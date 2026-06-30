@@ -237,19 +237,9 @@ skills/
 
 ## Roadmap
 
-### 已完成
-
 - ✅ **x-to-obsidian** — X 推文 / thread / Article 归档 + Telegram 我的收藏同步
 
-### 计划中
-
-- ⏳ **readwise-to-obsidian** — Readwise 高亮一键导入 vault
-- ⏳ **notion-to-obsidian** — Notion 页面批量迁移（保留 toggle、callout、引用）
-- ⏳ **webclip-to-obsidian** — 用 Obsidian Web Clipper 抓的 Inbox 文件自动归类
-- ⏳ **podcast-to-obsidian** — 播客文稿（小宇宙 / Spotify）归档
-- ⏳ **rss-to-obsidian** — RSS 阅读器（如 Feedly）的 starred items 归档
-
-欢迎 issue 提需求或 PR 提交新 skill。
+未来添加哪些 skill 看实际需要——欢迎 issue 提需求或 PR 提交。
 
 ---
 
