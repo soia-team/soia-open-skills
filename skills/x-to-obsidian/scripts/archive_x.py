@@ -614,7 +614,7 @@ def main():
             "translation_hint": "<!-- Ask your AI agent to translate if needed -->",
             "thoughts": "My Thoughts", "thoughts_hint": "<!-- Left blank for the user -->",
             "related": "Related", "rel_articles": "- Related articles:",
-            "rel_moc": "- Topic MOC:", "rel_books": "- Related books:",
+            "rel_books": "- Related books:",
             "quoted": "Quoted Tweet", "sep": " | ", "method_val": f"fxtwitter API ({body_meta})",
             "source_header": "Source Info",
         }
@@ -626,7 +626,7 @@ def main():
             "translation_hint": "<!-- 如需翻译，对 AI 说「翻译这篇」 -->",
             "thoughts": "我的看法", "thoughts_hint": "<!-- 留空给用户后续手写 -->",
             "related": "关联", "rel_articles": "- 相关文章：",
-            "rel_moc": "- 主题 MOC：", "rel_books": "- 关联书目：",
+            "rel_books": "- 关联书目：",
             "quoted": "引用 / 嵌套推文", "sep": " ｜ ", "method_val": f"fxtwitter API（{body_meta}）",
             "source_header": "来源信息",
         }
@@ -675,7 +675,6 @@ def main():
 ## {L['related']}
 
 {L['rel_articles']}
-{L['rel_moc']}
 {L['rel_books']}
 
 </div>
