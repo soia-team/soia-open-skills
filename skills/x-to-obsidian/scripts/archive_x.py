@@ -432,11 +432,37 @@ def main():
         f"🔖 {tweet.get('bookmarks',0):,}"
     )
 
+    # UI language for section headings. Default: zh (Chinese).
+    # Set X_ARCHIVE_LANG=en to use English headings.
+    ui_lang = os.environ.get("X_ARCHIVE_LANG", "zh").lower()
+    if ui_lang == "en":
+        L = {
+            "source": "Source", "method": "Method", "metrics": "Metrics",
+            "summary": "Summary", "summary_hint": "<!-- AI: fill 1-sentence summary, 30-80 chars -->",
+            "content": "Content", "translation": "Translation",
+            "translation_hint": "<!-- Ask your AI agent to translate if needed -->",
+            "thoughts": "My Thoughts", "thoughts_hint": "<!-- Left blank for the user -->",
+            "related": "Related", "rel_articles": "- Related articles:",
+            "rel_moc": "- Topic MOC:", "rel_books": "- Related books:",
+            "quoted": "Quoted Tweet", "sep": " | ", "method_val": f"fxtwitter API ({body_meta})",
+        }
+    else:
+        L = {
+            "source": "来源", "method": "抓取方式", "metrics": "元数据",
+            "summary": "摘要", "summary_hint": "<!-- AI 补充：1 句话 30-80 字浓缩 -->",
+            "content": "原文", "translation": "中文译文",
+            "translation_hint": "<!-- 如需翻译，对 AI 说「翻译这篇」 -->",
+            "thoughts": "我的看法", "thoughts_hint": "<!-- 留空给用户后续手写 -->",
+            "related": "关联", "rel_articles": "- 相关文章：",
+            "rel_moc": "- 主题 MOC：", "rel_books": "- 关联书目：",
+            "quoted": "引用 / 嵌套推文", "sep": " ｜ ", "method_val": f"fxtwitter API（{body_meta}）",
+        }
+
     translation_section = ""
     if lang != "zh":
         translation_section = (
-            "\n## Translation\n\n"
-            "<!-- Ask your AI agent to translate if needed -->\n"
+            f"\n## {L['translation']}\n\n"
+            f"{L['translation_hint']}\n"
         )
 
     quoted = tweet.get("quote") or {}
@@ -445,8 +471,8 @@ def main():
         qa = quoted.get("author", {})
         qtext = (quoted.get("text") or "").strip()
         quoted_section = (
-            f"\n## Quoted Tweet\n\n"
-            f"> [@{qa.get('screen_name','')}]({quoted.get('url','')}) | {qa.get('name','')}\n\n"
+            f"\n## {L['quoted']}\n\n"
+            f"> [@{qa.get('screen_name','')}]({quoted.get('url','')}){L['sep']}{qa.get('name','')}\n\n"
             f"{qtext}\n"
         )
 
@@ -454,27 +480,27 @@ def main():
 
 # {title_raw}
 
-> **Source** | [@{handle}]({tweet['url']}) | {published_at_str} CST
-> **Method** | fxtwitter API ({body_meta})
-> **Metrics** | {metrics_line}
+> **{L['source']}**{L['sep']}[@{handle}]({tweet['url']}){L['sep']}{published_at_str} CST
+> **{L['method']}**{L['sep']}{L['method_val']}
+> **{L['metrics']}**{L['sep']}{metrics_line}
 
-## Summary
+## {L['summary']}
 
-<!-- AI: fill 1-sentence summary, 30-80 chars -->
+{L['summary_hint']}
 
-## Content
+## {L['content']}
 
 {body}
 {translation_section}{quoted_section}
-## My Thoughts
+## {L['thoughts']}
 
-<!-- Left blank for the user -->
+{L['thoughts_hint']}
 
-## Related
+## {L['related']}
 
-- Related articles:
-- Topic MOC:
-- Related books:
+{L['rel_articles']}
+{L['rel_moc']}
+{L['rel_books']}
 """
 
     # write
