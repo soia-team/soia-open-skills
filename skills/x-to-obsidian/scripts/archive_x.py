@@ -383,6 +383,40 @@ def find_existing_archive(article_root: Path, status_id: str) -> Path | None:
     return None
 
 
+def extract_preserved_fields(existing_path: Path | None) -> dict:
+    """Pull hand-filled topics/people/summary out of an already-archived file
+    so --force (re-running to pick up a script fix) doesn't wipe out curation
+    work a human or AI did after the first archive.
+    """
+    preserved = {"topics": None, "people": None, "summary": None}
+    if not existing_path or not existing_path.exists():
+        return preserved
+    try:
+        text = existing_path.read_text(encoding="utf-8")
+    except Exception:
+        return preserved
+
+    fm_match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
+    if fm_match:
+        fm = fm_match.group(1)
+        for key in ("topics", "people"):
+            m = re.search(rf"^{key}:\s*\n((?:  - .*\n?)+)", fm, re.MULTILINE)
+            if m:
+                preserved[key] = f"{key}:\n" + m.group(1).rstrip("\n")
+                continue
+            m = re.search(rf"^{key}:\s*(\[.+?\])\s*$", fm, re.MULTILINE)
+            if m and m.group(1).strip() != "[]":
+                preserved[key] = f"{key}: {m.group(1)}"
+
+    m = re.search(r"##\s*(?:摘要|Summary)\s*\n\n(.*?)\n\n##", text, re.DOTALL)
+    if m:
+        body = m.group(1).strip()
+        if body and not body.startswith("<!--"):
+            preserved["summary"] = body
+
+    return preserved
+
+
 def build_frontmatter(
     tweet: dict,
     chain: list[dict],
@@ -391,10 +425,12 @@ def build_frontmatter(
     published_at_str: str,
     media: list[dict],
     lang: str,
+    preserved: dict | None = None,
 ) -> str:
     author = tweet["author"]
     article = tweet.get("article") or {}
     quoted = tweet.get("quote") or {}
+    preserved = preserved or {}
 
     lines = [
         "---",
@@ -407,8 +443,8 @@ def build_frontmatter(
         f"captured_at: {captured_at_str}",
         f"language: {lang}",
         f"type: {'article' if is_article else ('thread' if len(chain) > 1 else 'tweet')}",
-        "topics: []",
-        "people: []",
+        preserved.get("topics") or "topics: []",
+        preserved.get("people") or "people: []",
     ]
     if media:
         lines.append("media:")
@@ -478,6 +514,8 @@ def main():
 
     if existing and args.force:
         print(f"⚠️  Force-overwriting: {existing.relative_to(vault)}", file=sys.stderr)
+
+    preserved = extract_preserved_fields(existing)
 
     print(f"📖 Fetching @{handle} / {status_id}", file=sys.stderr)
 
@@ -555,7 +593,8 @@ def main():
     lang = detect_language(sample_text, root.get("lang"))
 
     fm = build_frontmatter(
-        tweet, chain, is_article, captured_at_str, published_at_str, media, lang
+        tweet, chain, is_article, captured_at_str, published_at_str, media, lang,
+        preserved=preserved,
     )
 
     metrics_line = (
@@ -621,7 +660,7 @@ def main():
 
 ## {L['summary']}
 
-{L['summary_hint']}
+{preserved.get('summary') or L['summary_hint']}
 
 ## {L['content']}
 
