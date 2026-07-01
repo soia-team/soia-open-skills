@@ -120,16 +120,20 @@ def walk_thread(handle: str, status_id: str, max_depth: int = 50) -> list[dict]:
     return chain
 
 
-def apply_inline_styles(text: str, inline_style_ranges: list[dict]) -> str:
-    """Apply Draft.js inlineStyleRanges (BOLD/ITALIC) to Markdown markup."""
-    if not inline_style_ranges or not text:
+def apply_inline_markup(
+    text: str,
+    inline_style_ranges: list[dict],
+    entity_ranges: list[dict],
+    entity_map: dict,
+) -> str:
+    """Apply Draft.js inlineStyleRanges (BOLD/ITALIC) and LINK entityRanges to Markdown."""
+    if not text:
         return text
 
-    # Collect per-character style flags
     n = len(text)
     bold = [False] * n
     italic = [False] * n
-    for r in inline_style_ranges:
+    for r in inline_style_ranges or []:
         style = r.get("style", "")
         offset = r.get("offset", 0)
         length = r.get("length", 0)
@@ -141,40 +145,106 @@ def apply_inline_styles(text: str, inline_style_ranges: list[dict]) -> str:
             for i in range(offset, end):
                 italic[i] = True
 
+    # link_url[i] holds the target URL when position i sits inside a LINK entity span
+    link_url: list[str | None] = [None] * n
+    for r in entity_ranges or []:
+        ent = entity_map.get(str(r.get("key"))) or {}
+        if ent.get("type") != "LINK":
+            continue
+        url = (ent.get("data") or {}).get("url")
+        if not url:
+            continue
+        offset = r.get("offset", 0)
+        length = r.get("length", 0)
+        end = min(offset + length, n)
+        for i in range(offset, end):
+            link_url[i] = url
+
     result: list[str] = []
-    prev_b, prev_i = False, False
+    prev_b, prev_i, prev_link = False, False, None
     for idx, ch in enumerate(text):
-        cur_b, cur_i = bold[idx], italic[idx]
-        # Close tags (reverse order: italic closes before bold)
+        cur_b, cur_i, cur_link = bold[idx], italic[idx], link_url[idx]
+        # close in reverse nesting order: italic, bold, link
         if prev_i and not cur_i:
             result.append("*")
         if prev_b and not cur_b:
             result.append("**")
-        # Open tags
+        if prev_link and cur_link != prev_link:
+            result.append(f"]({prev_link})")
+        # open in nesting order: link, bold, italic
+        if cur_link and cur_link != prev_link:
+            result.append("[")
         if cur_b and not prev_b:
             result.append("**")
         if cur_i and not prev_i:
             result.append("*")
         result.append(ch)
-        prev_b, prev_i = cur_b, cur_i
-    # Close any open tags at end
+        prev_b, prev_i, prev_link = cur_b, cur_i, cur_link
     if prev_i:
         result.append("*")
     if prev_b:
         result.append("**")
+    if prev_link:
+        result.append(f"]({prev_link})")
     return "".join(result)
 
 
-def render_article_blocks(blocks: list[dict]) -> str:
+def render_atomic_block(
+    entity_ranges: list[dict], entity_map: dict, media_by_id: dict, source_url: str
+) -> str | None:
+    """Render the entity behind an `atomic` block: code (MARKDOWN), DIVIDER, or MEDIA.
+
+    Atomic blocks carry no real text of their own (just a placeholder space) —
+    the actual content lives in content.entityMap, keyed by the block's entityRanges.
+    """
+    for r in entity_ranges or []:
+        ent = entity_map.get(str(r.get("key"))) or {}
+        typ = ent.get("type")
+        data = ent.get("data") or {}
+        if typ == "DIVIDER":
+            return "---"
+        if typ == "MARKDOWN":
+            md = data.get("markdown", "")
+            return md.rstrip() if md else None
+        if typ == "MEDIA":
+            images = []
+            for item in data.get("mediaItems") or []:
+                media = media_by_id.get(str(item.get("mediaId")))
+                url = ((media or {}).get("media_info") or {}).get("original_img_url")
+                if url:
+                    images.append(f"![]({url})")
+            if images:
+                return "\n\n".join(images)
+            # couldn't resolve a direct URL — point back to the source instead of a silent gap
+            return f"*[图片：见原文]({source_url})*" if source_url else None
+    return None
+
+
+def render_article_blocks(
+    blocks: list[dict], entity_map: dict, media_by_id: dict, source_url: str = ""
+) -> str:
     out: list[str] = []
     for b in blocks:
         raw_text = (b.get("text") or "").rstrip()
         typ = b.get("type", "unstyled")
-        if not raw_text and typ == "unstyled":
+        entity_ranges = b.get("entityRanges") or []
+
+        if typ == "atomic":
+            rendered = render_atomic_block(entity_ranges, entity_map, media_by_id, source_url)
+            if rendered:
+                out.append(rendered)
+            continue
+
+        if not raw_text and typ in ("unstyled", "header-one", "header-two", "header-three", "header-four"):
+            continue
+        if re.fullmatch(r"MPH_MARKER_\d+", raw_text):
+            # internal fxtwitter placeholder token, not authored content
             continue
         inline_styles = b.get("inlineStyleRanges") or []
-        text = apply_inline_styles(raw_text, inline_styles)
-        if typ == "header-two":
+        text = apply_inline_markup(raw_text, inline_styles, entity_ranges, entity_map)
+        if typ == "header-one":
+            out.append(f"\n## {text}\n")
+        elif typ == "header-two":
             out.append(f"\n## {text}\n")
         elif typ == "header-three":
             out.append(f"\n### {text}\n")
@@ -459,8 +529,19 @@ def main():
 
     # body
     if is_article:
-        blocks = article.get("content", {}).get("blocks", [])
-        body = render_article_blocks(blocks)
+        content = article.get("content", {})
+        blocks = content.get("blocks", [])
+        entity_map = {
+            str(e["key"]): e["value"]
+            for e in content.get("entityMap", [])
+            if isinstance(e, dict)
+        }
+        media_by_id = {
+            str(m["media_id"]): m
+            for m in article.get("media_entities", [])
+            if isinstance(m, dict)
+        }
+        body = render_article_blocks(blocks, entity_map, media_by_id, tweet.get("url", ""))
         body_meta = f"X Article ({len(blocks)} blocks)"
     elif len(chain) > 1:
         body = render_thread(chain)
