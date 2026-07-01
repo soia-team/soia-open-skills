@@ -29,7 +29,7 @@ from pathlib import Path
 CST = timezone(timedelta(hours=8))
 
 URL_RE = re.compile(
-    r"https?://(?:mobile\.)?(?:x|twitter|fxtwitter)\.com/([^/]+)/status/(\d+)",
+    r"https?://(?:mobile\.)?(?:x|twitter|fxtwitter)\.com/([^/]+)/(?:status|article)/(\d+)",
     re.IGNORECASE,
 )
 
@@ -120,13 +120,60 @@ def walk_thread(handle: str, status_id: str, max_depth: int = 50) -> list[dict]:
     return chain
 
 
+def apply_inline_styles(text: str, inline_style_ranges: list[dict]) -> str:
+    """Apply Draft.js inlineStyleRanges (BOLD/ITALIC) to Markdown markup."""
+    if not inline_style_ranges or not text:
+        return text
+
+    # Collect per-character style flags
+    n = len(text)
+    bold = [False] * n
+    italic = [False] * n
+    for r in inline_style_ranges:
+        style = r.get("style", "")
+        offset = r.get("offset", 0)
+        length = r.get("length", 0)
+        end = min(offset + length, n)
+        if style.upper() == "BOLD":
+            for i in range(offset, end):
+                bold[i] = True
+        elif style.upper() == "ITALIC":
+            for i in range(offset, end):
+                italic[i] = True
+
+    result: list[str] = []
+    prev_b, prev_i = False, False
+    for idx, ch in enumerate(text):
+        cur_b, cur_i = bold[idx], italic[idx]
+        # Close tags (reverse order: italic closes before bold)
+        if prev_i and not cur_i:
+            result.append("*")
+        if prev_b and not cur_b:
+            result.append("**")
+        # Open tags
+        if cur_b and not prev_b:
+            result.append("**")
+        if cur_i and not prev_i:
+            result.append("*")
+        result.append(ch)
+        prev_b, prev_i = cur_b, cur_i
+    # Close any open tags at end
+    if prev_i:
+        result.append("*")
+    if prev_b:
+        result.append("**")
+    return "".join(result)
+
+
 def render_article_blocks(blocks: list[dict]) -> str:
     out: list[str] = []
     for b in blocks:
-        text = (b.get("text") or "").rstrip()
+        raw_text = (b.get("text") or "").rstrip()
         typ = b.get("type", "unstyled")
-        if not text and typ == "unstyled":
+        if not raw_text and typ == "unstyled":
             continue
+        inline_styles = b.get("inlineStyleRanges") or []
+        text = apply_inline_styles(raw_text, inline_styles)
         if typ == "header-two":
             out.append(f"\n## {text}\n")
         elif typ == "header-three":
@@ -208,11 +255,15 @@ def collect_media(tweets: list[dict]) -> list[dict]:
 
 
 def sanitize_title_for_filename(title: str, limit: int = 50) -> str:
-    # filesystem-illegal chars
-    title = re.sub(r'[/\\:*?"<>|]+', "-", title)
-    # punctuation
+    # filesystem-illegal chars + separator-like punctuation (colon/semicolon,
+    # half- and full-width) — these join two meaningful phrases, so replace
+    # with a dash rather than deleting (deleting would merge the phrases
+    # into one confusing run, e.g. "A：B" -> "AB" instead of "A-B")
+    title = re.sub(r'[/\\:*?"<>|：；;]+', "-", title)
+    # wrapping punctuation (brackets/quotes) — safe to strip since they
+    # enclose rather than separate text
     title = re.sub(
-        r"[（）()\[\]【】.,，。！!?？:：;；\"'""'']+", "", title
+        r"[（）()\[\]【】.,，。！!?？\"'""'']+", "", title
     )
     # emoji (supplementary plane)
     title = re.sub(r"[\U00010000-\U0010ffff]", "", title)
@@ -445,6 +496,7 @@ def main():
             "related": "Related", "rel_articles": "- Related articles:",
             "rel_moc": "- Topic MOC:", "rel_books": "- Related books:",
             "quoted": "Quoted Tweet", "sep": " | ", "method_val": f"fxtwitter API ({body_meta})",
+            "source_header": "Source Info",
         }
     else:
         L = {
@@ -456,6 +508,7 @@ def main():
             "related": "关联", "rel_articles": "- 相关文章：",
             "rel_moc": "- 主题 MOC：", "rel_books": "- 关联书目：",
             "quoted": "引用 / 嵌套推文", "sep": " ｜ ", "method_val": f"fxtwitter API（{body_meta}）",
+            "source_header": "来源信息",
         }
 
     translation_section = ""
@@ -480,6 +533,7 @@ def main():
 
 # {title_raw}
 
+> [!source]- {L['source_header']}
 > **{L['source']}**{L['sep']}[@{handle}]({tweet['url']}){L['sep']}{published_at_str} CST
 > **{L['method']}**{L['sep']}{L['method_val']}
 > **{L['metrics']}**{L['sep']}{metrics_line}
