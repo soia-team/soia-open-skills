@@ -60,6 +60,16 @@ npx skills add soia-team/soia-open-skills
 
 ---
 
+### 📚 [reading-planner](./skills/reading-planner/)
+
+场景化阅读计划生成器。把一批书（文章书单 / 文章观点映射 / 一个主题）组织成**表格化、按真实字数排期**的可执行阅读计划，落地成 Obsidian 笔记。
+
+- 节奏按字数算，不按"每月 X 本"拍脑袋——微信读书 `/book/chapterinfo` 逐章字数加总，显式假设（每周阅读时长/速度）可调
+- 书单用微信读书真实评分核实，低分书标「存疑」待用户拍板
+- 与已有藏书交叉比对，避免重复买
+- 产出计划面向读者，只说「对 AI 说『同步这本书的划线』」，不暴露脚本名
+- 可选联动 [weread-skills](https://github.com/Tencent/WeChatReading) 与 [huashu-weread](https://github.com/alchaincyf/huashu-weread)（依赖声明而非修改第三方文件）
+
 ## 安装
 
 ### 方式 A：npx skills add（推荐）
