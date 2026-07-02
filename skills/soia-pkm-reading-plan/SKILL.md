@@ -1,9 +1,11 @@
 ---
-name: reading-planner
+name: soia-pkm-reading-plan
 description: 场景化阅读计划生成器。把一批书（来自文章书单、文章观点映射、或一个主题）组织成带表格、按真实字数排期的可执行阅读计划，落地成 Obsidian 笔记。可选联动微信读书 skill 拿真实字数/评分/书架做交叉核实。当用户说「做个读书计划」「按 XX 场景排个计划」「把这篇文章的书单排成计划」「这篇文章的观点对应哪些书」「帮我规划下半年读什么」时触发。
 ---
 
-# reading-planner
+# soia-pkm-reading-plan
+
+> 属 SOIA 个人知识管理域（`soia-pkm-*`）的「加工」环节，与 `soia-pkm-forge`（输出）、`soia-pkm-bootstrap`（搭建）同族。
 
 把「想读的一批书」变成「排得进日程、读得完」的计划。
 

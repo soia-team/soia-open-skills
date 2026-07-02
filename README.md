@@ -60,7 +60,7 @@ npx skills add soia-team/soia-open-skills
 
 ---
 
-### 📚 [reading-planner](./skills/reading-planner/)
+### 📚 [soia-pkm-reading-plan](./skills/soia-pkm-reading-plan/)
 
 场景化阅读计划生成器。把一批书（文章书单 / 文章观点映射 / 一个主题）组织成**表格化、按真实字数排期**的可执行阅读计划，落地成 Obsidian 笔记。
 
