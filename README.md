@@ -53,35 +53,41 @@ npx skills add soia-team/soia-open-skills
 
 ## Skills 清单（10）
 
+> **通用能力（所有 skill 共享）**
+> - 🤖 **支持的 AI**：跨 agent 通用——Claude Code、Codex、Cursor、Gemini、Kimi、amp、Warp、Zed 等所有兼容 [skills.sh](https://skills.sh) 标准的 AI。一次写 `SKILL.md`，处处可用。
+> - 📚 **适用知识库**：Obsidian vault（推荐 PARA 结构；没有现成的？用 `bootstrap` 一键搭）。底层是纯 Markdown + YAML frontmatter，不锁定平台。
+> - 🔗 **依赖链**：`clip-*` 是入口（独立可用）→ `organize` / `distill` 需 vault 里有内容 → `compose` 需 distill 的观点 → `publish` 需 compose 的草稿。
+> - **状态图例**：✅ 可直接用 · 🟡 可用但需补脚本 / 配凭据
+
 ### 📥 收集 · clip 家族
 
-| skill | 说明 |
-|-------|------|
-| [`soia-pkm-clip-x`](./skills/soia-pkm-clip-x/) | X 推文 / thread / Article 长文 → vault（fxtwitter API + Telegram 批量同步）|
-| [`soia-pkm-clip-wechat`](./skills/soia-pkm-clip-wechat/) | 微信公众号文章 → vault（静态 HTML 抓取）|
-| [`soia-pkm-clip-web`](./skills/soia-pkm-clip-web/) | 通用网页 / 博客 → vault（正文抽取）|
-| [`soia-pkm-clip-drive`](./skills/soia-pkm-clip-drive/) | 云盘 PDF / Word / 文档 → vault |
+| skill | 说明 | 现在能用? | 依赖 |
+|-------|------|----------|------|
+| [`soia-pkm-clip-x`](./skills/soia-pkm-clip-x/) | X 推文/thread/长文 → vault | ✅ 完全可用（脚本齐全，已多次实测）| 无（Telegram 同步可选）|
+| [`soia-pkm-clip-wechat`](./skills/soia-pkm-clip-wechat/) | 公众号文章 → vault | 🟡 SKILL.md 就绪，抓取脚本待 AI 生成 | 无 |
+| [`soia-pkm-clip-web`](./skills/soia-pkm-clip-web/) | 通用网页/博客 → vault | 🟡 同上 | Python `trafilatura` |
+| [`soia-pkm-clip-drive`](./skills/soia-pkm-clip-drive/) | 云盘 PDF/Word → vault | 🟡 同上 | Python `pypdf`/`python-docx` |
 
 ### 🗂️ 整理
 
-| skill | 说明 |
-|-------|------|
-| [`soia-pkm-organize`](./skills/soia-pkm-organize/) | 分类 / 补 frontmatter / 建两级 MOC / 按月归位 / 补双链 |
+| skill | 说明 | 现在能用? | 依赖 |
+|-------|------|----------|------|
+| [`soia-pkm-organize`](./skills/soia-pkm-organize/) | 分类/补 frontmatter/建两级 MOC/按月归位/补双链 | ✅ 可用（底层脚本 rebuild_moc/backfill 已在用）| vault 里已有归档内容 |
 
 ### ✍️ 提炼 → 成文 → 发布
 
-| skill | 说明 |
-|-------|------|
-| [`soia-pkm-distill`](./skills/soia-pkm-distill/) | **收藏 → 观点**：读原文 → 苏格拉底式一次一问 → 你答 → 整理成「我的看法」（内容是你的，AI 只落字、不替写）|
-| [`soia-pkm-compose`](./skills/soia-pkm-compose/) | **观点 → 文章草稿**（以你的观点为骨、摘抄为料）|
-| [`soia-pkm-publish`](./skills/soia-pkm-publish/) | **一稿 → 多平台**：公众号（三级强调排版 + 推草稿箱）/ X thread / 小红书。只建草稿、不自动群发 |
+| skill | 说明 | 现在能用? | 依赖 |
+|-------|------|----------|------|
+| [`soia-pkm-distill`](./skills/soia-pkm-distill/) | **收藏 → 观点**：读原文 → 一次一问 → 你答 → 「我的看法」（内容是你的，AI 只落字）| ✅ 完全可用（已实战）| vault 里有文章（`clip-*` 产出）|
+| [`soia-pkm-compose`](./skills/soia-pkm-compose/) | **观点 → 文章草稿**（你的观点为骨、摘抄为料）| ✅ 可用（纯 LLM，无需脚本）| `distill` 产出的观点 |
+| [`soia-pkm-publish`](./skills/soia-pkm-publish/) | **一稿 → 多平台**：公众号排版+推草稿箱 / X thread / 小红书 | 🟡 渲染 `render.py` 可用；微信推送需配 `.env` 凭据 | `compose` 的草稿 + 微信公众号 API |
 
 ### 🧰 支撑
 
-| skill | 说明 |
-|-------|------|
-| [`soia-pkm-bootstrap`](./skills/soia-pkm-bootstrap/) | 从零初始化 AI-native vault（PARA 骨架 + AGENTS + 模板 + Bases + CSS + 多 AI 接入）|
-| [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | 场景化阅读计划生成器（书单 / 主题 → 按真实字数排期的计划）|
+| skill | 说明 | 现在能用? | 依赖 |
+|-------|------|----------|------|
+| [`soia-pkm-bootstrap`](./skills/soia-pkm-bootstrap/) | 从零初始化 AI-native vault（PARA + AGENTS + 模板 + Bases + CSS + 多 AI 接入）| ✅ 可用（`init_vault.py` 跑通）| 无（它是起点）|
+| [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | 场景化阅读计划（书单/主题 → 按真实字数排期）| ✅ 可用 | 可选联动 `weread-skills`（第三方）|
 
 ---
 
