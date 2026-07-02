@@ -666,8 +666,6 @@ def main():
 
 {body}
 {translation_section}{quoted_section}
-<div class="no-print">
-
 ## {L['thoughts']}
 
 {L['thoughts_hint']}
@@ -676,8 +674,6 @@ def main():
 
 {L['rel_articles']}
 {L['rel_books']}
-
-</div>
 """
 
     # write
