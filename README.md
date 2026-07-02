@@ -2,7 +2,7 @@
 
 # soia-open-skills
 
-> *「不是把 X 存进硬盘，是让 X 上的每一句话能在你需要的时候被引出来。」*
+> *把「收藏」变成「作品」——AI 时代的个人知识管理技能体系。*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Agent-Agnostic](https://img.shields.io/badge/Agent-Agnostic-blueviolet)](https://skills.sh)
@@ -11,280 +11,177 @@
 
 <br>
 
-**面向 Obsidian 重度用户的 Agent skill 集合 · 把日常知识管理工作流封装成 skill**
-
-<br>
-
-我们日常都在用 AI 整理信息。早上手机刷 X 看到一篇好 thread，转发到 Telegram「我的收藏」；电脑前打开 Claude Code 让它存进 Obsidian——但这一步特别繁琐：要先打开链接、要把 thread 拼起来、要补元数据。
-
-本仓库把这类「**重复但有价值**」的工作流封装成 skill：装上 skill 后，一句话就能跑完。
+**面向 Obsidian 的 `soia-pkm-*` 技能集 · 覆盖「收 → 整理 → 点 → 写 → 发」完整 PKM 闭环**
 
 ```bash
 npx skills add soia-team/soia-open-skills
 ```
 
-跨 agent 通用——Claude Code、Cursor、Codex、Hermes、OpenClaw 都能装。
+跨 agent 通用——Claude Code、Cursor、Codex、Gemini、Kimi 都能装。
 
-[Skills 清单](#skills-清单) · [安装](#安装) · [设计哲学](#设计哲学) · [Roadmap](#roadmap)
+[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单10) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
 
 </div>
 
 ---
 
-## Skills 清单
-
-### 🐦 [x-to-obsidian](./skills/x-to-obsidian/)
-
-把 X (Twitter) 推文 / thread / Article 长文一键归档到 Obsidian vault，附带 Telegram「我的收藏」批量同步。
-
-**核心特性**：
-
-- 基于 [fxtwitter](https://github.com/FixTweet/FixTweet) 公开 API — 无需 X API key、无需登录、零成本
-- thread 自动沿 `replying_to_status` 回溯到根
-- X Article 长文取 `content.blocks` 全量
-- 元数据齐全（作者、views/likes/bookmarks、媒体直链、created_at）
-- 自动 URL 去重（按 frontmatter `url:` 字段扫 vault）
-- 多语言识别（zh / en / ja / ko，先检假名再判中文，日韩中分得清）
-- Telegram 我的收藏两条同步路径：
-  - **JSON 导出**（推荐）— Telegram Desktop 官方导出，零依赖、零风险、ToS 合规
-  - **MTProto API**（高阶）— Telethon 实时同步，需 `api_id/hash` 和住宅 IP
-
-**触发词**（说人话用，agent 自动识别）：
+## PKM 闭环：一篇内容的一生
 
 ```
-"归档这条 X：URL"          → archive_x.py <URL>
-"归档并翻译：URL"          → 同上 + AI 自动翻译
-"整理一下这条 thread：URL" → 同上 + 强制 thread 回溯
-"同步我的电报收藏"          → sync_telegram_export.py <json_path>
+                     soia-pkm 个人知识管理闭环
+
+   收 ────────→ 整理 ───────→ 点 ────────→ 写 ────────→ 发
+ ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐
+ │ clip-x  │  │         │  │         │  │         │  │         │
+ │ clip-   │  │organize │  │ distill │  │ compose │  │ publish │
+ │  wechat │─→│ 分类/MOC│─→│收藏→观点 │─→│ 观点→文 │─→│ 公众号  │
+ │ clip-web│  │ /归位/  │  │(你的看法)│  │ (草稿)  │  │/X/小红书│
+ │ clip-   │  │ 补双链  │  │         │  │         │  │         │
+ │  drive  │  │         │  │         │  │         │  │         │
+ └─────────┘  └─────────┘  └─────────┘  └─────────┘  └─────────┘
+   多源输入                                                  │
+      ↑                                                      ▼
+      └─────────  飞轮：发布 → 心得喂回 vault → 更好的输入  ──┘
+
+  支撑：soia-pkm-bootstrap（一句话从零搭 vault + 接入多 AI）
+        soia-pkm-reading-plan（读书线：把书单排成可执行阅读计划）
 ```
+
+**核心理念**：收藏 ≠ 吸收。大多数人的知识库是"信息坟场"——囤了一大堆，从不回看。`soia-pkm` 把「收藏 → 观点 → 成文 → 发布」这条**从消费到创造**的链路，拆成职责单一、可组合的 skill，让 AI 帮你把囤积的信息真正变成**你自己的**作品。
 
 ---
 
-### 📚 [soia-pkm-reading-plan](./skills/soia-pkm-reading-plan/)
+## Skills 清单（10）
 
-场景化阅读计划生成器。把一批书（文章书单 / 文章观点映射 / 一个主题）组织成**表格化、按真实字数排期**的可执行阅读计划，落地成 Obsidian 笔记。
+### 📥 收集 · clip 家族
 
-- 节奏按字数算，不按"每月 X 本"拍脑袋——微信读书 `/book/chapterinfo` 逐章字数加总，显式假设（每周阅读时长/速度）可调
-- 书单用微信读书真实评分核实，低分书标「存疑」待用户拍板
-- 与已有藏书交叉比对，避免重复买
-- 产出计划面向读者，只说「对 AI 说『同步这本书的划线』」，不暴露脚本名
-- 可选联动 [weread-skills](https://github.com/Tencent/WeChatReading) 与 [huashu-weread](https://github.com/alchaincyf/huashu-weread)（依赖声明而非修改第三方文件）
+| skill | 说明 |
+|-------|------|
+| [`soia-pkm-clip-x`](./skills/soia-pkm-clip-x/) | X 推文 / thread / Article 长文 → vault（fxtwitter API + Telegram 批量同步）|
+| [`soia-pkm-clip-wechat`](./skills/soia-pkm-clip-wechat/) | 微信公众号文章 → vault（静态 HTML 抓取）|
+| [`soia-pkm-clip-web`](./skills/soia-pkm-clip-web/) | 通用网页 / 博客 → vault（正文抽取）|
+| [`soia-pkm-clip-drive`](./skills/soia-pkm-clip-drive/) | 云盘 PDF / Word / 文档 → vault |
+
+### 🗂️ 整理
+
+| skill | 说明 |
+|-------|------|
+| [`soia-pkm-organize`](./skills/soia-pkm-organize/) | 分类 / 补 frontmatter / 建两级 MOC / 按月归位 / 补双链 |
+
+### ✍️ 提炼 → 成文 → 发布
+
+| skill | 说明 |
+|-------|------|
+| [`soia-pkm-distill`](./skills/soia-pkm-distill/) | **收藏 → 观点**：读原文 → 苏格拉底式一次一问 → 你答 → 整理成「我的看法」（内容是你的，AI 只落字、不替写）|
+| [`soia-pkm-compose`](./skills/soia-pkm-compose/) | **观点 → 文章草稿**（以你的观点为骨、摘抄为料）|
+| [`soia-pkm-publish`](./skills/soia-pkm-publish/) | **一稿 → 多平台**：公众号（三级强调排版 + 推草稿箱）/ X thread / 小红书。只建草稿、不自动群发 |
+
+### 🧰 支撑
+
+| skill | 说明 |
+|-------|------|
+| [`soia-pkm-bootstrap`](./skills/soia-pkm-bootstrap/) | 从零初始化 AI-native vault（PARA 骨架 + AGENTS + 模板 + Bases + CSS + 多 AI 接入）|
+| [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | 场景化阅读计划生成器（书单 / 主题 → 按真实字数排期的计划）|
+
+---
 
 ## 安装
-
-### 方式 A：npx skills add（推荐）
 
 ```bash
 npx skills add soia-team/soia-open-skills
 ```
 
-会自动把 `skills/` 下所有 skill 装到你 agent 的 skill 目录。
+会把 `skills/` 下所有 skill 装到你 agent 的目录，**跨 agent 通用**（Claude Code / Codex / Cursor / Gemini / Kimi …）。装后直接说：
 
-### 方式 B：手动 clone + 复制
+| 你说 | 触发 |
+|------|------|
+| `归档这条 X：<URL>` | clip-x |
+| `整理文章库` / `重建 MOC` | organize |
+| `给这篇补我的看法` | distill |
+| `把这些观点写成一篇` | compose |
+| `把这篇发成公众号` | publish |
+| `从零搭个知识库` | bootstrap |
 
-```bash
-# 1. clone 仓库
-git clone https://github.com/soia-team/soia-open-skills.git
-cd soia-open-skills
-
-# 2. 复制到你 agent 的 skills 目录
-cp -R skills/x-to-obsidian ~/.claude/skills/         # Claude Code
-cp -R skills/x-to-obsidian ~/.codex/skills/          # Codex
-cp -R skills/x-to-obsidian ~/.agents/skills/         # 通用 agent
-```
-
-### 配置 Obsidian vault 路径
-
-每个 skill 都通过环境变量找 vault：
+### 配置 vault 路径
 
 ```bash
 # ~/.zshrc 或 ~/.bashrc
 export OBSIDIAN_VAULT=~/Documents/MyVault           # 必须
-export OBSIDIAN_ARTICLES="Articles"                 # 可选，归档子目录，默认 "Articles"
+export OBSIDIAN_ARTICLES="40_阅读与摘抄/10_文章摘抄"  # 可选，归档子目录
 ```
 
-或者每次调脚本时用 `--vault` 参数覆盖。
+或每次调脚本时用 `--vault` 覆盖。
 
 ---
 
-## Telegram 我的收藏同步指南
+## Telegram 我的收藏同步（clip-x）
 
-本仓库特别为重度用户提供「**手机收藏 → 电脑同步**」的完整工作流。
+`clip-x` 的杀手锏：把手机随手转发到 Telegram「我的收藏」的 X 链接，一行命令批量归档。
 
-### 为什么需要这个
+**推荐路径：JSON 导出**（合规、零风控、不需 API 凭证）
 
-很多人的习惯：
+1. Telegram Desktop → Settings → Advanced → Export Telegram data → 勾「私聊」+ 选 **Machine-readable JSON** → 导出。
+2. 得到 `result.json`。
+3. 跑同步（自动 URL 去重，已归档的跳过）：
 
+```bash
+python3 ~/.claude/skills/soia-pkm-clip-x/scripts/sync_telegram_export.py \
+  "$HOME/Downloads/Telegram Desktop/ChatExport_XXXX/result.json" --dry-run   # 预览
+python3 ~/.claude/skills/soia-pkm-clip-x/scripts/sync_telegram_export.py \
+  "<path>"                                                                     # 实跑
 ```
-早上 / 通勤
-  手机刷 X → 看到好内容 → 长按转发 → Telegram「我的收藏」
 
-晚上 / 工作时
-  打开电脑 → 想把那些链接整理进 vault → ??
-```
-
-如果一条条手动复制粘贴归档，每次 30 条 X 至少 30 分钟。本 skill 把这一步压缩到一行命令。
-
-### 推荐路径：JSON 导出（5 分钟完成 0-200 篇归档）
-
-1. **Telegram Desktop 导出**：
-   ```
-   左上角汉堡 ☰ → Settings → Advanced → Export Telegram data
-   勾「私聊」(Personal chats) ← 必勾
-   格式选 ⊙ Machine-readable JSON
-   时间范围按需，点导出
-   ```
-
-2. 几秒到 1 分钟后得到一个目录：
-   ```
-   ~/Downloads/Telegram Desktop/ChatExport_2026-06-30/
-   ├── result.json   ← 主数据
-   ├── chats/        ← 媒体（脚本不用这个）
-   └── lists/
-   ```
-
-3. **跑同步**（默认从最新开始）：
-   ```bash
-   # 看看会归档什么（不实际跑）
-   python3 ~/.claude/skills/x-to-obsidian/scripts/sync_telegram_export.py \
-     "$HOME/Downloads/Telegram Desktop/ChatExport_2026-06-30/result.json" \
-     --dry-run
-
-   # 实际归档（自动 URL 去重，已存在的跳过）
-   python3 ~/.claude/skills/x-to-obsidian/scripts/sync_telegram_export.py \
-     "$HOME/Downloads/Telegram Desktop/ChatExport_2026-06-30/result.json"
-
-   # 只处理某日期之后的
-   python3 ~/.claude/skills/x-to-obsidian/scripts/sync_telegram_export.py \
-     "<path>" --since 2026-06-01
-
-   # 限量
-   python3 ~/.claude/skills/x-to-obsidian/scripts/sync_telegram_export.py \
-     "<path>" --limit 30
-   ```
-
-4. **以后每月**重新导出一次（30 秒）+ 跑命令 → **自动跳过已归档的，只处理新增**。
-
-**这条路径不需要任何 Telegram API 凭证**，Telegram 官方支持，ToS 合规，0 风控风险。
-
-### 高阶路径：MTProto API
-
-如果你想「不导出就能拉」，可以走 MTProto API。但**国内大陆用户不推荐**：
-
-- 要去 [my.telegram.org](https://my.telegram.org/auth) 申请 api_id + api_hash
-- 申请 app 时 Telegram 对**机房 IP** 和**手机号-IP 跨区**有强风控
-- 大陆 +86 号 + 国内 IP / 机场节点 / 美国 VPN 几乎必触发 ERROR
-- 反复尝试会**锁号 24-72 小时**
-
-如果你确实有住宅 IP（香港 PCCW / 日本 HKT / 等），按 [skills/x-to-obsidian/SKILL.md](skills/x-to-obsidian/SKILL.md) 的「MTProto」段操作。
+高阶的 MTProto API 路径（国内不推荐，有风控）见 [clip-x 的 SKILL.md](./skills/soia-pkm-clip-x/SKILL.md)。
 
 ---
 
 ## 设计哲学
 
-### 1. Vault 不分子目录，靠多维度索引
-
-Obsidian 的核心价值是 **frontmatter + tag + wikilink 的多维度索引网络**。文件夹是单维度、强约束的；多维度索引才是 Obsidian 的正解。
-
-本套 skill 严格遵守：
-
-- 文章按年扁平存放，不按主题分子目录
-- 主题聚合靠 frontmatter `topics: [[xxx]]` + `_MOC/<主题>.md`
-- 跨域关联靠 wikilink `[[]]`
-- 复杂查询靠 [Obsidian Bases](https://help.obsidian.md/bases)（1.7.0+ 核心功能）
-
-### 2. 机器层 + AI 层双轨
-
-- **机器层**（脚本）：拉数据、去重、规范化、写入合同字符串段
-- **AI 层**（LLM）：补摘要、判主题、关联人物、提炼笔记
-
-两层用**段标题合同字符串**通信（如 `## Summary`），互不干扰。脚本写"机器段"，AI 写"用户段"，用户在"思考段"。
-
-### 3. 用户内容永不覆盖
-
-所有写入都遵守：
-
-- 用户写的 `## My Thoughts` `## Related` 等段**绝不被脚本动**
-- 机器段标记明确（带「来自 fxtwitter · 自动同步」字样），用户在里面写字会被下次同步覆盖（这个行为是合同里写明的）
-- 已存在文件的 `topics` / `people` / `Summary` 字段在 `--force` 重抓时会被覆盖（明确警告）
-
-### 4. 跨 agent 通用
-
-不绑定特定 agent。`SKILL.md` + 一组 Python 脚本（纯 stdlib，可选第三方）就是 skill 的全部。Claude Code / Codex / Cursor / Hermes 都能装。
+1. **收藏 ≠ 吸收**：闭环的命脉是 `distill`——把别人的文章变成**你自己的**判断。收藏一万条不如吸收一条。
+2. **观点是你的，AI 只落字**：`distill` / `compose` 绝不替你编造观点，缺料就问。产出的是你的作品，不是 AI 的总结。
+3. **Vault 不分子目录，靠多维索引**：文章按年扁平存放，主题聚合靠 frontmatter `topics:[[]]` + `_MOC/` + [Bases](https://help.obsidian.md/bases)，不靠文件夹。
+4. **机器层 + AI 层双轨**：脚本管拉取 / 去重 / 规范化（机器段），LLM 管摘要 / 判主题 / 提炼（用户段），用段标题合同字符串通信，互不覆盖。
+5. **职责单一、可组合**：每个 skill 只做一件事，串成闭环；扩展靠新建 skill + 依赖声明，**不改第三方 skill**（`npx skills check` 会覆盖）。
+6. **跨 agent**：一次写 `SKILL.md`，所有支持 skills 标准的 AI 都能用。
 
 ---
+
+## 命名规范
+
+`soia-pkm-<环节>-<对象>`，全小写 kebab-case。`soia-pkm-*` 是 SOIA 技能体系的第四个域（与 `soia-design-*` / `soia-dev-*` / `soia-gov-*` 平级），专管个人知识管理。
 
 ## 仓库结构
 
 ```
 soia-open-skills/
-├── README.md              ← 你正在看
-├── LICENSE                ← MIT
-├── .gitignore
-└── skills/                ← npx skills 扫描这个目录
-    └── x-to-obsidian/     ← 第一个 skill
-        ├── SKILL.md       ← skill 入口（必须）
-        └── scripts/
-            ├── archive_x.py
-            ├── sync_telegram_export.py
-            ├── sync_telegram_saved.py
-            └── generate_telegram_session.py
+├── README.md
+├── LICENSE · CONTRIBUTING.md
+└── skills/                    ← npx skills 扫描此目录
+    ├── soia-pkm-clip-x/       ├── soia-pkm-distill/
+    ├── soia-pkm-clip-wechat/  ├── soia-pkm-compose/
+    ├── soia-pkm-clip-web/     ├── soia-pkm-publish/
+    ├── soia-pkm-clip-drive/   ├── soia-pkm-bootstrap/
+    ├── soia-pkm-organize/     └── soia-pkm-reading-plan/
 ```
 
-未来添加新 skill：
-
-```
-skills/
-├── x-to-obsidian/
-├── readwise-to-obsidian/    ← 未来
-├── notion-to-obsidian/      ← 未来
-└── ...
-```
-
-每个 skill 一个文件夹，独立的 `SKILL.md` + 自己的脚本。
-
----
-
-## Roadmap
-
-- ✅ **x-to-obsidian** — X 推文 / thread / Article 归档 + Telegram 我的收藏同步
-
-未来添加哪些 skill 看实际需要——欢迎 issue 提需求或 PR 提交。
+每个 skill 一个文件夹，独立 `SKILL.md`（frontmatter 含 `name` + `description`）+ 自己的 `scripts/`。
 
 ---
 
 ## 致谢与相关项目
 
-本仓库 **不包括** 但 **强烈推荐配合使用** 的 skill：
+配合使用的第三方 skill（本仓库借鉴其方法论，但不修改其文件）：
 
-- [**alchaincyf/huashu-weread**](https://github.com/alchaincyf/huashu-weread) — 微信读书高阶顾问 skill（4 个 workflow：advisor / path / alchemy / review）。在 weread 官方 skill 之上做工作流编排。花叔写的，本仓库借鉴了它的 README 风格。
-- [**WeRead 官方 skill**](https://weread.qq.com/r/weread-skills) — 微信读书原子 API skill，作为 huashu-weread-advisor 的底层。
-
----
+- [**alchaincyf/huashu-weread**](https://github.com/alchaincyf/huashu-weread) — 微信读书高阶顾问。`distill` 借鉴了它的 alchemy 提炼方法论，`reading-plan` 与它协同。README 风格亦受其启发。
+- [**Tencent/WeChatReading**](https://github.com/Tencent/WeChatReading) — 微信读书原子 API skill，读书线的底层。
 
 ## 贡献
 
-欢迎 PR、issue。如果你也在搭建类似的 Obsidian + AI 知识管理系统，特别欢迎：
-
-- 新 skill（如 Notion / Logseq / Roam Research 迁移）
-- 现有 skill 的 bug 修复 / 体验改进
-- 文档完善
-
-加 skill 时请遵守：
-
-1. 放在 `skills/<skill-name>/` 下
-2. 必须有 `SKILL.md`，frontmatter 含 `name` 和 `description`
-3. `description` 控制在 200 字符内（渐进式披露原则）
-4. 任何路径、key、个人数据**严禁**硬编码，全部用环境变量
-5. 给出至少 1 个端到端用例
-
----
+欢迎 PR / issue。加 skill 请：① 放 `skills/<name>/` ② 有 `SKILL.md`（`name` + `description`，description ≤200 字）③ 路径 / key / 个人数据全用环境变量，严禁硬编码 ④ 至少 1 个端到端用例。详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
 ## License
 
-[MIT](LICENSE) — 自由 fork、改造、商用。请保留 attribution。
-
----
+[MIT](./LICENSE) — 自由 fork、改造、商用，请保留 attribution。
 
 ## 维护者
 
