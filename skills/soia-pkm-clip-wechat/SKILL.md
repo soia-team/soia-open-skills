@@ -1,5 +1,6 @@
 ---
 name: soia-pkm-clip-wechat
+version: 1.0.0
 description: 把微信公众号文章一键归档到 Obsidian vault。抓 mp.weixin.qq.com 的静态 HTML，提取标题/作者/正文/发布时间/配图，按 clip 家族统一规范落地。Triggers：「归档这篇公众号」「clip 这个公众号文章」「存这篇微信文章」
 ---
 

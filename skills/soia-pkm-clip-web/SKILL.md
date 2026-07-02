@@ -1,5 +1,6 @@
 ---
 name: soia-pkm-clip-web
+version: 1.0.0
 description: 把任意网页/博客文章一键归档到 Obsidian vault。用正文抽取（readability/trafilatura）提取标题/正文/作者，按 clip 家族统一规范落地。Triggers：「归档这个网页」「clip 这个链接」「存这篇博客」
 ---
 
