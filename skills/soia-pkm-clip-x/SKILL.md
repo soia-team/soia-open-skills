@@ -1,9 +1,9 @@
 ---
-name: x-to-obsidian
+name: soia-pkm-clip-x
 description: 把 X (Twitter) 推文 / thread / Article 长文一键归档到 Obsidian vault。基于 fxtwitter API，零配置、无需 X API key。支持 Telegram 我的收藏批量同步（JSON 导出路径，零风险）。Triggers：「归档这条 X」「archive this」「clip 这条推文」「整理这条 thread」「同步我的电报收藏」
 ---
 
-# x-to-obsidian
+# soia-pkm-clip-x
 
 把 X 上有价值的内容沉淀到 Obsidian vault，构建可检索的知识资产。
 

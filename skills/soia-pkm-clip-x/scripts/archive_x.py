@@ -65,7 +65,7 @@ def parse_url(url: str) -> tuple[str, str]:
 
 def http_get_json(url: str, timeout: int = 15) -> dict | None:
     req = urllib.request.Request(
-        url, headers={"User-Agent": "Mozilla/5.0 x-to-obsidian/1.0"}
+        url, headers={"User-Agent": "Mozilla/5.0 soia-pkm-clip-x/1.0"}
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
