@@ -165,3 +165,14 @@ python3 sync_telegram_saved.py --dry-run
 python3 sync_telegram_saved.py --days 30
 python3 sync_telegram_saved.py --all
 ```
+
+
+---
+
+## 完成后回执
+
+执行完**必须**向用户输出（不要默默做完）：
+
+1. **做了什么** — 一句话总结完成的工作。
+2. **文件变更** — 列出新建 / 修改 / 移动的文件（完整路径）；未改动文件则说明"未改动文件"。
+3. **下一步** — 可选的后续建议（如衔接的下一个 skill）。
