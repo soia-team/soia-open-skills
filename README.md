@@ -45,13 +45,14 @@ npx skills add soia-team/soia-open-skills
 
   支撑：soia-pkm-bootstrap（一句话从零搭 vault + 接入多 AI）
         soia-pkm-reading-plan（读书线：把书单排成可执行阅读计划）
+        soia-pkm-library（书库线：微信读书同步 + 记录补齐 + 总览生成）
 ```
 
 **核心理念**：收藏 ≠ 吸收。大多数人的知识库是"信息坟场"——囤了一大堆，从不回看。`soia-pkm` 把「收藏 → 观点 → 成文 → 发布」这条**从消费到创造**的链路，拆成职责单一、可组合的 skill，让 AI 帮你把囤积的信息真正变成**你自己的**作品。
 
 ---
 
-## Skills 清单（10）
+## Skills 清单（11）
 
 > **通用能力（所有 skill 共享）**
 > - 🤖 **支持的 AI**：跨 agent 通用——Claude Code、Codex、Cursor、Gemini、Kimi、amp、Warp、Zed 等所有兼容 [skills.sh](https://skills.sh) 标准的 AI。一次写 `SKILL.md`，处处可用。
@@ -88,6 +89,7 @@ npx skills add soia-team/soia-open-skills
 |-------|------|----------|------|
 | [`soia-pkm-bootstrap`](./skills/soia-pkm-bootstrap/) | 从零初始化 AI-native vault（PARA + AGENTS + 模板 + Bases + CSS + 多 AI 接入）| ✅ 可用（`init_vault.py` 跑通）| 无（它是起点）|
 | [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | 场景化阅读计划（书单/主题 → 按真实字数排期）| ✅ 可用 | 可选联动 `weread-skills`（第三方）|
+| [`soia-pkm-library`](./skills/soia-pkm-library/) | 维护书库：微信读书同步（书目/划线）+ 补书详情 + 补待读记录 + 生成图书馆/阅读记录/分类三份总览 | ✅ 可用（7 个机械脚本，幂等可重复跑）| 可选联动 `weread-skills`（同步类脚本需 `WEREAD_API_KEY`）|
 
 ---
 
@@ -167,7 +169,8 @@ soia-open-skills/
     ├── soia-pkm-clip-wechat/  ├── soia-pkm-compose/
     ├── soia-pkm-clip-web/     ├── soia-pkm-publish/
     ├── soia-pkm-clip-drive/   ├── soia-pkm-bootstrap/
-    ├── soia-pkm-organize/     └── soia-pkm-reading-plan/
+    ├── soia-pkm-organize/     ├── soia-pkm-reading-plan/
+    │                          └── soia-pkm-library/
 ```
 
 每个 skill 一个文件夹，独立 `SKILL.md`（frontmatter 含 `name` + `description`）+ 自己的 `scripts/`。
