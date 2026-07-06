@@ -18,7 +18,7 @@ description: 把任意网页/博客文章一键归档到 Obsidian vault。用正
 
 ## 落地（clip 家族统一规范）
 
-- 路径：`40_阅读与摘抄/10_文章摘抄/<年>/YYYY-MM-DD-<来源>-<作者>-<标题>.md`（来源如 博客 / Substack / Medium）
+- 路径：`40_图书视频馆/10_文章摘抄/<年>/YYYY-MM-DD-<来源>-<作者>-<标题>.md`（来源如 博客 / Substack / Medium）
 - frontmatter 同 clip 家族；正文 `## 摘要 / 原文 / 我的看法 / 关联`。
 - 归档后补摘要 + topics；走 `organize` 归位。
 

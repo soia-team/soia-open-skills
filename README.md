@@ -119,7 +119,7 @@ npx skills add soia-team/soia-open-skills
 ```bash
 # ~/.zshrc 或 ~/.bashrc
 export OBSIDIAN_VAULT=~/Documents/MyVault           # 必须
-export OBSIDIAN_ARTICLES="40_阅读与摘抄/10_文章摘抄"  # 可选，归档子目录
+export OBSIDIAN_ARTICLES="40_图书视频馆/10_文章摘抄"  # 可选，归档子目录
 ```
 
 或每次调脚本时用 `--vault` 覆盖。

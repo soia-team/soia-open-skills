@@ -17,7 +17,7 @@ description: 把微信公众号文章一键归档到 Obsidian vault。抓 mp.wei
 
 ## 落地（clip 家族统一规范）
 
-- 路径：`40_阅读与摘抄/10_文章摘抄/<年>/YYYY-MM-DD-公众号-<作者>-<标题>.md`
+- 路径：`40_图书视频馆/10_文章摘抄/<年>/YYYY-MM-DD-公众号-<作者>-<标题>.md`
 - frontmatter：`tags:[文章摘抄]`、`source: 公众号`、`url`、`author`、`published_at`、`captured_at`、`topics:[]`、`content_complete`
 - 正文段：`## 摘要`（AI 补）、`## 原文`、`## 我的看法`（留空）、`## 关联`
 - 归档后 AI 补摘要 + topics；之后走 `organize` 归位到月份。

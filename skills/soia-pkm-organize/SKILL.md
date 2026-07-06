@@ -18,7 +18,7 @@ PKM 闭环的**整理环节**：把杂乱的收藏规整成结构化、可检索
 
 ## 底层脚本（机械层，organize 调用）
 
-- `rebuild_moc.py`：扫全部文章 topics，重建 `_MOC/` 两级地图。
+- `scripts/rebuild_moc.py`：扫全部文章 topics，重建 `_MOC/` 两级地图。支持 `--vault`/`OBSIDIAN_VAULT` 指定库路径，分类表可用 `_MOC/.categories.json` 按库覆盖默认值（见脚本 `--help`）。
 - `backfill_reading_records.py`：书库 → 阅读记录补齐（读书线）。
 - 按月归位：`mv <年>/*.md <年>/<月>/`（按文件名日期）。
 

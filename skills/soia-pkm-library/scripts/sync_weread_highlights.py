@@ -15,7 +15,7 @@
   python3 sync_weread_highlights.py --book-id <bookId> # 直接按 bookId
 
   --vault / OBSIDIAN_VAULT env 指定 vault 根目录，--base 覆盖书库相对路径
-  （默认 40_阅读与摘抄/30_个人书库）。以上参数可与任意 mode 组合，例如：
+  （默认 40_图书视频馆/30_个人书库）。以上参数可与任意 mode 组合，例如：
   python3 sync_weread_highlights.py --vault ~/MyVault --all
 
 数据流：
@@ -49,7 +49,7 @@ from pathlib import Path
 API = "https://i.weread.qq.com/api/agent/gateway"
 SKILL_VERSION = "1.0.3"
 
-DEFAULT_BASE = "40_阅读与摘抄/30_个人书库"
+DEFAULT_BASE = "40_图书视频馆/30_个人书库"
 # 阅读记录生命周期状态目录（默认值，可用 --config 覆盖 record_status_dirs）
 DEFAULT_RECORD_STATUS_DIRS = ["已完成", "在读", "暂停", "搁置"]
 

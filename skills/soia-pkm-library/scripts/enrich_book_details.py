@@ -8,7 +8,7 @@
   python3 enrich_book_details.py --refresh-chapters     # 只刷新被截断的章节目录
 
   --vault / OBSIDIAN_VAULT env 指定 vault 根目录，--base 覆盖书库相对路径
-  （默认 40_阅读与摘抄/30_个人书库）。可与上述任意模式组合，例如：
+  （默认 40_图书视频馆/30_个人书库）。可与上述任意模式组合，例如：
   python3 enrich_book_details.py --vault ~/MyVault 系统之美
 
 写入位置：
@@ -33,7 +33,7 @@ from pathlib import Path
 API = "https://i.weread.qq.com/api/agent/gateway"
 SKILL_VERSION = "1.0.3"
 
-DEFAULT_BASE = "40_阅读与摘抄/30_个人书库"
+DEFAULT_BASE = "40_图书视频馆/30_个人书库"
 
 
 def call(name, **p):

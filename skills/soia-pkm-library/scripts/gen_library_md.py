@@ -4,13 +4,12 @@
 用法：
   python3 gen_library_md.py                       # 用 --vault/OBSIDIAN_VAULT + 默认书库相对路径
   python3 gen_library_md.py --vault ~/MyVault
-  python3 gen_library_md.py --base 40_阅读与摘抄/30_个人书库
+  python3 gen_library_md.py --base 40_图书视频馆/30_个人书库
   python3 gen_library_md.py --config my_categories.json
   python3 gen_library_md.py --output /tmp/preview.md    # 干跑，不覆盖 vault 里的总览文件
 
 vault 路径解析优先级：--vault > OBSIDIAN_VAULT env > 当前目录。
-书库相对路径默认 `40_阅读与摘抄/30_个人书库`，可用 --base 覆盖（未来 vault 重构
-为「图书/视频馆下设云盘区」时，只需改这一个参数）。
+书库相对路径默认 `40_图书视频馆/30_个人书库`，可用 --base 覆盖。
 """
 import argparse
 import json
@@ -19,7 +18,7 @@ import sys
 from pathlib import Path
 from collections import defaultdict
 
-DEFAULT_BASE = "40_阅读与摘抄/30_个人书库"
+DEFAULT_BASE = "40_图书视频馆/30_个人书库"
 
 # 一级分类显示顺序与图标（默认值，可用 --config 的 JSON 覆盖）
 DEFAULT_CATEGORY_ORDER = [

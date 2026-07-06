@@ -22,8 +22,8 @@ DIRS = [
     "10_工作台/00_Inbox",
     "20_资料库",
     "30_日志与思考",
-    "40_阅读与摘抄/10_文章摘抄/_模板",
-    "40_阅读与摘抄/10_文章摘抄/_MOC",
+    "40_图书视频馆/10_文章摘抄/_模板",
+    "40_图书视频馆/10_文章摘抄/_MOC",
     "50_写作与发布/10_草稿",
     "50_写作与发布/20_发布",
     "90_系统归档",
@@ -41,7 +41,7 @@ ROOT_AGENTS = """# AGENTS.md · Vault 全局规则
 - `10_工作台/`    进行中的工作 + `00_Inbox/`
 - `20_资料库/`    长期参考资料（Resource）
 - `30_日志与思考/` 日记 / 对话纪要（时间线）
-- `40_阅读与摘抄/` 读书与文章（Resource 专项）
+- `40_图书视频馆/` 读书与文章（Resource 专项）
 - `50_写作与发布/` 原创草稿与发布
 - `90_系统归档/`  不再活跃的历史（Archive）
 
@@ -58,7 +58,7 @@ ROOT_AGENTS = """# AGENTS.md · Vault 全局规则
 由 soia-pkm-bootstrap 生成。
 """
 
-READ_AGENTS = """# 40_阅读与摘抄 · AGENTS.md
+READ_AGENTS = """# 40_图书视频馆 · AGENTS.md
 
 > 文章摘抄放 `10_文章摘抄/<年>/`，命名 `YYYY-MM-DD-<来源>-<作者>-<标题>.md`。
 > frontmatter 必填：`tags:[文章摘抄]`、`source`、`url`、`author`、`topics:[]`、`captured_at`。
@@ -123,8 +123,8 @@ HANDBOOK = """# 使用手册
 
 FILES = {
     "AGENTS.md": ROOT_AGENTS,
-    "40_阅读与摘抄/AGENTS.md": READ_AGENTS,
-    "40_阅读与摘抄/10_文章摘抄/_模板/文章模板.md": ARTICLE_TMPL,
+    "40_图书视频馆/AGENTS.md": READ_AGENTS,
+    "40_图书视频馆/10_文章摘抄/_模板/文章模板.md": ARTICLE_TMPL,
     ".obsidian/snippets/wide-page.css": WIDE_CSS,
     "00_系统/使用手册.md": HANDBOOK,
 }

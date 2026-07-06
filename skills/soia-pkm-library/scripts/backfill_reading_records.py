@@ -11,11 +11,11 @@
 用法：
   python3 backfill_reading_records.py                       # 用 --vault/OBSIDIAN_VAULT + 默认书库相对路径
   python3 backfill_reading_records.py --vault ~/MyVault
-  python3 backfill_reading_records.py --base 40_阅读与摘抄/30_个人书库
+  python3 backfill_reading_records.py --base 40_图书视频馆/30_个人书库
   python3 backfill_reading_records.py --config my_backfill.json
 
 vault 路径解析优先级：--vault > OBSIDIAN_VAULT env > 当前目录。
-书库相对路径默认 `40_阅读与摘抄/30_个人书库`，可用 --base 覆盖。
+书库相对路径默认 `40_图书视频馆/30_个人书库`，可用 --base 覆盖。
 """
 import argparse
 import json
@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 from collections import defaultdict
 
-DEFAULT_BASE = "40_阅读与摘抄/30_个人书库"
+DEFAULT_BASE = "40_图书视频馆/30_个人书库"
 
 DEFAULT_STATUS = "待读"
 DEFAULT_ICON = "📥"
