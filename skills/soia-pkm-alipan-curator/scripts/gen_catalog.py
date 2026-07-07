@@ -79,6 +79,8 @@ def main():
     ap.add_argument('--scan-dir',required=True); ap.add_argument('--out',required=True)
     ap.add_argument('--moves'); ap.add_argument('--deletes'); ap.add_argument('--roots')
     ap.add_argument('--title',default='云盘馆藏总览'); ap.add_argument('--drive',default='备份盘')
+    ap.add_argument('--search-dir',help='额外输出:按区分的全文检索索引目录(每文件一行,只搜不看)')
+    ap.add_argument('--junk',default='',help='逗号分隔的路径前缀,其下文件不入检索索引(如模板碎片区)')
     a=ap.parse_args()
     recs=load(a.scan_dir,a.moves,a.deletes,a.roots); ch=build(recs)
 
@@ -109,9 +111,12 @@ def main():
     tot_d=tot_f=tot_s=0; rowsum=[]
     for r in roots:
         d,f,s=stats(r); tot_d+=d+1; tot_f+=f; tot_s+=s; rowsum.append((recs[r]['name'],d+1,f,s,recs[r].get('id')))
+    out.append(f"---\ntype: moc\ntitle: {a.title}\ntags: [MOC, 云盘, 全盘索引]\n---\n")
     out.append(f"# ☁️ {a.title}\n")
-    out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 折叠标题浏览，点资源行 🔗 直达网盘看文件")
-    out.append("> 两层：本文件=全盘索引（导航）；`云盘馆藏.base`=15张精选卡（策展）。整理逻辑见 `20_云盘地图/` 各《深度分类方案》。\n")
+    out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 折叠标题浏览，点资源行 🔗 直达网盘")
+    search_nav = " ▸ **搜单个文件** → `20_云盘地图/_全文检索/`（每区一份全文件清单，Ctrl+F/全局搜）" if a.search_dir else ""
+    out.append(f"> 三样各司其职：**本文件**=浏览结构（清爽到资源级）；[[云盘馆藏.base|🃏 精选卡]]=15张策展卡；**_全文检索/**=搜任意单文件。{search_nav}")
+    out.append("> 分类逻辑见 `20_云盘地图/` 各《深度分类方案》。\n")
     out.append("| 区 | 直达 | 目录 | 文件 | 体量 |")
     out.append("|---|---|---:|---:|---:|")
     for nm,d,f,s,fid in rowsum:
@@ -151,5 +156,39 @@ def main():
         emit(r, 1)
     open(a.out,'w').write("\n".join(x for x in out if x is not None)+"\n")
     print(f"OK {a.out} · {sum(1 for x in out if x)} 行 · {tot_d} 目录")
+
+    if a.search_dir:
+        os.makedirs(a.search_dir, exist_ok=True)
+        junk=[j for j in a.junk.split(',') if j]
+        NNp=re.compile(r'^\d{2}[_.]')
+        def resource_of(p):
+            segs=p.split('/')
+            for i in range(2,len(segs)):
+                if not NNp.match(segs[i]): return '/'.join(segs[:i+1])
+            return '/'.join(segs[:-1])
+        # 收集每区文件
+        zfiles=defaultdict(list)
+        for p,r in recs.items():
+            if r.get('dir'): continue
+            if any(p.startswith(j) for j in junk): continue
+            zfiles[p.split('/')[1]].append(p)
+        idx_total=0
+        for zone in sorted(zfiles):
+            files=sorted(zfiles[zone])
+            idx_total+=len(files)
+            by_res=defaultdict(list)
+            for p in files: by_res[resource_of(p)].append(p)
+            lines=[f"---\ntags: [云盘检索]\n区: {zone}\n---\n",
+                   f"# 🔍 {zone} · 全文检索索引\n",
+                   f"> 仅供 Ctrl+F / 全局搜索定位**单个文件**（共 {len(files):,} 个）；浏览结构请用 [[00_馆藏总览]]。**别在编辑模式久留（文件大）**。\n"]
+            for res in sorted(by_res):
+                rname=res.split('/',2)[-1] if res.count('/')>=2 else res
+                lines.append(f"\n## {rname}")
+                for p in sorted(by_res[res]):
+                    rel=p[len(res)+1:] if p.startswith(res+'/') else recs[p]['name']
+                    lines.append(f"- {rel} · {human(recs[p].get('size'))}")
+            safe=zone.replace('/','_')
+            open(os.path.join(a.search_dir, safe+'.md'),'w').write("\n".join(lines)+"\n")
+        print(f"检索索引: {a.search_dir} · {len(zfiles)}个区文件 · {idx_total:,}行文件条目")
 
 if __name__=='__main__': main()
