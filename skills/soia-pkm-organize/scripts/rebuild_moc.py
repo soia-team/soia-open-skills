@@ -12,7 +12,7 @@ built-in default and can be overridden per-vault with a JSON file — see --help
 Usage:
     python3 rebuild_moc.py --vault /path/to/vault
     python3 rebuild_moc.py --vault . --date 2026-07-02
-    OBSIDIAN_VAULT=~/MyVault python3 rebuild_moc.py
+    python3 rebuild_moc.py --vault <vault-path>
 
 Per-vault category override (optional):
     Put `<vault>/40_图书视频馆/10_文章摘抄/_MOC/.categories.json` shaped like
