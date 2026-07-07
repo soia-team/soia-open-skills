@@ -3,16 +3,18 @@
 # 这个 wrapper 负责「先调用用户原有的 notify 命令，再触发 vault 会话日志脚本」。
 #
 # 接入方式（写进 config.toml，见 ../references/session-log-setup.md）：
-#   notify = ["/绝对路径/soia-pkm-maintain/scripts/codex_notify_wrapper.sh", "--vault", "<vault绝对路径>"]
+#   notify = ["/绝对路径/soia-pkm-maintain/scripts/codex_notify_wrapper.sh", "--vault", "<vault绝对路径>", "--log-dir", "<vault内日志目录>"]
 #
 # 不要改这个脚本来写死个人路径。vault 通过 --vault 或私有 env 文件里的 OBSIDIAN_VAULT 传入。
+# 日志目录通过 --log-dir 或私有 env 文件里的 SOIA_SESSION_LOG_DIR 传入。
 #
 # 如果原本已有 notify 需要保留，用 --original-count N -- 传入原命令的固定参数：
-#   notify = ["/path/codex_notify_wrapper.sh", "--vault", "<vault>", "--original-count", "2", "--", "/old/program", "turn-ended"]
+#   notify = ["/path/codex_notify_wrapper.sh", "--vault", "<vault>", "--log-dir", "<vault内日志目录>", "--original-count", "2", "--", "/old/program", "turn-ended"]
 # Codex 追加的事件 JSON 会被 wrapper 继续转发给原命令。
 
 AGENT="Codex"
 VAULT_PATH="${OBSIDIAN_VAULT:-}"
+SESSION_LOG_DIR="${SOIA_SESSION_LOG_DIR:-}"
 ORIGINAL_COUNT=0
 EVENT_ARGS=()
 POST_DASH=()
@@ -47,6 +49,10 @@ while [ $# -gt 0 ]; do
       VAULT_PATH="$2"
       shift 2
       ;;
+    --log-dir)
+      SESSION_LOG_DIR="$2"
+      shift 2
+      ;;
     --original-count)
       ORIGINAL_COUNT="$2"
       shift 2
@@ -72,6 +78,8 @@ elif [ "${#POST_DASH[@]}" -gt 0 ]; then
 fi
 
 # 触发 vault 会话日志脚本；失败不应影响 Codex 主流程。
-"$SCRIPT_DIR/session_end_log.sh" --agent "$AGENT" --vault "$VAULT_PATH" 2>/dev/null || true
+LOG_ARGS=(--agent "$AGENT" --vault "$VAULT_PATH")
+[ -n "$SESSION_LOG_DIR" ] && LOG_ARGS+=(--log-dir "$SESSION_LOG_DIR")
+"$SCRIPT_DIR/session_end_log.sh" "${LOG_ARGS[@]}" 2>/dev/null || true
 
 exit 0

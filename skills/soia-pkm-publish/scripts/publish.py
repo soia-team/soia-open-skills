@@ -37,7 +37,7 @@ def main():
     app_id = os.environ.get("WECHAT_APP_ID")
     secret = os.environ.get("WECHAT_APP_SECRET")
     if not (app_id and secret):
-        print("❌ 缺 WECHAT_APP_ID / WECHAT_APP_SECRET（存 .env，勿提交 Git）")
+        print("❌ 缺 WECHAT_APP_ID / WECHAT_APP_SECRET：请放到私有 env 文件或进程环境，勿提交 Git")
         sys.exit(1)
 
     # 3. 微信 API（待实现的框架）：

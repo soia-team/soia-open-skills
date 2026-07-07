@@ -9,22 +9,20 @@ Prerequisites:
   3. Copy api_id and api_hash
 
 Usage:
-    # Put these in a private env file such as ~/.config/soia-pkm/env,
-    # or pass SOIA_PKM_ENV_FILE=/private/path/env.
-    export TELEGRAM_API_ID=12345678
-    export TELEGRAM_API_HASH=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    # Put TELEGRAM_API_ID and TELEGRAM_API_HASH in a private env file
+    # such as ~/.config/soia-pkm/env, or pass SOIA_PKM_ENV_FILE.
     python3 generate_telegram_session.py
 
 The script will prompt for:
   - Your phone number (with country code, e.g. +86XXXXXXXXXXX)
   - Confirmation code (sent via Telegram app, NOT SMS)
-  - 2FA password (if enabled)
+  - 2FA credential (if enabled)
 
 It prints a session_string. Save it to a private env file:
 
     ~/.config/soia-pkm/env
 
-⚠️ Session string is equivalent to your account password. Keep it private.
+⚠️ Session string is equivalent to an account credential. Keep it private.
    Never commit to git. If compromised, revoke via Telegram → Settings →
    Devices → end the session.
 
@@ -71,7 +69,7 @@ print()
 print("You will be prompted for:")
 print("  - Phone number (with country code)")
 print("  - Confirmation code (sent via Telegram app, NOT SMS!)")
-print("  - 2FA password (if enabled)")
+print("  - 2FA credential (if enabled)")
 print()
 
 with TelegramClient(StringSession(), api_id, api_hash) as client:
@@ -93,9 +91,8 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
     print("  $EDITOR ~/.config/soia-pkm/env")
     print()
     print("Add:")
-    print(f'  export TELEGRAM_SESSION_STRING="{session_string}"')
-    print(f"  export TELEGRAM_API_ID={api_id}")
-    print(f"  export TELEGRAM_API_HASH={api_hash}")
+    print('  export TELEGRAM_SESSION_STRING="<paste_the_session_string_printed_above>"')
+    print("Keep TELEGRAM_API_ID and TELEGRAM_API_HASH in the same private env file; they are not echoed here.")
     print()
     print("Then test:")
     print("  python3 sync_telegram_saved.py --dry-run")

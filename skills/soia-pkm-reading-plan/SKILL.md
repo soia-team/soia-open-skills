@@ -111,10 +111,7 @@ source: "[[<来源文章>]]"   # 模式 A/B 才有
 
 ## 环境变量
 
-```bash
-export OBSIDIAN_VAULT=~/Documents/MyVault   # vault 根目录
-export WEREAD_API_KEY=wrk-xxxxxxxx          # 可选，联动微信读书数据
-```
+脚本优先读取 `--vault <vault路径>`、进程环境或私有 env 文件。可选变量名包括 `OBSIDIAN_VAULT` 与 `WEREAD_API_KEY`；不要在开源 skill、vault 正文或 shell 启动文件中写入实际值。
 
 ## 异常处理
 

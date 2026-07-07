@@ -42,7 +42,7 @@ vault 用久了会积累三类"基础设施债"：
    拿到四类发现：死链 wikilink / 重复文件名 / 主标签漂移 / 过期文章。
 2. AI 汇总写周简报，落地路径：
    ```
-   <vault>/30_日志与思考/40_周维护简报/<YYYY>-W<ISO周数>-vault周报.md
+   <vault>/<周报目录>/<YYYY>-W<ISO周数>-vault周报.md
    ```
    例：`2026-W28-vault周报.md`（ISO 周数取当天 `date.isocalendar()` 的周数，两位数补零）。
 
@@ -100,7 +100,7 @@ bash scripts/session_end_log.sh --vault <path> --agent Claude-Code
 bash scripts/session_end_log.sh --vault <path> --agent Codex
 ```
 
-所有脚本共享同一套参数化约定：`--vault <path>` 或私有 env 文件里的 `OBSIDIAN_VAULT`（二选一，`--vault` 优先），不硬编码任何具体 vault 路径。私有 env 优先级：`$SOIA_PKM_ENV_FILE` > `~/.config/soia-pkm/env` > `~/.soia-pkm.env`。
+所有脚本共享同一套参数化约定：`--vault <path>` 或私有 env 文件里的 `OBSIDIAN_VAULT`（二选一，`--vault` 优先），不硬编码任何具体 vault 路径。会话日志目录可用 `--log-dir <vault内相对目录>` 或私有 env 的 `SOIA_SESSION_LOG_DIR` 覆盖；默认是 `30_日志与思考/20_AI协作日志`。私有 env 优先级：`$SOIA_PKM_ENV_FILE` > `~/.config/soia-pkm/env` > `~/.soia-pkm.env`。
 
 ## 边界与异常
 

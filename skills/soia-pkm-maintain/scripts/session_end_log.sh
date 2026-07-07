@@ -3,13 +3,14 @@
 # （soia-pkm-maintain skill 机械层；工作流③ AI 会话日志接入的底层脚本）
 #
 # 用法：
-#   session_end_log.sh --vault <vault路径> [--agent <名称>]
+#   session_end_log.sh --vault <vault路径> [--agent <名称>] [--log-dir <vault内相对目录>]
 #   session_end_log.sh [--agent <名称>]  # 也可从私有 env 文件读取 OBSIDIAN_VAULT
 #
 # 参数：
 #   --vault <path>   vault 根目录（未传时取私有 env 文件里的 OBSIDIAN_VAULT；两者都没有则静默退出）
 #   --agent <name>   agent 名称，决定日志子目录和节流状态文件（默认 Claude-Code；
 #                    Codex 场景传 --agent Codex）
+#   --log-dir <rel>  vault 内日志根目录；也可用私有 env 的 SOIA_SESSION_LOG_DIR 覆盖
 #
 # 触发场景与节流：
 #   - Claude Code 的 SessionEnd hook 每次会话结束触发一次，天然是"一次会话一条快照"。
@@ -17,7 +18,8 @@
 #     日志会刷屏。所以本脚本用 git status --porcelain 输出内容的 md5 做节流：跟上次
 #     落盘时的状态一致就直接退出，不重复写快照，只有改动内容变化时才追加。
 #   - 节流状态文件：<vault>/.git/soia-session-log-<agent>.state
-#   - 节流对比前会先过滤掉本脚本自己写的日志目录（30_日志与思考/20_Agent工作日志），
+#   - 节流对比前会先过滤掉本脚本自己写的日志目录（默认 30_日志与思考/20_AI协作日志，
+#     可由 --log-dir / SOIA_SESSION_LOG_DIR 覆盖），
 #     否则第一次创建当天日志文件后，这个新文件本身在 git status 里从"不存在"变成
 #     "??"，会被误判成"内容变了"，多写一条空快照——过滤掉这个自引用噪音后，只有
 #     vault 里其他地方的真实改动才会触发新快照。
@@ -32,6 +34,7 @@
 #   - 不做任何 git 操作（不 add/commit/push），只读 git status。
 
 AGENT="Claude-Code"
+SESSION_LOG_DIR="${SOIA_SESSION_LOG_DIR:-30_日志与思考/20_AI协作日志}"
 
 load_private_env() {
   local candidates=()
@@ -61,6 +64,10 @@ while [ $# -gt 0 ]; do
       VAULT="$2"
       shift 2
       ;;
+    --log-dir)
+      SESSION_LOG_DIR="$2"
+      shift 2
+      ;;
     *)
       shift
       ;;
@@ -72,9 +79,18 @@ cd "$VAULT" 2>/dev/null || exit 0
 
 RAW_CHANGES=$(git -c core.quotepath=false status --porcelain 2>/dev/null)
 [ -z "$RAW_CHANGES" ] && exit 0
+SESSION_LOG_DIR="${SESSION_LOG_DIR#/}"
+SESSION_LOG_DIR="${SESSION_LOG_DIR%/}"
 # 过滤掉本脚本自己的日志目录：既过滤完整路径（正常情况），也过滤 git 把全新目录
-# 折叠成单独一行 "?? 30_日志与思考/" 的极端情况（仅发生在该目录第一次被追踪之前）
-CHANGES=$(printf '%s\n' "$RAW_CHANGES" | grep -E -v -- '30_日志与思考/$|30_日志与思考/20_Agent工作日志')
+# 折叠成单独一行的情况（仅发生在该目录第一次被追踪之前）
+CHANGES=$(printf '%s\n' "$RAW_CHANGES" | awk -v log="$SESSION_LOG_DIR" '
+  {
+    path=$0
+    sub(/^..[[:space:]]+/, "", path)
+    if (path == log || index(path, log "/") == 1) next
+    print
+  }
+')
 [ -z "$CHANGES" ] && exit 0  # 剩下的改动只有本脚本自己的日志目录，视为无实质改动
 
 STATE_DIR="$VAULT/.git"
@@ -92,7 +108,7 @@ fi
 
 TODAY=$(date +%F)
 NOW=$(date +%H:%M)
-LOGDIR="$VAULT/30_日志与思考/20_Agent工作日志/$(date +%Y)/$AGENT"
+LOGDIR="$VAULT/$SESSION_LOG_DIR/$(date +%Y)/$AGENT"
 mkdir -p "$LOGDIR"
 LOGFILE="$LOGDIR/$TODAY.md"
 if [ ! -f "$LOGFILE" ]; then
