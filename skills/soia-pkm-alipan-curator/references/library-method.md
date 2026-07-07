@@ -7,6 +7,7 @@
 对齐正规图书馆模式：**实体资源在云盘，Obsidian 里只存索引/卡片，不搬文件进来**。核心是**浏览 / 检索 / 策展 三样各司其职**（别硬塞进一个文件，也别过度建库）：
 
 > **🔑 生成器铁律**：`00_馆藏总览` 和 `_全文检索/` 都由本 skill 的 `scripts/gen_catalog.py` 产出，**靠调用技能生成，绝不把脚本写进用户的 OB vault**（OB 只放产出）。扫描数据（JSONL）是运行时数据，放 `/tmp` 或私有 env，不进 vault 也不进 skill 仓库。
+> **⚠️ 网盘深链格式（实盘校准，别猜）**：备份盘文件夹 = `https://www.alipan.com/drive/file/all/backup/<file_id>`（`folder/<id>` 会弹回首页）；用 `--url-prefix` 传，默认已是此格式；file_id 来自扫描数据。
 > 命令：`python3 <本skill>/scripts/gen_catalog.py --scan-dir <扫描JSONL目录> --out <总览.md> --search-dir <检索目录> [--moves f --deletes f --roots f --junk <碎片前缀>]`
 
 ### 1. 00_馆藏总览（浏览：折叠树 + 资源级表格）
