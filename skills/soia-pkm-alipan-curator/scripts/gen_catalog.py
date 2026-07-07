@@ -184,9 +184,12 @@ def main():
             for res in sorted(by_res):
                 rname=res.split('/',2)[-1] if res.count('/')>=2 else res
                 lines.append(f"\n## {rname}")
+                lines.append("\n| 文件 | 大小 |")
+                lines.append("|---|---:|")
                 for p in sorted(by_res[res]):
                     rel=p[len(res)+1:] if p.startswith(res+'/') else recs[p]['name']
-                    lines.append(f"- {rel} · {human(recs[p].get('size'))}")
+                    rel=rel.replace('|','·')
+                    lines.append(f"| {rel} | {human(recs[p].get('size'))} |")
             safe=zone.replace('/','_')
             open(os.path.join(a.search_dir, safe+'.md'),'w').write("\n".join(lines)+"\n")
         print(f"检索索引: {a.search_dir} · {len(zfiles)}个区文件 · {idx_total:,}行文件条目")

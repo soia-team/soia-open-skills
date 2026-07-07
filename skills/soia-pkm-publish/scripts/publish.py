@@ -12,6 +12,12 @@ import argparse
 import subprocess
 from pathlib import Path
 
+from soia_env import load_private_env
+
+# 自动探测 $SOIA_PKM_ENV_FILE / ~/.config/soia-pkm/env / ~/.soia-pkm.env，
+# 把 WECHAT_APP_ID / WECHAT_APP_SECRET 等 setdefault 进环境（不覆盖已有进程变量）。
+load_private_env()
+
 
 def main():
     ap = argparse.ArgumentParser()
