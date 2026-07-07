@@ -19,7 +19,7 @@ npx skills add soia-team/soia-open-skills
 
 跨 agent 通用——Claude Code、Cursor、Codex、Gemini、Kimi 都能装。
 
-[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单13) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
+[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单14) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
 
 </div>
 
@@ -54,7 +54,7 @@ npx skills add soia-team/soia-open-skills
 
 ---
 
-## Skills 清单（13）
+## Skills 清单（14）
 
 > **通用能力（所有 skill 共享）**
 > - 🤖 **支持的 AI**：跨 agent 通用——Claude Code、Codex、Cursor、Gemini、Kimi、amp、Warp、Zed 等所有兼容 [skills.sh](https://skills.sh) 标准的 AI。一次写 `SKILL.md`，处处可用。
@@ -70,6 +70,7 @@ npx skills add soia-team/soia-open-skills
 | [`soia-pkm-clip-wechat`](./skills/soia-pkm-clip-wechat/) | 公众号文章 → vault | 🟡 SKILL.md 就绪，抓取脚本待 AI 生成 | 无 |
 | [`soia-pkm-clip-web`](./skills/soia-pkm-clip-web/) | 通用网页/博客 → vault | 🟡 同上 | Python `trafilatura` |
 | [`soia-pkm-clip-drive`](./skills/soia-pkm-clip-drive/) | 云盘 PDF/Word → vault | 🟡 同上 | Python `pypdf`/`python-docx` |
+| [`soia-pkm-clip-repo`](./skills/soia-pkm-clip-repo/) | GitHub 开源项目仓库 → vault「开源项目图书馆」索引 | ✅ 可用（脚本齐全：单仓归档 + 批量刷新）| 无（需本机一个 upstream clone 目录）|
 
 ### 🗂️ 整理
 
@@ -108,6 +109,7 @@ npx skills add soia-team/soia-open-skills
 | 你说 | 触发 |
 |------|------|
 | `归档这条 X：<URL>` | clip-x |
+| `归档这个项目 <github url>` | clip-repo |
 | `整理文章库` / `重建 MOC` | organize |
 | `给这篇补我的看法` | distill |
 | `把这些观点写成一篇` | compose |
@@ -173,8 +175,9 @@ soia-open-skills/
     ├── soia-pkm-clip-wechat/  ├── soia-pkm-bootstrap/
     ├── soia-pkm-clip-web/     ├── soia-pkm-reading-plan/
     ├── soia-pkm-clip-drive/   ├── soia-pkm-library/
-    ├── soia-pkm-organize/     ├── soia-pkm-alipan/
-    ├── soia-pkm-distill/      └── soia-pkm-alipan-curator/
+    ├── soia-pkm-clip-repo/    ├── soia-pkm-alipan/
+    ├── soia-pkm-organize/     └── soia-pkm-alipan-curator/
+    ├── soia-pkm-distill/
     └── soia-pkm-compose/
 ```
 
