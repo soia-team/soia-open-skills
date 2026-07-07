@@ -4,7 +4,9 @@
 
 1. **Fork** 这个仓库
 
-2. **在 `skills/` 下建一个新目录**，命名用小写连字符（如 `notion-to-obsidian`）：
+2. **先读技能规范**：[SKILL_SPEC.md](./SKILL_SPEC.md)。所有 public skill 必须遵守其中的路径、配置、secret、个人信息和验证口径约束。
+
+3. **在 `skills/` 下建一个新目录**，命名用小写连字符（如 `notion-to-obsidian`）：
 
    ```
    skills/your-skill-name/
@@ -13,7 +15,7 @@
        └── *.py
    ```
 
-3. **写 SKILL.md**，frontmatter 必须有：
+4. **写 SKILL.md**，frontmatter 必须有：
 
    ```yaml
    ---
@@ -22,22 +24,24 @@
    ---
    ```
 
-4. **路径参数化**：
+5. **路径参数化**：
    - 严禁硬编码 `/Users/xxx`、`/home/xxx` 等本地路径
+   - 严禁把维护者自己的 vault 子目录当作公共默认值（如某个中文 PARA 目录）
    - 用环境变量（如 `OBSIDIAN_VAULT`）+ 命令行 `--vault` 参数
    - 提供清晰的错误提示（"please set OBSIDIAN_VAULT or use --vault"）
 
-5. **不要 commit 任何 secret**：
+6. **不要 commit 任何 secret**：
    - 不 commit `.env`
    - 不 commit `*.session`
    - 不在代码里写真实 API key / token / 密码
    - 文档里举例用 `<YOUR_KEY>` 占位符
 
-6. **测试**：
+7. **测试**：
    - 至少给出 1 个端到端用例
    - 文档里说明如何手动验证
+   - 区分「静态检查通过」「已安装」「端到端测试通过」「已提交」，不要混用
 
-7. **提 PR**，说明：
+8. **提 PR**，说明：
    - 这个 skill 解决什么问题
    - 触发词是什么
    - 与其他 skill 的关系

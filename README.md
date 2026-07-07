@@ -11,7 +11,7 @@
 
 <br>
 
-**面向 Obsidian 的 `soia-pkm-*` 技能集 · 覆盖「收 → 整理 → 点 → 写 → 发」完整 PKM 闭环**
+**面向 Obsidian 的 `soia-pkm-*` 技能集 · 覆盖「收 → 整理 → 点 → 写 → 转化/发布」完整 PKM 闭环**
 
 ```bash
 npx skills add soia-team/soia-open-skills
@@ -44,6 +44,7 @@ npx skills add soia-team/soia-open-skills
       └─────────  飞轮：发布 → 心得喂回 vault → 更好的输入  ──┘
 
   支撑：soia-pkm-bootstrap（一句话从零搭 vault + 接入多 AI）
+        soia-pkm-transform（转化线：文章 → PDF/PPT/图片/试卷/脑图/播客/闪卡）
         soia-pkm-reading-plan（读书线：把书单排成可执行阅读计划）
         soia-pkm-library（书库线：微信读书同步 + 记录补齐 + 总览生成）
         soia-pkm-alipan（云盘线·原子层：aliyunpan CLI 可靠原子操作）
@@ -54,7 +55,7 @@ npx skills add soia-team/soia-open-skills
 
 ---
 
-## Skills 清单（14）
+## Skills 清单（15）
 
 > **通用能力（所有 skill 共享）**
 > - 🤖 **支持的 AI**：跨 agent 通用——Claude Code、Codex、Cursor、Gemini、Kimi、amp、Warp、Zed 等所有兼容 [skills.sh](https://skills.sh) 标准的 AI。一次写 `SKILL.md`，处处可用。
@@ -86,6 +87,12 @@ npx skills add soia-team/soia-open-skills
 | [`soia-pkm-compose`](./skills/soia-pkm-compose/) | **观点 → 文章草稿**（你的观点为骨、摘抄为料）| ✅ 可用（纯 LLM，无需脚本）| `distill` 产出的观点 |
 | [`soia-pkm-publish`](./skills/soia-pkm-publish/) | **一稿 → 多平台**：公众号排版+推草稿箱 / X thread / 小红书 | 🟡 渲染 `render.py` 可用；微信推送需配 `.env` 凭据 | `compose` 的草稿 + 微信公众号 API |
 
+### 🔁 转化 · 文章 → 产物
+
+| skill | 说明 | 现在能用? | 依赖 |
+|-------|------|----------|------|
+| [`soia-pkm-transform`](./skills/soia-pkm-transform/) | **文章 → 多产物**：PDF / PPT / 图片长图 / 试卷 / 脑图 / 播客 / 闪卡 / 报告；公共路由层，可选调用 Obsidian、NotebookLM、Codex 内置文档/图片/PPT 能力与 `publish` | ✅ 可用（路由 skill + 配置模板；具体产物取决于本机 provider） | vault 文章或 URL；NotebookLM / Obsidian / Codex 内置能力按需可选 |
+
 ### 🧰 支撑
 
 | skill | 说明 | 现在能用? | 依赖 |
@@ -113,6 +120,7 @@ npx skills add soia-team/soia-open-skills
 | `整理文章库` / `重建 MOC` | organize |
 | `给这篇补我的看法` | distill |
 | `把这些观点写成一篇` | compose |
+| `转换文章为 PPT` / `把这篇转成脑图` | transform |
 | `把这篇发成公众号` | publish |
 | `从零搭个知识库` | bootstrap |
 
@@ -120,8 +128,8 @@ npx skills add soia-team/soia-open-skills
 
 ```bash
 # ~/.zshrc 或 ~/.bashrc
-export OBSIDIAN_VAULT=~/Documents/MyVault           # 必须
-export OBSIDIAN_ARTICLES="40_图书视频馆/10_文章摘抄"  # 可选，归档子目录
+export OBSIDIAN_VAULT=~/Documents/MyVault                 # 必须
+export OBSIDIAN_ARTICLES="<vault-relative-articles-dir>"   # 可选，归档子目录
 ```
 
 或每次调脚本时用 `--vault` 覆盖。
@@ -176,8 +184,8 @@ soia-open-skills/
     ├── soia-pkm-clip-web/     ├── soia-pkm-reading-plan/
     ├── soia-pkm-clip-drive/   ├── soia-pkm-library/
     ├── soia-pkm-clip-repo/    ├── soia-pkm-alipan/
-    ├── soia-pkm-organize/     └── soia-pkm-alipan-curator/
-    ├── soia-pkm-distill/
+    ├── soia-pkm-organize/     ├── soia-pkm-transform/
+    ├── soia-pkm-distill/      └── soia-pkm-alipan-curator/
     └── soia-pkm-compose/
 ```
 
@@ -194,7 +202,7 @@ soia-open-skills/
 
 ## 贡献
 
-欢迎 PR / issue。加 skill 请：① 放 `skills/<name>/` ② 有 `SKILL.md`（`name` + `description`，description ≤200 字）③ 路径 / key / 个人数据全用环境变量，严禁硬编码 ④ 至少 1 个端到端用例。详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+欢迎 PR / issue。加 skill 请：① 先读 [SKILL_SPEC.md](./SKILL_SPEC.md) ② 放 `skills/<name>/` ③ 有 `SKILL.md`（`name` + `description`，description ≤200 字）④ 路径 / key / 个人数据全用配置或环境变量，严禁硬编码 ⑤ 至少 1 个端到端用例。详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
 ## License
 

@@ -1,0 +1,98 @@
+# soia-pkm-transform public config example.
+# Copy to ~/.config/soia-pkm/transform.yml or point SOIA_PKM_TRANSFORM_CONFIG to it.
+# Keep secrets out of this file. Store provider auth in each provider's private auth flow.
+
+version: 1
+
+vault:
+  path_env: OBSIDIAN_VAULT
+  update_source_note: true
+
+outputs:
+  root: "outputs/transform"
+  date_partition: yearly
+  naming: "{date}-{source}-{title}-{target}"
+  pdf:
+    provider: obsidian
+    save: sibling
+  ppt:
+    provider: auto
+    format: pptx
+    save: output_root
+  image:
+    provider: auto
+    format: png
+    save: output_root
+  long_image:
+    provider: html_screenshot
+    format: png
+    save: output_root
+  quiz:
+    provider: auto
+    format: markdown
+    save: output_root
+  mindmap:
+    provider: auto
+    format: mermaid
+    save: output_root
+  podcast:
+    provider: notebooklm
+    format: mp3
+    save: output_root
+  flashcards:
+    provider: notebooklm
+    format: markdown
+    save: output_root
+  report:
+    provider: auto
+    format: markdown
+    save: output_root
+
+providers:
+  notebooklm:
+    enabled: auto
+    command: notebooklm
+    profile_env: NOTEBOOKLM_PROFILE
+    home_env: NOTEBOOKLM_HOME
+    language: zh_Hans
+    prefer_for:
+      - podcast
+      - video
+      - quiz
+      - flashcards
+      - mindmap
+      - report
+      - infographic
+  obsidian:
+    enabled: auto
+    prefer_for:
+      - pdf
+  local:
+    enabled: true
+    prefer_for:
+      - ppt
+      - image
+      - long_image
+      - quiz
+      - mindmap
+      - report
+  publish:
+    enabled: auto
+    prefer_for:
+      - wechat
+      - x_thread
+      - xhs
+
+validation:
+  pdf:
+    check_pages: true
+    render_sample: true
+  ppt:
+    render_preview: true
+    check_overlaps: true
+  image:
+    check_dimensions: true
+  quiz:
+    check_answer_count: true
+  mindmap:
+    check_syntax: true
