@@ -1,7 +1,7 @@
 ---
 name: soia-pkm-alipan
 version: 1.0.0
-description: 阿里云盘原子操作层 — 安装/登录 aliyunpan CLI、备份盘与资源库双盘切换、目录浏览、移动/重命名/删除、下载上传、容量查询。是 soia-pkm-alipan-curator（整理顾问/学习计划）的底层依赖。当用户说「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」时触发。
+description: 阿里云盘原子操作层 — 安装/登录 aliyunpan CLI（含登录态过期处理、非交互环境取码技巧）、备份盘与资源库双盘切换（--driveId 显式传参）、目录浏览、移动/重命名/删除、下载上传、容量查询、全盘 JSONL 爬虫扫描方法论。是 soia-pkm-alipan-curator（整理顾问/学习计划）的底层依赖。当用户说「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」「云盘登录过期了」「全盘扫描一下云盘」时触发。
 ---
 
 # soia-pkm-alipan — 阿里云盘原子操作层
@@ -24,9 +24,9 @@ aliyunpan who && aliyunpan quota
 ## 双盘模型（关键概念）
 
 一个账号两个盘，**共享同一容量配额**（用 `aliyunpan quota` 看总量）：
-- **备份盘** / **资源库**：`aliyunpan drive` 列出各盘 DriveID，`aliyunpan drive <driveId>` 切换
+- **备份盘** / **资源库**：`aliyunpan drive` 列出各盘 DriveID
 - 所有 `ls/mv/rename` 只作用于**当前盘**；跨盘移动 CLI 不支持，需在 App 里手动操作
-- 脚本里每次会话开头都应显式切盘：`aliyunpan drive <id> >/dev/null 2>&1`
+- ⚠️ **不要用 `aliyunpan drive <driveId>` 做全局切换**：该命令写全局配置，多代理/多脚本并发时会互相污染当前盘上下文。铁律是**每条命令都显式带 `--driveId`**（如 `aliyunpan ls --driveId <id> "/路径"`），而不是切换后再跑无盘参数的命令。详见 `references/ops-playbook.md` 一.5。
 
 ## 常用命令
 
@@ -60,3 +60,12 @@ aliyunpan ls "$DIR" </dev/null 2>/dev/null | \
 2. **删除/覆盖前先看**：`rm` 前先 `ls` 确认内容；同名冲突会自动加 `(1)` 后缀——移动前查目标是否已存在，避免产生 `xxx(1)` 重复目录。
 3. **高危操作留人**：清空目录、批量删除、跨盘手动迁移，列清单请用户确认或亲手操作。
 4. **凭据**：登录态在 `~/.config/aliyunpan/`（或 `ALIYUNPAN_CONFIG_DIR`），不要 cat 打印 token。
+
+## 深入实战手册
+
+以下场景遇到时先读 `references/ops-playbook.md`（2026-07 云盘整理战役实战沉淀），不要重新试错：
+- 安装/登录细节：两步授权+扫码流程、登录态约 3 天过期的症状与处理、非交互环境（无真 TTY）取二维码链接的技巧（伪终端 pty / 长驻进程读 stdout）
+- `--driveId` 显式传参铁律：为什么绝不能用 `aliyunpan drive <id>` 切全局盘（多代理并发会互相污染当前盘上下文）
+- 批量操作实战坑：批量 rename 的 cd 依赖坑与恢复方法、`ll` 输出里的 FILE ID 与直达链接拼法、移动改名不改 file_id 但跨盘移动会换 file_id、删除进回收站 30 天且回收站清空才真正释放配额
+- 全盘 JSONL 爬虫方法论：Python DFS 遍历 + nohup 后台 + 断点续扫 + progress 心跳 + errors 落盘的完整设计，以及登录瞬断成批报错、目录名含特殊空格报"指定目录不存在"两大坑的处理方式，和海量碎片区（>200 文件）的聚合剪枝规则
+- 防代理卡死纪律：长内容一律脚本落文件、对话回复限 15 行
