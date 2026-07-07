@@ -9,7 +9,7 @@
 3. 本文件默认建议。
 4. 当前 agent 实际可用工具。
 
-无法确认 provider 是否可用时，先做只读检查，例如 `command -v notebooklm`、`notebooklm auth check --test --json`、确认 Obsidian 是否能打开目标 vault。不要在未确认时直接承诺产物。
+无法确认 provider 是否可用时，先做只读检查，例如 `command -v notebooklm`、`notebooklm auth check --test --json`、确认 Obsidian 是否能打开目标 vault、确认 Open Design daemon health。不要在未确认时直接承诺产物。
 
 ## NotebookLM provider
 
@@ -25,6 +25,7 @@
 - 自动化前用 `notebooklm auth check --test --json` 验证认证，不能只看本地 cookie 是否存在。
 - 并行工作流不要依赖 `notebooklm use` 的全局上下文；优先在 notebook-scoped 命令里传 `-n <notebook-id>`。
 - 生成 artifact 后记录 `notebook_id`、`source_id`、`task_id` / `artifact_id`、下载路径。
+- 如果 `command -v notebooklm` 或 auth check 失败，本轮不能写「已调用 NotebookLM」；只能写「NotebookLM provider 不可用，缺少 CLI / 登录态 / 网络 / 账号权限」，并给出可重跑命令。
 
 常见命令形态：
 
@@ -52,6 +53,35 @@ notebooklm download slide-deck "<out.pptx>" --format pptx -n <notebook-id> -a <a
 | infographic | `generate infographic` -> `download infographic` |
 
 使用 NotebookLM 的好处是 source-grounded、低消耗本地上下文、支持多种 artifact 下载；不足是依赖账号、网络、非官方接口和生成队列。
+
+## Open Design / html-ppt provider
+
+适用：高质量 PPT/HTML deck、高密度信息图、长图、课程模块、技术分享、视觉探索。
+
+推荐用途：
+
+- `visual_dense`：用 HTML/CSS 做高密度信息海报，再用 managed Chromium 截图成 PNG。
+- `ppt`：用 `html-ppt` full-deck 模板生成 HTML deck，再按需要导出 PNG / PDF / PPTX。
+- `learning`：用 `course-module` / `presenter-mode-reveal`，保留学习目标、讲稿、自测题。
+- `workflow / architecture`：用 `knowledge-arch-blueprint`。
+- `AI-native / graph / tool`：用 `graphify-dark-graph`。
+
+可用性检查：
+
+```bash
+node -v
+pnpm -v
+pnpm tools-dev run web
+curl -s http://127.0.0.1:<daemon-port>/api/health
+```
+
+注意：
+
+- Open Design 要求 Node `~24`；如果当前 Node 不匹配，使用用户环境里的 Node 24，不要把路径写死进 skill。
+- 如果跳过 postinstall，需要先构建缺失的 workspace dist，再启动。按报错补依赖，不要静默失败。
+- `html-ppt/scripts/render.sh` 使用 Playwright managed Chromium；不要默认 fallback 到系统 Google Chrome，macOS 上容易被 profile / Crashpad 卡住。
+- 生成 deck 时必须从 template 出发，不要手写低质白底 bullet PPT。
+- 生成高密度图时，先写内容结构和视觉信息架构，再写 HTML；不要只做低信息量摘要卡。
 
 ## Obsidian provider
 

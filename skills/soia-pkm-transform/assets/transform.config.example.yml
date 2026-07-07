@@ -12,11 +12,22 @@ outputs:
   root: "outputs/transform"
   date_partition: yearly
   naming: "{date}-{source}-{title}-{target}"
+  default_content_mode:
+    pdf: preserve
+    ppt: learning
+    image: visual_dense
+    long_image: visual_dense
+    infographic: visual_dense
+    quiz: learning
+    mindmap: synthesize
+    podcast: synthesize
+    flashcards: learning
+    report: synthesize
   pdf:
     provider: obsidian
     save: sibling
   ppt:
-    provider: auto
+    provider: open_design
     format: pptx
     save: output_root
   image:
@@ -24,7 +35,11 @@ outputs:
     format: png
     save: output_root
   long_image:
-    provider: html_screenshot
+    provider: open_design
+    format: png
+    save: output_root
+  infographic:
+    provider: open_design
     format: png
     save: output_root
   quiz:
@@ -67,6 +82,21 @@ providers:
     enabled: auto
     prefer_for:
       - pdf
+  open_design:
+    enabled: auto
+    command: pnpm
+    node_version: "24"
+    prefer_for:
+      - ppt
+      - image
+      - long_image
+      - infographic
+    templates:
+      architecture: html-ppt-knowledge-arch-blueprint
+      technical: html-ppt-tech-sharing
+      course: html-ppt-course-module
+      dense_infographic: magazine-poster
+      ai_graph: html-ppt-graphify-dark-graph
   local:
     enabled: true
     prefer_for:
