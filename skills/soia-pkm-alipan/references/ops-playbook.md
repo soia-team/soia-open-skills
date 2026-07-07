@@ -34,8 +34,8 @@ aliyunpan --version         # 确认版本
 
 正确做法：**每条命令都显式带 `--driveId`**：
 ```bash
-aliyunpan ls --driveId <DRIVE_ID> "/目标目录/"
-aliyunpan mv --driveId <DRIVE_ID> "/源" "/目标目录/"
+aliyunpan ls --driveId "$DRIVE_ID" "/目标目录/"
+aliyunpan mv --driveId "$DRIVE_ID" "/源" "/目标目录/"
 ```
 这是本次整理战役全程多代理并发执行的安全前提，务必写进任何批量脚本的第一行原则。
 
