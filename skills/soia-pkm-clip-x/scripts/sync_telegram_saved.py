@@ -21,7 +21,12 @@ Environment variables:
     TELEGRAM_API_HASH       from my.telegram.org
     TELEGRAM_SESSION_STRING from generate_telegram_session.py
     OBSIDIAN_VAULT          Path to your Obsidian vault
-    OBSIDIAN_ARTICLES       Subdirectory for articles (default: "Articles")
+    OBSIDIAN_ARTICLES       Subdirectory for articles
+                            (defaults to "Articles")
+
+Private env files are auto-loaded from SOIA_PKM_ENV_FILE,
+~/.config/soia-pkm/env, or ~/.soia-pkm.env. Do not store secrets in
+the vault or committed skill repo.
 
 Usage:
     python3 sync_telegram_saved.py
@@ -29,6 +34,7 @@ Usage:
     python3 sync_telegram_saved.py --all
     python3 sync_telegram_saved.py --dry-run
     python3 sync_telegram_saved.py --vault /path/to/vault
+    python3 sync_telegram_saved.py --articles-dir <articles-subdir>
 
 Dependencies: pip install telethon
 """
@@ -42,6 +48,8 @@ import subprocess
 import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+from soia_env import env_source_hint, load_private_env
 
 try:
     from telethon import TelegramClient
@@ -62,25 +70,46 @@ X_URL_RE = re.compile(
 
 CST = timezone(timedelta(hours=8))
 
+DEFAULT_ARTICLES_DIR = "Articles"
+
+
+def looks_like_vault(path: Path) -> bool:
+    return (path / ".obsidian").is_dir() or (path / "AGENTS.md").is_file()
+
+
+def discover_vault_from_cwd() -> Path | None:
+    cur = Path.cwd().resolve()
+    for p in (cur, *cur.parents):
+        if looks_like_vault(p):
+            return p
+    return None
+
 
 def resolve_vault(cli_vault: str | None) -> Path:
     if cli_vault:
         p = Path(cli_vault).expanduser().resolve()
     else:
         env = os.environ.get("OBSIDIAN_VAULT")
-        if not env:
-            print("❌ No vault. Set OBSIDIAN_VAULT or pass --vault", file=sys.stderr)
-            sys.exit(1)
-        p = Path(env).expanduser().resolve()
-    if not p.exists():
+        if env:
+            p = Path(env).expanduser().resolve()
+        else:
+            p = discover_vault_from_cwd()
+            if not p:
+                print("❌ No vault path found. Run from the vault root, set OBSIDIAN_VAULT, or pass --vault <path>.", file=sys.stderr)
+                print(f"   Private env sources checked: {env_source_hint()}.", file=sys.stderr)
+                sys.exit(1)
+            print(f"ℹ️  Auto-detected vault from cwd: {p}", file=sys.stderr)
+    if not p.exists() or not p.is_dir():
         print(f"❌ Vault not found: {p}", file=sys.stderr)
         sys.exit(1)
     return p
 
 
-def resolve_article_root(vault: Path) -> Path:
-    sub = os.environ.get("OBSIDIAN_ARTICLES", "Articles")
-    return vault / sub
+def resolve_article_root(vault: Path, cli_articles_dir: str | None = None) -> Path:
+    sub = cli_articles_dir or os.environ.get("OBSIDIAN_ARTICLES")
+    if sub:
+        return vault / sub
+    return vault / DEFAULT_ARTICLES_DIR
 
 
 def find_archived_status_ids(article_root: Path) -> set[str]:
@@ -169,8 +198,10 @@ async def collect_x_urls(since_dt: datetime | None, limit: int | None) -> tuple[
     return results, n_scanned
 
 
-def call_archive(url: str, vault: Path, force: bool = False) -> tuple[str, str]:
+def call_archive(url: str, vault: Path, articles_dir: str | None = None, force: bool = False) -> tuple[str, str]:
     args = ["python3", str(ARCHIVE_SCRIPT), url, "--vault", str(vault)]
+    if articles_dir:
+        args.extend(["--articles-dir", articles_dir])
     if force:
         args.append("--force")
     proc = subprocess.run(args, capture_output=True, text=True, timeout=60)
@@ -184,6 +215,8 @@ def call_archive(url: str, vault: Path, force: bool = False) -> tuple[str, str]:
 
 
 def main():
+    load_private_env()
+
     ap = argparse.ArgumentParser(description="Sync Telegram Saved Messages via MTProto API")
     ap.add_argument("--days", type=int, default=7)
     ap.add_argument("--all", action="store_true")
@@ -191,10 +224,11 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--vault", help="Override OBSIDIAN_VAULT")
+    ap.add_argument("--articles-dir", help="Article archive dir relative to vault (overrides OBSIDIAN_ARTICLES)")
     args = ap.parse_args()
 
     vault = resolve_vault(args.vault)
-    article_root = resolve_article_root(vault)
+    article_root = resolve_article_root(vault, args.articles_dir)
 
     missing = [
         v
@@ -203,7 +237,7 @@ def main():
     ]
     if missing:
         print(f"❌ Missing env vars: {', '.join(missing)}", file=sys.stderr)
-        print("Run generate_telegram_session.py first.", file=sys.stderr)
+        print(f"Load them from a private env file ({env_source_hint()}) or run generate_telegram_session.py first.", file=sys.stderr)
         sys.exit(1)
 
     if args.all:
@@ -250,7 +284,7 @@ def main():
     ok, skip, fail = 0, 0, 0
     for i, u in enumerate(to_archive, 1):
         print(f"[{i}/{len(to_archive)}] {u['url']}", file=sys.stderr)
-        status, msg = call_archive(u["url"], vault, force=args.force)
+        status, msg = call_archive(u["url"], vault, articles_dir=args.articles_dir, force=args.force)
         if status == "archived":
             print(f"  ✓ {msg}", file=sys.stderr)
             ok += 1

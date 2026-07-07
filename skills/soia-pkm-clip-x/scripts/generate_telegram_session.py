@@ -9,6 +9,8 @@ Prerequisites:
   3. Copy api_id and api_hash
 
 Usage:
+    # Put these in a private env file such as ~/.config/soia-pkm/env,
+    # or pass SOIA_PKM_ENV_FILE=/private/path/env.
     export TELEGRAM_API_ID=12345678
     export TELEGRAM_API_HASH=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     python3 generate_telegram_session.py
@@ -18,10 +20,9 @@ The script will prompt for:
   - Confirmation code (sent via Telegram app, NOT SMS)
   - 2FA password (if enabled)
 
-It prints a session_string. Save it to your shell rc:
+It prints a session_string. Save it to a private env file:
 
-    echo 'export TELEGRAM_SESSION_STRING="1ApGNxxx..."' >> ~/.zshrc
-    source ~/.zshrc
+    ~/.config/soia-pkm/env
 
 ⚠️ Session string is equivalent to your account password. Keep it private.
    Never commit to git. If compromised, revoke via Telegram → Settings →
@@ -32,6 +33,8 @@ Dependencies: pip install telethon
 import os
 import sys
 
+from soia_env import env_source_hint, load_private_env
+
 try:
     from telethon.sync import TelegramClient
     from telethon.sessions import StringSession
@@ -39,13 +42,17 @@ except ImportError:
     print("❌ telethon not installed. Run: pip3 install telethon", file=sys.stderr)
     sys.exit(1)
 
+load_private_env()
+
 api_id = os.environ.get("TELEGRAM_API_ID")
 api_hash = os.environ.get("TELEGRAM_API_HASH")
 
 if not api_id or not api_hash:
     print("❌ Missing TELEGRAM_API_ID or TELEGRAM_API_HASH", file=sys.stderr)
     print()
-    print("Get them from https://my.telegram.org/auth then:")
+    print("Get them from https://my.telegram.org/auth, then put them in a private env file.")
+    print(f"Supported sources: {env_source_hint()}")
+    print("Example private file content:")
     print("  export TELEGRAM_API_ID=<your_api_id>")
     print("  export TELEGRAM_API_HASH=<your_api_hash>")
     print("  python3 generate_telegram_session.py")
@@ -80,12 +87,15 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
     print()
     print(session_string)
     print()
-    print("Save to your shell rc:")
+    print("Save to a private env file (do not commit; do not put it in the vault):")
     print()
-    print(f'  echo \'export TELEGRAM_SESSION_STRING="{session_string}"\' >> ~/.zshrc')
-    print(f"  echo 'export TELEGRAM_API_ID={api_id}' >> ~/.zshrc")
-    print(f"  echo 'export TELEGRAM_API_HASH={api_hash}' >> ~/.zshrc")
-    print(f"  source ~/.zshrc")
+    print("  mkdir -p ~/.config/soia-pkm && chmod 700 ~/.config/soia-pkm")
+    print("  $EDITOR ~/.config/soia-pkm/env")
+    print()
+    print("Add:")
+    print(f'  export TELEGRAM_SESSION_STRING="{session_string}"')
+    print(f"  export TELEGRAM_API_ID={api_id}")
+    print(f"  export TELEGRAM_API_HASH={api_hash}")
     print()
     print("Then test:")
     print("  python3 sync_telegram_saved.py --dry-run")

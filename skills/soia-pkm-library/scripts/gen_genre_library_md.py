@@ -18,6 +18,10 @@ import sys
 from pathlib import Path
 from collections import defaultdict
 
+from soia_env import env_source_hint, load_private_env
+
+load_private_env()
+
 DEFAULT_BASE = "40_图书视频馆/40_孩子书库"
 
 # 类型显示顺序与中文描述（默认值，可用 --config 覆盖）
@@ -64,7 +68,7 @@ def resolve_vault(args):
     env = os.environ.get("OBSIDIAN_VAULT")
     if env:
         return Path(env).expanduser()
-    print("❌ 未指定 vault：请传 --vault 或设置 OBSIDIAN_VAULT env", file=sys.stderr)
+    print(f"❌ 未指定 vault：请传 --vault 或在私有 env 文件中设置 OBSIDIAN_VAULT（{env_source_hint()}）", file=sys.stderr)
     sys.exit(1)
 
 

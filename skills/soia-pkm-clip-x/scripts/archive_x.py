@@ -8,11 +8,16 @@ Usage:
     python3 archive_x.py <X URL>
     python3 archive_x.py <X URL> --force                # Force overwrite if archived
     python3 archive_x.py <X URL> --vault /path/to/vault # Override vault path
+    python3 archive_x.py <X URL> --articles-dir <articles-subdir>
 
 Environment variables (alternative to --vault):
-    OBSIDIAN_VAULT     Path to your Obsidian vault (required if --vault not given)
+    OBSIDIAN_VAULT     Path to your Obsidian vault
     OBSIDIAN_ARTICLES  Subdirectory within vault for archived articles
-                       (default: "Articles")
+                       (defaults to "Articles")
+
+Private env files are auto-loaded from SOIA_PKM_ENV_FILE,
+~/.config/soia-pkm/env, or ~/.soia-pkm.env. Do not store secrets in
+the vault or committed skill repo.
 """
 from __future__ import annotations
 
@@ -26,6 +31,8 @@ import urllib.error
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+from soia_env import env_source_hint, load_private_env
+
 CST = timezone(timedelta(hours=8))
 
 URL_RE = re.compile(
@@ -33,27 +40,54 @@ URL_RE = re.compile(
     re.IGNORECASE,
 )
 
+DEFAULT_ARTICLES_DIR = "Articles"
+
+
+def looks_like_vault(path: Path) -> bool:
+    return (path / ".obsidian").is_dir() or (path / "AGENTS.md").is_file()
+
+
+def discover_vault_from_cwd() -> Path | None:
+    """Find a vault by walking up from the current working directory.
+
+    Many AI CLIs run non-login shells, so shell startup exports may be absent. When
+    the agent is already inside the vault, cwd-based discovery is more reliable
+    than asking it to rediscover shell startup behavior.
+    """
+    cur = Path.cwd().resolve()
+    for p in (cur, *cur.parents):
+        if looks_like_vault(p):
+            return p
+    return None
+
 
 def resolve_vault(cli_vault: str | None) -> Path:
-    """Resolve the vault path from CLI arg or env var."""
+    """Resolve the vault path from CLI arg, env var, or cwd discovery."""
     if cli_vault:
         p = Path(cli_vault).expanduser().resolve()
     else:
         env = os.environ.get("OBSIDIAN_VAULT")
-        if not env:
-            print("❌ No vault path. Set OBSIDIAN_VAULT env or pass --vault <path>", file=sys.stderr)
-            print("   Example: export OBSIDIAN_VAULT=~/Documents/MyVault", file=sys.stderr)
-            sys.exit(1)
-        p = Path(env).expanduser().resolve()
-    if not p.exists():
+        if env:
+            p = Path(env).expanduser().resolve()
+        else:
+            p = discover_vault_from_cwd()
+            if not p:
+                print("❌ No vault path found.", file=sys.stderr)
+                print("   Fix: run from the vault root, set OBSIDIAN_VAULT, or pass --vault <path>.", file=sys.stderr)
+                print(f"   Private env sources checked: {env_source_hint()}.", file=sys.stderr)
+                sys.exit(1)
+            print(f"ℹ️  Auto-detected vault from cwd: {p}", file=sys.stderr)
+    if not p.exists() or not p.is_dir():
         print(f"❌ Vault path does not exist: {p}", file=sys.stderr)
         sys.exit(1)
     return p
 
 
-def resolve_article_root(vault: Path) -> Path:
-    sub = os.environ.get("OBSIDIAN_ARTICLES", "Articles")
-    return vault / sub
+def resolve_article_root(vault: Path, cli_articles_dir: str | None = None) -> Path:
+    sub = cli_articles_dir or os.environ.get("OBSIDIAN_ARTICLES")
+    if sub:
+        return vault / sub
+    return vault / DEFAULT_ARTICLES_DIR
 
 
 def parse_url(url: str) -> tuple[str, str]:
@@ -488,10 +522,13 @@ def build_frontmatter(
 
 
 def main():
+    load_private_env()
+
     ap = argparse.ArgumentParser(description="Archive X tweet/thread/Article into Obsidian vault.")
     ap.add_argument("url", nargs="?", help="X URL (x.com / twitter.com / fxtwitter.com)")
     ap.add_argument("--force", action="store_true", help="Force re-archive even if already exists")
     ap.add_argument("--vault", help="Path to Obsidian vault (overrides OBSIDIAN_VAULT env)")
+    ap.add_argument("--articles-dir", help="Article archive dir relative to vault (overrides OBSIDIAN_ARTICLES)")
     args = ap.parse_args()
 
     if not args.url:
@@ -499,7 +536,7 @@ def main():
         sys.exit(1)
 
     vault = resolve_vault(args.vault)
-    article_root = resolve_article_root(vault)
+    article_root = resolve_article_root(vault, args.articles_dir)
 
     handle, status_id = parse_url(args.url)
 

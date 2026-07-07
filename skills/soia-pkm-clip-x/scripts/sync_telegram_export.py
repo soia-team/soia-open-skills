@@ -16,10 +16,16 @@ Usage:
     python3 sync_telegram_export.py <result.json> --since 2026-05-01
     python3 sync_telegram_export.py <result.json> --limit 30
     python3 sync_telegram_export.py <result.json> --vault /path/to/vault
+    python3 sync_telegram_export.py <result.json> --articles-dir <articles-subdir>
 
 Environment variables:
-    OBSIDIAN_VAULT     Path to your Obsidian vault (required)
-    OBSIDIAN_ARTICLES  Subdirectory for archived articles (default: "Articles")
+    OBSIDIAN_VAULT     Path to your Obsidian vault
+    OBSIDIAN_ARTICLES  Subdirectory for archived articles
+                       (defaults to "Articles")
+
+Private env files are auto-loaded from SOIA_PKM_ENV_FILE,
+~/.config/soia-pkm/env, or ~/.soia-pkm.env. Do not store secrets in
+the vault or committed skill repo.
 """
 from __future__ import annotations
 
@@ -33,6 +39,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from soia_env import env_source_hint, load_private_env
+
 ARCHIVE_SCRIPT = Path(__file__).parent / "archive_x.py"
 
 X_URL_RE = re.compile(
@@ -40,25 +48,46 @@ X_URL_RE = re.compile(
     re.IGNORECASE,
 )
 
+DEFAULT_ARTICLES_DIR = "Articles"
+
+
+def looks_like_vault(path: Path) -> bool:
+    return (path / ".obsidian").is_dir() or (path / "AGENTS.md").is_file()
+
+
+def discover_vault_from_cwd() -> Path | None:
+    cur = Path.cwd().resolve()
+    for p in (cur, *cur.parents):
+        if looks_like_vault(p):
+            return p
+    return None
+
 
 def resolve_vault(cli_vault: str | None) -> Path:
     if cli_vault:
         p = Path(cli_vault).expanduser().resolve()
     else:
         env = os.environ.get("OBSIDIAN_VAULT")
-        if not env:
-            print("❌ No vault path. Set OBSIDIAN_VAULT env or pass --vault <path>", file=sys.stderr)
-            sys.exit(1)
-        p = Path(env).expanduser().resolve()
-    if not p.exists():
+        if env:
+            p = Path(env).expanduser().resolve()
+        else:
+            p = discover_vault_from_cwd()
+            if not p:
+                print("❌ No vault path found. Run from the vault root, set OBSIDIAN_VAULT, or pass --vault <path>.", file=sys.stderr)
+                print(f"   Private env sources checked: {env_source_hint()}.", file=sys.stderr)
+                sys.exit(1)
+            print(f"ℹ️  Auto-detected vault from cwd: {p}", file=sys.stderr)
+    if not p.exists() or not p.is_dir():
         print(f"❌ Vault path does not exist: {p}", file=sys.stderr)
         sys.exit(1)
     return p
 
 
-def resolve_article_root(vault: Path) -> Path:
-    sub = os.environ.get("OBSIDIAN_ARTICLES", "Articles")
-    return vault / sub
+def resolve_article_root(vault: Path, cli_articles_dir: str | None = None) -> Path:
+    sub = cli_articles_dir or os.environ.get("OBSIDIAN_ARTICLES")
+    if sub:
+        return vault / sub
+    return vault / DEFAULT_ARTICLES_DIR
 
 
 def find_archived_status_ids(article_root: Path) -> set[str]:
@@ -141,8 +170,10 @@ def extract_status_id(url: str) -> str | None:
     return m.group(1) if m else None
 
 
-def call_archive(url: str, vault: Path, force: bool = False, timeout: int = 60) -> tuple[str, str]:
+def call_archive(url: str, vault: Path, articles_dir: str | None = None, force: bool = False, timeout: int = 60) -> tuple[str, str]:
     args = ["python3", str(ARCHIVE_SCRIPT), url, "--vault", str(vault)]
+    if articles_dir:
+        args.extend(["--articles-dir", articles_dir])
     if force:
         args.append("--force")
     try:
@@ -162,6 +193,8 @@ def call_archive(url: str, vault: Path, force: bool = False, timeout: int = 60) 
 
 
 def main():
+    load_private_env()
+
     ap = argparse.ArgumentParser(description="Sync X URLs from Telegram JSON export to Obsidian vault")
     ap.add_argument("json_path", help="Path to result.json from Telegram Desktop export")
     ap.add_argument("--dry-run", action="store_true", help="List only, don't archive")
@@ -171,10 +204,11 @@ def main():
     ap.add_argument("--sleep", type=float, default=0.5, help="Sleep between requests (seconds)")
     ap.add_argument("--reverse", action="store_true", help="Oldest first instead of newest first")
     ap.add_argument("--vault", help="Path to Obsidian vault (overrides OBSIDIAN_VAULT)")
+    ap.add_argument("--articles-dir", help="Article archive dir relative to vault (overrides OBSIDIAN_ARTICLES)")
     args = ap.parse_args()
 
     vault = resolve_vault(args.vault)
-    article_root = resolve_article_root(vault)
+    article_root = resolve_article_root(vault, args.articles_dir)
 
     json_path = Path(args.json_path).expanduser()
     if not json_path.exists():
@@ -244,7 +278,7 @@ def main():
     for i, u in enumerate(to_run, 1):
         d = u["date"][:10]
         print(f"[{i}/{len(to_run)}] [{d}] {u['url']}", file=sys.stderr)
-        status, msg = call_archive(u["url"], vault, force=args.no_skip)
+        status, msg = call_archive(u["url"], vault, articles_dir=args.articles_dir, force=args.no_skip)
         if status == "archived":
             print(f"  ✓ {msg}", file=sys.stderr)
             ok += 1

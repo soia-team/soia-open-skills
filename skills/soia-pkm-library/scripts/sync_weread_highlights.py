@@ -45,6 +45,10 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
+from soia_env import env_source_hint, load_private_env
+
+load_private_env()
+
 # ---------- 常量 ----------
 API = "https://i.weread.qq.com/api/agent/gateway"
 SKILL_VERSION = "1.0.3"
@@ -65,7 +69,7 @@ MAX_RETRY = 1
 def call(name: str, **p):
     key = os.environ.get("WEREAD_API_KEY")
     if not key:
-        print("❌ WEREAD_API_KEY 未设置（请 source ~/.zshrc）", file=sys.stderr)
+        print(f"❌ WEREAD_API_KEY 未设置：请放到私有 env 文件（{env_source_hint()}），不要写入 vault 或开源 skill 仓库", file=sys.stderr)
         sys.exit(1)
     body = {"api_name": name, "skill_version": SKILL_VERSION, **p}
     req = urllib.request.Request(
@@ -400,7 +404,7 @@ def resolve_vault(vault_arg):
     env = os.environ.get("OBSIDIAN_VAULT")
     if env:
         return Path(env).expanduser()
-    print("❌ 未指定 vault：请传 --vault 或设置 OBSIDIAN_VAULT env", file=sys.stderr)
+    print(f"❌ 未指定 vault：请传 --vault 或在私有 env 文件中设置 OBSIDIAN_VAULT（{env_source_hint()}）", file=sys.stderr)
     sys.exit(1)
 
 
