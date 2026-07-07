@@ -117,7 +117,7 @@ def main():
     for nm,d,f,s,fid in rowsum:
         lk=f"[🔗]({FOLDER_URL}{fid})" if fid else ""
         e=next((v for k,v in EMOJI.items() if k in nm),'📁')
-        out.append(f"| {e} [[#{nm}\\|{nm}]] | {lk} | {d:,} | {f:,} | {human(s)} |")
+        out.append(f"| {e} **{nm}** | {lk} | {d:,} | {f:,} | {human(s)} |")
     out.append("")
 
     def emit(path, level):
