@@ -68,7 +68,17 @@ https://www.alipan.com/drive/file/<file_id>       # 文件
 
 需要"摸清楚整个盘/整个大目录到底有什么"（叶级全量索引，为整理方案打底）时，单条 `ls` 逐层人工点不现实，用脚本做全盘 DFS 爬虫落 JSONL。
 
-### 3.1 基本方法论
+**✅ 已脚本化（别再手写一次性爬虫）**：`scripts/scan_drive.py`——参数化、线程池、重试、断点续扫、可选聚合剪枝、敏感目录只记不下钻。
+```bash
+python3 <本skill>/scripts/scan_drive.py --driveId 278255980 \
+    --root /10_孩子学习库 --root /20_个人阅读 --out /tmp/idx/scan.jsonl \
+    --workers 6 --resume [--no-descend 敏感目录名] \
+    [--agg-prefix /30_技术成长/40_AI与工具/Office课程合集 --agg-threshold 200]
+# 输出 <out> + <out>.errors + <out>.progress；被 kill 后加 --resume 接着扫。
+```
+**完整图书馆流水线**：`scan_drive.py`（实盘→JSONL，本 skill）→ `gen_catalog.py`（JSONL→折叠树总览+全文检索，alipan-curator skill）。扫描根自身不入 JSONL，其 file_id 用一份 `roots.json`（`{"/区":"file_id"}`，`aliyunpan ll <区>` 取根 id）传给 gen_catalog 的 `--roots`；整理挪动后另存移动日志 jsonl 传 `--moves`，无需重扫全盘即可刷新总览。
+
+### 3.1 基本方法论（scan_drive.py 已实现，改脚本/换盘时参考）
 - **DFS 遍历**：Python 脚本对目录树做深度优先遍历，每进一层就 `ls`/`ll` 该层，子目录压栈继续下探，文件直接落记录
 - **每行一个 JSON 对象**（JSONL 格式），字段至少包含：路径、名称、类型（文件/目录）、大小、file_id、层级
 - **nohup 后台跑**：全盘扫描耗时可能几十分钟到几小时（本次技术成长一个区就 3.34TB/38164 文件），必须 `nohup python scan.py > scan.log 2>&1 &` 丢后台，不要占着前台阻塞会话
