@@ -42,13 +42,15 @@ python3 scripts/notebooklm_artifact_matrix.py \
 
 如果要保留 notebook 方便人工检查，加 `--keep-notebook`。默认脚本只在成功创建了本轮临时 notebook 时才会尝试清理它。
 
+脚本会逐目标记录 `status`；某个目标失败时继续后续目标。要保持旧行为可加 `--stop-on-error`。
+
 ## Artifact 覆盖表
 
 | 目标 | Generate | Download | 主要验证 |
 |------|----------|----------|----------|
-| podcast | `generate audio --wait` | `download audio podcast.mp3` | MP3 存在且大小合理 |
-| video | `generate video --wait` | `download video overview.mp4` | MP4 存在且大小合理 |
-| cinematic-video | `generate cinematic-video --wait` | `download cinematic-video cinematic.mp4` | MP4 存在 |
+| podcast | `generate audio --wait` | `download audio --all podcast/` | MP3 存在且大小合理 |
+| video | `generate video --wait` | `download video --all video/` | MP4 存在且大小合理 |
+| cinematic-video | `generate cinematic-video --wait` | `download cinematic-video --all cinematic-video/` | MP4 存在 |
 | ppt | `generate slide-deck --format detailed --wait` | `download slide-deck deck.pptx --format pptx` | PPTX 能打开 / 可渲染 |
 | infographic | `generate infographic --orientation portrait --detail detailed --wait` | `download infographic infographic.png` | PNG 尺寸与文字可读 |
 | mindmap | `generate mind-map --kind interactive` | `download mind-map mindmap.json` | JSON 可解析 |

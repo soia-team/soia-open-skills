@@ -33,6 +33,17 @@
 - 若环境没有 Playwright，也可以用当前 agent 的浏览器截图能力、系统浏览器打印、或 PDF/PNG 工具。
 - 若没有可编辑 PPT 能力，先交 HTML deck / PDF deck，并在回执说明不是 PPTX。
 
+本地全量 smoke：
+
+```bash
+python3 scripts/local_artifact_smoke.py \
+  --article <article.md> \
+  --out-dir <out-dir> \
+  --json
+```
+
+该脚本从同一篇 Markdown 生成 `report.md/html/pdf`、`deck.html/pptx`、`infographic.html/png`、`data-table.csv`、`quiz.md`、`flashcards.md/csv`、`mindmap.mmd`、`podcast-script.md`、`video-script.md`、`cinematic-video-shotlist.md`，并用 Playwright 渲染 PNG/PDF。若 Playwright 自带浏览器缺失，脚本会优先使用系统 Chrome；不要要求用户为了普通本地导出先安装 Open Design。
+
 ## Codex / Agent Native Providers
 
 适用：本地可编辑产物和强视觉校验。

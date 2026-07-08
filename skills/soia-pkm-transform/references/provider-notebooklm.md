@@ -18,6 +18,7 @@
 - 不用 npm 安装 NotebookLM CLI。`npx skills add teng-lin/notebooklm-py` 只安装 agent skill，不安装 Python CLI。
 - 初次使用需要 `notebooklm login` 或明确授权的 browser-cookie 导入；skill 不保存 Google 账号、密码、cookie。
 - 自动化前用 `NOTEBOOKLM_HOME=... notebooklm auth check --test --json` 验证认证，不能只看本地 cookie 是否存在。
+- 每条自动化命令都带上 `NOTEBOOKLM_HOME`；裸跑 `notebooklm ...` 会回落到默认 `~/.notebooklm`，容易让其他 AI 误判“未登录”。
 - 并行工作流不要依赖 `notebooklm use` 的全局上下文；优先在 notebook-scoped 命令里传 `-n <notebook-id>`。
 - 生成 artifact 后记录 `notebook_id`、`source_id`、`task_id` / `artifact_id`、下载路径。
 - 语言代码必须来自 `notebooklm language list`。简体中文是 `zh_Hans`，不是 `zh-Hans`。
@@ -96,6 +97,17 @@ notebooklm generate slide-deck --prompt-file prompt.txt -n <notebook-id> --forma
 notebooklm download slide-deck "<out.pptx>" --format pptx -n <notebook-id> --force --json
 ```
 
+音频/视频下载的兼容写法：
+
+```bash
+NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm generate audio "..." -n <notebook-id> --language "$NOTEBOOKLM_HL" --wait --json
+NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm download audio --all "<out-dir>/podcast" -n <notebook-id> --force --json
+```
+
+实测 `download audio <single-file> --latest` 在部分版本会返回空 `UNEXPECTED_ERROR`，但 `download audio --all <dir>` 能列出并下载已生成 artifact。video / cinematic-video smoke 也优先用 `--all <dir>`，再按扩展名验证。
+
+`generate quiz` 和 `generate flashcards` 当前 CLI 不支持 `--language`；用 `NOTEBOOKLM_HL=zh_Hans` 或在描述文字中要求简体中文，不要给这两个子命令追加 `--language`。
+
 ## 目标映射
 
 | Transform 目标 | 先读 prompt | NotebookLM 命令 |
@@ -112,3 +124,11 @@ notebooklm download slide-deck "<out.pptx>" --format pptx -n <notebook-id> --for
 | data-table | [prompt-notebooklm-report.md](prompt-notebooklm-report.md) | `generate data-table` -> `download data-table` |
 
 全量 smoke / dry-run 见 [notebooklm-test-matrix.md](notebooklm-test-matrix.md)。
+
+脚本：
+
+```bash
+python3 scripts/notebooklm_artifact_matrix.py --article <article.md> --out-dir <out> --targets all --run --json
+```
+
+该脚本会逐目标记录 `status`；某个 artifact 生成或下载失败时继续后续目标，并在 `summary.failed` 中列出真实失败点。

@@ -19,25 +19,32 @@ from typing import Any
 
 
 DEFAULT_HOME = "~/.config/soia-pkm/notebooklm"
+NO_LANGUAGE_TARGETS = {"quiz", "flashcards"}
 
 
 TARGETS: dict[str, dict[str, Any]] = {
     "podcast": {
         "generate": ["generate", "audio", "--format", "brief", "--length", "short"],
         "prompt": "用简体中文生成一段结构清晰、信息保真的播客，保留文章关键例子和边界。",
-        "download": ["download", "audio", "podcast.mp3", "--force"],
+        "download": ["download", "audio", "--all", "podcast", "--force"],
+        "download_path_index": 3,
+        "download_glob": "podcast/*.mp3",
         "kind": "binary",
     },
     "video": {
         "generate": ["generate", "video", "--format", "explainer", "--style", "classic"],
         "prompt": "用简体中文生成一个讲解型视频，重点解释文章的概念关系和实践步骤。",
-        "download": ["download", "video", "overview.mp4", "--force"],
+        "download": ["download", "video", "--all", "video", "--force"],
+        "download_path_index": 3,
+        "download_glob": "video/*.mp4",
         "kind": "binary",
     },
     "cinematic-video": {
         "generate": ["generate", "cinematic-video"],
         "prompt": "用纪录片式叙事概括文章核心主题，避免夸张和无来源判断。",
-        "download": ["download", "cinematic-video", "cinematic.mp4", "--force"],
+        "download": ["download", "cinematic-video", "--all", "cinematic-video", "--force"],
+        "download_path_index": 3,
+        "download_glob": "cinematic-video/*.mp4",
         "kind": "binary",
     },
     "ppt": {
@@ -123,6 +130,17 @@ def run_json(cmd: list[str], env: dict[str, str], cwd: Path | None = None) -> di
         return {"stdout": completed.stdout, "stderr": completed.stderr}
 
 
+def error_payload(exc: BaseException) -> dict[str, Any]:
+    raw = str(exc)
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            return data
+    except json.JSONDecodeError:
+        pass
+    return {"error": True, "message": raw[-4000:]}
+
+
 def run_plain(cmd: list[str], env: dict[str, str], cwd: Path | None = None) -> dict[str, Any]:
     completed = subprocess.run(cmd, cwd=cwd, env=env, text=True, capture_output=True, check=False)
     return {
@@ -174,23 +192,42 @@ def build_generate_command(target: str, notebook_id: str, language: str, timeout
         base.append(prompt)
     else:
         base.append(prompt)
+    base.extend(["-n", notebook_id])
+    if target not in NO_LANGUAGE_TARGETS:
+        base.extend(["--language", language])
     if target != "mindmap":
-        base.extend(["-n", notebook_id, "--language", language, "--wait", "--timeout", str(timeout), "--json"])
+        base.extend(["--wait", "--timeout", str(timeout), "--json"])
     else:
-        base.extend(["-n", notebook_id, "--language", language, "--json"])
+        base.extend(["--json"])
     return base
 
 
 def build_download_command(target: str, notebook_id: str, out_dir: Path) -> list[str]:
     spec = TARGETS[target]
     args = list(spec["download"])
-    if len(args) >= 3:
-        args[2] = str(out_dir / args[2])
+    path_index = spec.get("download_path_index", 2)
+    if len(args) > path_index:
+        args[path_index] = str(out_dir / args[path_index])
     return ["notebooklm", *args, "-n", notebook_id, "--json"]
 
 
 def validate_download(target: str, out_dir: Path) -> dict[str, Any]:
     spec = TARGETS[target]
+    if "download_glob" in spec:
+        paths = sorted(out_dir.glob(spec["download_glob"]))
+        result: dict[str, Any] = {
+            "glob": str(out_dir / spec["download_glob"]),
+            "exists": bool(paths),
+            "paths": [str(path) for path in paths],
+            "count": len(paths),
+        }
+        if paths:
+            result["bytes"] = sum(path.stat().st_size for path in paths)
+            result["non_empty"] = all(path.stat().st_size > 1024 for path in paths)
+            result["ok"] = result["non_empty"]
+        else:
+            result["ok"] = False
+        return result
     filename = spec["download"][2]
     path = out_dir / filename
     result: dict[str, Any] = {"path": str(path), "exists": path.exists()}
@@ -200,13 +237,19 @@ def validate_download(target: str, out_dir: Path) -> dict[str, Any]:
             try:
                 json.loads(path.read_text(encoding="utf-8"))
                 result["json_valid"] = True
+                result["ok"] = True
             except Exception as exc:  # noqa: BLE001
                 result["json_valid"] = False
                 result["json_error"] = str(exc)
+                result["ok"] = False
         elif spec["kind"] == "text":
             result["non_empty"] = bool(path.read_text(encoding="utf-8", errors="replace").strip())
+            result["ok"] = result["non_empty"]
         else:
             result["non_empty"] = path.stat().st_size > 1024
+            result["ok"] = result["non_empty"]
+    else:
+        result["ok"] = False
     return result
 
 
@@ -281,13 +324,39 @@ def execute(args: argparse.Namespace, targets: list[str]) -> dict[str, Any]:
             generate_cmd = build_generate_command(target, notebook_id, args.language, args.timeout)
             download_cmd = build_download_command(target, notebook_id, out_dir)
             entry: dict[str, Any] = {"generate_cmd": generate_cmd, "download_cmd": download_cmd}
-            entry["generate"] = run_json(generate_cmd, env)
-            entry["download"] = run_json(download_cmd, env)
+            try:
+                entry["generate"] = run_json(generate_cmd, env)
+            except Exception as exc:
+                entry["status"] = "generate_failed"
+                entry["error"] = error_payload(exc)
+                result["targets"][target] = entry
+                if args.stop_on_error:
+                    raise
+                continue
+            try:
+                entry["download"] = run_json(download_cmd, env)
+            except Exception as exc:
+                entry["status"] = "download_failed"
+                entry["error"] = error_payload(exc)
+                entry["validation"] = validate_download(target, out_dir)
+                result["targets"][target] = entry
+                if args.stop_on_error:
+                    raise
+                continue
             entry["validation"] = validate_download(target, out_dir)
+            entry["status"] = "ok" if entry["validation"].get("ok") else "validation_failed"
             result["targets"][target] = entry
     finally:
         if not args.keep_notebook:
             result["delete"] = run_plain(["notebooklm", "delete", "-n", notebook_id, "-y", "--json"], env)
+    result["summary"] = {
+        "ok": [name for name, item in result["targets"].items() if item.get("status") == "ok"],
+        "failed": {
+            name: item.get("status")
+            for name, item in result["targets"].items()
+            if item.get("status") != "ok"
+        },
+    }
     return result
 
 
@@ -311,6 +380,7 @@ def main() -> int:
     parser.add_argument("--notebook-title", help="Temporary notebook title.")
     parser.add_argument("--run", action="store_true", help="Actually create notebook and generate/download artifacts.")
     parser.add_argument("--keep-notebook", action="store_true", help="Keep the temporary notebook after --run.")
+    parser.add_argument("--stop-on-error", action="store_true", help="Stop at first target failure instead of recording and continuing.")
     parser.add_argument("--json", action="store_true", help="Print JSON.")
     args = parser.parse_args()
 
