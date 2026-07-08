@@ -87,12 +87,16 @@ providers:
   notebooklm:
     enabled: auto
     install_policy: prompt   # prompt | auto_when_requested | never
-    install_command: uv tool install "notebooklm-py[browser]"
-    auth_check: notebooklm auth check --test --json
-    login_command: notebooklm login
+    install_command: uv tool install "notebooklm-py[browser,cookies]"
     command: notebooklm
-    profile_env: NOTEBOOKLM_PROFILE
     home_env: NOTEBOOKLM_HOME
+    home_default: "~/.config/soia-pkm/notebooklm"
+    profile_env: NOTEBOOKLM_PROFILE
+    profile_default: default
+    auth_check: NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}" notebooklm auth check --test --json
+    login_command: NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}" notebooklm login
+    current_browser_cookie_login_policy: prefer_when_user_requests_current_chrome
+    current_chrome_login_command: NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}" notebooklm login --browser-cookies 'chrome::<profile>'
     language: zh_Hans
     prefer_for:
       - podcast

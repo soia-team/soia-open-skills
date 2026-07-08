@@ -21,37 +21,62 @@
 
 推荐公共实现：`teng-lin/notebooklm-py`。
 
+上游依据：
+
+- README: https://github.com/teng-lin/notebooklm-py
+- CLI reference: https://github.com/teng-lin/notebooklm-py/blob/main/docs/cli-reference.md
+- Configuration: https://github.com/teng-lin/notebooklm-py/blob/main/docs/configuration.md
+- Agent skill: https://github.com/teng-lin/notebooklm-py/blob/main/SKILL.md
+
 关键点：
 
 - 它是非官方 NotebookLM API/CLI，适合个人研究和自动化；Google 内部接口可能变化，必须保留降级说明。
-- 安装建议用隔离工具，例如 `uv tool install "notebooklm-py[browser]"` 或 `pipx install "notebooklm-py[browser]"`。普通 `pip install` 只在 active virtualenv 或非 externally-managed Python 中使用。
-- 初次使用需要 `notebooklm login`，认证数据由 NotebookLM CLI 管理；skill 不保存 Google 账号、密码、cookie。
-- 自动化前用 `notebooklm auth check --test --json` 验证认证，不能只看本地 cookie 是否存在。
+- 安装建议用隔离工具，例如 `uv tool install "notebooklm-py[browser,cookies]"` 或 `pipx install "notebooklm-py[browser,cookies]"`。`browser` 支持受控浏览器登录，`cookies` 支持在用户授权后复用当前 Chrome / Firefox 登录态。普通 `pip install` 只在 active virtualenv 或非 externally-managed Python 中使用。
+- 初次使用需要 `notebooklm login` 或明确授权的 browser-cookie 导入，认证数据由 NotebookLM CLI 管理；skill 不保存 Google 账号、密码、cookie。
+- 自动化前用 `NOTEBOOKLM_HOME=... notebooklm auth check --test --json` 验证认证，不能只看本地 cookie 是否存在。
 - 并行工作流不要依赖 `notebooklm use` 的全局上下文；优先在 notebook-scoped 命令里传 `-n <notebook-id>`。
 - 生成 artifact 后记录 `notebook_id`、`source_id`、`task_id` / `artifact_id`、下载路径。
+- 语言代码必须用 `notebooklm language list` 支持的 code。简体中文是 `zh_Hans`，不是 `zh-Hans`。优先用 `--language zh_Hans` 或 `NOTEBOOKLM_HL=zh_Hans`。
 - 如果 `command -v notebooklm` 失败，先进入安装步骤，不能只报告缺 CLI。
+- NotebookLM 0.7.3 默认把 profile 放在 `~/.notebooklm`，但这不是本 skill 的公共约定。优先设置 `NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}"`，让认证、profile、context 都在 `~/.config/soia-pkm/notebooklm` 下。
 - 如果 CLI 已安装但 auth check 失败，进入登录闸门：提示用户运行或同意执行 `notebooklm login`，由用户在浏览器里登录 Google；agent 不读取密码、cookie 或 `storage_state.json` 内容。
+- 进入登录闸门前，先检查当前 Chrome 是否已运行并能打开 `https://notebooklm.google.com/`。如果当前 Chrome 已登录 NotebookLM，优先走 current-browser cookie 导入；不要直接开一个新的受控浏览器让用户重新登录。
+- `notebooklm login` / `notebooklm login --browser chrome` 会打开受控浏览器 profile，不是用户正在使用的 Chrome 窗口。不要把它描述成「使用当前 Chrome」。
+- 若用户明确要求复用当前 Chrome 登录态，或用户明确反对新开登录窗口，应使用 `notebooklm login --browser-cookies 'chrome::<profile>'` 或 `notebooklm auth refresh --browser-cookies 'chrome::<profile>'`。这会读取浏览器 cookie，必须先说明风险；可先让用户自己运行 `notebooklm auth inspect --browser chrome` 选择 profile，或用 Chrome 控制确认当前页面已登录。
 - 如果登录后 `auth check --test --json` 仍失败，本轮不能写「已调用 NotebookLM」；只能写「NotebookLM provider 不可用，缺少登录态 / 网络 / 账号权限」，并给出可重跑命令。
+- 可用 `scripts/notebooklm_health.py --ensure-home --json` 做只读健康检查；它只汇总 CLI、推荐 `NOTEBOOKLM_HOME` 和 auth check 结果，不打印 cookie 内容。
 
 ### NotebookLM bootstrap
 
 当用户明确要 NotebookLM 产物，或目标默认 provider 是 NotebookLM（podcast / video / quiz / flashcards / grounded report / mindmap）时：
 
-1. **检查 CLI**：
+0. **设置认证根目录**：
+
+   ```bash
+   export NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}"
+   mkdir -p "$NOTEBOOKLM_HOME"
+   chmod 700 "$NOTEBOOKLM_HOME"
+   ```
+
+   如果用户已有自己的 `NOTEBOOKLM_HOME`，尊重现有值。不要在 vault 或开源 skill 仓库里保存认证文件。
+
+1. **检查 CLI 与推荐目录**：
 
    ```bash
    command -v notebooklm
    notebooklm --version
+   NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm language list
+   python3 scripts/notebooklm_health.py --ensure-home --json
    ```
 
 2. **缺 CLI 时安装**，按顺序选择可用工具：
 
    ```bash
-   command -v uv && uv tool install "notebooklm-py[browser]"
+   command -v uv && uv tool install "notebooklm-py[browser,cookies]"
    # 或
-   command -v pipx && pipx install "notebooklm-py[browser]"
+   command -v pipx && pipx install "notebooklm-py[browser,cookies]"
    # 仅在 active venv / 用户明确允许时：
-   python -m pip install "notebooklm-py[browser]"
+   python -m pip install "notebooklm-py[browser,cookies]"
    ```
 
    安装后重跑 `command -v notebooklm && notebooklm --version`。
@@ -59,18 +84,28 @@
 3. **验证认证**：
 
    ```bash
-   notebooklm auth check --test --json
+   NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm auth check --test --json
    ```
 
 4. **缺登录态时进入人工登录闸门**：
 
    ```bash
-   notebooklm login
-   notebooklm auth check --test --json
-   notebooklm list --json
+   NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm login
+   NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm auth check --test --json
+   NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm list --json
    ```
 
    只要登录未完成，就不要生成 NotebookLM artifact。可先生成本地降级草稿，但回执必须标注「未调用 NotebookLM」。
+
+   如果当前 Chrome 已登录 NotebookLM，或用户不想打开受控浏览器，而是要复用当前 Chrome：
+
+   ```bash
+   # 会读取浏览器 cookie。仅在用户明确要复用当前 Chrome 登录态时使用。
+   NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm auth inspect --browser chrome --json
+   NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm login --browser-cookies 'chrome::<profile>'
+   ```
+
+   `<profile>` 由用户提供，或通过 `auth inspect` 的只读结果选择。Agent 不要打印账号邮箱、cookie 值或 `storage_state.json` 内容。
 
 5. **可选安装 NotebookLM skill**：
 
@@ -83,11 +118,13 @@
 常见命令形态：
 
 ```bash
+export NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}"
+export NOTEBOOKLM_HL="${NOTEBOOKLM_HL:-zh_Hans}"
 notebooklm auth check --test --json
 notebooklm create "Article Transform - <title>" --json
 notebooklm source add "<article.md or URL>" -n <notebook-id> --json
 notebooklm source wait <source-id> -n <notebook-id>
-notebooklm generate slide-deck "Create a concise Chinese deck" -n <notebook-id> --json
+notebooklm generate slide-deck "Create a concise Chinese deck" -n <notebook-id> --format detailed --length short --language "$NOTEBOOKLM_HL" --json
 notebooklm artifact wait <task-id> -n <notebook-id>
 notebooklm download slide-deck "<out.pptx>" --format pptx -n <notebook-id> -a <artifact-id>
 ```

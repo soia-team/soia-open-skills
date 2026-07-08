@@ -11,7 +11,7 @@ params:
   provider: auto                 # auto | local_presentation | html_deck | notebooklm | open_design
   output_format: pptx            # pptx | html | pdf
   audience: auto                 # 小白 | 专业读者 | 管理者 | 学生 | ...
-  language: zh-Hans
+  language: zh_Hans
   content_mode: learning         # learning | preserve | synthesize
   style: auto                    # course | technical | executive | workshop | xhs | magazine
   slide_count: auto              # auto | 6 | 8 | 10 | 12 | ...
