@@ -10,6 +10,7 @@ Create new skills from the repository template:
 
 ```bash
 cp -R templates/skill-template skills/<your-skill-name>
+mv skills/<your-skill-name>/SKILL.md.template skills/<your-skill-name>/SKILL.md
 python3 scripts/audit_skills.py
 ```
 

@@ -10,6 +10,7 @@
 
    ```bash
    cp -R templates/skill-template skills/your-skill-name
+   mv skills/your-skill-name/SKILL.md.template skills/your-skill-name/SKILL.md
    ```
 
 4. **写 SKILL.md**，frontmatter 必须有：
