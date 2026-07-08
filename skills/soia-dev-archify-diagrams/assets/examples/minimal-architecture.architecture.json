@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "System Boundary",
+    "subtitle": "source -> runtime",
+    "output": "minimal-architecture.html"
+  },
+  "components": [
+    {
+      "id": "source",
+      "type": "frontend",
+      "label": "Source",
+      "sublabel": "repo",
+      "pos": [40, 280],
+      "size": [130, 60]
+    },
+    {
+      "id": "runtime",
+      "type": "backend",
+      "label": "Runtime",
+      "sublabel": "service",
+      "pos": [250, 280],
+      "size": [130, 60]
+    }
+  ],
+  "connections": [
+    {
+      "from": "source",
+      "to": "runtime",
+      "label": "deploy",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": []
+}

@@ -11,7 +11,7 @@
 
 <br>
 
-**面向 Obsidian 的 `soia-pkm-*` 技能集 · 覆盖「收 → 整理 → 点 → 写 → 转化/发布」完整 PKM 闭环**
+**面向 Obsidian 的 `soia-pkm-*` 技能集 + 可公开复用的 `soia-dev-*` 开发 helper**
 
 ```bash
 npx skills add soia-team/soia-open-skills
@@ -19,7 +19,7 @@ npx skills add soia-team/soia-open-skills
 
 跨 agent 通用——Claude Code、Cursor、Codex、Gemini、Kimi 都能装。
 
-[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单14) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
+[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单20) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
 
 </div>
 
@@ -49,13 +49,15 @@ npx skills add soia-team/soia-open-skills
         soia-pkm-library（书库线：微信读书同步 + 记录补齐 + 总览生成）
         soia-pkm-alipan（云盘线·原子层：aliyunpan CLI 可靠原子操作）
         soia-pkm-alipan-curator（云盘线·顾问层：盘点/整理/索引/学习计划）
+        soia-dev-archify-diagrams（文档图表线：Archify JSON IR → README/docs PNG 图）
+        soia-dev-github-ops / soia-dev-ai-cli-upgrade（公共开发工具线）
 ```
 
 **核心理念**：收藏 ≠ 吸收。大多数人的知识库是"信息坟场"——囤了一大堆，从不回看。`soia-pkm` 把「收藏 → 观点 → 成文 → 发布」这条**从消费到创造**的链路，拆成职责单一、可组合的 skill，让 AI 帮你把囤积的信息真正变成**你自己的**作品。
 
 ---
 
-## Skills 清单（15）
+## Skills 清单（20）
 
 > **通用能力（所有 skill 共享）**
 > - 🤖 **支持的 AI**：跨 agent 通用——Claude Code、Codex、Cursor、Gemini、Kimi、amp、Warp、Zed 等所有兼容 [skills.sh](https://skills.sh) 标准的 AI。一次写 `SKILL.md`，处处可用。
@@ -72,6 +74,7 @@ npx skills add soia-team/soia-open-skills
 | [`soia-pkm-clip-web`](./skills/soia-pkm-clip-web/) | 通用网页/博客 → vault | 🟡 同上 | Python `trafilatura` |
 | [`soia-pkm-clip-drive`](./skills/soia-pkm-clip-drive/) | 云盘 PDF/Word → vault | 🟡 同上 | Python `pypdf`/`python-docx` |
 | [`soia-pkm-clip-repo`](./skills/soia-pkm-clip-repo/) | GitHub 开源项目仓库 → vault「开源项目图书馆」索引 | ✅ 可用（脚本齐全：单仓归档 + 批量刷新）| 无（需本机一个 upstream clone 目录）|
+| [`soia-pkm-clip-gzh`](./skills/soia-pkm-clip-gzh/) | 自己管理的公众号已发文章批量 → vault | ✅ 可用（官方 API / 登录态 Cookie 两条路线）| 微信公众号开发凭据或登录态 Cookie |
 
 ### 🗂️ 整理
 
@@ -100,8 +103,12 @@ npx skills add soia-team/soia-open-skills
 | [`soia-pkm-bootstrap`](./skills/soia-pkm-bootstrap/) | 从零初始化 AI-native vault（PARA + AGENTS + 模板 + Bases + CSS + 多 AI 接入）| ✅ 可用（`init_vault.py` 跑通）| 无（它是起点）|
 | [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | 场景化阅读计划（书单/主题 → 按真实字数排期）| ✅ 可用 | 可选联动 `weread-skills`（第三方）|
 | [`soia-pkm-library`](./skills/soia-pkm-library/) | 维护书库：微信读书同步（书目/划线）+ 补书详情 + 补待读记录 + 生成图书馆/阅读记录/分类三份总览 | ✅ 可用（7 个机械脚本，幂等可重复跑）| 可选联动 `weread-skills`（同步类脚本需 `WEREAD_API_KEY`）|
+| [`soia-pkm-maintain`](./skills/soia-pkm-maintain/) | vault 周维护、全库地图重生成、AI 会话日志接入 | ✅ 可用（Python stdlib / bash 脚本）| Obsidian vault，`--vault <path>` 或 `OBSIDIAN_VAULT` |
 | [`soia-pkm-alipan`](./skills/soia-pkm-alipan/) | 阿里云盘原子操作层：登录/双盘切换/浏览/移动/重命名/上传下载/容量查询，含输出解析与安全守则 | ✅ 可用（无需脚本，直接驱动 `aliyunpan` CLI）| `aliyunpan` CLI（brew 安装 + 扫码登录）|
 | [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | 云盘资源顾问：盘点核对（inventory）/规范整理（organize）/索引落 OB（catalog）/孩子学习计划（plan）| ✅ 可用（纯方法论层，命令全走 alipan）| `soia-pkm-alipan`（原子层）|
+| [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify 图表工作流：架构图 / 数据流 / 工作流 / 时序 / 生命周期图，维护 JSON IR 并导出 README/docs PNG | ✅ 可用（脚本齐全；需本机可用 Archify）| `ARCHIFY_BIN` 或 `ARCHIFY_ROOT`，可选 Playwright/Chrome 导出 PNG |
+| [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release，默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY` |
+| [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | AI/开发 CLI 批量盘点与升级：Codex / Claude / Gemini / Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ 可用（脚本齐全；支持 dry-run 和日志）| Node/npm；部分工具需要 Homebrew 或自身 updater |
 
 ---
 
@@ -123,6 +130,9 @@ npx skills add soia-team/soia-open-skills
 | `转换文章为 PPT` / `把这篇转成脑图` | transform |
 | `把这篇发成公众号` | publish |
 | `从零搭个知识库` | bootstrap |
+| `给 README 画一张架构图` / `用 Archify 重画流程图` | soia-dev-archify-diagrams |
+| `查这个 PR checks` / `看最近 GitHub Actions 失败原因` | soia-dev-github-ops |
+| `升级本机 AI CLI` / `dry-run 看 codex/claude 版本` | soia-dev-ai-cli-upgrade |
 
 ### 配置 vault 路径
 
@@ -182,14 +192,18 @@ soia-open-skills/
 ├── scripts/audit_skills.py    ← 本仓库技能审计
 ├── templates/skill-template/  ← 新 skill 起手模板
 └── skills/                    ← npx skills 扫描此目录
-    ├── soia-pkm-clip-x/       ├── soia-pkm-publish/
-    ├── soia-pkm-clip-wechat/  ├── soia-pkm-bootstrap/
-    ├── soia-pkm-clip-web/     ├── soia-pkm-reading-plan/
-    ├── soia-pkm-clip-drive/   ├── soia-pkm-library/
-    ├── soia-pkm-clip-repo/    ├── soia-pkm-alipan/
-    ├── soia-pkm-organize/     ├── soia-pkm-transform/
-    ├── soia-pkm-distill/      └── soia-pkm-alipan-curator/
-    └── soia-pkm-compose/
+    ├── soia-pkm-clip-x/       ├── soia-pkm-clip-wechat/
+    ├── soia-pkm-clip-gzh/     ├── soia-pkm-clip-web/
+    ├── soia-pkm-clip-drive/   ├── soia-pkm-clip-repo/
+    ├── soia-pkm-organize/     ├── soia-pkm-distill/
+    ├── soia-pkm-compose/      ├── soia-pkm-publish/
+    ├── soia-pkm-transform/    ├── soia-pkm-bootstrap/
+    ├── soia-pkm-reading-plan/ ├── soia-pkm-library/
+    ├── soia-pkm-maintain/     ├── soia-pkm-alipan/
+    ├── soia-pkm-alipan-curator/
+    ├── soia-dev-archify-diagrams/
+    ├── soia-dev-github-ops/
+    └── soia-dev-ai-cli-upgrade/
 ```
 
 每个 skill 一个文件夹，独立 `SKILL.md`（frontmatter 含 `name` + `description`）+ 自己的 `scripts/`。
