@@ -13,6 +13,7 @@
 | 封面图 / 头图 / 背景图 | [prompt-codex-image.md](prompt-codex-image.md) | Codex imagegen / gpt-image-2 / image provider | 少字或无字；最终标题建议后期叠加 |
 | 插画 / 图标 / 视觉隐喻 | [prompt-codex-image.md](prompt-codex-image.md) | Codex imagegen / gpt-image-2 / image provider | 生成视觉资产，不承载事实密集信息 |
 | 视觉报告 / PDF report | [prompt-report.md](prompt-report.md) | Markdown/HTML/PDF provider | 结构化综合，不冒充全文 PDF |
+| Open Design PPT / 长图 / 动效 | [prompt-open-design.md](prompt-open-design.md) | Open Design / template-guided local render | 必须说明 handoff 还是模板指导本地生成 |
 | NotebookLM slide deck | [prompt-notebooklm-ppt.md](prompt-notebooklm-ppt.md) | NotebookLM | source-grounded deck；记录 Notebook/artifact id |
 | NotebookLM image / infographic | [prompt-notebooklm-image.md](prompt-notebooklm-image.md) | NotebookLM | source-grounded image artifact；密集中文仍需人工/截图验收 |
 | NotebookLM quiz / flashcards / mindmap / podcast / report | [prompt-notebooklm.md](prompt-notebooklm.md) 路由到具体文件 | NotebookLM | source-grounded；必须记录 Notebook/artifact id |
@@ -65,6 +66,7 @@ qa:
 - PPT / 课件：读取 [prompt-ppt.md](prompt-ppt.md)，它支持 `slide_count`、`audience`、`style`、`aspect_ratio`、`provider` 等参数。
 - 高密度长图 / 信息图：读取 [prompt-infographic.md](prompt-infographic.md)，它默认走 HTML/CSS 截图并强调信息块密度。
 - Codex image / imagegen：读取 [prompt-codex-image.md](prompt-codex-image.md)，它约束 imagegen 只做视觉素材，不做密集中文排版。
+- Open Design：读取 [prompt-open-design.md](prompt-open-design.md)，它区分 `handoff` 和 `template_guided_local_render`，并按 PPT、长图、视频选不同模板。
 - 视觉报告：读取 [prompt-report.md](prompt-report.md)，它区分 report 和全文 PDF。
 - NotebookLM artifact：先读取 [prompt-notebooklm.md](prompt-notebooklm.md)，再按产物读取 [prompt-notebooklm-ppt.md](prompt-notebooklm-ppt.md)、[prompt-notebooklm-image.md](prompt-notebooklm-image.md)、[prompt-notebooklm-quiz.md](prompt-notebooklm-quiz.md)、[prompt-notebooklm-flashcards.md](prompt-notebooklm-flashcards.md)、[prompt-notebooklm-mindmap.md](prompt-notebooklm-mindmap.md)、[prompt-notebooklm-podcast.md](prompt-notebooklm-podcast.md) 或 [prompt-notebooklm-report.md](prompt-notebooklm-report.md)。
 

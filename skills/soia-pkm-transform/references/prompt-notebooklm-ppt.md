@@ -7,6 +7,7 @@
 
 目标读者：{params.audience}
 页数：{params.slide_count 或 8-12}
+推荐风格：{params.style 或 course_module / technical_sharing / knowledge_blueprint / editorial_magazine}
 语言：中文
 内容模式：learning / preserve，不能压成泛泛摘要。
 
@@ -16,6 +17,8 @@ Deck 要求：
 3. 必须包含：题名页、文章地图、问题场景、案例拆解、概念层级、流程图、易混概念对照、风险边界、自测/讨论、来源页。
 4. 所有关键判断必须能回到 source，不引入 source 外事实。
 5. 如果 source 没有真实数据，不要伪造图表或统计。
+6. 不要生成“几页摘要卡”。每页要承担不同任务：map / flow / table / case / quiz / source 等。
+7. 如果文章是教程或概念入门，加入学习目标、术语速查、练习题；如果是技术工具文，加入执行步骤、命令/工具、验收检查；如果是观点文，加入论点、证据、反例和边界。
 
 输出后下载 slide-deck，优先 pptx；不支持 pptx 时下载 PDF，并记录 artifact id。
 ```

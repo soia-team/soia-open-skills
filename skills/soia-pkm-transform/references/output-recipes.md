@@ -43,16 +43,16 @@ params:
 默认分两种：
 
 - 普通公共环境：优先用当前 agent 的 presentation provider 或本地自包含 HTML deck。
-- 用户明确要求或配置指定 Open Design：再用 Open Design / html-ppt 模板。
+- 用户明确要求或配置指定 Open Design：读取 [provider-open-design.md](provider-open-design.md) 和 [prompt-open-design.md](prompt-open-design.md)，再用 Open Design / html-ppt 模板。
 - 需要快速 grounded deck 或多源资料：用 NotebookLM `slide-deck`，先读取 [prompt-notebooklm-ppt.md](prompt-notebooklm-ppt.md)，优先下载 `.pptx`，不行再下载 PDF。
 
 选型：
 
-- 教学/概念入门：课程模块结构；若 Open Design 可用，可参考 `course-module` 或 `presenter-mode-reveal`。
-- 系统结构/术语关系/工作流：架构蓝图结构；若 Open Design 可用，可参考 `knowledge-arch-blueprint`。
-- 技术分享：技术分享结构；若 Open Design 可用，可参考 `tech-sharing`。
-- AI 工具/知识图谱/流程：图谱/流程结构；若 Open Design 可用，可参考 `graphify-dark-graph`。
-- 小红书图文：卡片化编辑结构；若 Open Design 可用，可参考 `xhs-white-editorial` 或 `xhs-post`。
+- 教学/概念入门：`style: course_module`；若 Open Design 可用，可参考 `html-ppt-course-module` 或 `presenter-mode-reveal`。
+- 系统结构/术语关系/工作流：`style: knowledge_blueprint`；若 Open Design 可用，可参考 `html-ppt-knowledge-arch-blueprint`。
+- 技术分享：`style: technical_sharing`；若 Open Design 可用，可参考 `html-ppt-tech-sharing`。
+- AI 工具/知识图谱/流程：`style: graph_dark`；若 Open Design 可用，可参考 `html-ppt-graphify-dark-graph`。
+- 小红书图文：`style: xhs_cards`；若 Open Design 可用，可参考 `html-ppt-xhs-white-editorial` 或 `social-carousel`。
 
 内容结构至少 8-12 页，除非用户要求短 deck：
 
@@ -91,7 +91,7 @@ params:
 默认：
 
 - 高密度中文长图/信息图：优先本地 HTML/CSS 排版后截图。
-- 用户明确要求或配置指定 Open Design：再用 Open Design / template-guided local render。
+- 用户明确要求或配置指定 Open Design：读取 [provider-open-design.md](provider-open-design.md) 和 [prompt-open-design.md](prompt-open-design.md)，再用 Open Design / template-guided local render。
 - 封面图/插画/背景素材：可用 imagegen / gpt-image-2。
 - NotebookLM 可用且用户要「信息图」时，可选 `generate infographic`，先读取 [prompt-notebooklm-image.md](prompt-notebooklm-image.md)。
 

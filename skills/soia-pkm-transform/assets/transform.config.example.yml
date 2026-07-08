@@ -21,7 +21,10 @@ outputs:
     quiz: learning
     mindmap: synthesize
     podcast: synthesize
+    video: synthesize
+    cinematic-video: synthesize
     flashcards: learning
+    data_table: synthesize
     report: synthesize
   pdf:
     provider: obsidian
@@ -37,6 +40,27 @@ outputs:
       aspect_ratio: "16:9"
       density: dense
       include_speaker_notes: auto
+      style_presets:
+        course_module:
+          when: "小白教程、概念入门、训练营、课程"
+          slide_count: "10-14"
+          layout_roles: [cover, learning_map, concept_graph, case_breakdown, workflow, comparison, practice, source]
+        technical_sharing:
+          when: "技术文章、工具教程、AI workflow"
+          slide_count: "10-14"
+          layout_roles: [cover, architecture, pipeline, command_table, qa_gate, risk_matrix, checklist, source]
+        knowledge_blueprint:
+          when: "知识库、系统结构、方法论"
+          slide_count: "8-12"
+          layout_roles: [cover, map, hierarchy, flow, matrix, operating_model, next_actions, source]
+        editorial_magazine:
+          when: "观点文章、趋势解读、商业分析"
+          slide_count: "8-12"
+          layout_roles: [cover, thesis, evidence_grid, counterpoint, implication, action, source]
+        xhs_cards:
+          when: "小红书卡片、社交轮播"
+          slide_count: "6-9"
+          layout_roles: [cover, hook, concept_card, checklist, example, recap]
   image:
     provider: auto
     format: png
@@ -74,9 +98,17 @@ outputs:
     provider: notebooklm
     format: mp3
     save: output_root
+  video:
+    provider: notebooklm
+    format: mp4
+    save: output_root
   flashcards:
     provider: notebooklm
     format: markdown
+    save: output_root
+  data_table:
+    provider: notebooklm
+    format: csv
     save: output_root
   report:
     provider: auto
@@ -101,11 +133,13 @@ providers:
     prefer_for:
       - podcast
       - video
+      - cinematic-video
       - quiz
       - flashcards
       - mindmap
       - report
       - infographic
+      - data_table
   obsidian:
     enabled: auto
     prefer_for:
@@ -133,6 +167,14 @@ providers:
       course: html-ppt-course-module
       dense_infographic: magazine-poster
       ai_graph: html-ppt-graphify-dark-graph
+      editorial: guizang-ppt
+      xhs_cards: html-ppt-xhs-white-editorial
+    integrations:
+      mcp_install_dry_run:
+        codex: od mcp install codex --print
+        claude: od mcp install claude --print
+        gemini: od mcp install gemini --print
+        opencode: od mcp install opencode --print
   local_visual:
     enabled: true
     prefer_for:
@@ -187,21 +229,21 @@ prompt_routes:
     local: prompt-ppt.md
     local_visual: prompt-ppt.md
     notebooklm: prompt-notebooklm-ppt.md
-    open_design: prompt-ppt.md
+    open_design: prompt-open-design.md
   image:
     codex_image: prompt-codex-image.md
     imagegen: prompt-codex-image.md
     local_visual: prompt-infographic.md
     notebooklm: prompt-notebooklm-image.md
-    open_design: prompt-infographic.md
+    open_design: prompt-open-design.md
   long_image:
     local_visual: prompt-infographic.md
     notebooklm: prompt-notebooklm-image.md
-    open_design: prompt-infographic.md
+    open_design: prompt-open-design.md
   infographic:
     local_visual: prompt-infographic.md
     notebooklm: prompt-notebooklm-image.md
-    open_design: prompt-infographic.md
+    open_design: prompt-open-design.md
   quiz:
     notebooklm: prompt-notebooklm-quiz.md
   flashcards:
@@ -210,6 +252,12 @@ prompt_routes:
     notebooklm: prompt-notebooklm-mindmap.md
   podcast:
     notebooklm: prompt-notebooklm-podcast.md
+  video:
+    notebooklm: prompt-notebooklm-podcast.md
+  cinematic-video:
+    notebooklm: prompt-notebooklm-podcast.md
+  data_table:
+    notebooklm: prompt-notebooklm-report.md
   report:
     local: prompt-report.md
     notebooklm: prompt-notebooklm-report.md

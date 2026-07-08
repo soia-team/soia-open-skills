@@ -30,8 +30,11 @@ TARGET_ALIASES = {
     "exam": "quiz",
     "test": "quiz",
     "audio": "podcast",
+    "cinematic_video": "cinematic-video",
     "mind-map": "mindmap",
     "mind_map": "mindmap",
+    "datatable": "data_table",
+    "data-table": "data_table",
 }
 
 PROVIDER_ALIASES = {
@@ -58,7 +61,10 @@ DEFAULT_CONTENT_MODE = {
     "quiz": "learning",
     "mindmap": "synthesize",
     "podcast": "synthesize",
+    "video": "synthesize",
+    "cinematic-video": "synthesize",
     "flashcards": "learning",
+    "data_table": "synthesize",
     "report": "synthesize",
     "wechat": "synthesize",
     "x_thread": "synthesize",
@@ -74,7 +80,10 @@ DEFAULT_PROVIDER = {
     "quiz": "notebooklm",
     "mindmap": "notebooklm",
     "podcast": "notebooklm",
+    "video": "notebooklm",
+    "cinematic-video": "notebooklm",
     "flashcards": "notebooklm",
+    "data_table": "notebooklm",
     "report": "local",
     "wechat": "publish",
     "x_thread": "publish",
@@ -85,23 +94,23 @@ DEFAULT_PROMPT_ROUTES: dict[str, dict[str, str]] = {
     "ppt": {
         "local": "prompt-ppt.md",
         "local_visual": "prompt-ppt.md",
-        "open_design": "prompt-ppt.md",
+        "open_design": "prompt-open-design.md",
         "notebooklm": "prompt-notebooklm-ppt.md",
     },
     "image": {
         "codex_image": "prompt-codex-image.md",
         "local_visual": "prompt-infographic.md",
-        "open_design": "prompt-infographic.md",
+        "open_design": "prompt-open-design.md",
         "notebooklm": "prompt-notebooklm-image.md",
     },
     "long_image": {
         "local_visual": "prompt-infographic.md",
-        "open_design": "prompt-infographic.md",
+        "open_design": "prompt-open-design.md",
         "notebooklm": "prompt-notebooklm-image.md",
     },
     "infographic": {
         "local_visual": "prompt-infographic.md",
-        "open_design": "prompt-infographic.md",
+        "open_design": "prompt-open-design.md",
         "notebooklm": "prompt-notebooklm-image.md",
     },
     "quiz": {
@@ -115,6 +124,15 @@ DEFAULT_PROMPT_ROUTES: dict[str, dict[str, str]] = {
     },
     "podcast": {
         "notebooklm": "prompt-notebooklm-podcast.md",
+    },
+    "video": {
+        "notebooklm": "prompt-notebooklm-podcast.md",
+    },
+    "cinematic-video": {
+        "notebooklm": "prompt-notebooklm-podcast.md",
+    },
+    "data_table": {
+        "notebooklm": "prompt-notebooklm-report.md",
     },
     "report": {
         "local": "prompt-report.md",
@@ -182,8 +200,31 @@ def references_for(target: str, prompt_file: str | None, provider: str) -> list[
     refs = ["references/output-recipes.md"]
     if target in {"ppt", "image", "long_image", "infographic", "report"}:
         refs.insert(0, "references/design-prompts.md")
-    if provider in {"notebooklm", "open_design"}:
-        refs.append("references/providers.md")
+    if provider in {"local", "local_visual", "codex_image", "obsidian", "publish"}:
+        refs.append("references/provider-soia-local.md")
+    if provider == "notebooklm":
+        refs.extend([
+            "references/providers.md",
+            "references/provider-notebooklm.md",
+        ])
+    if provider == "open_design":
+        refs.extend([
+            "references/providers.md",
+            "references/provider-open-design.md",
+        ])
+    if target in {
+        "podcast",
+        "video",
+        "cinematic-video",
+        "ppt",
+        "quiz",
+        "flashcards",
+        "mindmap",
+        "report",
+        "infographic",
+        "data_table",
+    } and provider == "notebooklm":
+        refs.append("references/notebooklm-test-matrix.md")
     if prompt_file:
         refs.append(f"references/{prompt_file}")
     return list(dict.fromkeys(refs))
