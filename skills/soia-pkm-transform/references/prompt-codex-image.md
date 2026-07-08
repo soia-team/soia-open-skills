@@ -1,14 +1,14 @@
-# Imagegen Prompt
+# Codex Image Prompt
 
-用于「封面图 / 头图 / 文章配图 / 背景图 / 插画 / 视觉隐喻」。它生成视觉素材，不承担中文密集信息排版。
+用于 Codex imagegen / gpt-image-2 / image provider 生成「封面图、头图、文章配图、背景图、插画、视觉隐喻、图标素材」。它生成视觉素材，不承担中文密集信息排版。
 
 ## 参数
 
 ```yaml
 target_output: image
 params:
+  provider: codex_image           # codex_image | imagegen | gpt-image-2 | auto
   image_subtype: cover_image      # cover_image | illustration | background | icon_set
-  provider: imagegen              # imagegen | gpt-image-2 | auto
   aspect_ratio: "16:9"            # 16:9 | 4:3 | 1:1 | 3:4 | 9:16
   text_policy: avoid_dense_text   # no_text | short_title_only | avoid_dense_text
   style: editorial                # editorial | cinematic | isometric | 3d | collage | minimal
@@ -43,4 +43,4 @@ params:
 
 - 图像不包含错误中文、乱码数字或伪造标识。
 - 如需标题、作者、来源，用 HTML/PPT/图片编辑后期叠加。
-- 回执区分「imagegen 生成视觉素材」与「最终排版图」。
+- 回执区分「Codex image 生成视觉素材」与「最终排版图」。

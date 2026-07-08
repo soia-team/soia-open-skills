@@ -44,7 +44,7 @@ params:
 
 - 普通公共环境：优先用当前 agent 的 presentation provider 或本地自包含 HTML deck。
 - 用户明确要求或配置指定 Open Design：再用 Open Design / html-ppt 模板。
-- 需要快速 grounded deck 或多源资料：用 NotebookLM `slide-deck`，优先下载 `.pptx`，不行再下载 PDF。
+- 需要快速 grounded deck 或多源资料：用 NotebookLM `slide-deck`，先读取 [prompt-notebooklm-ppt.md](prompt-notebooklm-ppt.md)，优先下载 `.pptx`，不行再下载 PDF。
 
 选型：
 
@@ -79,21 +79,21 @@ params:
 
 | 子类型 | 例子 | Prompt | Provider |
 |--------|------|--------|----------|
-| `cover_image` | 封面图、头图、文章配图、PPT 背景 | [prompt-imagegen.md](prompt-imagegen.md) | imagegen / gpt-image-2 / image provider |
-| `illustration` | 插画、图标、视觉隐喻、装饰图 | [prompt-imagegen.md](prompt-imagegen.md) | imagegen / gpt-image-2 / image provider |
+| `cover_image` | 封面图、头图、文章配图、PPT 背景 | [prompt-codex-image.md](prompt-codex-image.md) | Codex imagegen / gpt-image-2 / image provider |
+| `illustration` | 插画、图标、视觉隐喻、装饰图 | [prompt-codex-image.md](prompt-codex-image.md) | Codex imagegen / gpt-image-2 / image provider |
 | `long_image` | 长图、图文卡、竖版总结图 | [prompt-infographic.md](prompt-infographic.md) | local_visual HTML/CSS screenshot |
 | `infographic` | 一张图讲清楚、信息图、研究海报 | [prompt-infographic.md](prompt-infographic.md) | local_visual HTML/CSS screenshot |
 
 长图/信息图开始前先读取 [prompt-infographic.md](prompt-infographic.md) 和 QA Gate。信息图必须先做信息架构，再做视觉；不要从「帮我总结」直接跳到 HTML。
 
-封面图/插画开始前先读取 [prompt-imagegen.md](prompt-imagegen.md)。不要要求 imagegen 直接生成大量中文文字；最终文字用 HTML/PPT/图片编辑叠加。
+封面图/插画开始前先读取 [prompt-codex-image.md](prompt-codex-image.md)。不要要求 imagegen 直接生成大量中文文字；最终文字用 HTML/PPT/图片编辑叠加。
 
 默认：
 
 - 高密度中文长图/信息图：优先本地 HTML/CSS 排版后截图。
 - 用户明确要求或配置指定 Open Design：再用 Open Design / template-guided local render。
 - 封面图/插画/背景素材：可用 imagegen / gpt-image-2。
-- NotebookLM 可用且用户要「信息图」时，可选 `generate infographic`。
+- NotebookLM 可用且用户要「信息图」时，可选 `generate infographic`，先读取 [prompt-notebooklm-image.md](prompt-notebooklm-image.md)。
 
 要求：
 
@@ -119,7 +119,7 @@ params:
 - NotebookLM 可用：`generate quiz`，下载 Markdown 或 JSON。
 - 本地降级：生成 `quiz.md`。
 
-使用 NotebookLM 时先读取 [prompt-notebooklm.md](prompt-notebooklm.md)；本地降级时按 `learning` 模式保留原文概念、例子和易错点。
+使用 NotebookLM 时先读取 [prompt-notebooklm-quiz.md](prompt-notebooklm-quiz.md)；本地降级时按 `learning` 模式保留原文概念、例子和易错点。
 
 题型建议：
 
@@ -143,7 +143,7 @@ params:
 - 本地降级：生成 Mermaid mindmap 或缩进 Markdown。
 - 用户要演示效果：可接 mindmap-ppt 类 provider 或当前 agent presentation provider。
 
-使用 NotebookLM 时先读取 [prompt-notebooklm.md](prompt-notebooklm.md)；本地降级时保留文章标题层级和概念关系，不把长文压成 3 层空泛树。
+使用 NotebookLM 时先读取 [prompt-notebooklm-mindmap.md](prompt-notebooklm-mindmap.md)；本地降级时保留文章标题层级和概念关系，不把长文压成 3 层空泛树。
 
 本地 Mermaid 形态：
 
@@ -168,7 +168,7 @@ mindmap
 
 默认：NotebookLM `generate audio`。
 
-开始前读取 [prompt-notebooklm.md](prompt-notebooklm.md)，明确语言、时长、听众和内容保真度。
+开始前读取 [prompt-notebooklm-podcast.md](prompt-notebooklm-podcast.md)，明确语言、时长、听众和内容保真度。
 
 要求：
 
@@ -187,7 +187,7 @@ mindmap
 - NotebookLM `generate flashcards` 下载 Markdown/JSON。
 - 本地降级：生成问答卡 Markdown 表格。
 
-使用 NotebookLM 时先读取 [prompt-notebooklm.md](prompt-notebooklm.md)；本地降级时按「一个概念一张卡」生成。
+使用 NotebookLM 时先读取 [prompt-notebooklm-flashcards.md](prompt-notebooklm-flashcards.md)；本地降级时按「一个概念一张卡」生成。
 
 验证：
 
@@ -203,7 +203,7 @@ mindmap
 - 本地 Markdown report 适合快速总结和轻量加工。
 - 如果用户要原创文章而不是报告，转交 `soia-pkm-compose`。
 
-开始前读取 [prompt-report.md](prompt-report.md)。如果用户明确要求 NotebookLM grounded report，先读取 [prompt-notebooklm.md](prompt-notebooklm.md) 并按 provider bootstrap 检查。
+开始前读取 [prompt-report.md](prompt-report.md)。如果用户明确要求 NotebookLM grounded report，先读取 [prompt-notebooklm-report.md](prompt-notebooklm-report.md) 并按 provider bootstrap 检查。
 
 注意：Report 是「综合报告」，不是 PDF 全文导出。用户说「转 PDF」时不要自动转成 report。
 

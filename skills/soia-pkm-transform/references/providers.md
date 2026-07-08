@@ -94,16 +94,16 @@ notebooklm download slide-deck "<out.pptx>" --format pptx -n <notebook-id> -a <a
 
 目标映射：
 
-| transform 目标 | NotebookLM 命令 |
-|----------------|-----------------|
-| podcast | `generate audio` -> `download audio` |
-| video | `generate video` -> `download video` |
-| ppt | `generate slide-deck` -> `download slide-deck --format pptx` 或 PDF |
-| mindmap | `generate mind-map` -> `download mind-map` |
-| quiz | `generate quiz` -> `download quiz --format markdown/json/html` |
-| flashcards | `generate flashcards` -> `download flashcards --format markdown/json/html` |
-| report | `generate report` -> `download report` |
-| infographic | `generate infographic` -> `download infographic` |
+| transform 目标 | 先读 prompt | NotebookLM 命令 |
+|----------------|-------------|-----------------|
+| podcast | [prompt-notebooklm-podcast.md](prompt-notebooklm-podcast.md) | `generate audio` -> `download audio` |
+| video | [prompt-notebooklm-podcast.md](prompt-notebooklm-podcast.md) | `generate video` -> `download video` |
+| ppt | [prompt-notebooklm-ppt.md](prompt-notebooklm-ppt.md) | `generate slide-deck` -> `download slide-deck --format pptx` 或 PDF |
+| mindmap | [prompt-notebooklm-mindmap.md](prompt-notebooklm-mindmap.md) | `generate mind-map` -> `download mind-map` |
+| quiz | [prompt-notebooklm-quiz.md](prompt-notebooklm-quiz.md) | `generate quiz` -> `download quiz --format markdown/json/html` |
+| flashcards | [prompt-notebooklm-flashcards.md](prompt-notebooklm-flashcards.md) | `generate flashcards` -> `download flashcards --format markdown/json/html` |
+| report | [prompt-notebooklm-report.md](prompt-notebooklm-report.md) | `generate report` -> `download report` |
+| infographic | [prompt-notebooklm-image.md](prompt-notebooklm-image.md) | `generate infographic` -> `download infographic` |
 
 使用 NotebookLM 的好处是 source-grounded、低消耗本地上下文、支持多种 artifact 下载；不足是依赖账号、网络、非官方接口和生成队列。
 
@@ -206,7 +206,7 @@ curl -s http://127.0.0.1:<daemon-port>/api/health
 
 流程：
 
-1. 读取 [design-prompts.md](design-prompts.md)，再按目标读取 [prompt-ppt.md](prompt-ppt.md)、[prompt-infographic.md](prompt-infographic.md)、[prompt-imagegen.md](prompt-imagegen.md) 或 [prompt-report.md](prompt-report.md)，先写 visual brief 和信息架构。
+1. 读取 [design-prompts.md](design-prompts.md)，再按 provider 和目标读取 [prompt-ppt.md](prompt-ppt.md)、[prompt-infographic.md](prompt-infographic.md)、[prompt-codex-image.md](prompt-codex-image.md)、[prompt-report.md](prompt-report.md) 或 NotebookLM 的具体 artifact prompt，先写 visual brief 和信息架构。
 2. 生成自包含 HTML/CSS 或 PPTX；不要依赖外部模板路径。
 3. 渲染检查：尺寸、文字可读性、截断、重叠、乱码。
 4. 若渲染失败，先修布局；不要把未验收产物交付。
@@ -228,7 +228,7 @@ curl -s http://127.0.0.1:<daemon-port>/api/health
 
 规则：
 
-- 先读取 [prompt-imagegen.md](prompt-imagegen.md)。
+- 先读取 [prompt-codex-image.md](prompt-codex-image.md)。
 - 默认生成无字或少字图；标题、作者、来源、数字、表格用 HTML/PPT/图片编辑后期叠加。
 - 若 imagegen 输出里出现乱码文字、错误数字或不该有的 logo，要重新生成或裁掉文字区，不要把错误文字交付。
 - 回执要区分「imagegen 生成视觉素材」和「本地排版生成最终图片」。

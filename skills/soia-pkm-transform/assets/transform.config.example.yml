@@ -177,3 +177,24 @@ validation:
     check_answer_count: true
   mindmap:
     check_syntax: true
+
+prompt_routes:
+  ppt:
+    local: prompt-ppt.md
+    notebooklm: prompt-notebooklm-ppt.md
+    open_design: prompt-ppt.md
+  image:
+    codex_image: prompt-codex-image.md
+    local_visual: prompt-infographic.md
+    notebooklm: prompt-notebooklm-image.md
+  quiz:
+    notebooklm: prompt-notebooklm-quiz.md
+  flashcards:
+    notebooklm: prompt-notebooklm-flashcards.md
+  mindmap:
+    notebooklm: prompt-notebooklm-mindmap.md
+  podcast:
+    notebooklm: prompt-notebooklm-podcast.md
+  report:
+    local: prompt-report.md
+    notebooklm: prompt-notebooklm-report.md
