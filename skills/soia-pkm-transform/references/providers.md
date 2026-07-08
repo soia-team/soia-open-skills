@@ -109,6 +109,11 @@ notebooklm download slide-deck "<out.pptx>" --format pptx -n <notebook-id> -a <a
 
 适用：高质量 PPT/HTML deck、高密度信息图、长图、课程模块、技术分享、视觉探索。
 
+Open Design 有两种使用模式，回执必须说清楚是哪一种：
+
+1. **Open Design handoff**：把 brief / prompt / 素材交给 Open Design app / agent / template runtime 生成或继续编辑设计产物。
+2. **Template-guided local render**：读取 Open Design 的 design template / html-ppt 规则，由当前 agent 生成 HTML/CSS/PPTX，再用 Playwright managed Chromium 渲染验证。这是模板指导的本地生成，不要声称「Open Design agent 已生成」。
+
 推荐用途：
 
 - `visual_dense`：用 HTML/CSS 做高密度信息海报，再用 managed Chromium 截图成 PNG。
@@ -132,6 +137,7 @@ curl -s http://127.0.0.1:<daemon-port>/api/health
 - 如果跳过 postinstall，需要先构建缺失的 workspace dist，再启动。按报错补依赖，不要静默失败。
 - `html-ppt/scripts/render.sh` 使用 Playwright managed Chromium；不要默认 fallback 到系统 Google Chrome，macOS 上容易被 profile / Crashpad 卡住。
 - 生成 deck 时必须从 template 出发，不要手写低质白底 bullet PPT。
+- 如果没有可用的 Open Design agent/session API，就采用 template-guided local render，并在回执里写明。
 - 生成高密度图时，先写内容结构和视觉信息架构，再写 HTML；不要只做低信息量摘要卡。
 
 ## Obsidian provider

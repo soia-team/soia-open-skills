@@ -113,6 +113,8 @@ constraints: []
 
 使用 NotebookLM、Obsidian、Open Design、Codex 内置文件能力或发布链路前，按需读取 [references/providers.md](references/providers.md)。
 
+NotebookLM provider 的公共实现依赖 `teng-lin/notebooklm-py`；首次使用若本机没有 `notebooklm` CLI，应按 [references/providers.md](references/providers.md) 的 NotebookLM bootstrap 安装、登录、验证，而不是直接降级或停止。
+
 生成 PPT / 长图 / 信息图 / 海报 / 视觉报告前，必须读取 [references/design-prompts.md](references/design-prompts.md)。不要只写「总结成 PPT」这类低信息 prompt；先建立信息架构、视觉方向、负向约束和 QA 标准，再生成产物。
 
 ## 工作流
