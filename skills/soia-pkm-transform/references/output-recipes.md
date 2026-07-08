@@ -27,17 +27,17 @@ PDF 的默认语义是**全文转换**，不是摘要报告。除非用户明确
 
 默认分两种：
 
-- 需要高质量视觉和 HTML/PPT 双交付：优先用 Open Design / html-ppt 模板。
-- 需要可编辑、本地交付：用当前 agent 的 presentation provider。
+- 普通公共环境：优先用当前 agent 的 presentation provider 或本地自包含 HTML deck。
+- 用户明确要求或配置指定 Open Design：再用 Open Design / html-ppt 模板。
 - 需要快速 grounded deck 或多源资料：用 NotebookLM `slide-deck`，优先下载 `.pptx`，不行再下载 PDF。
 
 选型：
 
-- 教学/概念入门：`course-module` 或 `presenter-mode-reveal`。
-- 系统结构/术语关系/工作流：`knowledge-arch-blueprint`。
-- 技术分享：`tech-sharing`。
-- AI 工具/知识图谱/流程：`graphify-dark-graph`。
-- 小红书图文：`xhs-white-editorial` 或 `xhs-post`。
+- 教学/概念入门：课程模块结构；若 Open Design 可用，可参考 `course-module` 或 `presenter-mode-reveal`。
+- 系统结构/术语关系/工作流：架构蓝图结构；若 Open Design 可用，可参考 `knowledge-arch-blueprint`。
+- 技术分享：技术分享结构；若 Open Design 可用，可参考 `tech-sharing`。
+- AI 工具/知识图谱/流程：图谱/流程结构；若 Open Design 可用，可参考 `graphify-dark-graph`。
+- 小红书图文：卡片化编辑结构；若 Open Design 可用，可参考 `xhs-white-editorial` 或 `xhs-post`。
 
 内容结构至少 8-12 页，除非用户要求短 deck：
 
@@ -64,7 +64,8 @@ PDF 的默认语义是**全文转换**，不是摘要报告。除非用户明确
 
 默认：
 
-- 高密度中文长图/信息图：优先 Open Design / HTML/CSS 排版后用 managed Chromium 截图。
+- 高密度中文长图/信息图：优先本地 HTML/CSS 排版后截图。
+- 用户明确要求或配置指定 Open Design：再用 Open Design / template-guided local render。
 - 单张视觉说明图：image provider。
 - NotebookLM 可用且用户要「信息图」时，可选 `generate infographic`。
 

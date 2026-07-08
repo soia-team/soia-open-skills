@@ -103,8 +103,8 @@ constraints: []
 | 目标 | 默认 provider | 常见降级 |
 |------|---------------|----------|
 | PDF | Obsidian 原生导出（vault 内 Markdown，`preserve`） | agent PDF 工具 / 浏览器打印；不得默认总结 |
-| PPT / PPTX | Open Design / html-ppt 或 Codex presentations | NotebookLM slide-deck / PDF deck |
-| 图片 / 长图 / 信息图 | Open Design / HTML screenshot（高密度中文优先） | imagegen / NotebookLM infographic |
+| PPT / PPTX | 当前 agent presentations / 本地 HTML deck（自包含） | Open Design / NotebookLM slide-deck / PDF deck |
+| 图片 / 长图 / 信息图 | 本地 HTML/CSS screenshot（高密度中文优先） | Open Design / imagegen / NotebookLM infographic |
 | 试卷 / 测验 | NotebookLM quiz 或本地 Markdown quiz | 手写 Markdown + 答案 |
 | 脑图 | NotebookLM mind-map JSON 或 Mermaid mindmap | mindmap-ppt / Markdown outline |
 | 播客 / 视频 / 闪卡 | NotebookLM | 不可用时说明需要 provider |
@@ -114,6 +114,8 @@ constraints: []
 使用 NotebookLM、Obsidian、Open Design、Codex 内置文件能力或发布链路前，按需读取 [references/providers.md](references/providers.md)。
 
 NotebookLM provider 的公共实现依赖 `teng-lin/notebooklm-py`；首次使用若本机没有 `notebooklm` CLI，应按 [references/providers.md](references/providers.md) 的 NotebookLM bootstrap 安装、登录、验证，而不是直接降级或停止。
+
+Open Design 是增强 provider，不是公共 skill 的硬依赖。默认应先用本地 HTML/CSS、当前 agent 文件能力和渲染检查完成；只有用户明确要求、配置指定，或本机已检测到 Open Design 时，才按 [references/providers.md](references/providers.md) 的 Open Design bootstrap / handoff 流程使用。
 
 生成 PPT / 长图 / 信息图 / 海报 / 视觉报告前，必须读取 [references/design-prompts.md](references/design-prompts.md)。不要只写「总结成 PPT」这类低信息 prompt；先建立信息架构、视觉方向、负向约束和 QA 标准，再生成产物。
 

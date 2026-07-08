@@ -13,6 +13,8 @@
 
 如果 provider 缺失，按本文件的 bootstrap 步骤推进：能安全安装的先安装并验证；需要用户认证的进入人工登录闸门；仍不可用时再降级或停止。不要把「未安装」当作最终答案。
 
+视觉类 provider 的例外：Open Design 是增强项，不是公共默认依赖。若 Open Design 缺失，默认先用 Local visual provider；只有用户明确要求 Open Design、配置指定 `provider: open_design`，或当前环境已检测到可用 Open Design 时，才安装 / 启动 Open Design。
+
 ## NotebookLM provider
 
 适用：播客、视频、PPT/PPTX、脑图、quiz、flashcards、report、infographic、data table，以及多源资料的 grounded synthesis。
@@ -109,6 +111,8 @@ notebooklm download slide-deck "<out.pptx>" --format pptx -n <notebook-id> -a <a
 
 适用：高质量 PPT/HTML deck、高密度信息图、长图、课程模块、技术分享、视觉探索。
 
+定位：Open Design 是**增强 provider**，不是 `soia-pkm-transform` 的硬依赖。公共默认实现必须在没有 Open Design 的机器上可用。
+
 Open Design 有两种使用模式，回执必须说清楚是哪一种：
 
 1. **Open Design handoff**：把 brief / prompt / 素材交给 Open Design app / agent / template runtime 生成或继续编辑设计产物。
@@ -125,11 +129,61 @@ Open Design 有两种使用模式，回执必须说清楚是哪一种：
 可用性检查：
 
 ```bash
+test -n "$OPEN_DESIGN_HOME" && test -d "$OPEN_DESIGN_HOME"
+command -v od
 node -v
 pnpm -v
 pnpm tools-dev run web
 curl -s http://127.0.0.1:<daemon-port>/api/health
 ```
+
+### Open Design bootstrap
+
+仅在用户明确要求 / 配置指定 / 已检测到 Open Design 时执行。不要为了普通「转换文章为长图/PPT」强制安装 Open Design。
+
+推荐来源：`https://github.com/nexu-io/open-design.git`。
+
+1. **定位已有安装**：
+
+   ```bash
+   command -v od
+   test -n "$OPEN_DESIGN_HOME" && test -d "$OPEN_DESIGN_HOME"
+   ```
+
+2. **没有源码时询问或使用用户指定目录 clone**：
+
+   ```bash
+   git clone https://github.com/nexu-io/open-design.git "$OPEN_DESIGN_HOME"
+   cd "$OPEN_DESIGN_HOME"
+   ```
+
+   `OPEN_DESIGN_HOME` 必须来自用户配置或当前环境，不要在公共 skill 里写死个人路径。
+
+3. **准备运行环境**：
+
+   ```bash
+   node -v      # 需要 Node 24.x
+   corepack enable
+   corepack pnpm --version
+   pnpm install
+   ```
+
+4. **启动本地开发服务**：
+
+   ```bash
+   pnpm tools-dev run web
+   ```
+
+   如果只是要 daemon / web 背景运行，可按 Open Design Quickstart 使用 `pnpm tools-dev`。启动后用打印出的 URL 和 daemon port 验证健康。
+
+5. **可选 MCP 接入**：
+
+   ```bash
+   od mcp install codex --print
+   od mcp install claude --print
+   ```
+
+   是否真正写入 agent 配置应由用户确认；公共 skill 不自动改用户的多 agent 配置。
 
 注意：
 
@@ -139,6 +193,28 @@ curl -s http://127.0.0.1:<daemon-port>/api/health
 - 生成 deck 时必须从 template 出发，不要手写低质白底 bullet PPT。
 - 如果没有可用的 Open Design agent/session API，就采用 template-guided local render，并在回执里写明。
 - 生成高密度图时，先写内容结构和视觉信息架构，再写 HTML；不要只做低信息量摘要卡。
+
+## Local visual provider
+
+适用：没有 Open Design 的普通用户环境。它是视觉类转换的公共默认路径。
+
+能力：
+
+- PPT / PPTX：使用当前 agent 的 presentations / PowerPoint 能力，或生成自包含 HTML deck 后导出。
+- 长图 / 信息图：使用本地 HTML/CSS 生成页面，再用 Playwright / browser screenshot / 当前 agent 截图能力导出 PNG。
+- 视觉报告：生成 Markdown/HTML，再按 PDF 或截图导出。
+
+流程：
+
+1. 读取 [design-prompts.md](design-prompts.md)，先写 visual brief 和信息架构。
+2. 生成自包含 HTML/CSS 或 PPTX；不要依赖外部模板路径。
+3. 渲染检查：尺寸、文字可读性、截断、重叠、乱码。
+4. 若渲染失败，先修布局；不要把未验收产物交付。
+
+降级边界：
+
+- 若环境没有 Playwright，也可以用当前 agent 的浏览器截图能力、系统浏览器打印、或 PDF/PNG 工具。
+- 若没有可编辑 PPT 能力，先交 HTML deck / PDF deck，并在回执说明不是 PPTX。
 
 ## Obsidian provider
 

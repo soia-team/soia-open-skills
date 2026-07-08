@@ -27,7 +27,7 @@ outputs:
     provider: obsidian
     save: sibling
   ppt:
-    provider: open_design
+    provider: auto
     format: pptx
     save: output_root
   image:
@@ -35,11 +35,11 @@ outputs:
     format: png
     save: output_root
   long_image:
-    provider: open_design
+    provider: local_visual
     format: png
     save: output_root
   infographic:
-    provider: open_design
+    provider: local_visual
     format: png
     save: output_root
   quiz:
@@ -87,7 +87,10 @@ providers:
     prefer_for:
       - pdf
   open_design:
-    enabled: auto
+    enabled: optional
+    install_policy: prompt   # prompt | auto_when_requested | never
+    repo: https://github.com/nexu-io/open-design.git
+    home_env: OPEN_DESIGN_HOME
     command: pnpm
     node_version: "24"
     quality_gate:
@@ -106,6 +109,18 @@ providers:
       course: html-ppt-course-module
       dense_infographic: magazine-poster
       ai_graph: html-ppt-graphify-dark-graph
+  local_visual:
+    enabled: true
+    prefer_for:
+      - ppt
+      - image
+      - long_image
+      - infographic
+    render:
+      prefer: playwright
+      fallback:
+        - browser_screenshot
+        - print_to_pdf
   local:
     enabled: true
     prefer_for:
