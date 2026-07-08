@@ -216,6 +216,23 @@ curl -s http://127.0.0.1:<daemon-port>/api/health
 - 若环境没有 Playwright，也可以用当前 agent 的浏览器截图能力、系统浏览器打印、或 PDF/PNG 工具。
 - 若没有可编辑 PPT 能力，先交 HTML deck / PDF deck，并在回执说明不是 PPTX。
 
+## Codex imagegen / image2 provider
+
+适用：封面图、头图、插画、背景图、视觉隐喻、图标素材、卡片背景、PPT 视觉资产。
+
+不适用：
+
+- 中文密集长图。
+- 带大量小字、表格、精确数字、引用、来源说明的信息图。
+- 需要严格可编辑文字的 PPT 页面。
+
+规则：
+
+- 先读取 [design-prompts.md](design-prompts.md) 的「Imagegen / 封面图 Prompt」。
+- 默认生成无字或少字图；标题、作者、来源、数字、表格用 HTML/PPT/图片编辑后期叠加。
+- 若 imagegen 输出里出现乱码文字、错误数字或不该有的 logo，要重新生成或裁掉文字区，不要把错误文字交付。
+- 回执要区分「imagegen 生成视觉素材」和「本地排版生成最终图片」。
+
 ## Obsidian provider
 
 适用：vault 内 Markdown -> PDF。

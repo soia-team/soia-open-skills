@@ -34,6 +34,7 @@ outputs:
     provider: auto
     format: png
     save: output_root
+    subtype_default: cover_image   # cover_image | illustration | long_image | infographic
   long_image:
     provider: local_visual
     format: png
@@ -113,7 +114,6 @@ providers:
     enabled: true
     prefer_for:
       - ppt
-      - image
       - long_image
       - infographic
     render:
@@ -121,6 +121,14 @@ providers:
       fallback:
         - browser_screenshot
         - print_to_pdf
+  imagegen:
+    enabled: auto
+    prefer_for:
+      - image
+      - cover_image
+      - illustration
+    text_policy: avoid_dense_text
+    compose_text_later: true
   local:
     enabled: true
     prefer_for:

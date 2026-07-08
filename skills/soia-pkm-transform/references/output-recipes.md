@@ -60,13 +60,24 @@ PDF 的默认语义是**全文转换**，不是摘要报告。除非用户明确
 
 ## 图片 / 长图 / 信息图
 
-开始前先读取 [design-prompts.md](design-prompts.md) 的「高密度信息图 Prompt」和 QA Gate。信息图必须先做信息架构，再做视觉；不要从「帮我总结」直接跳到 HTML。
+先判断用户说的「图片」是哪一种：
+
+| 子类型 | 例子 | Prompt | Provider |
+|--------|------|--------|----------|
+| `cover_image` | 封面图、头图、文章配图、PPT 背景 | `Imagegen / 封面图 Prompt` | imagegen / gpt-image-2 / image provider |
+| `illustration` | 插画、图标、视觉隐喻、装饰图 | `Imagegen / 封面图 Prompt` | imagegen / gpt-image-2 / image provider |
+| `long_image` | 长图、图文卡、竖版总结图 | `高密度信息图 Prompt` | local_visual HTML/CSS screenshot |
+| `infographic` | 一张图讲清楚、信息图、研究海报 | `高密度信息图 Prompt` | local_visual HTML/CSS screenshot |
+
+长图/信息图开始前先读取 [design-prompts.md](design-prompts.md) 的「高密度信息图 Prompt」和 QA Gate。信息图必须先做信息架构，再做视觉；不要从「帮我总结」直接跳到 HTML。
+
+封面图/插画开始前先读取 [design-prompts.md](design-prompts.md) 的「Imagegen / 封面图 Prompt」。不要要求 imagegen 直接生成大量中文文字；最终文字用 HTML/PPT/图片编辑叠加。
 
 默认：
 
 - 高密度中文长图/信息图：优先本地 HTML/CSS 排版后截图。
 - 用户明确要求或配置指定 Open Design：再用 Open Design / template-guided local render。
-- 单张视觉说明图：image provider。
+- 封面图/插画/背景素材：可用 imagegen / gpt-image-2。
 - NotebookLM 可用且用户要「信息图」时，可选 `generate infographic`。
 
 要求：
@@ -84,6 +95,7 @@ PDF 的默认语义是**全文转换**，不是摘要报告。除非用户明确
 - 不出现明显乱码、截断、错别字。
 - 至少人工或截图抽查一次，不得只检查文件存在。
 - 抽查时若出现遮挡、过度留白、信息块不足、层级不清，必须迭代版式后再交付。
+- imagegen 产物如果包含错误文字、乱码、伪造 logo 或错误数字，必须重做或改成无字素材。
 
 ## Quiz / Exam
 

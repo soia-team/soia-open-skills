@@ -1,6 +1,21 @@
 # Design Prompts
 
-用于 PPT、长图、信息图、海报、视觉报告。目标是把文章转换成可读、好看、信息密度足够的产物，而不是把原文压缩成几张低质摘要卡。
+用于 PPT、长图、信息图、海报、封面图、插画和视觉报告。目标是把文章转换成可读、好看、信息密度足够的产物，而不是把原文压缩成几张低质摘要卡。
+
+## Prompt 路由
+
+不同设计产物必须使用不同 prompt，不要共用一个「把文章转换成视觉」的大提示词。
+
+| 目标产物 | 首选 prompt | 首选 provider | 关键边界 |
+|----------|-------------|---------------|----------|
+| PPT / 课件 | [PPT / 课件 Prompt](#ppt--课件-prompt) | 当前 agent presentations / HTML deck | 8-12 页、叙事结构、版式轮廓变化、可渲染检查 |
+| 高密度长图 / 信息图 / 海报 | [高密度信息图 Prompt](#高密度信息图-prompt) | local_visual HTML/CSS screenshot | 中文密集文字必须排版在 HTML/CSS，不优先生图 |
+| 封面图 / 头图 / 背景图 | [Imagegen / 封面图 Prompt](#imagegen--封面图-prompt) | Codex imagegen / gpt-image-2 / image provider | 少字或无字；最终标题建议后期叠加 |
+| 插画 / 图标 / 视觉隐喻 | [Imagegen / 封面图 Prompt](#imagegen--封面图-prompt) | Codex imagegen / gpt-image-2 / image provider | 生成视觉资产，不承载事实密集信息 |
+| 视觉报告 / PDF report | [视觉报告 Prompt](#视觉报告-prompt) | Markdown/HTML/PDF provider | 结构化综合，不冒充全文 PDF |
+| NotebookLM artifact | [NotebookLM 产物 Prompt](#notebooklm-产物-prompt) | NotebookLM | source-grounded；必须记录 Notebook/artifact id |
+
+Codex image2 / imagegen 的定位：生成**视觉素材**，不是中文密集排版引擎。若用户要「一张图讲清楚」且包含大量中文、数字、表格或引用，先用 HTML/CSS 排版；可以把 imagegen 生成的背景、插画、纹理、图标作为素材再叠加文字。
 
 ## 通用视觉合同
 
@@ -79,6 +94,37 @@ qa:
 - 渲染成 PNG 后检查：尺寸、可读性、重叠、截断。
 ```
 
+## Imagegen / 封面图 Prompt
+
+用于「生成封面图 / 头图 / 文章配图 / 背景图 / 插画 / 视觉隐喻」。可调用 Codex imagegen / gpt-image-2 / 其他 image provider。
+
+不要用它直接生成中文密集信息图；图片模型对长中文、表格、精确数字和小字不稳定。需要文字时，先生成无字或少字视觉资产，再用 HTML/PPT/图片编辑叠加文字。
+
+```text
+你是资深视觉创意总监。请为下面文章生成一张 {用途：封面图/头图/插画/背景图}。
+
+目标读者：{audience}
+画幅：{16:9 / 4:3 / 1:1 / 3:4 / 9:16}
+视觉目标：让读者在 2 秒内感到 {情绪/主题/冲突}
+文章主判断：{main_verdict}
+
+内容要求：
+1. 只表达文章的核心主题、情绪和视觉隐喻，不承载密集事实。
+2. 不生成长段中文文字、表格、小字、真实统计数字。
+3. 如果必须有文字，只允许 1 个短中文标题或留出标题区，最终文字由后期排版叠加。
+4. 不伪造品牌 logo、人物肖像、真实机构标识，除非用户提供素材和授权。
+
+视觉要求：
+1. 明确主体、前景、中景、背景和留白区域。
+2. 指定风格：{editorial / cinematic / isometric / 3D / collage / minimal / research poster background}。
+3. 指定色彩：{palette}，避免单色糊满。
+4. 为后期叠加中文标题预留干净区域。
+
+输出：
+- 生成图像。
+- 如果还要成品封面，后续用 HTML/PPT/图片编辑把标题、来源、作者叠加上去。
+```
+
 ## PPT / 课件 Prompt
 
 用于「转成 PPT / 课件 / workshop deck」。
@@ -106,6 +152,31 @@ qa:
 3. 中文正文少而准；长内容进表格、流程或讲稿，不堆 bullet。
 4. 输出 PPTX 时必须渲染全部页面并检查溢出、重叠、空白页。
 5. 如果用 HTML deck，要保留导航和导出路径；如果用 PPTX，要保证可编辑。
+```
+
+## 视觉报告 Prompt
+
+用于「把文章生成视觉报告 / report PDF / 研究简报」，不是全文 PDF。
+
+```text
+你是研究编辑和信息设计师。请把下面文章转换成一份中文视觉报告。
+
+内容模式：synthesize，不是全文 preserve，也不是 TL;DR 摘要。
+目标读者：{audience}
+
+结构要求：
+1. 摘要：3-5 条，不超过 1 页。
+2. 文章地图：保留原文主要章节。
+3. 核心判断：每条都对应原文依据。
+4. 关键证据 / 案例：用表格、流程或卡片呈现。
+5. 风险与边界：哪些结论需要验证，哪些是作者观点。
+6. 行动建议 / 继续追问。
+7. 来源与生成说明。
+
+设计要求：
+1. 报告可以比 PPT 信息更密，但必须有清楚层级。
+2. 图表只使用原文数据；没有数据时标注示意。
+3. 不把 report 当作「转 PDF」的默认替代品。
 ```
 
 ## NotebookLM 产物 Prompt
