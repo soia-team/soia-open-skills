@@ -181,12 +181,23 @@ validation:
 prompt_routes:
   ppt:
     local: prompt-ppt.md
+    local_visual: prompt-ppt.md
     notebooklm: prompt-notebooklm-ppt.md
     open_design: prompt-ppt.md
   image:
     codex_image: prompt-codex-image.md
+    imagegen: prompt-codex-image.md
     local_visual: prompt-infographic.md
     notebooklm: prompt-notebooklm-image.md
+    open_design: prompt-infographic.md
+  long_image:
+    local_visual: prompt-infographic.md
+    notebooklm: prompt-notebooklm-image.md
+    open_design: prompt-infographic.md
+  infographic:
+    local_visual: prompt-infographic.md
+    notebooklm: prompt-notebooklm-image.md
+    open_design: prompt-infographic.md
   quiz:
     notebooklm: prompt-notebooklm-quiz.md
   flashcards:
