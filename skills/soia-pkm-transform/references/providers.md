@@ -11,6 +11,8 @@
 
 无法确认 provider 是否可用时，先做只读检查，例如 `command -v notebooklm`、`notebooklm auth check --test --json`、确认 Obsidian 是否能打开目标 vault、确认 Open Design daemon health。不要在未确认时直接承诺产物。
 
+如果 provider 缺失，按本文件的 bootstrap 步骤推进：能安全安装的先安装并验证；需要用户认证的进入人工登录闸门；仍不可用时再降级或停止。不要把「未安装」当作最终答案。
+
 ## NotebookLM provider
 
 适用：播客、视频、PPT/PPTX、脑图、quiz、flashcards、report、infographic、data table，以及多源资料的 grounded synthesis。
@@ -20,12 +22,61 @@
 关键点：
 
 - 它是非官方 NotebookLM API/CLI，适合个人研究和自动化；Google 内部接口可能变化，必须保留降级说明。
-- 安装建议用隔离工具，例如 `uv tool install "notebooklm-py[browser]"` 或 `pipx install "notebooklm-py[browser]"`。
+- 安装建议用隔离工具，例如 `uv tool install "notebooklm-py[browser]"` 或 `pipx install "notebooklm-py[browser]"`。普通 `pip install` 只在 active virtualenv 或非 externally-managed Python 中使用。
 - 初次使用需要 `notebooklm login`，认证数据由 NotebookLM CLI 管理；skill 不保存 Google 账号、密码、cookie。
 - 自动化前用 `notebooklm auth check --test --json` 验证认证，不能只看本地 cookie 是否存在。
 - 并行工作流不要依赖 `notebooklm use` 的全局上下文；优先在 notebook-scoped 命令里传 `-n <notebook-id>`。
 - 生成 artifact 后记录 `notebook_id`、`source_id`、`task_id` / `artifact_id`、下载路径。
-- 如果 `command -v notebooklm` 或 auth check 失败，本轮不能写「已调用 NotebookLM」；只能写「NotebookLM provider 不可用，缺少 CLI / 登录态 / 网络 / 账号权限」，并给出可重跑命令。
+- 如果 `command -v notebooklm` 失败，先进入安装步骤，不能只报告缺 CLI。
+- 如果 CLI 已安装但 auth check 失败，进入登录闸门：提示用户运行或同意执行 `notebooklm login`，由用户在浏览器里登录 Google；agent 不读取密码、cookie 或 `storage_state.json` 内容。
+- 如果登录后 `auth check --test --json` 仍失败，本轮不能写「已调用 NotebookLM」；只能写「NotebookLM provider 不可用，缺少登录态 / 网络 / 账号权限」，并给出可重跑命令。
+
+### NotebookLM bootstrap
+
+当用户明确要 NotebookLM 产物，或目标默认 provider 是 NotebookLM（podcast / video / quiz / flashcards / grounded report / mindmap）时：
+
+1. **检查 CLI**：
+
+   ```bash
+   command -v notebooklm
+   notebooklm --version
+   ```
+
+2. **缺 CLI 时安装**，按顺序选择可用工具：
+
+   ```bash
+   command -v uv && uv tool install "notebooklm-py[browser]"
+   # 或
+   command -v pipx && pipx install "notebooklm-py[browser]"
+   # 仅在 active venv / 用户明确允许时：
+   python -m pip install "notebooklm-py[browser]"
+   ```
+
+   安装后重跑 `command -v notebooklm && notebooklm --version`。
+
+3. **验证认证**：
+
+   ```bash
+   notebooklm auth check --test --json
+   ```
+
+4. **缺登录态时进入人工登录闸门**：
+
+   ```bash
+   notebooklm login
+   notebooklm auth check --test --json
+   notebooklm list --json
+   ```
+
+   只要登录未完成，就不要生成 NotebookLM artifact。可先生成本地降级草稿，但回执必须标注「未调用 NotebookLM」。
+
+5. **可选安装 NotebookLM skill**：
+
+   ```bash
+   notebooklm skill install
+   ```
+
+   这只注册 agent skill，不替代 CLI 安装和 auth check。
 
 常见命令形态：
 

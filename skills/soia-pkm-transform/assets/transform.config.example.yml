@@ -66,6 +66,10 @@ outputs:
 providers:
   notebooklm:
     enabled: auto
+    install_policy: prompt   # prompt | auto_when_requested | never
+    install_command: uv tool install "notebooklm-py[browser]"
+    auth_check: notebooklm auth check --test --json
+    login_command: notebooklm login
     command: notebooklm
     profile_env: NOTEBOOKLM_PROFILE
     home_env: NOTEBOOKLM_HOME
@@ -86,6 +90,11 @@ providers:
     enabled: auto
     command: pnpm
     node_version: "24"
+    quality_gate:
+      render_required: true
+      min_infographic_blocks: 8
+      min_deck_slides: 8
+      require_layout_variety: true
     prefer_for:
       - ppt
       - image
