@@ -56,23 +56,25 @@ params:
 
 必须先输出设计 brief：
 1. Job to be done：读者看完要理解、判断或行动什么。
-2. 信息架构：8-15 个信息块；每块包含 claim、evidence/detail、source anchor。
-3. 视觉结构：封面/总览/流程/对比/表格/风险/行动/来源；PPT 至少 4 种版式轮廓。
-4. 模板映射：说明为何选择该 Open Design template / style。
-5. 负向约束：不要低密度摘要卡，不要单色大留白，不伪造数字，不把长文压成三点。
+2. Source coverage：列出原文章节、概念清单、案例链和关键判断；这是后续验收基线。
+3. 信息架构：8-15 个信息块；每块包含 claim、evidence/detail、source anchor。
+4. 视觉结构：封面/总览/流程/对比/表格/风险/行动/来源；PPT 至少 4 种版式轮廓。
+5. 模板映射：说明为何选择该 Open Design template / style，不能只写“现代感/科技感”。
+6. 负向约束：不要低密度摘要卡，不要单色大留白，不伪造数字，不把长文压成三点。
 
 如果 target_output=ppt：
-- 生成 8-14 页 slide plan；每页标题必须是明确判断，不是“背景介绍”。
+- 中长文生成 14-18 页 slide plan；短文至少 8 页；每页标题必须是明确判断，不是“背景介绍”。
 - 每页指定 layout role：cover / map / flow / matrix / table / case / quiz / source 等。
-- 必须有文章地图、概念关系、案例拆解、流程/架构、对比表、风险边界、来源页。
+- 必须有文章地图、概念覆盖矩阵、案例拆解、流程/架构、术语速查、对比表、风险边界、自测、来源页。
+- 若文章介绍十几个概念，不允许只做“概念简介”几页；必须分模块覆盖。
 
 如果 target_output=long_image 或 infographic：
 - 使用 1080x1920 或用户指定 canvas。
-- 顶部放 verdict / 主题判断；中部 6-9 个编号卡片；下部放流程、对比表或关系图；底部放支持点/风险点/继续追问。
+- 顶部放 verdict / 主题判断；中部 8-15 个编号卡片；下部放流程、对比表或关系图；底部放支持点/风险点/继续追问。
 - 中文密集文字使用 HTML/CSS 排版，不要求生图模型直接绘制文字。
 
 如果 target_output=video：
-- 先写 6-10 个镜头的 storyboard，再映射 HyperFrames / motion template。
+- 先写 8-12 个镜头的 storyboard，再映射 HyperFrames / motion template。
 - 每个镜头有字幕、画面元素、运动、时长。
 
 完成后必须给 QA：
@@ -85,6 +87,6 @@ params:
 
 - 没有 `od` / daemon / project id 时，不写「Open Design 已生成」。
 - 使用 MCP 安装命令前先 `--print`；真实写配置需要用户确认。
-- PPT 至少 8 页、至少 4 种版式轮廓。
-- 信息图至少 8 个信息块，且能回到原文证据。
+- 中长文 PPT 至少 14 页、至少 4 种版式轮廓。
+- 信息图至少 12 个信息块，且能回到原文证据。
 - 导出物必须实际渲染或下载检查。

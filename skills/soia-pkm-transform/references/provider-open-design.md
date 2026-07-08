@@ -106,7 +106,8 @@ curl -sS http://127.0.0.1:<daemon-port>/api/projects
 - `od export <file> --project <id> --format <pdf|image|pptx>` 是程序化导出路径；没有 project id 时不要假装已走 Open Design 导出。
 - `od tools connectors` / `od tools live-artifacts` 需要 Open Design 在 agent run 内注入 `OD_TOOL_TOKEN`；普通终端没有 token 时返回缺 token 是正常安全门。
 - 生成 deck 时必须从 template / style preset 出发，不要手写低质白底 bullet PPT。
-- 生成高密度图时，先写内容结构和视觉信息架构，再写 HTML；不要只做低信息量摘要卡。
+- 生成 deck / 高密度图时，先写 source coverage、template mapping 和视觉信息架构，再写 HTML；不要只做低信息量摘要卡。
+- 中长文 deck 目标 14-18 页；信息图至少 12 个信息块。达不到时只能标注为 draft / brief，不能说完成。
 - 具体 prompt 读取 [prompt-open-design.md](prompt-open-design.md)。
 
 ## Headless artifact smoke

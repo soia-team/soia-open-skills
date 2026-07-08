@@ -39,10 +39,11 @@
 python3 scripts/local_artifact_smoke.py \
   --article <article.md> \
   --out-dir <out-dir> \
+  --strict \
   --json
 ```
 
-该脚本从同一篇 Markdown 生成 `report.md/html/pdf`、`deck.html/pptx`、`infographic.html/png`、`data-table.csv`、`quiz.md`、`flashcards.md/csv`、`mindmap.mmd`、`podcast-script.md`、`video-script.md`、`cinematic-video-shotlist.md`，并用 Playwright 渲染 PNG/PDF。若 Playwright 自带浏览器缺失，脚本会优先使用系统 Chrome；不要要求用户为了普通本地导出先安装 Open Design。
+该脚本从同一篇 Markdown 生成 `report.md/html/pdf`、`deck.html/pptx`、`infographic.html/png`、`data-table.csv`、`quiz.md`、`flashcards.md/csv`、`mindmap.mmd`、`podcast-script.md`、`video-script.md`、`cinematic-video-shotlist.md`，并用 Playwright 渲染 PNG/PDF。`--strict` 会检查报告长度、概念覆盖、deck 页数、信息块数、题目/答案数量、音频/视频脚本长度等质量门；失败时不要交付。若 Playwright 自带浏览器缺失，脚本会优先使用系统 Chrome；不要要求用户为了普通本地导出先安装 Open Design。
 
 ## Codex / Agent Native Providers
 

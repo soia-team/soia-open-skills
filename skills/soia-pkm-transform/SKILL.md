@@ -16,6 +16,8 @@ description: 把 X/公众号/网页/Markdown 文章转换为 PDF、PPT、图片/
 - 秘钥和登录态只放 provider 自己的私有位置，例如 `NOTEBOOKLM_HOME`、微信公众号私有 env、agent 密钥流程；不要写进 vault 或开源 skill。
 - 不读取 `私有数据.md`、浏览器 cookie、账号配置文件，除非用户明确要求且 provider 官方流程需要。
 - 默认是转换，不是总结。只有用户明确说“总结/摘要/TL;DR”时才压缩内容。
+- 生成前先抽 source 的章节、概念、案例链和关键判断；产物必须覆盖这张清单的大部分内容。
+- 文件存在不等于完成；页数、信息密度、覆盖度、样式和媒介完整性按 [quality-gates.md](references/quality-gates.md) 验收。
 
 ## 触发后先判断
 
@@ -85,7 +87,7 @@ python3 scripts/local_artifact_smoke.py --article <article.md> --out-dir <out> -
 3. 选模式和 recipe：先定 `content_mode`，再跑 `resolve_route.py` 或读 [output-recipes.md](references/output-recipes.md)。
 4. 检查 provider：NotebookLM、Open Design、Obsidian、发布链路都先跑健康检查；不可用就按对应 provider bootstrap。
 5. 生成产物：只写到用户指定目录、当前项目或 vault 的 `outputs/transform/<YYYY>/<文章stem>/`。
-6. 验证：文件存在不等于完成，必须按目标检查可打开、可读、可解析、无明显乱码/重叠/空白。
+6. 验证：按 [quality-gates.md](references/quality-gates.md) 检查覆盖度、页数/信息块数、可打开、可读、可解析、无明显乱码/重叠/空白。
 7. 回写链接：源文章在 vault 内且配置允许时，只追加 `## 转化产物` 链接，不改原文。
 8. 回执：列来源、content_mode、provider、输出文件、验证结果、失败/降级原因。
 

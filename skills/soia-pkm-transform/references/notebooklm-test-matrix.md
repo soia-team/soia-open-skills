@@ -48,13 +48,13 @@ python3 scripts/notebooklm_artifact_matrix.py \
 
 | 目标 | Generate | Download | 主要验证 |
 |------|----------|----------|----------|
-| podcast | `generate audio --wait` | `download audio --all podcast/` | MP3 存在且大小合理 |
-| video | `generate video --wait` | `download video --all video/` | MP4 存在且大小合理 |
-| cinematic-video | `generate cinematic-video --wait` | `download cinematic-video --all cinematic-video/` | MP4 存在 |
+| podcast | `generate audio --format deep-dive --length long --wait` | `download audio --all podcast/` | MP3 存在且大小合理；不是 1 分钟摘要 |
+| video | `generate video --format explainer --style whiteboard --wait` | `download video --all video/` | MP4 存在且大小合理 |
+| cinematic-video | `generate video --format cinematic --wait` | `download video --all cinematic-video/` | MP4 存在 |
 | ppt | `generate slide-deck --format detailed --wait` | `download slide-deck deck.pptx --format pptx` | PPTX 能打开 / 可渲染 |
 | infographic | `generate infographic --orientation portrait --detail detailed --wait` | `download infographic infographic.png` | PNG 尺寸与文字可读 |
 | mindmap | `generate mind-map --kind interactive` | `download mind-map mindmap.json` | JSON 可解析 |
-| report | `generate report --format study-guide --wait` | `download report report.md` | Markdown 非空、有结构 |
+| report | `generate report --format custom --wait` | `download report report.md` | Markdown 非空、有 source 地图 / coverage matrix / 风险边界 |
 | data-table | `generate data-table "..." --wait` | `download data-table data.csv` | CSV 可读 |
 | quiz | `generate quiz --difficulty medium --quantity standard --wait` | `download quiz quiz.md --format markdown` | 题目/答案数量一致 |
 | flashcards | `generate flashcards --difficulty medium --quantity standard --wait` | `download flashcards flashcards.md --format markdown` | 卡片数量与格式合理 |

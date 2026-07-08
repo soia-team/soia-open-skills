@@ -100,7 +100,7 @@ notebooklm download slide-deck "<out.pptx>" --format pptx -n <notebook-id> --for
 音频/视频下载的兼容写法：
 
 ```bash
-NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm generate audio "..." -n <notebook-id> --language "$NOTEBOOKLM_HL" --wait --json
+NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm generate audio "..." -n <notebook-id> --format deep-dive --length long --language "$NOTEBOOKLM_HL" --wait --json
 NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm download audio --all "<out-dir>/podcast" -n <notebook-id> --force --json
 ```
 
@@ -108,18 +108,22 @@ NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm download audio --all "<out-dir>/po
 
 `generate quiz` 和 `generate flashcards` 当前 CLI 不支持 `--language`；用 `NOTEBOOKLM_HL=zh_Hans` 或在描述文字中要求简体中文，不要给这两个子命令追加 `--language`。
 
+`generate report` 支持 `--format briefing-doc|study-guide|blog-post|custom`。transform 的普通 report 默认使用 `custom / Create Your Own`；只有用户明确要 quick brief / study guide / blog post 时才使用对应内置格式。
+
+`generate video` 支持 `--format explainer|brief|cinematic`。transform 的 cinematic-video 目标应走 `notebooklm generate video --format cinematic`，不是 `generate cinematic-video`。
+
 ## 目标映射
 
 | Transform 目标 | 先读 prompt | NotebookLM 命令 |
 |----------------|-------------|-----------------|
 | podcast | [prompt-notebooklm-podcast.md](prompt-notebooklm-podcast.md) | `generate audio` -> `download audio` |
 | video | [prompt-notebooklm-podcast.md](prompt-notebooklm-podcast.md) | `generate video` -> `download video` |
-| cinematic-video | [prompt-notebooklm-podcast.md](prompt-notebooklm-podcast.md) | `generate cinematic-video` -> `download cinematic-video` |
+| cinematic-video | [prompt-notebooklm-podcast.md](prompt-notebooklm-podcast.md) | `generate video --format cinematic` -> `download video` |
 | ppt | [prompt-notebooklm-ppt.md](prompt-notebooklm-ppt.md) | `generate slide-deck` -> `download slide-deck --format pptx` 或 PDF |
 | mindmap | [prompt-notebooklm-mindmap.md](prompt-notebooklm-mindmap.md) | `generate mind-map` -> `download mind-map` |
 | quiz | [prompt-notebooklm-quiz.md](prompt-notebooklm-quiz.md) | `generate quiz` -> `download quiz --format markdown/json/html` |
 | flashcards | [prompt-notebooklm-flashcards.md](prompt-notebooklm-flashcards.md) | `generate flashcards` -> `download flashcards --format markdown/json/html` |
-| report | [prompt-notebooklm-report.md](prompt-notebooklm-report.md) | `generate report` -> `download report` |
+| report | [prompt-notebooklm-report.md](prompt-notebooklm-report.md) | `generate report --format custom` -> `download report` |
 | infographic | [prompt-notebooklm-image.md](prompt-notebooklm-image.md) | `generate infographic` -> `download infographic` |
 | data-table | [prompt-notebooklm-report.md](prompt-notebooklm-report.md) | `generate data-table` -> `download data-table` |
 

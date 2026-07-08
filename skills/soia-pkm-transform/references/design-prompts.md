@@ -35,7 +35,8 @@ job_to_be_done: ""       # 看完之后要理解/判断/行动什么
 content_mode: visual_dense | learning | synthesize
 information_architecture:
   main_verdict: ""
-  blocks: []             # 8-15 个信息块，每个有 claim + detail
+  coverage: []           # 原文章节、概念清单、案例链、关键判断
+  blocks: []             # 12-18 个信息块，每个有 claim + detail
   flows: []              # 流程/因果/层级/对比关系
   tables_or_charts: []   # 有数据用真实数据；无数据只做 labeled illustrative chart
   risks_or_limits: []
@@ -75,7 +76,8 @@ qa:
 视觉产物完成前必须过关：
 
 - **内容保真**：能对应回原文结构和例子；没有把全文误做成摘要。
-- **信息密度**：长图至少 8 个信息块；PPT 至少 8 页（除非用户指定更短）。
+- **信息密度**：长图至少 12 个信息块；中长文 PPT 至少 14 页（除非用户指定更短）。
+- **概念覆盖**：概念教程、工具教程、方法论文章要覆盖主要概念的 80% 以上，不能只挑几个词做摘要。
 - **版式质量**：没有孤零零大标题、大片空白、重复卡片模板。
 - **视觉语义**：支持/风险/流程/注释有清楚的颜色或版式区分。
 - **渲染验证**：PNG/PDF/PPTX 已实际渲染；检查重叠、截断、乱码。

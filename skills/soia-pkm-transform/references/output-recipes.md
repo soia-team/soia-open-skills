@@ -54,7 +54,7 @@ params:
 - AI 工具/知识图谱/流程：`style: graph_dark`；若 Open Design 可用，可参考 `html-ppt-graphify-dark-graph`。
 - 小红书图文：`style: xhs_cards`；若 Open Design 可用，可参考 `html-ppt-xhs-white-editorial` 或 `social-carousel`。
 
-内容结构至少 8-12 页，除非用户要求短 deck：
+内容结构至少 14-18 页（中长文 / 概念数 >=12），除非用户要求短 deck：
 
 1. 题名页：文章标题、来源、作者。
 2. 文章地图：保留原文主要章节，不只列 3-5 个观点。
@@ -72,6 +72,7 @@ params:
 - 无明显文字重叠、越界、空白页。
 - 版式轮廓至少包含 4 种：封面 / 地图 / 流程 / 对比 / 表格 / 自测 / 来源，不能每页同一种卡片模板。
 - 若使用 HTML deck，必须保留键盘导航和导出路径；不要只交一个不可编辑截图。
+- 若文章含多个概念，先列 coverage matrix；主要概念覆盖率低于 80% 时不算完成。
 
 ## 图片 / 长图 / 信息图
 
@@ -210,11 +211,14 @@ mindmap
 结构：
 
 1. 摘要。
-2. 核心观点。
-3. 关键证据。
-4. 可执行建议。
-5. 局限与待核实。
-6. 来源。
+2. Source 地图和 coverage matrix。
+3. 核心观点。
+4. 关键证据 / 案例 / 概念矩阵。
+5. 可执行建议。
+6. 局限与待核实。
+7. 来源。
+
+中长文 report 不能短到只剩摘要；若用户要 brief，文件名和回执标注 `briefing`。
 
 ## WeChat / X / Xiaohongshu
 

@@ -197,7 +197,7 @@ def default_provider_for(target: str, provider: str) -> str:
 
 
 def references_for(target: str, prompt_file: str | None, provider: str) -> list[str]:
-    refs = ["references/output-recipes.md"]
+    refs = ["references/output-recipes.md", "references/quality-gates.md"]
     if target in {"ppt", "image", "long_image", "infographic", "report"}:
         refs.insert(0, "references/design-prompts.md")
     if provider in {"local", "local_visual", "codex_image", "obsidian", "publish"}:
