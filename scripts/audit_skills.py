@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""Audit public skill folders for common authoring mistakes."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+
+ALLOWED_FRONTMATTER = {"name", "description"}
+DISALLOWED_SKILL_DOCS = {
+    "README.md",
+    "INSTALLATION_GUIDE.md",
+    "QUICK_REFERENCE.md",
+    "CHANGELOG.md",
+}
+TEXT_SUFFIXES = {
+    ".md",
+    ".py",
+    ".sh",
+    ".yml",
+    ".yaml",
+    ".json",
+    ".toml",
+    ".txt",
+    ".example",
+}
+
+ABSOLUTE_PATH_RE = re.compile(r"(/Users/[^ \n`]+|/home/[^/< \n`]+/[^ \n`]+)")
+SECRET_VALUE_RE = re.compile(
+    r"(?i)\b(?:secret|token|api[_-]?key|session[_-]?string|password|cookie)\b\s*[:=]\s*"
+    r"(?!<|\{|YOUR_|EXAMPLE|example|placeholder|\*{4,}|x{4,}|auto\b|prompt\b|never\b|null\b|os\.|resp\.|client\.)"
+    r"[^ \n#]{8,}"
+)
+KNOWN_SECRET_RE = re.compile(
+    r"(AIza[0-9A-Za-z_-]{20,}|sk-[0-9A-Za-z_-]{20,}|ghp_[0-9A-Za-z]{20,})"
+)
+PRIVATE_CONTEXT_RE = re.compile(r"(老大|二宝|三宝|宝宝|真实家庭结构|孩子昵称|私有 memory|成绩\s*\d{2,3})")
+VAULT_SPECIFIC_RE = re.compile(
+    r"(40_图书视频馆/10_文章摘抄|40_图书视频馆/40_孩子书库|50_写作与发布/10_草稿|"
+    r"50_写作与发布/30_转化输出|10_工作台/00_Inbox)"
+)
+
+
+@dataclass
+class Finding:
+    severity: str
+    path: str
+    message: str
+    line: int | None = None
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "severity": self.severity,
+            "path": self.path,
+            "line": self.line,
+            "message": self.message,
+        }
+
+
+def rel(path: Path, root: Path) -> str:
+    return str(path.relative_to(root))
+
+
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="ignore")
+
+
+def parse_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
+    if not text.startswith("---\n"):
+        return {}, ["missing YAML frontmatter"]
+    end = text.find("\n---", 4)
+    if end == -1:
+        return {}, ["unterminated YAML frontmatter"]
+    raw = text[4:end].strip().splitlines()
+    data: dict[str, str] = {}
+    errors: list[str] = []
+    for line in raw:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if ":" not in line:
+            errors.append(f"cannot parse frontmatter line: {line}")
+            continue
+        key, value = line.split(":", 1)
+        data[key.strip()] = value.strip().strip('"').strip("'")
+    return data, errors
+
+
+def add_line_finding(findings: list[Finding], severity: str, root: Path, path: Path, line_no: int, message: str) -> None:
+    findings.append(Finding(severity, rel(path, root), message, line_no))
+
+
+def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
+    skill_name = skill_dir.name
+    skill_md = skill_dir / "SKILL.md"
+    if not skill_md.is_file():
+        findings.append(Finding("ERROR", rel(skill_dir, root), "missing SKILL.md"))
+        return
+
+    text = read_text(skill_md)
+    fm, errors = parse_frontmatter(text)
+    for error in errors:
+        findings.append(Finding("ERROR", rel(skill_md, root), error))
+
+    if fm.get("name") != skill_name:
+        findings.append(Finding("ERROR", rel(skill_md, root), f"frontmatter name must match folder name: {skill_name!r}"))
+    if not fm.get("description"):
+        findings.append(Finding("ERROR", rel(skill_md, root), "missing frontmatter description"))
+    elif len(fm["description"]) > 220:
+        findings.append(Finding("WARN", rel(skill_md, root), f"description is long ({len(fm['description'])} chars); keep trigger metadata concise"))
+
+    extras = sorted(set(fm) - ALLOWED_FRONTMATTER)
+    if extras:
+        findings.append(Finding("WARN", rel(skill_md, root), f"extra frontmatter fields: {', '.join(extras)}"))
+
+    for path in skill_dir.rglob("*"):
+        if path.is_dir():
+            continue
+        if path.name in DISALLOWED_SKILL_DOCS:
+            findings.append(Finding("WARN", rel(path, root), "auxiliary docs inside skill; prefer SKILL.md + references/"))
+        if path.name == ".env" or path.suffix == ".session":
+            findings.append(Finding("ERROR", rel(path, root), "private auth/session file must not be committed"))
+        if "references" in path.parts:
+            try:
+                idx = path.parts.index("references")
+            except ValueError:
+                idx = -1
+            if idx >= 0 and len(path.parts) - idx > 2:
+                findings.append(Finding("WARN", rel(path, root), "nested references should stay one level below references/"))
+
+
+def audit_text_file(root: Path, path: Path, findings: list[Finding]) -> None:
+    if path.suffix not in TEXT_SUFFIXES and path.name not in {"SKILL.md", ".env.example"}:
+        return
+    text = read_text(path)
+    for i, line in enumerate(text.splitlines(), start=1):
+        placeholder_path = any(marker in line for marker in ("/Users/xxx", "/home/xxx", "/Users/<", "/home/<"))
+        secret_is_env_read = "os.environ" in line or "getenv(" in line
+        secret_is_placeholder_expr = "{" in line and "}" in line
+        secret_is_function_call = re.search(r"[:=]\s*[A-Za-z_][A-Za-z0-9_.]*\(", line) is not None
+        if ABSOLUTE_PATH_RE.search(line) and not placeholder_path:
+            add_line_finding(findings, "ERROR", root, path, i, "hardcoded absolute user path")
+        if KNOWN_SECRET_RE.search(line) or (
+            SECRET_VALUE_RE.search(line)
+            and not secret_is_env_read
+            and not secret_is_placeholder_expr
+            and not secret_is_function_call
+        ):
+            add_line_finding(findings, "ERROR", root, path, i, "possible committed secret or credential value")
+        if PRIVATE_CONTEXT_RE.search(line):
+            add_line_finding(findings, "WARN", root, path, i, "possible private family/profile context")
+        if VAULT_SPECIFIC_RE.search(line):
+            add_line_finding(findings, "WARN", root, path, i, "vault-specific public default; prefer placeholder, env, CLI arg, or config")
+
+
+def collect_findings(root: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    skills_root = root / "skills"
+    if not skills_root.is_dir():
+        return [Finding("ERROR", "skills", "missing skills/ directory")]
+
+    for skill_dir in sorted(path for path in skills_root.iterdir() if path.is_dir() and not path.name.startswith(".")):
+        audit_skill(root, skill_dir, findings)
+
+    # SKILL_SPEC.md intentionally contains forbidden examples; scanning it would create false positives.
+    scan_roots = [root / "README.md", root / "CONTRIBUTING.md", skills_root]
+    for scan_root in scan_roots:
+        if scan_root.is_file():
+            audit_text_file(root, scan_root, findings)
+        elif scan_root.is_dir():
+            for path in scan_root.rglob("*"):
+                if path.is_file():
+                    audit_text_file(root, path, findings)
+    return sorted(findings, key=lambda f: (f.severity != "ERROR", f.path, f.line or 0, f.message))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Audit public skills for authoring-rule drift.")
+    parser.add_argument("--root", default=".", help="Repository root.")
+    parser.add_argument("--json", action="store_true", help="Print JSON findings.")
+    parser.add_argument("--strict", action="store_true", help="Exit non-zero on WARN as well as ERROR.")
+    args = parser.parse_args()
+
+    root = Path(args.root).resolve()
+    findings = collect_findings(root)
+
+    if args.json:
+        print(json.dumps([f.as_dict() for f in findings], ensure_ascii=False, indent=2))
+    else:
+        if not findings:
+            print("No findings.")
+        for finding in findings:
+            loc = finding.path if finding.line is None else f"{finding.path}:{finding.line}"
+            print(f"{finding.severity}: {loc}: {finding.message}")
+
+    has_error = any(f.severity == "ERROR" for f in findings)
+    has_warn = any(f.severity == "WARN" for f in findings)
+    return 1 if has_error or (args.strict and has_warn) else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

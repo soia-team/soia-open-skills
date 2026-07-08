@@ -4,6 +4,17 @@ This repository publishes reusable agent skills. Every skill must work for users
 
 ## Public Skill Rules
 
+### 0. Start from the template
+
+Create new skills from the repository template:
+
+```bash
+cp -R templates/skill-template skills/<your-skill-name>
+python3 scripts/audit_skills.py
+```
+
+The template is intentionally generic: it shows config discovery, provider setup boundaries, and validation language without encoding any maintainer-specific vault layout.
+
 ### 1. No hardcoded personal paths
 
 Do not hardcode maintainer-specific or vault-specific paths in scripts, `SKILL.md`, examples, or config templates.
@@ -121,6 +132,18 @@ Before commit, verify:
 - [ ] Scripts accept CLI args and/or env vars for paths.
 - [ ] Validation commands and limits are documented.
 - [ ] `git diff --check` passes.
+
+Run the repository audit:
+
+```bash
+python3 scripts/audit_skills.py
+```
+
+Use `--strict` in CI or before release when WARN-level drift should block:
+
+```bash
+python3 scripts/audit_skills.py --strict
+```
 
 Suggested scan:
 

@@ -1,0 +1,23 @@
+# Public config example for your-skill-name.
+# Copy to ~/.config/<your-skill-name>/config.yml or point YOUR_SKILL_CONFIG to it.
+# Keep secrets out of this file. Store provider auth in provider-owned login flows.
+
+version: 1
+
+paths:
+  workspace_env: YOUR_SKILL_WORKSPACE
+  output_root: outputs/your-skill-name
+
+defaults:
+  provider: auto
+  dry_run: false
+  update_source: false
+
+providers:
+  local:
+    enabled: true
+  external_provider:
+    enabled: auto
+    install_policy: prompt
+    command: <command-name>
+    auth_check: <safe-readonly-auth-check>

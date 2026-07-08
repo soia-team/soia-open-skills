@@ -178,6 +178,9 @@ python3 ~/.claude/skills/soia-pkm-clip-x/scripts/sync_telegram_export.py \
 soia-open-skills/
 ├── README.md
 ├── LICENSE · CONTRIBUTING.md
+├── SKILL_SPEC.md              ← public skill 规范
+├── scripts/audit_skills.py    ← 本仓库技能审计
+├── templates/skill-template/  ← 新 skill 起手模板
 └── skills/                    ← npx skills 扫描此目录
     ├── soia-pkm-clip-x/       ├── soia-pkm-publish/
     ├── soia-pkm-clip-wechat/  ├── soia-pkm-bootstrap/
@@ -191,6 +194,13 @@ soia-open-skills/
 
 每个 skill 一个文件夹，独立 `SKILL.md`（frontmatter 含 `name` + `description`）+ 自己的 `scripts/`。
 
+新增 skill 先复制模板：
+
+```bash
+cp -R templates/skill-template skills/your-skill-name
+python3 scripts/audit_skills.py
+```
+
 ---
 
 ## 致谢与相关项目
@@ -202,7 +212,7 @@ soia-open-skills/
 
 ## 贡献
 
-欢迎 PR / issue。加 skill 请：① 先读 [SKILL_SPEC.md](./SKILL_SPEC.md) ② 放 `skills/<name>/` ③ 有 `SKILL.md`（`name` + `description`，description ≤200 字）④ 路径 / key / 个人数据全用配置或环境变量，严禁硬编码 ⑤ 至少 1 个端到端用例。详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+欢迎 PR / issue。加 skill 请：① 先读 [SKILL_SPEC.md](./SKILL_SPEC.md) ② 从 [templates/skill-template](./templates/skill-template/) 复制 ③ 放 `skills/<name>/` ④ 有 `SKILL.md`（仅 `name` + `description`，description 尽量 ≤200 字）⑤ 路径 / key / 个人数据全用配置或环境变量，严禁硬编码 ⑥ 跑 `python3 scripts/audit_skills.py` ⑦ 至少 1 个端到端用例。详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
 ## License
 

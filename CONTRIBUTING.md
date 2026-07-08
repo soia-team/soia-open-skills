@@ -6,13 +6,10 @@
 
 2. **先读技能规范**：[SKILL_SPEC.md](./SKILL_SPEC.md)。所有 public skill 必须遵守其中的路径、配置、secret、个人信息和验证口径约束。
 
-3. **在 `skills/` 下建一个新目录**，命名用小写连字符（如 `notion-to-obsidian`）：
+3. **从模板复制一个新目录**，命名用小写连字符（如 `notion-to-obsidian`）：
 
-   ```
-   skills/your-skill-name/
-   ├── SKILL.md       ← 必须，skill 入口
-   └── scripts/       ← 可选，相关脚本
-       └── *.py
+   ```bash
+   cp -R templates/skill-template skills/your-skill-name
    ```
 
 4. **写 SKILL.md**，frontmatter 必须有：
@@ -23,6 +20,8 @@
    description: 一句话说明 skill 干什么 + 触发词清单（控制在 200 字符内）
    ---
    ```
+
+   frontmatter 只放 `name` 和 `description`，不要新增 `version` 等字段。
 
 5. **路径参数化**：
    - 严禁硬编码 `/Users/xxx`、`/home/xxx` 等本地路径
@@ -40,6 +39,12 @@
    - 至少给出 1 个端到端用例
    - 文档里说明如何手动验证
    - 区分「静态检查通过」「已安装」「端到端测试通过」「已提交」，不要混用
+   - 提交前运行：
+
+     ```bash
+     python3 scripts/audit_skills.py
+     git diff --check
+     ```
 
 8. **提 PR**，说明：
    - 这个 skill 解决什么问题

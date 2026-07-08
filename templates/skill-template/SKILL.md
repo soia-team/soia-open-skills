@@ -1,0 +1,46 @@
+---
+name: your-skill-name
+description: 一句话说明这个 skill 做什么、何时触发。包含 3-6 个自然语言触发词，保持简短，不写个人路径、账号或私有偏好。
+---
+
+# your-skill-name
+
+用 1-2 句话说明这个 skill 的定位：它解决什么问题、输入是什么、输出是什么、和其他 skill 的关系是什么。
+
+## Public Rules
+
+- Do not hardcode maintainer paths, vault directory names, account names, secrets, cookies, or private family context.
+- Put user-specific behavior in CLI args, environment variables, or config files.
+- Read only the user-provided source files or the current task workspace.
+- Use placeholders in examples: `<vault>`, `<path-to-article.md>`, `<YOUR_KEY>`.
+
+## When Triggered
+
+1. Parse the user request into `source`, `target`, `provider`, `output`, and optional `params`.
+2. If a provider, path, or credential is missing, check [references/providers.md](references/providers.md) and guide setup without reading private secret files.
+3. Execute the smallest reliable workflow.
+4. Validate the real output before claiming success.
+5. Report what changed, which checks ran, and any remaining gaps.
+
+## Inputs
+
+```yaml
+source: <url-or-path>
+target: <artifact-or-action>
+params:
+  provider: auto
+  output_dir: auto
+  dry_run: false
+```
+
+## Resources
+
+- Provider setup and fallback rules: [references/providers.md](references/providers.md)
+- Optional public config example: [assets/config.example.yml](assets/config.example.yml)
+- Optional config resolver: `scripts/resolve_config.py`
+
+## Validation
+
+- Static: run `python3 scripts/resolve_config.py --json` if the skill uses config.
+- Content: verify output exists and matches the requested target.
+- Safety: scan for hardcoded paths and secrets before commit.
