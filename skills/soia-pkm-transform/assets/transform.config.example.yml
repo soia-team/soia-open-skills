@@ -30,19 +30,38 @@ outputs:
     provider: auto
     format: pptx
     save: output_root
+    params:
+      slide_count: auto
+      audience: auto
+      style: auto
+      aspect_ratio: "16:9"
+      density: dense
+      include_speaker_notes: auto
   image:
     provider: auto
     format: png
     save: output_root
     subtype_default: cover_image   # cover_image | illustration | long_image | infographic
+    params:
+      aspect_ratio: auto
+      text_policy: avoid_dense_text
+      style: auto
   long_image:
     provider: local_visual
     format: png
     save: output_root
+    params:
+      canvas: "1080x1920"
+      density: high
+      style: research_poster
   infographic:
     provider: local_visual
     format: png
     save: output_root
+    params:
+      canvas: "1080x1920"
+      density: high
+      style: research_poster
   quiz:
     provider: auto
     format: markdown

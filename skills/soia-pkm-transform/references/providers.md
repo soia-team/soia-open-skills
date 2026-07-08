@@ -121,7 +121,7 @@ Open Design 有两种使用模式，回执必须说清楚是哪一种：
 推荐用途：
 
 - `visual_dense`：用 HTML/CSS 做高密度信息海报，再用 managed Chromium 截图成 PNG。
-- `ppt`：用 `html-ppt` full-deck 模板生成 HTML deck，再按需要导出 PNG / PDF / PPTX。
+- `ppt`：读取 [prompt-ppt.md](prompt-ppt.md)，用 `html-ppt` full-deck 模板生成 HTML deck，再按需要导出 PNG / PDF / PPTX。
 - `learning`：用 `course-module` / `presenter-mode-reveal`，保留学习目标、讲稿、自测题。
 - `workflow / architecture`：用 `knowledge-arch-blueprint`。
 - `AI-native / graph / tool`：用 `graphify-dark-graph`。
@@ -206,7 +206,7 @@ curl -s http://127.0.0.1:<daemon-port>/api/health
 
 流程：
 
-1. 读取 [design-prompts.md](design-prompts.md)，先写 visual brief 和信息架构。
+1. 读取 [design-prompts.md](design-prompts.md)，再按目标读取 [prompt-ppt.md](prompt-ppt.md)、[prompt-infographic.md](prompt-infographic.md)、[prompt-imagegen.md](prompt-imagegen.md) 或 [prompt-report.md](prompt-report.md)，先写 visual brief 和信息架构。
 2. 生成自包含 HTML/CSS 或 PPTX；不要依赖外部模板路径。
 3. 渲染检查：尺寸、文字可读性、截断、重叠、乱码。
 4. 若渲染失败，先修布局；不要把未验收产物交付。
@@ -228,7 +228,7 @@ curl -s http://127.0.0.1:<daemon-port>/api/health
 
 规则：
 
-- 先读取 [design-prompts.md](design-prompts.md) 的「Imagegen / 封面图 Prompt」。
+- 先读取 [prompt-imagegen.md](prompt-imagegen.md)。
 - 默认生成无字或少字图；标题、作者、来源、数字、表格用 HTML/PPT/图片编辑后期叠加。
 - 若 imagegen 输出里出现乱码文字、错误数字或不该有的 logo，要重新生成或裁掉文字区，不要把错误文字交付。
 - 回执要区分「imagegen 生成视觉素材」和「本地排版生成最终图片」。

@@ -23,7 +23,22 @@ PDF 的默认语义是**全文转换**，不是摘要报告。除非用户明确
 
 ## PPT / PPTX
 
-开始前先读取 [design-prompts.md](design-prompts.md) 的「PPT / 课件 Prompt」和 QA Gate。PPT 的失败形态通常不是文件打不开，而是低密度、无叙事、每页重复卡片、看起来像自动摘要。
+开始前先读取 [design-prompts.md](design-prompts.md) 的路由规则，再读取 [prompt-ppt.md](prompt-ppt.md)。PPT 的失败形态通常不是文件打不开，而是低密度、无叙事、每页重复卡片、看起来像自动摘要。
+
+输入默认来自 article packet / Markdown 正文。用户没有提供大纲时，agent 应从标题层级、段落结构、例子、术语和清单自动推断；用户给了参数时优先服从参数。
+
+常用参数：
+
+```yaml
+params:
+  slide_count: auto
+  audience: auto
+  style: auto
+  aspect_ratio: "16:9"
+  output_format: pptx
+  provider: auto
+  include_speaker_notes: auto
+```
 
 默认分两种：
 
@@ -64,14 +79,14 @@ PDF 的默认语义是**全文转换**，不是摘要报告。除非用户明确
 
 | 子类型 | 例子 | Prompt | Provider |
 |--------|------|--------|----------|
-| `cover_image` | 封面图、头图、文章配图、PPT 背景 | `Imagegen / 封面图 Prompt` | imagegen / gpt-image-2 / image provider |
-| `illustration` | 插画、图标、视觉隐喻、装饰图 | `Imagegen / 封面图 Prompt` | imagegen / gpt-image-2 / image provider |
-| `long_image` | 长图、图文卡、竖版总结图 | `高密度信息图 Prompt` | local_visual HTML/CSS screenshot |
-| `infographic` | 一张图讲清楚、信息图、研究海报 | `高密度信息图 Prompt` | local_visual HTML/CSS screenshot |
+| `cover_image` | 封面图、头图、文章配图、PPT 背景 | [prompt-imagegen.md](prompt-imagegen.md) | imagegen / gpt-image-2 / image provider |
+| `illustration` | 插画、图标、视觉隐喻、装饰图 | [prompt-imagegen.md](prompt-imagegen.md) | imagegen / gpt-image-2 / image provider |
+| `long_image` | 长图、图文卡、竖版总结图 | [prompt-infographic.md](prompt-infographic.md) | local_visual HTML/CSS screenshot |
+| `infographic` | 一张图讲清楚、信息图、研究海报 | [prompt-infographic.md](prompt-infographic.md) | local_visual HTML/CSS screenshot |
 
-长图/信息图开始前先读取 [design-prompts.md](design-prompts.md) 的「高密度信息图 Prompt」和 QA Gate。信息图必须先做信息架构，再做视觉；不要从「帮我总结」直接跳到 HTML。
+长图/信息图开始前先读取 [prompt-infographic.md](prompt-infographic.md) 和 QA Gate。信息图必须先做信息架构，再做视觉；不要从「帮我总结」直接跳到 HTML。
 
-封面图/插画开始前先读取 [design-prompts.md](design-prompts.md) 的「Imagegen / 封面图 Prompt」。不要要求 imagegen 直接生成大量中文文字；最终文字用 HTML/PPT/图片编辑叠加。
+封面图/插画开始前先读取 [prompt-imagegen.md](prompt-imagegen.md)。不要要求 imagegen 直接生成大量中文文字；最终文字用 HTML/PPT/图片编辑叠加。
 
 默认：
 
@@ -104,6 +119,8 @@ PDF 的默认语义是**全文转换**，不是摘要报告。除非用户明确
 - NotebookLM 可用：`generate quiz`，下载 Markdown 或 JSON。
 - 本地降级：生成 `quiz.md`。
 
+使用 NotebookLM 时先读取 [prompt-notebooklm.md](prompt-notebooklm.md)；本地降级时按 `learning` 模式保留原文概念、例子和易错点。
+
 题型建议：
 
 - 选择题 5-10 道。
@@ -125,6 +142,8 @@ PDF 的默认语义是**全文转换**，不是摘要报告。除非用户明确
 - NotebookLM 可用：`generate mind-map`，下载 JSON。
 - 本地降级：生成 Mermaid mindmap 或缩进 Markdown。
 - 用户要演示效果：可接 mindmap-ppt 类 provider 或当前 agent presentation provider。
+
+使用 NotebookLM 时先读取 [prompt-notebooklm.md](prompt-notebooklm.md)；本地降级时保留文章标题层级和概念关系，不把长文压成 3 层空泛树。
 
 本地 Mermaid 形态：
 
@@ -149,6 +168,8 @@ mindmap
 
 默认：NotebookLM `generate audio`。
 
+开始前读取 [prompt-notebooklm.md](prompt-notebooklm.md)，明确语言、时长、听众和内容保真度。
+
 要求：
 
 - 说明语言、时长和风格。
@@ -166,6 +187,8 @@ mindmap
 - NotebookLM `generate flashcards` 下载 Markdown/JSON。
 - 本地降级：生成问答卡 Markdown 表格。
 
+使用 NotebookLM 时先读取 [prompt-notebooklm.md](prompt-notebooklm.md)；本地降级时按「一个概念一张卡」生成。
+
 验证：
 
 - 每张卡只考一个点。
@@ -179,6 +202,8 @@ mindmap
 - NotebookLM `generate report` 适合 grounded 资料报告。
 - 本地 Markdown report 适合快速总结和轻量加工。
 - 如果用户要原创文章而不是报告，转交 `soia-pkm-compose`。
+
+开始前读取 [prompt-report.md](prompt-report.md)。如果用户明确要求 NotebookLM grounded report，先读取 [prompt-notebooklm.md](prompt-notebooklm.md) 并按 provider bootstrap 检查。
 
 注意：Report 是「综合报告」，不是 PDF 全文导出。用户说「转 PDF」时不要自动转成 report。
 
