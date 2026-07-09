@@ -42,7 +42,7 @@ python3 backfill_reading_records.py
 # 重生成三份总览
 python3 gen_library_md.py
 python3 gen_records_md.py
-python3 gen_genre_library_md.py --base 40_图书视频馆/40_孩子书库
+python3 gen_genre_library_md.py --base <vault-book-library-dir>
 ```
 
 所有脚本共享同一套参数化约定：

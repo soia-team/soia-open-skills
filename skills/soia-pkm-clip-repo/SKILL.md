@@ -1,7 +1,6 @@
 ---
 name: soia-pkm-clip-repo
-version: 1.0.0
-description: 把 GitHub 开源项目仓库一键归档到 Obsidian vault 的「开源项目图书馆」——clone 上游代码（不进 vault）+ 生成/更新项目卡（分类/语言/访问链接/最近提交自动填，用途/状态/stars/我的笔记留人工）+ 起调研笔记骨架 + 双向链接；也支持批量重跑刷新全部项目卡的自动字段。当用户说「归档这个项目 <url>」「归档下这个仓库」「clip 这个 repo」「重新生成开源项目卡」时触发。
+description: 把 GitHub 开源项目仓库一键归档到 Obsidian vault 的「开源项目图书馆」——clone 上游代码（不进 vault）+ 生成/更新项目卡（分类/语言/访问链接/最近提交自动填，用途/状态/stars/我的笔记留人工）+ 起调研笔记骨架 + 双向链接；也支持批量重跑刷新全部项目卡的自动字段。当用户说「归档这个项目 URL」「归档下这个仓库」「clip 这个 repo」「重新生成开源项目卡」时触发。
 ---
 
 # soia-pkm-clip-repo

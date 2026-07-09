@@ -13,11 +13,11 @@ description: 把任意网页/博客文章一键归档到 Obsidian vault。用正
 - 正文抽取：`trafilatura` 或 `readability-lxml` 抽正文（去广告 / 导航），提取标题、作者、发布时间。
 - 抓不到正文 → `content_complete: false`，**绝不静默截断**。
 - 脚本：`scripts/archive_web.py <url> --vault <path>`。
-- 手机端可用 Obsidian Web Clipper 落到 `10_工作台/00_Inbox/`，再由本 skill 迁入。
+- 手机端可用 Obsidian Web Clipper 落到 `<vault-inbox-dir>/`，再由本 skill 迁入。
 
 ## 落地（clip 家族统一规范）
 
-- 路径：`40_图书视频馆/10_文章摘抄/<年>/YYYY-MM-DD-<来源>-<作者>-<标题>.md`（来源如 博客 / Substack / Medium）
+- 路径：`<vault-articles-dir>/<年>/YYYY-MM-DD-<来源>-<作者>-<标题>.md`（来源如 博客 / Substack / Medium）
 - frontmatter 同 clip 家族；正文 `## 摘要 / 原文 / 我的看法 / 关联`。
 - 归档后补摘要 + topics；走 `organize` 归位。
 

@@ -1,6 +1,6 @@
 ---
 name: soia-pkm-bootstrap
-description: 从零初始化一个 AI-native 的 Obsidian 个人知识库（PKM）。建 PARA 目录骨架 + 各区 AGENTS.md + 模板 + Bases + CSS，接入 Codex、Claude Code、Gemini CLI、opencode、workbuddy 多 AI 适配层，并装好 soia-pkm-* 的输入/整理/输出技能。Triggers：「初始化一个知识库」「从零建 vault」「bootstrap 一个 AI 知识库」「帮我搭个 Obsidian 知识库」「新建一个 PKM 库」「让 Obsidian 支持多种 AI」
+description: 初始化 AI-native Obsidian PKM：创建 PARA 目录、AGENTS 规则、模板、Bases、CSS、多 AI 入口，并接入 soia-pkm-* 闭环技能。Triggers：「初始化知识库」「从零建 vault」「bootstrap AI 知识库」「搭 Obsidian 知识库」「新建 PKM 库」
 ---
 
 # soia-pkm-bootstrap

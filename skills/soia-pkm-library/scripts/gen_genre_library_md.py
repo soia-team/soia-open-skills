@@ -4,12 +4,12 @@
 用法：
   python3 gen_genre_library_md.py                       # 用 --vault/OBSIDIAN_VAULT + 默认书库相对路径
   python3 gen_genre_library_md.py --vault ~/MyVault
-  python3 gen_genre_library_md.py --base 40_图书视频馆/40_孩子书库
+  python3 gen_genre_library_md.py --base <vault-book-library-dir>
   python3 gen_genre_library_md.py --config my_genres.json
   python3 gen_genre_library_md.py --output /tmp/preview.md    # 干跑，不覆盖 vault 里的总览文件
 
 vault 路径解析优先级：--vault > OBSIDIAN_VAULT env > 当前目录。
-书库相对路径默认 `40_图书视频馆/40_孩子书库`，可用 --base 覆盖。
+书库相对路径默认 `Books`，可用 --base 覆盖。
 """
 import argparse
 import json
@@ -22,7 +22,7 @@ from soia_env import env_source_hint, load_private_env
 
 load_private_env()
 
-DEFAULT_BASE = "40_图书视频馆/40_孩子书库"
+DEFAULT_BASE = "Books"
 
 # 类型显示顺序与中文描述（默认值，可用 --config 覆盖）
 DEFAULT_GENRE_ORDER = [

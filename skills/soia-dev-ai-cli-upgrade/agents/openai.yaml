@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dev AI CLI Upgrade"
+  short_description: "Audit and upgrade AI/developer CLIs such as codex, claude, gemini, kimi, qwen, opencode, cursor, qodercli, and mmx with dry-run reports and logs."
+  default_prompt: "Use soia-dev-ai-cli-upgrade: Audit and upgrade AI/developer CLIs such as codex, claude, gemini, kimi, qwen, opencode, cursor, qodercli, and mmx with dry-run reports and logs."

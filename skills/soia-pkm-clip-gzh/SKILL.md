@@ -1,7 +1,6 @@
 ---
 name: soia-pkm-clip-gzh
-version: 1.0.0
-description: 把用户自己管理的微信公众号已发文章批量拉取进 Obsidian vault。三条技术路线：官方 API（freepublish/batchget + material/batchget_material，仅覆盖通过草稿箱「发布」的文章，需已认证账号）、公众号后台接口（非官方 searchbiz + appmsg，能读全部历史含手动群发的老文，读自己号历史文章的推荐路线）、登录态 Cookie（非官方 profile_ext 接口，同样能读全部历史但票据更短命）。Triggers：「同步我的公众号」「批量拉取我公众号的历史文章」「批量归档我的公众号」「导入公众号已发文章」「clip 我的公众号」
+description: 批量归档用户自己管理的微信公众号已发文章到 Obsidian vault。支持官方 API、公众号后台接口、登录态 Cookie 三条路线，并按 url 去重。Triggers：「同步我的公众号」「批量拉取我公众号历史文章」「批量归档我的公众号」「导入公众号已发文章」「clip 我的公众号」
 ---
 
 # soia-pkm-clip-gzh
@@ -149,7 +148,7 @@ python3 scripts/fetch_cookie.py --biz <__biz> [--out <目录>] [--limit N] [--dr
 ## 落地规范（三条路共用）
 
 - **中转区，不是终点**：落到 vault 的**收件箱层**，不是 `soia-pkm-organize` 归位后的最终位置——`organize` 上线前先囤在这里，之后随"作品库重构"一起归位到 40/50 区。
-- 默认输出目录：`Inbox/gzh-articles/<年>/`（vault 内相对路径，代码里的通用默认值）。这个 vault 建议设为你自己的中转区，例如 `10_工作台/00_Inbox/gzh-已发/`——用 `--out 10_工作台/00_Inbox/gzh-已发` 或私有 env 里的 `OBSIDIAN_GZH_OUT` 覆盖（默认值刻意不硬编码具体中文路径，遵守本仓库 [SKILL_SPEC.md](../../SKILL_SPEC.md) 的"no hardcoded personal paths"规则）。
+- 默认输出目录：`Inbox/gzh-articles/<年>/`（vault 内相对路径，代码里的通用默认值）。这个 vault 建议设为你自己的中转区，例如 `<vault-inbox-dir>/gzh-articles/`——用 `--out <vault-relative-dir>` 或私有 env 里的 `OBSIDIAN_GZH_OUT` 覆盖（默认值刻意不硬编码具体中文路径，遵守本仓库 [SKILL_SPEC.md](../../SKILL_SPEC.md) 的"no hardcoded personal paths"规则）。
 - 文件名：`<出版日期>-公众号-<账号显示名>-<标题>.md`，同名冲突时按 url 特征加短后缀。
 - frontmatter：`tags:[公众号原创, 待归位]`、`source: 公众号自有`、`url`、`title`、`author`、`published_at`、`captured_at`、`route: api|cookie|mp-backend`、`content_complete`、`topics: []`（`topics` 是本 skill 相对用户原始字段清单多加的一项，方便后续 `organize` 直接补分类，无内容时留空数组，不影响其他字段）。
 - 正文：HTML → Markdown 走 stdlib `html.parser`（零第三方依赖，和这个仓库其它脚本一致），不保证 100% 还原排版，复杂内联样式/公众号专属组件会被拍平成纯文本+图片链接。`content_complete: false` 表示正文抓取失败或为空，需要人工核对原文链接。

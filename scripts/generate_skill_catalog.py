@@ -169,6 +169,52 @@ def catalog_description(entry: SkillEntry, limit: int = 220) -> str:
     return value
 
 
+def yaml_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def infer_display_name(name: str) -> str:
+    labels = {
+        "ai": "AI",
+        "api": "API",
+        "cli": "CLI",
+        "git": "Git",
+        "github": "GitHub",
+        "gzh": "GZH",
+        "pkm": "PKM",
+        "ui": "UI",
+        "x": "X",
+    }
+    parts = [part for part in name.split("-") if part and part != "soia"]
+    return " ".join(labels.get(part, part.capitalize()) for part in parts)
+
+
+def openai_yaml_for(entry: SkillEntry) -> str:
+    short_description = catalog_description(entry, limit=160)
+    default_prompt = f"Use {entry.name}: {short_description}"
+    return "\n".join(
+        [
+            "interface:",
+            f"  display_name: {yaml_string(infer_display_name(entry.name))}",
+            f"  short_description: {yaml_string(short_description)}",
+            f"  default_prompt: {yaml_string(default_prompt)}",
+            "",
+        ]
+    )
+
+
+def write_missing_openai(entries: list[SkillEntry]) -> int:
+    written = 0
+    for entry in entries:
+        target = entry.path / "agents" / "openai.yaml"
+        if target.is_file():
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(openai_yaml_for(entry), encoding="utf-8")
+        written += 1
+    return written
+
+
 def repo_title(root: Path) -> str:
     if "private" in root.name:
         return "SOIA Private Skills Catalog"
@@ -227,15 +273,6 @@ def render_readme(root: Path, entries: list[SkillEntry]) -> str:
             "",
         ]
     )
-    if (root / "skills" / "metadata-spec.md").is_file():
-        lines.extend(
-            [
-                "## Support Files",
-                "",
-                "- [`metadata-spec.md`](./metadata-spec.md) documents legacy private `metadata.json` compatibility only.",
-                "",
-            ]
-        )
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -274,11 +311,17 @@ def main() -> int:
     parser.add_argument("--root", default=".", help="Repository root.")
     parser.add_argument("--check", action="store_true", help="Fail if skills/README.md is stale.")
     parser.add_argument("--json", action="store_true", help="Print the discovered skill entries as JSON.")
+    parser.add_argument("--write-missing-openai", action="store_true", help="Create missing agents/openai.yaml files from SKILL.md.")
     parser.add_argument("--registry-out", help="Optional directory for v7 runtime registry JSON manifests.")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
     entries = load_skills(root)
+    if args.write_missing_openai:
+        written = write_missing_openai(entries)
+        if written:
+            entries = load_skills(root)
+        print(f"Wrote {written} missing agents/openai.yaml file(s).")
     rendered = render_readme(root, entries)
     readme = root / "skills" / "README.md"
 

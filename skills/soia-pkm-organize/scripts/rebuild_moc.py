@@ -15,7 +15,7 @@ Usage:
     python3 rebuild_moc.py --vault <vault-path>
 
 Per-vault category override (optional):
-    Put `<vault>/40_图书视频馆/10_文章摘抄/_MOC/.categories.json` shaped like
+    Put `<vault>/<articles-subdir>/_MOC/.categories.json` shaped like
     {"AI编程": ["Agent开发", ...], "产品与商业": [...]} to replace the default table.
 """
 
@@ -350,8 +350,8 @@ def main():
     parser = argparse.ArgumentParser(description="Rebuild two-level MOC for an Obsidian article vault.")
     parser.add_argument("--vault", default=os.environ.get("OBSIDIAN_VAULT"),
                         help="vault root (or set OBSIDIAN_VAULT)")
-    parser.add_argument("--articles-subdir", default="40_图书视频馆/10_文章摘抄",
-                        help="articles dir relative to vault (default: 40_图书视频馆/10_文章摘抄)")
+    parser.add_argument("--articles-subdir", default="Articles",
+                        help="articles dir relative to vault (default: Articles)")
     parser.add_argument("--date", default=date.today().isoformat(),
                         help="date stamp written into MOC frontmatter (default: today)")
     args = parser.parse_args()

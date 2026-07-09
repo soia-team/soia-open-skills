@@ -44,6 +44,11 @@ VAULT_SPECIFIC_RE = re.compile(
     r"(40_图书视频馆/10_文章摘抄|40_图书视频馆/40_孩子书库|50_写作与发布/10_草稿|"
     r"50_写作与发布/30_转化输出|10_工作台/00_Inbox)"
 )
+LOCAL_NPX_INSTALL_RE = re.compile(r'npx\s+skills\s+add\s+(?:"\$PWD"|\$PWD|\.)(?:\s|$).*(?:-g|--all)')
+LOCAL_SOURCE_DIR_RE = re.compile(r"--source-dir\s+skills(?:\s|$)")
+DIRECT_SKILL_COPY_RE = re.compile(
+    r"\bcp\s+-R\b.*\bskills\b.*(?:~/\.(?:agents|soia|codex|claude)|CODEX_HOME|\$CODEX_HOME)"
+)
 
 
 @dataclass
@@ -155,6 +160,12 @@ def audit_text_file(root: Path, path: Path, findings: list[Finding]) -> None:
             add_line_finding(findings, "WARN", root, path, i, "possible private family/profile context")
         if VAULT_SPECIFIC_RE.search(line):
             add_line_finding(findings, "WARN", root, path, i, "vault-specific public default; prefer placeholder, env, CLI arg, or config")
+        if LOCAL_NPX_INSTALL_RE.search(line):
+            add_line_finding(findings, "ERROR", root, path, i, "install acceptance must use remote npx repo, not local $PWD or .")
+        if LOCAL_SOURCE_DIR_RE.search(line):
+            add_line_finding(findings, "ERROR", root, path, i, "install acceptance must sync from ~/.agents/skills after npx, not repository-local skills/")
+        if DIRECT_SKILL_COPY_RE.search(line):
+            add_line_finding(findings, "ERROR", root, path, i, "do not copy local skill directories into AI skill targets; install via npx and symlink sync")
 
 
 def collect_findings(root: Path) -> list[Finding]:
@@ -167,7 +178,7 @@ def collect_findings(root: Path) -> list[Finding]:
         audit_skill(root, skill_dir, findings)
 
     # SKILL_SPEC.md intentionally contains forbidden examples; scanning it would create false positives.
-    scan_roots = [root / "README.md", root / "CONTRIBUTING.md", skills_root]
+    scan_roots = [root / "AGENTS.md", root / "README.md", root / "CONTRIBUTING.md", skills_root]
     for scan_root in scan_roots:
         if scan_root.is_file():
             audit_text_file(root, scan_root, findings)

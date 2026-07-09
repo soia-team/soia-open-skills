@@ -42,8 +42,8 @@ Forbidden examples:
 ```text
 /Users/<name>/...
 ~/Desktop/<personal-folder>
-50_写作与发布/30_转化输出
-40_图书视频馆/10_文章摘抄
+<personal-vault-output-dir>
+<personal-vault-articles-dir>
 ```
 
 Use one of these instead:

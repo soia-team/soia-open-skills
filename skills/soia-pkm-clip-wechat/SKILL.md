@@ -1,6 +1,6 @@
 ---
 name: soia-pkm-clip-wechat
-description: 把微信公众号文章一键归档到 Obsidian vault。抓 mp.weixin.qq.com 的静态 HTML，提取标题/作者/正文/发布时间/配图，按 clip 家族统一规范落地。当用户说「归档并转 PDF」「归档并导出 PDF」「archive and export PDF」时，归档后在 Obsidian vault 内优先调用 Obsidian 自带 PDF 导出。Triggers：「归档这篇公众号」「clip 这个公众号文章」「存这篇微信文章」
+description: 归档单篇微信公众号文章到 Obsidian vault：抓取静态 HTML，提取标题、作者、正文、发布时间和配图，按 clip 家族规范落地；需要 PDF 时优先用 Obsidian 导出。Triggers：「归档这篇公众号」「clip 这个公众号文章」「存这篇微信文章」
 ---
 
 # soia-pkm-clip-wechat
@@ -16,7 +16,7 @@ description: 把微信公众号文章一键归档到 Obsidian vault。抓 mp.wei
 
 ## 落地（clip 家族统一规范）
 
-- 路径：`40_图书视频馆/10_文章摘抄/<年>/YYYY-MM-DD-公众号-<作者>-<标题>.md`
+- 路径：`<vault-articles-dir>/<年>/YYYY-MM-DD-公众号-<作者>-<标题>.md`
 - frontmatter：`tags:[文章摘抄]`、`source: 公众号`、`url`、`author`、`published_at`、`captured_at`、`topics:[]`、`content_complete`
 - 正文段：`## 摘要`（AI 补）、`## 原文`、`## 我的看法`（留空）、`## 关联`
 - 归档后 AI 补摘要 + topics；之后走 `organize` 归位到月份。

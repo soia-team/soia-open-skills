@@ -3,7 +3,7 @@
   "description": "Default AI-native Obsidian vault scaffold. Copy this JSON and customize directories/files for your own workflow.",
   "directories": [
     "00_Obsidian系统/scripts",
-    "10_工作台/00_Inbox",
+    "10_Workbench/00_Inbox",
     "20_资料库",
     "30_日志与思考/10_日常所思",
     "30_日志与思考/20_AI协作日志",
@@ -11,7 +11,7 @@
     "30_日志与思考/40_周维护简报",
     "40_阅读与资料/10_文章摘抄/_模板",
     "40_阅读与资料/10_文章摘抄/_MOC",
-    "50_写作与发布/10_草稿",
+    "50_Writing/10_Drafts",
     "50_写作与发布/20_发布",
     "90_系统归档",
     ".claudian/opencode",

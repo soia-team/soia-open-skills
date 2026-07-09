@@ -1,7 +1,6 @@
 ---
 name: soia-pkm-alipan
-version: 1.0.0
-description: 阿里云盘原子操作层 — 安装/登录 aliyunpan CLI（含登录态过期处理、非交互环境取码技巧）、备份盘与资源库双盘切换（--driveId 显式传参）、目录浏览、移动/重命名/删除、下载上传、容量查询、全盘 JSONL 爬虫扫描方法论。是 soia-pkm-alipan-curator（整理顾问/学习计划）的底层依赖。当用户说「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」「云盘登录过期了」「全盘扫描一下云盘」时触发。
+description: 阿里云盘原子操作层：安装/登录 aliyunpan、显式 driveId 双盘操作、目录浏览、移动/重命名/删除、下载上传、容量查询、全盘 JSONL 扫描。作为 curator 的底层依赖。Triggers：「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」「云盘登录过期了」「全盘扫描云盘」
 ---
 
 # soia-pkm-alipan — 阿里云盘原子操作层

@@ -1,6 +1,5 @@
 ---
 name: soia-pkm-clip-drive
-version: 1.0.0
 description: 把云盘/本地的存量资料（PDF/Word/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理。Triggers：「导入云盘资料」「把这批 PDF 导进来」「clip 这个文档」「整理云盘」
 ---
 
@@ -17,7 +16,7 @@ description: 把云盘/本地的存量资料（PDF/Word/文档）批量导入 Ob
 
 ## 落地
 
-- 资料 / 参考类 → `20_资料库/<主题>/`；文章类 → `40_图书视频馆/10_文章摘抄/`。
+- 资料 / 参考类 → `<vault-resources-dir>/<主题>/`；文章类 → `<vault-articles-dir>/`（由配置或 CLI 参数决定）。
 - frontmatter：`tags:[资料]` 或 `[文章摘抄]`、`source: 云盘/pdf`、`original_path`、`captured_at`、`topics:[]`。
 - 导入后**必走 `organize`**：云盘资料通常量大又杂，靠 organize 分类 / 建 MOC / 去重。
 

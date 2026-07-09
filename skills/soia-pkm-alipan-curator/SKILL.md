@@ -1,7 +1,6 @@
 ---
 name: soia-pkm-alipan-curator
-version: 1.0.0
-description: 阿里云盘资源顾问 — 在 soia-pkm-alipan 原子层之上提供四类工作流：盘点云盘生成核对清单（inventory）、按规范整理目录（organize，含受众三分/学段序号化/杂包必拆/SHA1查重/广告清理方法论）、把资源地图落成 Obsidian 图书馆式索引（catalog，浏览总览+全文检索+精选卡三样，脚本 gen_catalog.py 只在本 skill）、基于用户本次提供的学情用云盘已有资源生成学习计划（plan）。当用户说「整理云盘」「云盘盘点」「更新云盘索引」「给云盘建个图书馆」「做馆藏卡」「按受众分一下这些资源」，或给出成绩截图/学情说「出个学习方案」「排个启蒙计划」「用网盘资源做个学习计划」时触发。
+description: 阿里云盘资源顾问，在 soia-pkm-alipan 原子操作上提供 inventory/organize/catalog/plan 四类工作流：盘点云盘、整理资源、生成 Obsidian 馆藏索引、基于本次用户提供的学情生成学习计划。Triggers：「整理云盘」「云盘盘点」「更新云盘索引」「给云盘建图书馆」「用网盘资源做学习计划」
 ---
 
 # soia-pkm-alipan-curator — 云盘资源顾问
