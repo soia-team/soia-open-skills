@@ -1,6 +1,6 @@
 ---
 name: soia-dev-archify-diagrams
-description: SOIA dev skill for Archify architecture, data-flow, workflow, sequence, and lifecycle diagrams. Use when asked to draw, improve, validate, or publish README/docs diagrams with JSON IR and PNG previews.
+description: Draw, improve, validate, or publish Archify architecture / data-flow / sequence / lifecycle diagrams with JSON IR and PNG previews. Triggers：「画架构图」「画时序图/流程图」「给 README 配图」「用 Archify 画」
 ---
 
 # soia-dev-archify-diagrams

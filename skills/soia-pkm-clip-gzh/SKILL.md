@@ -18,7 +18,9 @@ description: 批量归档用户自己管理的微信公众号已发文章到 Obs
 | 官方程度 | developers.weixin.qq.com 有文档 | 非官方，社区逆向（源码级核对） | 非官方，社区逆向，未见于官方文档 |
 | 脚本 | `scripts/fetch_api.py` | `scripts/fetch_mp.py` | `scripts/fetch_cookie.py` |
 
-**建议**：先跑路 A 探路（凭据搭起来一次成本低，长期可复用于增量同步；多数个人未认证号会直接卡在权限门槛，见下）。要读全部历史（含手动群发的老文），**优先用路 C**——凭据只需抓一对 token/Cookie，比路 B 要配对三个票据更不容易出错，是本 skill 里读自己号历史文章的推荐路线。路 B 保留作为路 C 失效时的备选（例如某天 `appmsg` 接口改版）。三条路都只在你自己能登录/管理的账号上跑；跑过的账号落地时会按 `url` 自动去重（互相跳过已归档的文章）。
+**建议**：先跑路 A 探路（凭据搭起来一次成本低，长期可复用于增量同步；多数个人未认证号会直接卡在权限门槛，见下）。要读全部历史（含手动群发的老文），**优先用路 C**——凭据只需抓一对 token/Cookie，比路 B 要配对三个票据更不容易出错，是本 skill 里读自己号历史文章的推荐路线。路 B 保留作为路 C 失效时的备选（例如某天两个接口都改版）。三条路都只在你自己能登录/管理的账号上跑；跑过的账号落地时会按 `url` 自动去重（互相跳过已归档的文章）。
+
+路 C 内部又分两条子路径，脚本按你传不传 `--name`/`--fakeid` 自动选：**不传（默认）走 appmsgpublish，读你自己当前登录的号**；传了 `--name`/`--fakeid` 才走 searchbiz+appmsg，读指定/别人的号——原因见下方路 C 小节。
 
 ## 路 A · 官方 API
 
@@ -55,24 +57,34 @@ python3 scripts/fetch_api.py [--out <vault内相对目录>] [--limit N] [--dry-r
 
 ## 路 C · 公众号后台接口（推荐：读自己号全部历史）
 
-复用 mp.weixin.qq.com **后台**（作者登录后台，非读者端 profile_ext）两个接口：`searchbiz`（公众号名 → fakeid）+ `appmsg?action=list_ex`（fakeid → 分页文章列表），和路 B 一样能读全部历史（含手动群发的老文），但凭据只需抓一对 token/Cookie，比路 B 要配对三个票据（key/pass_ticket/appmsg_token）更不容易出错。
+复用 mp.weixin.qq.com **后台**（作者登录后台，非读者端 profile_ext）的接口，和路 B 一样能读全部历史（含手动群发的老文），但凭据只需抓一对 token/Cookie，比路 B 要配对三个票据（key/pass_ticket/appmsg_token）更不容易出错。
 
-### 接口依据（源码级核对，非仅读文档）
+路 C 内部有两条子路径，`scripts/fetch_mp.py` 按你是否传 `--name`/`--fakeid` 自动切换：
 
-两个参考仓库各自的文档都写"具体参数见代码"，实际核对的是它们的源码文件，而不是文档正文：
+| | 默认（不传 `--name`/`--fakeid`） | 传 `--name` 或 `--fakeid` |
+|---|---|---|
+| 接口 | `appmsgpublish`（作者端「发表记录」） | `searchbiz`（名→fakeid）+ `appmsg?action=list_ex`（fakeid→列表） |
+| 读的是谁的号 | **你自己当前登录的这个账号**，不需要指定名字/fakeid | 指定名称/fakeid 对应的账号（可以是别的、你也管理的号） |
+| 适用场景 | 最常见场景：就是想备份自己号 | 你以某账号登录后台，但要读的是另一个你也管理、且知道名称/fakeid 的号 |
+| 验证状态 | **已实测**：2026-07-09 真实账号跑通，`ret=0`，`total_count=152` | 源码级核对，未见官方文档，标记「待用户实测校准」 |
 
-| 接口 | 方法 | 请求 | 响应关键字段 | 依据（源码文件） |
+**为什么默认路径不用 `searchbiz`**：`searchbiz` 是按名字模糊搜索公众号列表，设计给"找到别人的号"用；用自己公众号的名字去搜，经常搜不到自己（返回空列表），不适合当"我已经登录、我就是这个号"的默认路径。`appmsgpublish` 直接读的是当前登录态对应账号的发表记录，不存在这个问题。
+
+### 接口依据（源码级核对 + appmsgpublish 已实测）
+
+| 接口 | 方法 | 请求 | 响应关键字段 | 依据 |
 |---|---|---|---|---|
+| appmsgpublish（默认，读自己号） | GET | `/cgi-bin/appmsgpublish`，params `sub=list&begin=<0,20,40,...>&count=20&type=101_1&free_publish_type=1&sub_action=list_ex&token=&lang=zh_CN&f=json&ajax=1` | `base_resp.ret`；`publish_page`（**JSON 字符串**，`json.loads` 后为 `{total_count, publish_list[]}`）；每条 `publish_list[].publish_info`（**又是一层 JSON 字符串**），`json.loads` 后为 `{appmsgex[]}`，每条 `appmsgex[]` 含 `title/link/update_time/digest` | [cv-cat/WechatOAApis — utils/wx_utils.py](https://github.com/cv-cat/WechatOAApis/blob/master/utils/wx_utils.py) 源码级核对，**并于 2026-07-09 由用户在真实账号上实测验证通过** |
 | searchbiz（名 → fakeid） | GET | `/cgi-bin/searchbiz`，params `action=search_biz&begin=0&count=5&query=<公众号名>&token=&lang=zh_CN&f=json&ajax=1` | `base_resp.ret`，`list[].{alias,fakeid,nickname,round_head_img,service_type}` | [wnma3mz/wechat_articles_spider — ArticlesUrls.py::official_info()](https://github.com/wnma3mz/wechat_articles_spider/blob/master/wechatarticles/ArticlesUrls.py) 与 [cv-cat/WechatOAApis — utils/wx_utils.py::get_fakeid_params()](https://github.com/cv-cat/WechatOAApis/blob/master/utils/wx_utils.py) 两个独立仓库参数完全一致 |
 | appmsg（fakeid → 文章列表） | GET | `/cgi-bin/appmsg`，params `action=list_ex&begin=<0,5,10,...>&count=5&fakeid=<fakeid>&type=9&query=&token=&lang=zh_CN&f=json&ajax=1` | `base_resp.ret`，`app_msg_cnt`，`app_msg_list[].{aid,appmsgid,cover,digest,itemidx,link,title,update_time}`（**不含 author 字段**） | [wnma3mz/wechat_articles_spider — ArticlesUrls.py::__get_articles_data()](https://github.com/wnma3mz/wechat_articles_spider/blob/master/wechatarticles/ArticlesUrls.py) |
 
-⚠️ `cv-cat/WechatOAApis` 拉文章列表实际用的是另一个更新的接口 `cgi-bin/appmsgpublish`（`sub=list&sub_action=list_ex&type=101_1`，响应结构是 `publish_page`→再 `json.loads`→`publish_list`，每条 `publish_info` 又是一层 JSON 字符串），和这里用的 `appmsg?action=list_ex` 不是同一个接口、字段也不同——应该是 mp 后台新旧两版前端各自调用的接口。本 skill 按 `appmsg?action=list_ex` 实现（也是 `wnma3mz` 项目实际验证过的那条）；`appmsgpublish` 是待评估的备选，不在本次实现范围内。
+`appmsgpublish` 和 `appmsg?action=list_ex` 不是同一个接口、响应结构和分页步长都不同——应该是 mp 后台新旧两版前端各自调用的接口，脚本里是两套独立实现（`list_own_account()` vs `fetch_article_list()`），不能混用。
 
 ### ⚠️ 限制与风险（务必先读）
 
-- **非官方接口**：和路 B 一样没有官方文档背书，随时可能被调整。
-- **仅用于归档你自己管理的公众号**：脚本在 `--name` 命中后会打印 nickname/fakeid 并提示确认，不是你自己的号就 Ctrl+C 中断。
-- **token/Cookie 会过期**：社区报告通常几小时失效，无刷新机制，过期后 `base_resp.ret` 会返回非 0（脚本已按下表给出针对性提示，社区逆向交叉核对，未见官方文档，仍属「待用户实测校准」）：
+- **非官方接口**：和路 B 一样没有官方文档背书，随时可能被调整。`appmsgpublish` 虽然已实测通过，同样不是官方文档收录的接口。
+- **仅用于归档你自己管理的公众号**：`--name` 命中后会打印 nickname/fakeid 并提示确认，不是你自己的号就 Ctrl+C 中断；默认路径读的就是当前登录账号本身，不存在认错号的问题。
+- **token/Cookie 会过期**：社区报告通常几小时失效，无刷新机制，过期后 `base_resp.ret` 会返回非 0（脚本已按下表给出针对性提示，两条子路径共用同一套提示，社区逆向交叉核对，未见官方文档，仍属「待用户实测校准」）：
 
   | `ret` | 含义 | 处理 |
   |---|---|---|
@@ -80,24 +92,31 @@ python3 scripts/fetch_api.py [--out <vault内相对目录>] [--limit N] [--dry-r
   | `200013` | freq control | 触发限流，社区报告通常需要等待较长时间，别立刻重跑 |
   | `200040` | invalid csrf token | token 和 Cookie 疑似不是同一次登录会话抓的 |
 
-- **`appmsg` 列表本身不返回 author 字段**：落地时 `author` 用 `--account-name` / `WECHAT_ACCOUNT_NAME` 兜底，不保证等于文章真实署名作者，需要精确作者请人工核对原文页。
+- **两条子路径列表接口都不返回 author 字段**：落地时 `author` 用 `--account-name` / `WECHAT_ACCOUNT_NAME` 兜底，不保证等于文章真实署名作者，需要精确作者请人工核对原文页。
 - **限流风险**：脚本默认每页/每篇请求间隔 `--sleep 3` 秒；社区报告即使 5 秒/页的节流，抓到近千篇量级仍可能触发 `freq control`，批量抓取整年历史建议配合 `--limit` 分批跑。
 
 ### 凭据获取
 
-登录 `mp.weixin.qq.com` 后台，随便打开一篇文章编辑页或文章列表页，F12 打开浏览器开发者工具「网络」面板，从任意 `mp.weixin.qq.com` 请求的 URL 里复制 `token` 参数、从请求头复制完整 `Cookie` 字符串。填进 `.env.example` 对应的私有 env 文件（`WECHAT_MP_TOKEN` / `WECHAT_MP_COOKIE`）。
+登录 `mp.weixin.qq.com` 后台，随便打开一篇文章编辑页或文章列表页，F12 打开浏览器开发者工具「网络」面板，从**地址栏 URL** 里复制 `token` 参数、从请求头复制完整 `Cookie` 字符串。填进 `.env.example` 对应的私有 env 文件（`WECHAT_MP_TOKEN` / `WECHAT_MP_COOKIE`）。
+
+⚠️ 注意 `token` 要取地址栏 URL 里的那个（数字串），**不是**「网络」面板里某个请求参数名叫 `appmsg_token` 的那个票据——两者是不同的票据，`appmsgpublish` 认的是地址栏 `token`。
 
 ### 用法
 
 ```bash
-python3 scripts/fetch_mp.py [--name <公众号名>] [--fakeid <fakeid>] [--out <目录>] \
-    [--limit N] [--dry-run] [--vault <path>] [--account-name <显示名>] \
-    [--force] [--sleep 3] [--page-size 5]
+# 默认：不传 --name/--fakeid，读你自己当前登录的账号（appmsgpublish，推荐）
+python3 scripts/fetch_mp.py [--out <目录>] [--limit N] [--dry-run] \
+    [--vault <path>] [--account-name <显示名>] [--force] [--sleep 3] [--page-size 20]
+
+# 传 --name 或 --fakeid：读指定/别人的号（searchbiz + appmsg?action=list_ex）
+python3 scripts/fetch_mp.py --name <公众号名> [--out <目录>] [--limit N] [--dry-run] \
+    [--vault <path>] [--account-name <显示名>] [--force] [--sleep 3] [--page-size 5]
 ```
 
-- `--name` 与 `--fakeid` 二选一：`--name` 会先跑 `searchbiz` 搜索、取第一个匹配结果（读自己的号：搜自己公众号名）；已知 `fakeid` 时直接传 `--fakeid` 跳过搜索这一步更稳。
+- **不传 `--name`/`--fakeid`（默认，推荐）**：读你自己当前登录的账号，走 `appmsgpublish`，`--page-size` 默认 20。
+- **传 `--name` 与 `--fakeid`（二选一）**：走 `searchbiz`+`appmsg?action=list_ex`，`--page-size` 默认 5；`--name` 会先跑 `searchbiz` 搜索、取第一个匹配结果；已知 `fakeid` 时直接传 `--fakeid` 跳过搜索这一步更稳。
 - `--dry-run`：只翻页拉列表打印标题+链接，**不抓正文、不写文件**——比路 B 的 dry-run 更快（路 B 的 dry-run 仍会抓完全部正文），首次跑建议先 dry-run 核对篇数和标题是否符合预期。
-- 列表接口每页 `--page-size`（默认 5，社区实测上限）条，按 `app_msg_cnt` 和翻页结果自动判断何时停止。
+- `--page-size` 不传时按走的子路径自动取默认值（自己号 20 / 指定号 5），两个都是已验证/社区实测的稳定值，别调大。
 - 每条列表项拿到 `link` 后，脚本直接 GET 文章公开页面解析 `#js_content`（和路 B / `soia-pkm-clip-wechat` 单篇归档同一套正文抓取思路，不需要额外 cookie）。
 
 ## 路 B · 登录态 Cookie

@@ -1,6 +1,6 @@
 ---
 name: soia-dev-github-ops
-description: Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates.
+description: Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates. Triggers：「看下这个 PR」「查 CI 为什么挂了」「列 issue」「合并/评审 PR」「发个 release」「check GitHub PR/checks」
 ---
 
 # soia-dev-github-ops

@@ -1,6 +1,6 @@
 ---
 name: soia-dev-ai-cli-upgrade
-description: Audit and upgrade AI/developer CLIs such as codex, claude, gemini, kimi, qwen, opencode, cursor, qodercli, and mmx with dry-run reports and logs.
+description: Audit and upgrade AI/developer CLIs (codex, claude, gemini, kimi, qwen, opencode, cursor, etc.) with dry-run reports and logs. Triggers：「升级 AI CLI」「更新 codex/claude/gemini」「检查 CLI 版本」
 ---
 
 # soia-dev-ai-cli-upgrade
