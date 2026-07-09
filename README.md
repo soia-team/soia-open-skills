@@ -63,6 +63,7 @@ npx skills add soia-team/soia-open-skills
 > - 🤖 **支持的 AI**：跨 agent 通用——Claude Code、Codex、Cursor、Gemini、Kimi、amp、Warp、Zed 等所有兼容 [skills.sh](https://skills.sh) 标准的 AI。一次写 `SKILL.md`，处处可用。
 > - 📚 **适用知识库**：Obsidian vault（推荐 PARA 结构；没有现成的？用 `bootstrap` 一键搭）。底层是纯 Markdown + YAML frontmatter，不锁定平台。
 > - 🔗 **依赖链**：`clip-*` 是入口（独立可用）→ `organize` / `distill` 需 vault 里有内容 → `compose` 需 distill 的观点 → `publish` 需 compose 的草稿。
+> - 🧩 **第三方 skill 口径**：只在本仓库自建 skill 里声明依赖 / 可选增强 / 方法参考，**不改第三方 skill 文件**；具体来源以 `~/.agents/.skill-lock.json` 为准。
 > - **状态图例**：✅ 可直接用 · 🟡 可用但需补脚本 / 配凭据
 
 ### 📥 收集 · clip 家族
@@ -101,8 +102,8 @@ npx skills add soia-team/soia-open-skills
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
 | [`soia-pkm-bootstrap`](./skills/soia-pkm-bootstrap/) | 从零初始化 AI-native vault（PARA + AGENTS + 模板 + Bases + CSS + 多 AI 接入）| ✅ 可用（`init_vault.py` 跑通）| 无（它是起点）|
-| [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | 场景化阅读计划（书单/主题 → 按真实字数排期）| ✅ 可用 | 可选联动 `weread-skills`（第三方）|
-| [`soia-pkm-library`](./skills/soia-pkm-library/) | 维护书库：微信读书同步（书目/划线）+ 补书详情 + 补待读记录 + 生成图书馆/阅读记录/分类三份总览 | ✅ 可用（7 个机械脚本，幂等可重复跑）| 可选联动 `weread-skills`（同步类脚本需 `WEREAD_API_KEY`）|
+| [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | 场景化阅读计划（书单/主题 → 按真实字数排期）| ✅ 可用 | `weread-skills` 可选增强真实字数/评分；`huashu-weread-advisor` 可选复用推荐方法论；无第三方强依赖 |
+| [`soia-pkm-library`](./skills/soia-pkm-library/) | 维护书库：微信读书同步（书目/划线）+ 补书详情 + 补待读记录 + 生成图书馆/阅读记录/分类三份总览 | ✅ 可用（7 个机械脚本，幂等可重复跑）| 同步类脚本强依赖官方 `weread-skills` + `WEREAD_API_KEY`；本地总览脚本只依赖 vault |
 | [`soia-pkm-maintain`](./skills/soia-pkm-maintain/) | vault 周维护、全库地图重生成、AI 会话日志接入 | ✅ 可用（Python stdlib / bash 脚本）| Obsidian vault，`--vault <path>` 或 `OBSIDIAN_VAULT` |
 | [`soia-pkm-alipan`](./skills/soia-pkm-alipan/) | 阿里云盘原子操作层：登录/双盘切换/浏览/移动/重命名/上传下载/容量查询，含输出解析与安全守则 | ✅ 可用（无需脚本，直接驱动 `aliyunpan` CLI）| `aliyunpan` CLI（brew 安装 + 扫码登录）|
 | [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | 云盘资源顾问：盘点核对（inventory）/规范整理（organize）/索引落 OB（catalog）/孩子学习计划（plan）| ✅ 可用（纯方法论层，命令全走 alipan）| `soia-pkm-alipan`（原子层）|
@@ -213,6 +214,20 @@ soia-open-skills/
 每个 skill 一个文件夹，独立 `SKILL.md`（frontmatter 含 `name` + `description`）+ 自己的 `scripts/`。
 公开仓不使用 `metadata.json`；需要展示给 agent/UI 的补充信息放 `agents/openai.yaml`。
 
+### `agents/openai.yaml` 谁会用？
+
+`SKILL.md` 是所有 AI 的权威入口：能力说明、依赖、配置、安装步骤、运行流程、日志要求、完成总结都必须写在这里。
+`agents/openai.yaml` 只是可选的展示 / 发现元数据，不能承载只有某个 AI 才能看到的必需流程。
+
+| 使用方 | 如何使用 |
+|---|---|
+| Claude Code | 读取已安装 skill 目录里的 `SKILL.md`。它不直接依赖 `agents/openai.yaml`，所以强依赖、安装步骤、缺 key 提示必须写进 `SKILL.md`。 |
+| Codex / OpenAI 类界面 | 读取 `SKILL.md` 执行；可用 `agents/openai.yaml` 的 `display_name`、`short_description`、`default_prompt` 做更友好的搜索、列表和默认提示。 |
+| SOIA | 以 `SKILL.md` 为准；需要 v7 registry 时运行 `python3 scripts/generate_skill_catalog.py --registry-out <soia-repo>/runtime/registry/skills`，生成器会合并 `SKILL.md` 与可选 `agents/openai.yaml`。 |
+| 其他 skills.sh 兼容 AI | 默认只假设能读 `SKILL.md`。如果某个 AI 确实需要专属元数据，再新增 `agents/<agent>.yaml` 并在这里说明消费方。 |
+
+维护规则：必需指令不得只写在 `agents/openai.yaml`；修改 `SKILL.md` 或 `agents/openai.yaml` 后，重新运行 `python3 scripts/generate_skill_catalog.py`。
+
 新增 skill 先复制模板：
 
 ```bash
@@ -226,10 +241,14 @@ python3 scripts/audit_skills.py
 
 ## 致谢与相关项目
 
-配合使用的第三方 skill（本仓库借鉴其方法论，但不修改其文件）：
+配合使用的第三方 skill（本仓库只声明关系，不修改其文件；`npx skills check` 可能覆盖第三方本地修改）：
 
-- [**alchaincyf/huashu-weread**](https://github.com/alchaincyf/huashu-weread) — 微信读书高阶顾问。`distill` 借鉴了它的 alchemy 提炼方法论，`reading-plan` 与它协同。README 风格亦受其启发。
-- [**Tencent/WeChatReading**](https://github.com/Tencent/WeChatReading) — 微信读书原子 API skill，读书线的底层。
+| 第三方 skill | 上游 | 本仓库关系 |
+|---|---|---|
+| `weread-skills` | [Tencent/WeChatReading](https://github.com/Tencent/WeChatReading) | `soia-pkm-library` 微信读书同步类脚本的**强依赖**；`soia-pkm-reading-plan` 的可选数据增强 |
+| `huashu-weread-advisor` | [alchaincyf/huashu-weread](https://github.com/alchaincyf/huashu-weread) | `soia-pkm-reading-plan` 可选复用其选书/推荐方法论；`soia-pkm-distill` 只参考 alchemy 方法，不运行依赖 |
+| `book-to-skill` | [virgiliojr94/book-to-skill](https://github.com/virgiliojr94/book-to-skill) | 非运行依赖；用于把书籍/文档转成 skill 的独立工具 |
+| `find-skills` | [vercel-labs/skills](https://github.com/vercel-labs/skills) | 非运行依赖；用于发现/安装 skill 的辅助工具 |
 
 ## 贡献
 

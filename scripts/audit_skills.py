@@ -49,6 +49,13 @@ LOCAL_SOURCE_DIR_RE = re.compile(r"--source-dir\s+skills(?:\s|$)")
 DIRECT_SKILL_COPY_RE = re.compile(
     r"\bcp\s+-R\b.*\bskills\b.*(?:~/\.(?:agents|soia|codex|claude)|CODEX_HOME|\$CODEX_HOME)"
 )
+CUSTOMER_READABLE_RULES = (
+    ("customer-readable introduction", ("客户可读说明", "客户可见介绍")),
+    ("capability section", ("这个技能可以做什么", "能做什么")),
+    ("usage section", ("客户如何使用", "如何使用", "如何运行")),
+    ("dependency/install section", ("依赖与安装", "首次安装与配置", "前置依赖", "强依赖")),
+    ("log/completion receipt section", ("日志与完成回执", "客户可见日志与总结", "完成后回执", "执行后回执")),
+)
 
 
 @dataclass
@@ -121,6 +128,10 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
     extras = sorted(set(fm) - ALLOWED_FRONTMATTER)
     if extras:
         findings.append(Finding("WARN", rel(skill_md, root), f"extra frontmatter fields: {', '.join(extras)}"))
+
+    for label, markers in CUSTOMER_READABLE_RULES:
+        if not any(marker in text for marker in markers):
+            findings.append(Finding("ERROR", rel(skill_md, root), f"missing customer-readable {label}"))
 
     for path in skill_dir.rglob("*"):
         if path.is_dir():

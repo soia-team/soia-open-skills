@@ -1,9 +1,10 @@
 # soia-pkm-library private config example.
 # Copy to ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-library/config.yml.
 # `WEREAD_API_KEY` is a bearer token for the WeRead Agent API Gateway.
-# It is not derived from old cookies automatically. Request a real key from the
-# team/person who operates https://i.weread.qq.com/api/agent/gateway, then fill
-# it here.
+# It is not derived from old cookies automatically. Install the official
+# Tencent/WeChatReading skill (hard dependency for WeRead sync scripts) and get
+# an API key after logging in at:
+# https://weread.qq.com/r/weread-skills
 
 env:
   OBSIDIAN_VAULT: "<vault-path>"

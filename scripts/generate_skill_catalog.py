@@ -234,8 +234,9 @@ def render_readme(root: Path, entries: list[SkillEntry]) -> str:
         "",
         "## Source Fields",
         "",
-        "- `SKILL.md` provides canonical skill name and trigger description.",
-        "- `agents/openai.yaml` may provide human-facing display text and default prompt.",
+        "- `SKILL.md` is the canonical cross-agent instruction file. Capabilities, dependencies, setup, workflow steps, logs, and completion summaries must live there.",
+        "- `agents/openai.yaml` is optional UI/catalog metadata for OpenAI/Codex-style surfaces and SOIA registry display: `display_name`, `short_description`, and `default_prompt`.",
+        "- Claude Code and generic skills.sh-compatible agents must be assumed to consume `SKILL.md`; do not put required workflow steps only in `agents/openai.yaml`.",
         "- Legacy `metadata.json` files are not used to generate this catalog.",
         "",
     ]

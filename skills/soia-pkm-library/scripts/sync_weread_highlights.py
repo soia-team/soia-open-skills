@@ -45,9 +45,10 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from soia_env import env_source_hint, load_private_env
+from soia_env import env_source_hint, load_private_env, require_weread_skills, weread_api_key_hint
 
 load_private_env()
+require_weread_skills()
 
 # ---------- 常量 ----------
 API = "https://i.weread.qq.com/api/agent/gateway"
@@ -69,7 +70,12 @@ MAX_RETRY = 1
 def call(name: str, **p):
     key = os.environ.get("WEREAD_API_KEY")
     if not key:
-        print(f"❌ WEREAD_API_KEY 未设置：请放到私有 config.yml（{env_source_hint()}），不要写入 vault 或开源 skill 仓库", file=sys.stderr)
+        print(
+            f"❌ WEREAD_API_KEY 未设置：请先去微信读书官方 Skill 页面申请/获取 API Key："
+            f"{weread_api_key_hint()}；拿到后放到私有 config.yml（{env_source_hint()}），"
+            "不要写入 vault 或开源 skill 仓库",
+            file=sys.stderr,
+        )
         sys.exit(1)
     body = {"api_name": name, "skill_version": SKILL_VERSION, **p}
     req = urllib.request.Request(

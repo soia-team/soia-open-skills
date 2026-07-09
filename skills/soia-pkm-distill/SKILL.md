@@ -7,6 +7,69 @@ description: 把 Obsidian vault 里收藏的文章「炼」成你自己的观点
 
 把「收藏」变成「观点」。这是 PKM 闭环 `收→整理→点→写→发` 里从输入到输出的**命脉环节（点）**——专治"收藏一大堆、脑子里没沉淀、`我的看法`段永远空着"。
 
+## 客户可读说明
+
+### 这个技能可以做什么
+
+把 Obsidian vault 里收藏的文章「炼」成你自己的观点。读原文 → 苏格拉底式一次抛一个问题 → 你口述回答 → AI 把你的回答整理成「我的看法」段（内容是你的，AI 只帮落文字，绝不替你想、替你写），写完给你回执。也支持主题聚合：把一个 MOC 下多篇文章的观点提炼成一篇综述
+
+| 客户想要 | 技能会做 | 客户能看到 |
+|---|---|---|
+| 完成本技能覆盖的工作 | 读取用户请求、必要上下文和本技能正文流程，执行最小可靠步骤 | 客户会看到 Obsidian/vault 文件变更、终端日志、生成产物路径和最终回执。 |
+| 缺少依赖、权限、配置或 key | 停止需要外部状态的动作，明确指出缺什么 | 安装命令、申请地址、配置路径或需要客户确认的问题 |
+| 执行完成 | 汇总成功、跳过、失败、文件变更和验证结果 | 一段可复制进工单/日志的完成回执 |
+
+### 客户如何使用
+
+1. 用自然语言说明目标，并提供必要输入：文件、URL、repo、workspace、proposal、vault 或平台账号状态。
+2. Agent 先判断是否命中本技能，再检查依赖、配置、权限和风险动作。
+3. 能 dry-run 或预览的动作先给预览；涉及删除、覆盖、发送、发布、写远端状态时先征求客户确认。
+4. 执行后验证真实输出，不用“看起来成功”代替证据。
+5. 最终回复必须给客户可见总结：做了什么、日志摘要、文件变化、问题和下一步。
+
+### 依赖与安装
+
+安装本技能（单个技能）：
+
+```bash
+npx skills add soia-team/soia-open-skills -g -a '*' -s soia-pkm-distill -y
+```
+
+配置约定：
+
+```text
+~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-distill/config.yml
+SOIA_PKM_DISTILL_CONFIG_FILE=<custom-config-path>
+```
+
+- 如果本技能不需要私有配置，可以不创建 `config.yml`。
+- 如果需要 API key、cookie、session、provider home 或本机路径，只能放进私有 `config.yml`、进程环境或 provider 自己的登录态里，不能写进仓库、vault 正文或日志。
+- 强依赖、可选依赖和第三方 skill 关系必须以本 `SKILL.md` 后续的“依赖 / 前置 / 资源 / 边界”说明为准；没有写清楚时，先补说明或询问客户，不要猜。
+- 第三方 skill 只能声明依赖和安装方式，不直接修改第三方 skill 文件。
+
+### 日志与完成回执
+
+每次执行都要让客户看见过程和结果。最低回执格式：
+
+```markdown
+完成：<一句话说明本次完成了什么>。
+
+日志摘要：
+- started: <检查到的输入/配置/依赖，不打印秘密值>
+- processed: <数量或范围>
+- created/updated: <数量或路径>
+- skipped/failed: <数量和原因>
+
+文件变化：
+- <绝对路径或“未改动文件”>
+
+验证：
+- <运行过的检查、命令或人工核对点>
+
+问题与下一步：
+- <缺 key / 缺依赖 / 需要客户确认 / 建议下一条命令；没有则写“无”>
+```
+
 ## 核心原则（不可违背）
 
 **内容是用户的，AI 只帮他问出来、落成文字——绝不替他想、替他写。**
@@ -75,3 +138,12 @@ clip-*(收) → organize(整理) → ★distill(点：收藏→观点) → compo
 - 上游：`soia-pkm-clip-*` 把文章归档进来。
 - 下游：`soia-pkm-compose` 把 distill 产出的观点写成成文。
 - 方法论**参考** `huashu-weread-advisor` 的 alchemy（读书线的划线→笔记提炼）——distill 是它在**文章线**的对应物。仅借鉴方法，不改其文件（第三方 skill）。
+
+## 第三方 skill 关系
+
+| 第三方 skill | 对 `soia-pkm-distill` 的关系 |
+|---|---|
+| `huashu-weread-advisor` (`alchaincyf/huashu-weread`) | 方法参考：借鉴 alchemy 的提问与提炼思路，但本 skill 不调用它、不要求安装它 |
+| `weread-skills` (`Tencent/WeChatReading`) | 非依赖：本 skill 处理 vault 文章，不直接读取微信读书 API |
+| `book-to-skill` | 非依赖 |
+| `find-skills` | 非依赖 |

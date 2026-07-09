@@ -6,8 +6,9 @@
 
 ## Source Fields
 
-- `SKILL.md` provides canonical skill name and trigger description.
-- `agents/openai.yaml` may provide human-facing display text and default prompt.
+- `SKILL.md` is the canonical cross-agent instruction file. Capabilities, dependencies, setup, workflow steps, logs, and completion summaries must live there.
+- `agents/openai.yaml` is optional UI/catalog metadata for OpenAI/Codex-style surfaces and SOIA registry display: `display_name`, `short_description`, and `default_prompt`.
+- Claude Code and generic skills.sh-compatible agents must be assumed to consume `SKILL.md`; do not put required workflow steps only in `agents/openai.yaml`.
 - Legacy `metadata.json` files are not used to generate this catalog.
 
 ## PKM
@@ -25,11 +26,11 @@
 | [`soia-pkm-clip-x`](./soia-pkm-clip-x/) | 归档 X/Twitter 推文、thread、Article 到 Obsidian vault。基于 fxtwitter API，单条零配置；可选同步 Telegram 收藏。需要 PDF 时优先用 Obsidian 导出 | Use soia-pkm-clip-x: 归档 X/Twitter 推文、thread、Article 到 Obsidian vault。基于 fxtwitter API，单条零配置；可选同步 Telegram 收藏。需要 PDF 时优先用 Obsidian 导出 |
 | [`soia-pkm-compose`](./soia-pkm-compose/) | 把 distill 提炼出的观点写成成文草稿。以用户观点为骨、vault 摘抄为料，生成可继续交给 publish 的文章。可指定公众号/知乎/随笔风格 | Use soia-pkm-compose: 把 distill 提炼出的观点写成成文草稿。以用户观点为骨、vault 摘抄为料，生成可继续交给 publish 的文章。可指定公众号/知乎/随笔风格 |
 | [`soia-pkm-distill`](./soia-pkm-distill/) | 把 Obsidian vault 里收藏的文章「炼」成你自己的观点。读原文 → 苏格拉底式一次抛一个问题 → 你口述回答 → AI 把你的回答整理成「我的看法」段（内容是你的，AI 只帮落文字，绝不替你想、替你写），写完给你回执。也支持主题聚合：把一个 MOC 下多篇文章的观点提炼成一篇综述 | Use soia-pkm-distill: 把 Obsidian vault 里收藏的文章「炼」成你自己的观点。读原文 → 苏格拉底式一次抛一个问题 → 你口述回答 → AI 把你的回答整理成「我的看法」段（内容是你的，AI 只帮落文字，绝不替你想、替你写），写完给你回执。也支持主题聚合：把一个 MOC 下多篇文章的观点提炼成一篇综述 |
-| [`soia-pkm-library`](./soia-pkm-library/) | 维护 Obsidian 书库（图书馆书目 + 阅读记录）——同步微信读书已读书目与划线、补单本书详情、补建待读记录、重新生成图书馆总览/阅读记录总览/按类型总览三份 markdown 视图。底层是 7 个机械脚本（幂等、可重复跑），参数化支持任意 vault 路径与分类表 | Use soia-pkm-library: 维护 Obsidian 书库（图书馆书目 + 阅读记录）——同步微信读书已读书目与划线、补单本书详情、补建待读记录、重新生成图书馆总览/阅读记录总览/按类型总览三份 markdown 视图。底层是 7 个机械脚本（幂等、可重复跑），参数化支持任意 vault 路径与分类表 |
+| [`soia-pkm-library`](./soia-pkm-library/) | 维护 Obsidian 书库：同步微信读书书架、已读/在读记录、划线/想法和单本详情，并生成图书馆/阅读记录/类型总览。微信读书同步强依赖 weread-skills + WEREAD_API_KEY；每次执行必须输出客户可见日志、总结、文件变更和下一步建议。 | Use soia-pkm-library: 同步微信读书书架、阅读记录、划线/想法和单本详情到 Obsidian 书库，并生成总览。执行前检查 weread-skills + WEREAD_API_KEY；执行后输出客户可见日志摘要、文件变更和下一步建议。 |
 | [`soia-pkm-maintain`](./soia-pkm-maintain/) | Obsidian vault 维护技能（支撑类）——三个工作流：①周维护（lint 四类体检 + 周简报）②全库地图重生成 ③AI 会话日志接入（Claude Code / Codex 双平台）。底层机械脚本纯 Python stdlib / bash，参数化支持任意 vault 路径，不硬编码具体库 | Use soia-pkm-maintain: Obsidian vault 维护技能（支撑类）——三个工作流：①周维护（lint 四类体检 + 周简报）②全库地图重生成 ③AI 会话日志接入（Claude Code / Codex 双平台）。底层机械脚本纯 Python stdlib / bash，参数化支持任意 vault 路径，不硬编码具体库 |
 | [`soia-pkm-organize`](./soia-pkm-organize/) | 整理 Obsidian 文章库——补 frontmatter（topics/captured_at/author）、按主题双链归类、建/更新两级 MOC、按月份归位、补双链。底层调 rebuild_moc.py / backfill 等脚本，上层用 LLM 判断分类。用于激活存量收藏、规整新归档 | Use soia-pkm-organize: 整理 Obsidian 文章库——补 frontmatter（topics/captured_at/author）、按主题双链归类、建/更新两级 MOC、按月份归位、补双链。底层调 rebuild_moc.py / backfill 等脚本，上层用 LLM 判断分类。用于激活存量收藏、规整新归档 |
 | [`soia-pkm-publish`](./soia-pkm-publish/) | 把写好的文章草稿适配并发布到多平台——公众号（排版 + 推草稿箱）、X thread、小红书卡片。核心是公众号：按强调密度模型渲染成遵守\"微信平台红线\"的内联样式 HTML，机械校验通过后调微信 draft/add API 推到草稿箱（只建草稿、绝不自动群发） | Use soia-pkm-publish: 把写好的文章草稿适配并发布到多平台——公众号（排版 + 推草稿箱）、X thread、小红书卡片。核心是公众号：按强调密度模型渲染成遵守\"微信平台红线\"的内联样式 HTML，机械校验通过后调微信 draft/add API 推到草稿箱（只建草稿、绝不自动群发） |
-| [`soia-pkm-reading-plan`](./soia-pkm-reading-plan/) | 场景化阅读计划生成器。把一批书（来自文章书单、文章观点映射、或一个主题）组织成带表格、按真实字数排期的可执行阅读计划，落地成 Obsidian 笔记。可选联动微信读书 skill 拿真实字数/评分/书架做交叉核实。当用户说「做个读书计划」「按 XX 场景排个计划」「把这篇文章的书单排成计划」「这篇文章的观点对应哪些书」... | Use soia-pkm-reading-plan: 场景化阅读计划生成器。把一批书（来自文章书单、文章观点映射、或一个主题）组织成带表格、按真实字数排期的可执行阅读计划，落地成 Obsidian 笔记。可选联动微信读书 skill 拿真实字数/评分/书架做交叉核实。当用户说「做个读书计划」「按 XX 场景排个计划」「把这篇文章的书单排成计划」「这篇文章的观点对应哪些书」... |
+| [`soia-pkm-reading-plan`](./soia-pkm-reading-plan/) | 场景化阅读计划生成器。把一批书（来自文章书单、观点映射或主题）组织成带表格、按真实字数排期的可执行阅读计划。可选用 weread-skills 增强字数/评分/书架核实，缺少时降级估算；可选参考 huashu-weread-advisor 方法论但不依赖它。 | Use soia-pkm-reading-plan: 场景化阅读计划生成器。把一批书组织成带表格、按真实字数排期的可执行阅读计划。可选用 weread-skills 增强字数/评分/书架核实，缺少时降级估算；可选参考 huashu-weread-advisor 方法论但不依赖它。 |
 | [`soia-pkm-transform`](./soia-pkm-transform/) | 把 X/公众号/网页/Markdown 文章转换为 PDF、PPT、图片/长图、试卷、脑图、播客、闪卡、报告等产物的公共路由 skill。配置外置，可调用 Obsidian、NotebookLM、Open Design、Codex 文件能力与 publish | Use soia-pkm-transform: 把 X/公众号/网页/Markdown 文章转换为 PDF、PPT、图片/长图、试卷、脑图、播客、闪卡、报告等产物的公共路由 skill。配置外置，可调用 Obsidian、NotebookLM、Open Design、Codex 文件能力与 publish |
 
 ## Development

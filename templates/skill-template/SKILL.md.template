@@ -7,6 +7,79 @@ description: 一句话说明这个 skill 做什么、何时触发。包含具体
 
 用 1-2 句话说明这个 skill 的定位：它解决什么问题、输入是什么、输出是什么、和其他 skill 的关系是什么。
 
+## 客户可读说明
+
+### 这个技能可以做什么
+
+用客户能听懂的话说明这个 skill 可以帮客户完成什么工作、需要客户提供什么输入、最终会交付什么文件/报告/命令结果/回执。
+
+| 客户想要 | 技能会做 | 客户能看到 |
+|---|---|---|
+| `<客户场景 1>` | `<执行动作>` | `<文件 / 日志 / 总结 / 状态变化>` |
+| `<客户场景 2>` | `<执行动作>` | `<文件 / 日志 / 总结 / 状态变化>` |
+
+删除不用的行。不要把会影响客户判断的行为藏在实现细节里。
+
+### 客户如何使用
+
+1. 客户用自然语言说明目标，并提供必要输入：文件、URL、repo、workspace、proposal、vault 或平台账号状态。
+2. Agent 先判断是否命中本技能，再检查依赖、配置、权限和风险动作。
+3. 能 dry-run 或预览的动作先给预览；涉及删除、覆盖、发送、发布、写远端状态时先征求客户确认。
+4. 执行后验证真实输出，不用“看起来成功”代替证据。
+5. 最终回复必须给客户可见总结：做了什么、日志摘要、文件变化、问题和下一步。
+
+### 依赖与安装
+
+区分强依赖、可选增强、方法参考和非依赖。
+
+| 依赖 | 类型 | 安装 / 配置 | 缺失时怎么处理 |
+|---|---|---|---|
+| `<hard-dependency>` | 强依赖 | `<install command or URL>` | 停止并告诉客户如何补齐 |
+| `<optional-provider>` | 可选增强 | `<install command or URL>` | 降级执行，并说明少了什么能力 |
+| `<method-reference-skill>` | 方法参考 | 不需要安装，除非客户明确要求使用 | 只复用方法，不调用它 |
+| `<non-dependency>` | 非依赖 | 无 | 只用于避免误解 |
+
+配置约定：
+
+```text
+~/.config/soia-skills/<repo>/<skill-type>/<skill-name>/config.yml
+SOIA_<TYPE>_<SHORT>_CONFIG_FILE=<custom-config-path>
+```
+
+- 如果本技能不需要私有配置，可以不创建 `config.yml`。
+- API key、cookie、session、provider home、本机路径只放私有 `config.yml`、进程环境或 provider 自己的登录态里。
+- 如果依赖第三方 skill，记录上游来源和安装方式，不直接修改第三方 skill 文件。
+
+### 日志与完成回执
+
+每个 workflow 必须让客户看到证据。终端输出或最终回复至少包含：
+
+- 开始做什么，使用了哪个配置/ provider，但不打印秘密值。
+- 关键进度：数量、当前项、输出路径、跳过/失败原因。
+- 最终总结：成功 / 跳过 / 失败数量，创建或更新了哪些文件。
+- 下一步：需要客户确认、补 key、安装依赖或继续运行的具体命令。
+
+推荐最终回复格式：
+
+```markdown
+完成：<一句话说明本次完成了什么>。
+
+日志摘要：
+- started: <检查到的输入/配置/依赖，不打印秘密值>
+- processed: <数量或范围>
+- created/updated: <数量或路径>
+- skipped/failed: <数量和原因>
+
+文件变化：
+- <绝对路径或“未改动文件”>
+
+验证：
+- <运行过的检查、命令或人工核对点>
+
+问题与下一步：
+- <缺 key / 缺依赖 / 需要客户确认 / 建议下一条命令；没有则写“无”>
+```
+
 ## Safety Rules
 
 - Do not hardcode maintainer paths, local checkout paths, vault directory names, account names, secrets, cookies, session strings, or private context.
@@ -21,7 +94,7 @@ description: 一句话说明这个 skill 做什么、何时触发。包含具体
 2. If a provider, path, or credential is missing, check [references/providers.md](references/providers.md) and guide setup without reading private secret files.
 3. Execute the smallest reliable workflow.
 4. Validate the real output before claiming success.
-5. Report what changed, which checks ran, and any remaining gaps.
+5. Report what changed, visible log summary, which checks ran, and any remaining gaps.
 
 ## Inputs
 
@@ -41,6 +114,10 @@ params:
 - Optional config resolver: `scripts/resolve_config.py`
 
 Delete unused resource bullets. Do not add README / INSTALL / CHANGELOG inside a skill.
+
+## Agent Metadata
+
+`agents/openai.yaml` is optional UI/catalog metadata only. Keep required capabilities, dependencies, setup, workflow steps, log expectations, and completion summary rules in this `SKILL.md` so Claude Code, Codex, SOIA, and other skills.sh-compatible agents all receive the same instructions.
 
 ## Validation
 

@@ -1,3 +1,6 @@
+# Optional OpenAI/Codex/SOIA catalog metadata.
+# Canonical instructions still live in ../SKILL.md so Claude Code and other
+# skills.sh-compatible agents receive the same dependencies and workflow rules.
 interface:
   display_name: "<Human Display Name>"
   short_description: "<Short user-facing description.>"

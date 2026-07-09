@@ -33,6 +33,33 @@ Do not rename this directory to `open-skill-template`. The repository name
 already scopes the public/private difference, while a shared template path keeps
 agent instructions and contributor commands consistent.
 
+### Customer-readable `SKILL.md` contract
+
+Every skill must make its first screen understandable to a customer, not only to
+the maintainer. Near the top of `SKILL.md`, include a customer-readable section
+that answers:
+
+- What this skill can do.
+- How the customer should use it and what inputs they must provide.
+- Hard dependencies, optional dependencies, third-party skill relationships, and
+  installation/setup steps.
+- Where skill-specific private config belongs, using
+  `~/.config/soia-skills/<repo>/<skill-type>/<skill-name>/config.yml` and
+  `SOIA_<TYPE>_<SHORT>_CONFIG_FILE` when relevant.
+- What logs, file changes, validation evidence, issues, and next steps the
+  customer will see after every run.
+
+Required customer-facing markers:
+
+- `客户可读说明` or an equivalent customer-visible introduction.
+- `这个技能可以做什么` / `能做什么`.
+- `客户如何使用` / `如何使用` / `如何运行`.
+- `依赖与安装` / `首次安装与配置` / explicit dependency section.
+- `日志与完成回执` / `客户可见日志与总结` / completion receipt.
+
+Required workflow instructions must still live in `SKILL.md`; do not hide them in
+`agents/openai.yaml`, README files, or private notes.
+
 ### 1. No hardcoded personal paths
 
 Do not hardcode maintainer-specific or vault-specific paths in scripts, `SKILL.md`, examples, or config templates.
@@ -176,6 +203,7 @@ Do not say "tested" or "passed" without saying which checks ran.
 Before commit, verify:
 
 - [ ] `SKILL.md` has `name` and concise `description` with triggers.
+- [ ] `SKILL.md` has a customer-readable intro covering capabilities, usage, dependencies/install, config, logs, and completion receipt.
 - [ ] No `metadata.json`; public skills use `SKILL.md` and optional `agents/openai.yaml`.
 - [ ] No maintainer-specific paths or vault directory names.
 - [ ] No real secrets, cookies, tokens, sessions, private `config.yml`, or `.env` files.
@@ -216,6 +244,29 @@ Public discovery and install use:
 1. `skills/<name>/SKILL.md` frontmatter `name` and `description`
 2. optional `skills/<name>/agents/openai.yaml` for UI-facing metadata
 3. optional bundled `scripts/`, `references/`, and `assets/`
+
+## Agent metadata and consumption
+
+`SKILL.md` is the canonical cross-agent instruction file. Every agent should be
+able to use a skill from `SKILL.md` alone after the skill is installed or linked
+into that agent's skills directory.
+
+`agents/openai.yaml` is optional UI/catalog metadata, not a replacement for
+`SKILL.md`.
+
+| Consumer | Uses `SKILL.md` | Uses `agents/openai.yaml` | Notes |
+|---|---:|---:|---|
+| Claude Code | yes | no direct runtime dependency | Claude Code discovers installed skills from `~/.claude/skills/<name>/SKILL.md`; keep all required instructions in `SKILL.md`. |
+| Codex / OpenAI-style surfaces | yes | optional | `agents/openai.yaml` provides display name, short description, and default prompt for friendlier UI/catalog text. |
+| SOIA runtime / registry | yes | optional via generator | Use `python3 scripts/generate_skill_catalog.py --registry-out <soia-repo>/runtime/registry/skills`; the generator merges `SKILL.md` with optional `agents/openai.yaml`. |
+| Other skills.sh-compatible agents | yes | no assumption | Treat `SKILL.md` as the portable contract. Do not rely on agent-specific yaml unless that agent explicitly documents support. |
+
+Rules:
+
+- Never put required workflow steps only in `agents/openai.yaml`; duplicate them in `SKILL.md`.
+- If `agents/openai.yaml` exists, keep it short and customer-facing: `display_name`, `short_description`, `default_prompt`.
+- If another agent later needs its own metadata, add a separate `agents/<agent>.yaml` only when there is a real consumer and document that consumer here.
+- Regenerate catalog/registry after changing `SKILL.md` or `agents/openai.yaml`.
 
 `skills/README.md` is generated from the same sources:
 

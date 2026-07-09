@@ -9,6 +9,8 @@ from pathlib import Path
 OVERRIDE_CONFIG_NAME = "SOIA_PKM_LIBRARY_CONFIG_FILE"
 OVERRIDE_ENV_NAME = "SOIA_PKM_LIBRARY_ENV_FILE"
 DEFAULT_CONFIG_FILE = "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-library/config.yml"
+WEREAD_SKILL_URL = "https://weread.qq.com/r/weread-skills"
+WEREAD_SKILL_INSTALL = "npx skills add Tencent/WeChatReading -g"
 
 KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 PATH_LIKE_KEYS = {
@@ -87,6 +89,38 @@ def load_private_env(required: bool = False) -> Path | None:
 
 def env_source_hint() -> str:
     return f"{OVERRIDE_CONFIG_NAME}, {OVERRIDE_ENV_NAME}, or {DEFAULT_CONFIG_FILE}"
+
+
+def weread_skills_installed() -> bool:
+    home = Path.home()
+    return any(
+        path.exists()
+        for path in (
+            home / ".agents/skills/weread-skills",
+            home / ".codex/skills/weread-skills",
+            home / ".claude/skills/weread-skills",
+        )
+    )
+
+
+def weread_dependency_status() -> str:
+    return "已安装" if weread_skills_installed() else f"未检测到，请先执行 `{WEREAD_SKILL_INSTALL}`"
+
+
+def require_weread_skills() -> None:
+    if weread_skills_installed():
+        return
+    raise SystemExit(
+        "缺少强依赖 weread-skills：请先安装微信读书官方 Skill："
+        f"{WEREAD_SKILL_INSTALL}；官方页面：{WEREAD_SKILL_URL}"
+    )
+
+
+def weread_api_key_hint() -> str:
+    return (
+        f"请打开 {WEREAD_SKILL_URL} 登录微信读书获取 WEREAD_API_KEY；"
+        f"强依赖 weread-skills 状态：{weread_dependency_status()}"
+    )
 
 
 def main() -> int:
