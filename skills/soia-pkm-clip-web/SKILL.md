@@ -78,6 +78,17 @@ SOIA_PKM_CLIP_WEB_CONFIG_FILE=<custom-config-path>
 - 脚本：`scripts/archive_web.py <url> --vault <path>`。
 - 手机端可用 Obsidian Web Clipper 落到 `<vault-inbox-dir>/`，再由本 skill 迁入。
 
+## 抓取质量强制复核
+
+脚本退出码 0 不等于抓取成功——有些站点会把登录墙、导航壳或反爬拦截页当正常响应返回，脚本不会报错。**写入 vault 前必须亲读产物**，核对：标题是否匹配原页面（不是"登录""访问异常"这类站点通用标题）、正文是否为完整文章（不是导航栏/侧边栏堆砌，也不是清一色链接）、字数是否与原文体量大致相符。
+
+失败信号清单（命中任一条即判定失败，不得直接交付）：
+- 出现"登录""请先登录""verify you are human"等登录墙/验证关键词
+- 正文明显过短（应为长文却只有几十字）
+- 正文几乎全是链接、没有实质叙述文字
+
+命中失败信号时换策略（换 `readability-lxml`/`trafilatura` 互为兜底、提示用户手动登录后重试、或如实标 `content_complete: false` 并提醒人工核对原文），而不是把拦截页当正文写进 vault。
+
 ## 落地（clip 家族统一规范）
 
 - 路径：`<vault-articles-dir>/<年>/YYYY-MM-DD-<来源>-<作者>-<标题>.md`（来源如 博客 / Substack / Medium）
@@ -96,6 +107,8 @@ SOIA_PKM_CLIP_WEB_CONFIG_FILE=<custom-config-path>
 ---
 
 ## 完成后回执
+
+**交付顺序**：先把文件落盘，再输出下面的回执，不得反过来；不确定的元数据（如作者、发布时间解析失败）在回执里显式标注"未核实"，不编造。
 
 执行完**必须**向用户输出（不要默默做完）：
 

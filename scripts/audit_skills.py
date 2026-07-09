@@ -49,6 +49,12 @@ LOCAL_SOURCE_DIR_RE = re.compile(r"--source-dir\s+skills(?:\s|$)")
 DIRECT_SKILL_COPY_RE = re.compile(
     r"\bcp\s+-R\b.*\bskills\b.*(?:~/\.(?:agents|soia|codex|claude)|CODEX_HOME|\$CODEX_HOME)"
 )
+
+LINK_TARGET_RE = re.compile(r"\]\(([^)]+)\)")
+SRC_TARGET_RE = re.compile(r'src\s*=\s*"([^"]+)"')
+# Explicit repo-root docs that skills are allowed to link out to (established usage:
+# skills/soia-pkm-clip-gzh/SKILL.md links to ../../SKILL_SPEC.md).
+ALLOWED_ROOT_DOC_LINKS = {"README.md", "SKILL_SPEC.md", "CONTRIBUTING.md", "LICENSE", "AGENTS.md"}
 CUSTOMER_READABLE_RULES = (
     ("customer-readable introduction", ("客户可读说明", "客户可见介绍")),
     ("capability section", ("这个技能可以做什么", "能做什么")),
@@ -147,6 +153,60 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
                 idx = -1
             if idx >= 0 and len(path.parts) - idx > 2:
                 findings.append(Finding("WARN", rel(path, root), "nested references should stay one level below references/"))
+
+    audit_skill_links(root, skill_dir, findings)
+
+
+def check_link_target(root: Path, skill_dir: Path, source_file: Path, target: str) -> str | None:
+    """Return an error message if a relative link target escapes the skill directory."""
+    target = target.strip()
+    if not target or target.startswith("#"):
+        return None
+    if "://" in target or target.startswith("mailto:"):
+        return None
+    if target.startswith("<") or "{{" in target or "TODO" in target:
+        return None  # placeholder text, not a concrete path
+
+    path_part = target.split("#", 1)[0].split("?", 1)[0].strip()
+    if not path_part or path_part.startswith("/"):
+        return None  # absolute paths are covered by the hardcoded-path check
+    if ".." not in path_part.split("/"):
+        return None  # cannot escape the skill directory without a ".." segment
+
+    resolved = (source_file.parent / path_part).resolve()
+    skill_root = skill_dir.resolve()
+    try:
+        resolved.relative_to(skill_root)
+        return None  # still inside the skill directory
+    except ValueError:
+        pass
+
+    root_resolved = root.resolve()
+    if resolved.parent == root_resolved and resolved.name in ALLOWED_ROOT_DOC_LINKS:
+        return None  # explicit repo-level doc link, established usage
+
+    return f"relative link escapes skill directory: {target}"
+
+
+def audit_skill_links(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
+    md_files = [skill_dir / "SKILL.md"]
+    references_dir = skill_dir / "references"
+    if references_dir.is_dir():
+        md_files.extend(sorted(references_dir.glob("*.md")))
+
+    for md_file in md_files:
+        if not md_file.is_file():
+            continue
+        text = read_text(md_file)
+        for i, line in enumerate(text.splitlines(), start=1):
+            for match in LINK_TARGET_RE.finditer(line):
+                message = check_link_target(root, skill_dir, md_file, match.group(1))
+                if message:
+                    add_line_finding(findings, "ERROR", root, md_file, i, message)
+            for match in SRC_TARGET_RE.finditer(line):
+                message = check_link_target(root, skill_dir, md_file, match.group(1))
+                if message:
+                    add_line_finding(findings, "ERROR", root, md_file, i, message)
 
 
 def audit_text_file(root: Path, path: Path, findings: list[Finding]) -> None:

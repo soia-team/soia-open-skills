@@ -2,6 +2,8 @@
 
 # soia-open-skills
 
+中文 | [English](README.en.md)
+
 > *把「收藏」变成「作品」——AI 时代的个人知识管理技能体系。*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -19,7 +21,7 @@ npx skills add soia-team/soia-open-skills
 
 跨 agent 通用——Claude Code、Cursor、Codex、Gemini、Kimi 都能装。
 
-[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单20) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
+[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单20) · [高频技能速览](#高频技能速览) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
 
 </div>
 
@@ -68,6 +70,8 @@ npx skills add soia-team/soia-open-skills
 
 ### 📥 收集 · clip 家族
 
+核心价值：把分散在各平台的内容一键收进 vault，是整条闭环的入口——没有稳定的收，后面的整理、提炼、成文都无从谈起。
+
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
 | [`soia-pkm-clip-x`](./skills/soia-pkm-clip-x/) | X 推文/thread/长文 → vault | ✅ 完全可用（脚本齐全，已多次实测）| 无（Telegram 同步可选）|
@@ -79,11 +83,15 @@ npx skills add soia-team/soia-open-skills
 
 ### 🗂️ 整理
 
+核心价值：把杂乱的存量收藏转成有结构、可检索、能聚合复用的知识——收藏不等于吸收，整理是激活的第一步。
+
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
 | [`soia-pkm-organize`](./skills/soia-pkm-organize/) | 分类/补 frontmatter/建两级 MOC/按月归位/补双链 | ✅ 可用（底层脚本 rebuild_moc/backfill 已在用）| vault 里已有归档内容 |
 
 ### ✍️ 提炼 → 成文 → 发布
+
+核心价值：闭环里真正的价值转化环节——把别人的信息变成你自己的判断，再把判断写成可发布的作品，这是从"消费"到"创造"的分水岭。
 
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
@@ -93,11 +101,15 @@ npx skills add soia-team/soia-open-skills
 
 ### 🔁 转化 · 文章 → 产物
 
+核心价值：让同一篇内容适配不同消费场景——同一份素材一次输入，按需路由到 PDF、PPT、长图、播客等多种媒介产出。
+
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
 | [`soia-pkm-transform`](./skills/soia-pkm-transform/) | **文章 → 多产物**：PDF / PPT / 图片长图 / 试卷 / 脑图 / 播客 / 闪卡 / 报告；公共路由层，可选调用 Obsidian、NotebookLM、Codex 内置文档/图片/PPT 能力与 `publish` | ✅ 可用（路由 skill + 配置模板；具体产物取决于本机 provider） | vault 文章或 URL；NotebookLM / Obsidian / Codex 内置能力按需可选 |
 
 ### 🧰 支撑
+
+核心价值：维护闭环运转所需的基础设施——初始化 vault、维护书库、管理云盘、日常维护和开发工具链，不在闭环主链路上，却是全局能跑起来的地基。
 
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
@@ -110,6 +122,97 @@ npx skills add soia-team/soia-open-skills
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify 图表工作流：架构图 / 数据流 / 工作流 / 时序 / 生命周期图，维护 JSON IR 并导出 README/docs PNG | ✅ 可用（脚本齐全；需本机可用 Archify）| `ARCHIFY_BIN` 或 `ARCHIFY_ROOT`，可选 Playwright/Chrome 导出 PNG |
 | [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release，默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY` |
 | [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | AI/开发 CLI 批量盘点与升级：Codex / Claude / Gemini / Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ 可用（脚本齐全；支持 dry-run 和日志）| Node/npm；部分工具需要 Homebrew 或自身 updater |
+
+---
+
+## 高频技能速览
+
+闭环里最常被直接调用的 7 个 skill，逐个给最小可用示例。命令里的路径占位符统一用 `<vault路径>`；实际路径按你本机 vault 位置替换。
+
+### soia-pkm-clip-x
+
+把 X/Twitter 的推文、thread、X Article 一键归档进 Obsidian vault；基于 fxtwitter 公开 API，单条零配置，可选批量同步 Telegram「我的收藏」。
+
+```bash
+python3 archive_x.py <推文URL>
+python3 archive_x.py <推文URL> --force                    # 覆盖已归档
+python3 archive_x.py <推文URL> --vault <vault路径>         # 覆盖环境变量
+python3 sync_telegram_export.py <telegram导出json路径> --dry-run   # 预览批量同步
+```
+
+**典型输出**：在 vault 文章目录下新增一篇 Markdown，frontmatter 补全作者、发布时间、话题双链、语言标记，`## 我的看法` 留空待补。
+
+### soia-pkm-organize
+
+整理 vault 里杂乱的存量收藏——补 frontmatter、按主题建双链归类、重建两级 MOC、按月份归位文件。
+
+```bash
+python3 scripts/rebuild_moc.py --vault <vault路径>
+python3 scripts/backfill_reading_records.py --vault <vault路径>
+```
+
+**典型输出**：终端汇报本次处理了多少篇文章、补齐了哪些 topics、MOC 更新情况、归位了多少个文件。
+
+### soia-pkm-distill
+
+把收藏的文章「炼」成你自己的观点：AI 一次只抛一个问题，你口述回答，AI 只负责把回答整理成通顺的第一人称文字，绝不替你下判断。
+
+```text
+给这篇补我的看法
+把「Agent 开发」这个主题炼成观点
+```
+
+**典型输出**：文章的 `## 我的看法` 段落被写入一段基于你口述整理成文的第一人称观点；主题聚合模式则在草稿目录生成一篇观点综述。
+
+### soia-pkm-compose
+
+把 distill 提炼出的观点写成一篇可发布的成文草稿，以你的观点为骨架、vault 里的摘抄为论据。
+
+```text
+把这些观点写成一篇
+把「X 主题」写成文章
+```
+
+**典型输出**：草稿目录下新增一篇带 `tags:[草稿]` frontmatter 的成文 Markdown，附大纲、字数统计与修改建议。
+
+### soia-pkm-publish
+
+把成文草稿适配并发布到多平台——公众号排版推草稿箱、X thread、小红书卡片；公众号是主流程，渲染成遵守微信平台限制的内联样式 HTML，机械校验通过后才建草稿，绝不自动群发。
+
+```bash
+python3 scripts/render_wechat.py --file <article.md> --output <out.html>
+python3 scripts/validate_wechat_html.py --file <out.html>
+python3 scripts/publish.py --article <article.md> --cover <cover.png> --dry-run
+python3 scripts/archive.py --article <article.md> --url <发布后的文章链接>
+```
+
+**典型输出**：微信公众号后台生成一篇草稿（未群发），终端提示"确认无误后手动群发，群发完成后回来跑 archive 归档"。
+
+### soia-pkm-transform
+
+把文章转换成 PDF、PPT、长图、试卷、脑图、播客、闪卡、报告等多种产物的公共路由层，按目标格式自动路由到不同 provider（Obsidian 原生导出、NotebookLM、Open Design 等）。
+
+```bash
+python3 scripts/resolve_route.py --target ppt --provider notebooklm --json
+python3 scripts/notebooklm_artifact_matrix.py --article <article.md> --out-dir <输出目录> --targets all --run --json
+python3 scripts/validate_artifact_quality.py --article <article.md> --out-dir <输出目录> --strict --json
+```
+
+**典型输出**：在指定输出目录生成对应格式的产物文件，并附验收报告（页数、覆盖度、是否可打开可解析）。
+
+### soia-pkm-library
+
+维护 Obsidian 书库：同步微信读书书架与划线、补单本书详情、补待读记录、重新生成图书馆/阅读记录/分类三份总览；7 个机械脚本全部幂等、可重复跑。
+
+```bash
+python3 sync_weread_to_library.py --vault <vault路径>
+python3 sync_weread_highlights.py --all
+python3 backfill_reading_records.py
+python3 gen_library_md.py
+python3 gen_records_md.py
+```
+
+**典型输出**：终端汇报新增书卡数、新增阅读记录数、失败数，并给出下一步建议（如重新生成总览、同步划线）。
 
 ---
 

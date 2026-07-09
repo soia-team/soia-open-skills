@@ -136,7 +136,10 @@ SOIA_PKM_PUBLISH_CONFIG_FILE=<custom-config-path>
 3. **渲染**：`scripts/render_wechat.py` 把 Markdown → 遵守"微信平台红线"的内联样式 HTML。
 4. **校验**：`scripts/validate_wechat_html.py` 机械复核红线——有硬性违规先回到渲染结果/
    脚本修，通过（exit 0）才能进入下一步；warning 不阻塞，但建议顺手清一遍。
-5. **推草稿箱**：`scripts/publish.py` → 调微信 `draft/add` 建草稿（图片传 CDN、传封面）。
+5. **推草稿箱前先确认**：默认执行前确认风格、封面、发布账号这几项——显式调用本 skill、
+   命中 `workflow_type` 默认配置，都只是推荐输入，不构成跳过确认的理由；唯一的跳过条件
+   是客户当前这句话明确说"直接推/不用确认"，跳过后要在回执里说明本次沿用的假设。
+   确认通过后 `scripts/publish.py` → 调微信 `draft/add` 建草稿（图片传 CDN、传封面）。
 6. **人工确认发布后** → `scripts/archive.py` 标记已发布、记链接、更新日志。
 
 ### 脚本规格（scripts/）

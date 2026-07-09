@@ -1,0 +1,20 @@
+name: Audit Skills
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Audit skills
+        run: python3 scripts/audit_skills.py --strict
+      - name: Check skill catalog freshness
+        run: python3 scripts/generate_skill_catalog.py --check
