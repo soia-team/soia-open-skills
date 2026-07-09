@@ -1,0 +1,39 @@
+# soia-pkm-translate private config example.
+# Copy to ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-translate/config.yml
+# or point SOIA_PKM_TRANSLATE_CONFIG_FILE to a custom path.
+# No secrets belong in this file: target_language / mode / audience / style /
+# glossary are plain preferences, not credentials.
+
+# Default target language for translation output.
+target_language: zh-CN
+
+# Default mode when the user does not specify one: quick | normal | refined.
+mode: normal
+
+# Target reader profile: general | technical | academic | business, or a
+# free-text description such as "对 AI 感兴趣的普通读者".
+audience: general
+
+# Voice/tone preset: storytelling | formal | technical | literal | academic |
+# business | conversational | elegant, or a free-text description.
+style: storytelling
+
+# Word count that triggers the mechanical chunk_markdown.py splitting.
+chunk_threshold: 4000
+
+# Max words per chunk once chunking is triggered.
+chunk_max_words: 5000
+
+# Inline glossary: original term -> fixed translation. Threaded through every
+# chunk so terminology stays consistent across a long document, and rechecked
+# during the refined-mode review step.
+glossary:
+  "large language model": "大语言模型"
+  "prompt engineering": "提示词工程"
+  "retrieval-augmented generation": "检索增强生成"
+
+env:
+  # Optional: only needed if the skill should auto-discover an Obsidian vault
+  # root instead of operating on an explicit file path.
+  OBSIDIAN_VAULT: "<vault-path>"
+  SOIA_PKM_TRANSLATE_CONFIG_FILE: "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-translate/config.yml"

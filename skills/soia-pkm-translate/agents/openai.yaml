@@ -1,0 +1,4 @@
+interface:
+  display_name: "PKM Translate"
+  short_description: "三模式翻译技能（quick 直译 / normal 先分析术语受众再译 / refined 审校润色出版级），把长文机械分块保证术语一致，产出独立译文文件，不覆盖原文。"
+  default_prompt: "Use soia-pkm-translate: 三模式翻译技能，quick 直译 / normal 先分析后译（默认）/ refined 审校润色出版级。长文用机械分块脚本保术语一致，产出 <原文件名>-中文版.md 落在原文件同目录，不覆盖原文。"
