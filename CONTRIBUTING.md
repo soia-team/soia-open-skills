@@ -23,6 +23,7 @@
    ```
 
    frontmatter 只放 `name` 和 `description`，不要新增 `version` 等字段。
+   不要新增 `metadata.json`；公开仓使用 `SKILL.md` + 可选 `agents/openai.yaml`。
 
 5. **路径参数化**：
    - 严禁硬编码 `/Users/xxx`、`/home/xxx` 等本地路径

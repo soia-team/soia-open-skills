@@ -1,18 +1,19 @@
 ---
 name: your-skill-name
-description: 一句话说明这个 skill 做什么、何时触发。包含 3-6 个自然语言触发词，保持简短，不写个人路径、账号或私有偏好。
+description: 一句话说明这个 skill 做什么、何时触发。包含具体触发场景，保持简短，不写个人路径、账号或私有偏好。
 ---
 
 # your-skill-name
 
 用 1-2 句话说明这个 skill 的定位：它解决什么问题、输入是什么、输出是什么、和其他 skill 的关系是什么。
 
-## Public Rules
+## Safety Rules
 
-- Do not hardcode maintainer paths, vault directory names, account names, secrets, cookies, or private family context.
-- Put user-specific behavior in CLI args, environment variables, or config files.
+- Do not hardcode maintainer paths, local checkout paths, vault directory names, account names, secrets, cookies, session strings, or private context.
+- Put user-specific behavior in CLI args, environment variables, or user-owned config files.
+- For public skills, document variable names only. For private SOIA skills, follow this repo's `SKILL_SPEC.md` private env/config policy. Never commit real values.
 - Read only the user-provided source files or the current task workspace.
-- Use placeholders in examples: `<vault>`, `<path-to-article.md>`, `<YOUR_KEY>`.
+- Use placeholders in examples: `<path>`, `<repo-path>`, `<workspace>`, `<YOUR_KEY>`.
 
 ## When Triggered
 
@@ -36,8 +37,10 @@ params:
 ## Resources
 
 - Provider setup and fallback rules: [references/providers.md](references/providers.md)
-- Optional public config example: [assets/config.example.yml](assets/config.example.yml)
+- Optional config example: [assets/config.example.yml](assets/config.example.yml)
 - Optional config resolver: `scripts/resolve_config.py`
+
+Delete unused resource bullets. Do not add README / INSTALL / CHANGELOG inside a skill.
 
 ## Validation
 

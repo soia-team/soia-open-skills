@@ -45,6 +45,24 @@ python3 scripts/local_artifact_smoke.py \
 
 该脚本从同一篇 Markdown 生成 `report.md/html/pdf`、`deck.html/pptx`、`infographic.html/png`、`data-table.csv`、`quiz.md`、`flashcards.md/csv`、`mindmap.mmd`、`podcast-script.md`、`video-script.md`、`cinematic-video-shotlist.md`，并用 Playwright 渲染 PNG/PDF。`--strict` 会检查报告长度、概念覆盖、deck 页数、信息块数、题目/答案数量、音频/视频脚本长度等质量门；失败时不要交付。若 Playwright 自带浏览器缺失，脚本会优先使用系统 Chrome；不要要求用户为了普通本地导出先安装 Open Design。
 
+依赖：
+
+- `deck.pptx` 需要 Python 环境可 `import pptx`（包名通常是 `python-pptx`）。
+- HTML 到 PDF/PNG 渲染需要 Node 可 `require("playwright")`。若当前 agent 提供 bundled runtime，优先用 `--node-bin <node>` 和 `--node-path <node_modules>` 注入；不要把某台机器的 runtime 路径写进 skill。
+- 依赖缺失时先给安装/注入路径建议，再降级为 HTML deck / Markdown report；不要声称 PPTX、PDF 或 PNG 已导出。
+
+质量门也可以单独跑，适用于 local、NotebookLM、Open Design 或人工重排后的同名产物目录：
+
+```bash
+python3 scripts/validate_artifact_quality.py \
+  --article <article.md> \
+  --out-dir <out-dir> \
+  --strict \
+  --json
+```
+
+`article_packet.py` 会从 source 动态抽章节和概念；不要在本地 provider 里维护某个领域或某篇文章的固定术语库。
+
 ## Codex / Agent Native Providers
 
 适用：本地可编辑产物和强视觉校验。

@@ -1,4 +1,4 @@
-# Public config example for your-skill-name.
+# Generic config example for your-skill-name.
 # Copy to ~/.config/<your-skill-name>/config.yml or point YOUR_SKILL_CONFIG to it.
 # Keep secrets out of this file. Store provider auth in provider-owned login flows.
 
@@ -21,3 +21,7 @@ providers:
     install_policy: prompt
     command: <command-name>
     auth_check: <safe-readonly-auth-check>
+
+credentials:
+  policy: env_or_provider_login
+  variables: []

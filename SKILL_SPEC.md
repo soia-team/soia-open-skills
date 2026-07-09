@@ -11,10 +11,27 @@ Create new skills from the repository template:
 ```bash
 cp -R templates/skill-template skills/<your-skill-name>
 mv skills/<your-skill-name>/SKILL.md.template skills/<your-skill-name>/SKILL.md
+python3 scripts/generate_skill_catalog.py
 python3 scripts/audit_skills.py
 ```
 
 The template is intentionally generic: it shows config discovery, provider setup boundaries, and validation language without encoding any maintainer-specific vault layout.
+
+`soia-open-skills` and `soia-private-skills` intentionally use the same template
+path and outer structure:
+
+```text
+templates/skill-template/
+├── SKILL.md.template
+├── agents/openai.yaml
+├── assets/
+├── references/
+└── scripts/
+```
+
+Do not rename this directory to `open-skill-template`. The repository name
+already scopes the public/private difference, while a shared template path keeps
+agent instructions and contributor commands consistent.
 
 ### 1. No hardcoded personal paths
 
@@ -125,6 +142,7 @@ Do not say "tested" or "passed" without saying which checks ran.
 Before commit, verify:
 
 - [ ] `SKILL.md` has `name` and concise `description` with triggers.
+- [ ] No `metadata.json`; public skills use `SKILL.md` and optional `agents/openai.yaml`.
 - [ ] No maintainer-specific paths or vault directory names.
 - [ ] No real secrets, cookies, tokens, sessions, or `.env` files.
 - [ ] No private family/home/personal profile information.
@@ -137,6 +155,7 @@ Before commit, verify:
 Run the repository audit:
 
 ```bash
+python3 scripts/generate_skill_catalog.py --check
 python3 scripts/audit_skills.py
 ```
 
@@ -151,4 +170,28 @@ Suggested scan:
 ```bash
 grep -RInE '/Users/|/home/[^/<]+|WECHAT_APP_SECRET=.{8,}|WEREAD_API_KEY=.{8,}|TELEGRAM_SESSION_STRING=.{8,}|AIza[0-9A-Za-z_-]{20,}|sk-[0-9A-Za-z_-]{20,}|ghp_[0-9A-Za-z]{20,}|password *=|密码[:：]' \
   README.md CONTRIBUTING.md skills || true
+```
+
+## metadata.json
+
+Do not add `metadata.json` to public skills. It is a legacy SOIA private catalog
+format and is intentionally absent from `soia-open-skills`.
+
+Public discovery and install use:
+
+1. `skills/<name>/SKILL.md` frontmatter `name` and `description`
+2. optional `skills/<name>/agents/openai.yaml` for UI-facing metadata
+3. optional bundled `scripts/`, `references/`, and `assets/`
+
+`skills/README.md` is generated from the same sources:
+
+```bash
+python3 scripts/generate_skill_catalog.py
+```
+
+When v7 SOIA needs machine-readable registry manifests, export them from the same
+source fields instead of adding `metadata.json`:
+
+```bash
+python3 scripts/generate_skill_catalog.py --registry-out <soia-repo>/runtime/registry/skills
 ```

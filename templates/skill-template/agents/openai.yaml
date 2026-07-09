@@ -1,0 +1,4 @@
+interface:
+  display_name: "<Human Display Name>"
+  short_description: "<Short user-facing description.>"
+  default_prompt: "<A concise example prompt that should trigger this skill.>"

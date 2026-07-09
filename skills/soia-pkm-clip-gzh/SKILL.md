@@ -1,24 +1,25 @@
 ---
 name: soia-pkm-clip-gzh
 version: 1.0.0
-description: 把用户自己管理的微信公众号已发文章批量拉取进 Obsidian vault。两条技术路线：官方 API（freepublish/batchget + material/batchget_material，仅覆盖通过草稿箱「发布」的文章，需已认证账号）与登录态 Cookie（非官方 profile_ext 接口，能读全部历史含手动群发的老文，但票据几小时~几天会过期）。Triggers：「同步我的公众号」「批量拉取我公众号的历史文章」「批量归档我的公众号」「导入公众号已发文章」「clip 我的公众号」
+description: 把用户自己管理的微信公众号已发文章批量拉取进 Obsidian vault。三条技术路线：官方 API（freepublish/batchget + material/batchget_material，仅覆盖通过草稿箱「发布」的文章，需已认证账号）、公众号后台接口（非官方 searchbiz + appmsg，能读全部历史含手动群发的老文，读自己号历史文章的推荐路线）、登录态 Cookie（非官方 profile_ext 接口，同样能读全部历史但票据更短命）。Triggers：「同步我的公众号」「批量拉取我公众号的历史文章」「批量归档我的公众号」「导入公众号已发文章」「clip 我的公众号」
 ---
 
 # soia-pkm-clip-gzh
 
 `clip` 家族的**公众号批量成员**：和 `soia-pkm-clip-wechat`（单篇、贴 URL 归档）不同，这个 skill 面向"把我自己公众号的历史文章一次性拉进 vault"的批量场景。只用于归档**你自己管理**的公众号——不是通用的公众号爬虫。
 
-## 两条路线怎么选
+## 三条路线怎么选
 
-| | 路 A · 官方 API | 路 B · 登录态 Cookie |
-|---|---|---|
-| 覆盖范围 | 只有通过**草稿箱「发布」**发出的文章 | **全部历史**，含手动群发的老文 |
-| 账号要求 | 需已认证服务号/订阅号 | 任意公众号，只要你能登录后台 |
-| 凭据 | AppID/AppSecret，长期有效 + IP 白名单 | key/pass_ticket/appmsg_token，几小时~几天过期 |
-| 官方程度 | developers.weixin.qq.com 有文档 | 非官方，社区逆向，未见于官方文档 |
-| 脚本 | `scripts/fetch_api.py` | `scripts/fetch_cookie.py` |
+| | 路 A · 官方 API | 路 C · 公众号后台接口 | 路 B · 登录态 Cookie |
+|---|---|---|---|
+| 覆盖范围 | 只有通过**草稿箱「发布」**发出的文章 | **全部历史**，含手动群发的老文 | **全部历史**，含手动群发的老文 |
+| 账号要求 | 需已认证服务号/订阅号 | 任意公众号，只要你能登录后台 | 任意公众号，只要你能登录后台 |
+| 凭据 | AppID/AppSecret，长期有效 + IP 白名单 | token/Cookie，几小时过期 | key/pass_ticket/appmsg_token，几小时~几天过期 |
+| 凭据抓取难度 | 一次性配置（后台生成） | 抓 1 对值（token+Cookie） | 抓 3 个票据 + Cookie，容易漏抓/配错对 |
+| 官方程度 | developers.weixin.qq.com 有文档 | 非官方，社区逆向（源码级核对） | 非官方，社区逆向，未见于官方文档 |
+| 脚本 | `scripts/fetch_api.py` | `scripts/fetch_mp.py` | `scripts/fetch_cookie.py` |
 
-**建议**：先跑路 A 探路（凭据搭起来一次成本低，长期可复用于增量同步）；如果账号未认证、或需要连手动群发的老文一起拿，才上路 B，并且只在你自己能登录的账号上跑。两条路都跑过的账号，落地时会按 `url` 自动去重（互相跳过已归档的文章）。
+**建议**：先跑路 A 探路（凭据搭起来一次成本低，长期可复用于增量同步；多数个人未认证号会直接卡在权限门槛，见下）。要读全部历史（含手动群发的老文），**优先用路 C**——凭据只需抓一对 token/Cookie，比路 B 要配对三个票据更不容易出错，是本 skill 里读自己号历史文章的推荐路线。路 B 保留作为路 C 失效时的备选（例如某天 `appmsg` 接口改版）。三条路都只在你自己能登录/管理的账号上跑；跑过的账号落地时会按 `url` 自动去重（互相跳过已归档的文章）。
 
 ## 路 A · 官方 API
 
@@ -35,7 +36,7 @@ description: 把用户自己管理的微信公众号已发文章批量拉取进 
 - `freepublish/batchget` **只返回通过草稿箱「发布」动作发出的文章**。只走过"群发"但没点过"发布"的内容、以及草稿箱功能上线前的旧版图文消息，官方目前**没有任何 API** 能拿到——这不是本 skill 的实现缺陷，是微信开放社区多个帖子交叉确认过的平台限制。
 - `material/batchget_material`（type=news）返回的是永久图文素材；据社区反馈，一篇文章一旦经草稿箱正式「发布」，可能就从这个素材列表里消失。两个接口是**互补关系**，取并集也不等于"全部已发布历史"。
 - 「发布能力」相关接口文档注明：**自 2025-07 起，个人主体账号、企业主体未认证账号、以及不支持认证的账号，这些接口的调用权限会被回收**。多数个人订阅号大概率整条路线都跑不通，需要已认证服务号/订阅号（同 `soia-pkm-publish` 的 `draft/add` 一样的账号门槛）。
-- 结论：路 A 更适合"抽查/核对/增量同步已发布内容"，不要指望它是"全量备份"。要读全部历史（含手动群发的老文）用路 B。
+- 结论：路 A 更适合"抽查/核对/增量同步已发布内容"，不要指望它是"全量备份"。要读全部历史（含手动群发的老文）优先用路 C，路 B 作为备选。
 
 ### 凭据与限制
 
@@ -52,6 +53,53 @@ python3 scripts/fetch_api.py [--out <vault内相对目录>] [--limit N] [--dry-r
 - `--dry-run`：只拉列表打印，不写文件——**首次跑强烈建议先 dry-run**，核对 `total_count`/`item_count` 和拿到的篇数是否符合预期（尤其 `freepublish/batchget` 字段未 100% 核实到官方示例正文）。
 - `--account-name`：两个接口都不返回公众号昵称，给文件名/来源信息用；不传则文件名里用"公众号"占位。
 - `--force`：按 `url` 已归档的文章默认跳过，加这个才会覆盖重写。
+
+## 路 C · 公众号后台接口（推荐：读自己号全部历史）
+
+复用 mp.weixin.qq.com **后台**（作者登录后台，非读者端 profile_ext）两个接口：`searchbiz`（公众号名 → fakeid）+ `appmsg?action=list_ex`（fakeid → 分页文章列表），和路 B 一样能读全部历史（含手动群发的老文），但凭据只需抓一对 token/Cookie，比路 B 要配对三个票据（key/pass_ticket/appmsg_token）更不容易出错。
+
+### 接口依据（源码级核对，非仅读文档）
+
+两个参考仓库各自的文档都写"具体参数见代码"，实际核对的是它们的源码文件，而不是文档正文：
+
+| 接口 | 方法 | 请求 | 响应关键字段 | 依据（源码文件） |
+|---|---|---|---|---|
+| searchbiz（名 → fakeid） | GET | `/cgi-bin/searchbiz`，params `action=search_biz&begin=0&count=5&query=<公众号名>&token=&lang=zh_CN&f=json&ajax=1` | `base_resp.ret`，`list[].{alias,fakeid,nickname,round_head_img,service_type}` | [wnma3mz/wechat_articles_spider — ArticlesUrls.py::official_info()](https://github.com/wnma3mz/wechat_articles_spider/blob/master/wechatarticles/ArticlesUrls.py) 与 [cv-cat/WechatOAApis — utils/wx_utils.py::get_fakeid_params()](https://github.com/cv-cat/WechatOAApis/blob/master/utils/wx_utils.py) 两个独立仓库参数完全一致 |
+| appmsg（fakeid → 文章列表） | GET | `/cgi-bin/appmsg`，params `action=list_ex&begin=<0,5,10,...>&count=5&fakeid=<fakeid>&type=9&query=&token=&lang=zh_CN&f=json&ajax=1` | `base_resp.ret`，`app_msg_cnt`，`app_msg_list[].{aid,appmsgid,cover,digest,itemidx,link,title,update_time}`（**不含 author 字段**） | [wnma3mz/wechat_articles_spider — ArticlesUrls.py::__get_articles_data()](https://github.com/wnma3mz/wechat_articles_spider/blob/master/wechatarticles/ArticlesUrls.py) |
+
+⚠️ `cv-cat/WechatOAApis` 拉文章列表实际用的是另一个更新的接口 `cgi-bin/appmsgpublish`（`sub=list&sub_action=list_ex&type=101_1`，响应结构是 `publish_page`→再 `json.loads`→`publish_list`，每条 `publish_info` 又是一层 JSON 字符串），和这里用的 `appmsg?action=list_ex` 不是同一个接口、字段也不同——应该是 mp 后台新旧两版前端各自调用的接口。本 skill 按 `appmsg?action=list_ex` 实现（也是 `wnma3mz` 项目实际验证过的那条）；`appmsgpublish` 是待评估的备选，不在本次实现范围内。
+
+### ⚠️ 限制与风险（务必先读）
+
+- **非官方接口**：和路 B 一样没有官方文档背书，随时可能被调整。
+- **仅用于归档你自己管理的公众号**：脚本在 `--name` 命中后会打印 nickname/fakeid 并提示确认，不是你自己的号就 Ctrl+C 中断。
+- **token/Cookie 会过期**：社区报告通常几小时失效，无刷新机制，过期后 `base_resp.ret` 会返回非 0（脚本已按下表给出针对性提示，社区逆向交叉核对，未见官方文档，仍属「待用户实测校准」）：
+
+  | `ret` | 含义 | 处理 |
+  |---|---|---|
+  | `200003` | invalid session | token/cookie 已过期，重新登录后台抓包替换 |
+  | `200013` | freq control | 触发限流，社区报告通常需要等待较长时间，别立刻重跑 |
+  | `200040` | invalid csrf token | token 和 Cookie 疑似不是同一次登录会话抓的 |
+
+- **`appmsg` 列表本身不返回 author 字段**：落地时 `author` 用 `--account-name` / `WECHAT_ACCOUNT_NAME` 兜底，不保证等于文章真实署名作者，需要精确作者请人工核对原文页。
+- **限流风险**：脚本默认每页/每篇请求间隔 `--sleep 3` 秒；社区报告即使 5 秒/页的节流，抓到近千篇量级仍可能触发 `freq control`，批量抓取整年历史建议配合 `--limit` 分批跑。
+
+### 凭据获取
+
+登录 `mp.weixin.qq.com` 后台，随便打开一篇文章编辑页或文章列表页，F12 打开浏览器开发者工具「网络」面板，从任意 `mp.weixin.qq.com` 请求的 URL 里复制 `token` 参数、从请求头复制完整 `Cookie` 字符串。填进 `.env.example` 对应的私有 env 文件（`WECHAT_MP_TOKEN` / `WECHAT_MP_COOKIE`）。
+
+### 用法
+
+```bash
+python3 scripts/fetch_mp.py [--name <公众号名>] [--fakeid <fakeid>] [--out <目录>] \
+    [--limit N] [--dry-run] [--vault <path>] [--account-name <显示名>] \
+    [--force] [--sleep 3] [--page-size 5]
+```
+
+- `--name` 与 `--fakeid` 二选一：`--name` 会先跑 `searchbiz` 搜索、取第一个匹配结果（读自己的号：搜自己公众号名）；已知 `fakeid` 时直接传 `--fakeid` 跳过搜索这一步更稳。
+- `--dry-run`：只翻页拉列表打印标题+链接，**不抓正文、不写文件**——比路 B 的 dry-run 更快（路 B 的 dry-run 仍会抓完全部正文），首次跑建议先 dry-run 核对篇数和标题是否符合预期。
+- 列表接口每页 `--page-size`（默认 5，社区实测上限）条，按 `app_msg_cnt` 和翻页结果自动判断何时停止。
+- 每条列表项拿到 `link` 后，脚本直接 GET 文章公开页面解析 `#js_content`（和路 B / `soia-pkm-clip-wechat` 单篇归档同一套正文抓取思路，不需要额外 cookie）。
 
 ## 路 B · 登录态 Cookie
 
@@ -98,14 +146,14 @@ python3 scripts/fetch_cookie.py --biz <__biz> [--out <目录>] [--limit N] [--dr
 - 每条列表项拿到 `content_url` 后，脚本直接 GET 文章公开页面解析 `#js_content`（和 `soia-pkm-clip-wechat` 单篇归档同一套正文抓取思路，不需要额外 cookie）。
 - `--dry-run` 依然会翻完整个列表、抓完全部正文再打印（不写文件），量大时耗时较长——想快速核对列表本身，先看 stderr 里逐页打印的 `拿到 N 条，累计 M`。
 
-## 落地规范（两条路共用）
+## 落地规范（三条路共用）
 
 - **中转区，不是终点**：落到 vault 的**收件箱层**，不是 `soia-pkm-organize` 归位后的最终位置——`organize` 上线前先囤在这里，之后随"作品库重构"一起归位到 40/50 区。
 - 默认输出目录：`Inbox/gzh-articles/<年>/`（vault 内相对路径，代码里的通用默认值）。这个 vault 建议设为你自己的中转区，例如 `10_工作台/00_Inbox/gzh-已发/`——用 `--out 10_工作台/00_Inbox/gzh-已发` 或私有 env 里的 `OBSIDIAN_GZH_OUT` 覆盖（默认值刻意不硬编码具体中文路径，遵守本仓库 [SKILL_SPEC.md](../../SKILL_SPEC.md) 的"no hardcoded personal paths"规则）。
 - 文件名：`<出版日期>-公众号-<账号显示名>-<标题>.md`，同名冲突时按 url 特征加短后缀。
-- frontmatter：`tags:[公众号原创, 待归位]`、`source: 公众号自有`、`url`、`title`、`author`、`published_at`、`captured_at`、`route: api|cookie`、`content_complete`、`topics: []`（`topics` 是本 skill 相对用户原始字段清单多加的一项，方便后续 `organize` 直接补分类，无内容时留空数组，不影响其他字段）。
+- frontmatter：`tags:[公众号原创, 待归位]`、`source: 公众号自有`、`url`、`title`、`author`、`published_at`、`captured_at`、`route: api|cookie|mp-backend`、`content_complete`、`topics: []`（`topics` 是本 skill 相对用户原始字段清单多加的一项，方便后续 `organize` 直接补分类，无内容时留空数组，不影响其他字段）。
 - 正文：HTML → Markdown 走 stdlib `html.parser`（零第三方依赖，和这个仓库其它脚本一致），不保证 100% 还原排版，复杂内联样式/公众号专属组件会被拍平成纯文本+图片链接。`content_complete: false` 表示正文抓取失败或为空，需要人工核对原文链接。
-- 幂等：两个脚本按 `url` 在 `out_dir` 下递归查找是否已归档，已存在则默认跳过（`--force` 才覆盖），API/Cookie 两条路交替跑不会重复落地同一篇。
+- 幂等：三个脚本都按 `url` 在 `out_dir` 下递归查找是否已归档，已存在则默认跳过（`--force` 才覆盖），三条路交替跑不会重复落地同一篇。
 
 ## 归档后
 

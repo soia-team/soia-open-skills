@@ -75,7 +75,8 @@ python3 scripts/resolve_config.py
 python3 scripts/resolve_route.py --target ppt --provider notebooklm --json
 python3 scripts/notebooklm_health.py --ensure-home --json
 python3 scripts/notebooklm_artifact_matrix.py --article <article.md> --out-dir <out> --targets all --run --json
-python3 scripts/local_artifact_smoke.py --article <article.md> --out-dir <out> --json
+python3 scripts/local_artifact_smoke.py --article <article.md> --out-dir <out> --strict --json
+python3 scripts/validate_artifact_quality.py --article <article.md> --out-dir <out> --strict --json
 ```
 
 脚本只处理通用路径和公共 provider 流程；不要把个人 vault 路径写进脚本。
@@ -87,7 +88,7 @@ python3 scripts/local_artifact_smoke.py --article <article.md> --out-dir <out> -
 3. 选模式和 recipe：先定 `content_mode`，再跑 `resolve_route.py` 或读 [output-recipes.md](references/output-recipes.md)。
 4. 检查 provider：NotebookLM、Open Design、Obsidian、发布链路都先跑健康检查；不可用就按对应 provider bootstrap。
 5. 生成产物：只写到用户指定目录、当前项目或 vault 的 `outputs/transform/<YYYY>/<文章stem>/`。
-6. 验证：按 [quality-gates.md](references/quality-gates.md) 检查覆盖度、页数/信息块数、可打开、可读、可解析、无明显乱码/重叠/空白。
+6. 验证：先跑 `validate_artifact_quality.py` 或等价检查，再按 [quality-gates.md](references/quality-gates.md) 人眼复核覆盖度、页数/信息块数、可打开、可读、可解析、无明显乱码/重叠/空白。
 7. 回写链接：源文章在 vault 内且配置允许时，只追加 `## 转化产物` 链接，不改原文。
 8. 回执：列来源、content_mode、provider、输出文件、验证结果、失败/降级原因。
 
