@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dev Prompt Clarity"
+  short_description: "通用提示词技能：从零按七要素写结构化提示词、按六维诊断优化已有提示词、防误伤改写被安全分类器误判的正当请求；信息不足先澄清再产出。"
+  default_prompt: "Use soia-dev-prompt-clarity: 帮我处理这个提示词需求——先判定是新写、优化还是防误伤改写；信息不足先给我一份一次问全的澄清清单，再产出可直接使用的提示词和逐条说明。"

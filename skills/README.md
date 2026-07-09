@@ -2,7 +2,7 @@
 
 > Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.
 > Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.
-> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 20 skills.
+> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 21 skills.
 
 ## Source Fields
 
@@ -40,6 +40,7 @@
 | [`soia-dev-ai-cli-upgrade`](./soia-dev-ai-cli-upgrade/) | Audit and upgrade AI/developer CLIs such as codex, claude, gemini, kimi, qwen, opencode, cursor, qodercli, and mmx with dry-run reports and logs. | Use soia-dev-ai-cli-upgrade: Audit and upgrade AI/developer CLIs such as codex, claude, gemini, kimi, qwen, opencode, cursor, qodercli, and mmx with dry-run reports and logs. |
 | [`soia-dev-archify-diagrams`](./soia-dev-archify-diagrams/) | Create architecture and workflow diagrams with Archify. | Use soia-dev-archify-diagrams to create or update technical diagrams with JSON IR, validated HTML, and README PNG previews. |
 | [`soia-dev-github-ops`](./soia-dev-github-ops/) | Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates. | Use soia-dev-github-ops: Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates. |
+| [`soia-dev-prompt-clarity`](./soia-dev-prompt-clarity/) | 通用提示词技能：从零按七要素写结构化提示词、按六维诊断优化已有提示词、防误伤改写被安全分类器误判的正当请求；信息不足先澄清再产出。 | Use soia-dev-prompt-clarity: 帮我处理这个提示词需求——先判定是新写、优化还是防误伤改写；信息不足先给我一份一次问全的澄清清单，再产出可直接使用的提示词和逐条说明。 |
 
 ## Registry Export
 
