@@ -28,6 +28,8 @@ from datetime import date
 from pathlib import Path
 from collections import defaultdict
 
+from soia_env import load_private_env
+
 # ── Default category → topic table ───────────────────────────────────────────
 # Vault-agnostic default. Override per-vault via _MOC/.categories.json.
 
@@ -347,6 +349,7 @@ def generate_level1(topic_map: dict, category_stats: dict):
 def main():
     global ARTICLES_DIR, MOC_DIR, TODAY, CATEGORY_TOPICS, TOPIC_TO_CATEGORY
 
+    load_private_env()
     parser = argparse.ArgumentParser(description="Rebuild two-level MOC for an Obsidian article vault.")
     parser.add_argument("--vault", default=os.environ.get("OBSIDIAN_VAULT"),
                         help="vault root (or set OBSIDIAN_VAULT)")

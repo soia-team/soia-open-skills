@@ -1,5 +1,6 @@
 # Generic config example for your-skill-name.
-# Copy to ~/.config/<your-skill-name>/config.yml or point YOUR_SKILL_CONFIG to it.
+# Copy to ~/.config/soia-skills/soia-open-skills/<skill-type>/<your-skill-name>/config.yml
+# or point YOUR_SKILL_CONFIG_FILE to it.
 # Keep secrets out of this file. Store provider auth in provider-owned login flows.
 
 version: 1
@@ -25,3 +26,7 @@ providers:
 credentials:
   policy: env_or_provider_login
   variables: []
+
+env:
+  # Optional process env values the skill may load with scripts/resolve_config.py.
+  YOUR_SKILL_VARIABLE: "<value>"

@@ -7,7 +7,7 @@ Keep provider setup generic. Do not store API keys, cookies, tokens, usernames, 
 1. User's explicit provider in the current request.
 2. CLI argument or `params.provider`.
 3. User config file.
-4. Environment variable or repo-level private env policy.
+4. Environment variable or repo-level private config policy.
 5. Safe auto-detection.
 6. Generic fallback.
 
@@ -15,7 +15,7 @@ Keep provider setup generic. Do not store API keys, cookies, tokens, usernames, 
 
 - Document variable names only, such as `<YOUR_PROVIDER_KEY>`.
 - Public skills must rely on provider-owned login flows or user-owned config outside the repo.
-- Private SOIA skills must follow the repo-level `SKILL_SPEC.md` private env/config policy.
+- Private SOIA skills must follow the repo-level `SKILL_SPEC.md` private config/config policy.
 - Never read password files, cookies, browser profiles, or private token stores.
 
 ## Provider Template

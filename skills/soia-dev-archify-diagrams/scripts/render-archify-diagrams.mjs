@@ -4,8 +4,10 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { loadPrivateConfigEnv } from './soia-config.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+loadPrivateConfigEnv();
 
 const suffixToType = new Map([
   ['.architecture.json', 'architecture'],

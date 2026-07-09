@@ -1,0 +1,6 @@
+# soia-pkm-library private config example.
+# Copy to ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-library/config.yml.
+
+env:
+  OBSIDIAN_VAULT: "<vault-path>"
+  WEREAD_API_KEY: "<YOUR_WEREAD_API_KEY>"

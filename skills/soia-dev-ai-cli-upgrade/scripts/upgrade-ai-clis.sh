@@ -2,14 +2,45 @@
 set -euo pipefail
 
 # Public, reusable AI CLI upgrade helper. Keep machine-specific choices in env
-# vars or the optional private env file, not in the script.
+# vars or the optional private config file, not in the script.
 
-config_file="${SOIA_DEV_AI_CLI_UPGRADE_ENV_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/soia-dev-ai-cli-upgrade/env}"
+config_file="${SOIA_DEV_AI_CLI_UPGRADE_CONFIG_FILE:-${SOIA_DEV_AI_CLI_UPGRADE_ENV_FILE:-$HOME/.config/soia-skills/soia-open-skills/soia-dev/soia-dev-ai-cli-upgrade/config.yml}}"
 if [[ -f "$config_file" ]]; then
-  # shellcheck disable=SC1090
-  set -a
-  source "$config_file"
-  set +a
+  eval "$(python3 - "$config_file" <<'PY'
+from pathlib import Path
+import os
+import re
+import shlex
+import sys
+
+key_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+path_like = {"LOG_DIR", "NPM_PREFIX"}
+path = Path(sys.argv[1]).expanduser()
+in_env = False
+for raw_line in path.read_text(encoding="utf-8").splitlines():
+    stripped = raw_line.strip()
+    if not stripped or stripped.startswith("#"):
+        continue
+    indent = len(raw_line) - len(raw_line.lstrip(" "))
+    if indent == 0:
+        in_env = stripped == "env:"
+        continue
+    if not in_env or indent < 2 or ":" not in stripped:
+        continue
+    key, value = stripped.split(":", 1)
+    key = key.strip()
+    if not key_re.match(key):
+        continue
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        value = value[1:-1]
+    else:
+        value = value.split(" #", 1)[0].strip()
+    if key in path_like:
+        value = os.path.expandvars(os.path.expanduser(value))
+    print(f"export {key}={shlex.quote(value)}")
+PY
+)"
 fi
 
 state_home="${XDG_STATE_HOME:-$HOME/.local/state}"

@@ -12,10 +12,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from soia_env import load_private_env
 
 def default_home() -> Path:
-    config_home = Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")).expanduser()
-    return config_home / "soia-pkm" / "notebooklm"
+    return Path(
+        "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm"
+    ).expanduser()
 
 
 def run_command(cmd: list[str], env: dict[str, str]) -> dict[str, Any]:
@@ -86,10 +88,11 @@ def chrome_processes() -> list[str]:
 
 
 def main() -> int:
+    load_private_env()
     parser = argparse.ArgumentParser(
         description="Check NotebookLM CLI and auth with a SOIA-friendly NOTEBOOKLM_HOME."
     )
-    parser.add_argument("--home", help="NotebookLM home directory. Defaults to NOTEBOOKLM_HOME or ~/.config/soia-pkm/notebooklm.")
+    parser.add_argument("--home", help="NotebookLM home directory. Defaults to NOTEBOOKLM_HOME or the skill private notebooklm directory.")
     parser.add_argument("--profile", help="NotebookLM profile name to export as NOTEBOOKLM_PROFILE.")
     parser.add_argument("--ensure-home", action="store_true", help="Create the home directory with user-only permissions.")
     parser.add_argument("--skip-auth-test", action="store_true", help="Skip network auth check.")

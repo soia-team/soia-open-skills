@@ -1,0 +1,7 @@
+# soia-pkm-alipan private config example.
+# Copy to ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-alipan/config.yml.
+# Provider-owned login state stays in the aliyunpan directory; only put an
+# override pointer here when the default location is not right for this skill.
+
+env:
+  ALIYUNPAN_CONFIG_DIR: "<path-to-aliyunpan-config-dir>"

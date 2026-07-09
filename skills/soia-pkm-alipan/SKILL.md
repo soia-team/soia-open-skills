@@ -58,7 +58,8 @@ aliyunpan ls "$DIR" </dev/null 2>/dev/null | \
 1. **工具输出不可盲信**：出现物理不可能的结果（同目录同名多项、行数与字节矛盾）→ 疑似输出被污染，换通道交叉验证（Read vs Bash），或请用户在 App 亲眼核对后再继续。
 2. **删除/覆盖前先看**：`rm` 前先 `ls` 确认内容；同名冲突会自动加 `(1)` 后缀——移动前查目标是否已存在，避免产生 `xxx(1)` 重复目录。
 3. **高危操作留人**：清空目录、批量删除、跨盘手动迁移，列清单请用户确认或亲手操作。
-4. **凭据**：登录态在 `~/.config/aliyunpan/`（或 `ALIYUNPAN_CONFIG_DIR`），不要 cat 打印 token。
+4. **凭据**：登录态属于 aliyunpan provider，默认在 `~/.config/aliyunpan/`，不要搬进 skill，也不要 cat 打印 token。若需要改登录态目录，只把 `ALIYUNPAN_CONFIG_DIR` 这个 override 放进本技能私有配置：
+   `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-alipan/config.yml`（见 `config.example.yml`）。
 
 ## 深入实战手册
 

@@ -51,8 +51,8 @@ python3 gen_genre_library_md.py --base <vault-book-library-dir>
 - **`--base <relpath>`**：书库相对 vault 的路径。默认对应「个人书库」（`gen_genre_library_md.py` 默认对应「孩子书库」场景，可用 `--base` 切到个人书库）。**不要在正文里硬编码这个默认值**——vault 未来可能重构目录结构，需要哪个库直接传 `--base` 覆盖即可。
 - **`--config <json>`**：覆盖脚本内置的分类表/状态表/字段表默认值（分类映射、二级排序、状态图标、透传字段等），JSON 结构与脚本内 `DEFAULT_*` 常量的键一致，不用改代码，改配置就行。
 - **`--output <path>`**（仅 3 个 `gen_*` 脚本）：把生成结果写到指定文件而不是覆盖 vault 里的总览文件，用于干跑预览。
-- **私有 env 加载**：脚本会自动读取 `$SOIA_PKM_ENV_FILE`、`~/.config/soia-pkm/env`、`~/.soia-pkm.env`。秘钥只放这些私有文件，不放 vault、不放开源 skill 仓库。
-- 私有 env 文件只记录变量名对应的本机值；文档和开源仓库只保留变量名，不保留真实值。
+- **私有配置加载**：脚本会自动读取 `$SOIA_PKM_LIBRARY_CONFIG_FILE`（或兼容别名 `$SOIA_PKM_LIBRARY_ENV_FILE`）以及默认路径 `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-library/config.yml`。配置文件使用 YAML `env:` 映射；秘钥只放这些私有文件，不放 vault、不放开源 skill 仓库。
+- 私有配置文件只记录变量名对应的本机值；文档和开源仓库只保留变量名，不保留真实值。
 
 ## 目录契约
 
@@ -78,7 +78,7 @@ python3 gen_genre_library_md.py --base <vault-book-library-dir>
 
 ## Soft-dependency：weread-skills
 
-同步类脚本（`sync_weread_to_library.py` / `sync_weread_highlights.py` / `enrich_book_details.py`）直接调用微信读书 Agent API Gateway（`https://i.weread.qq.com/api/agent/gateway`），需要 `WEREAD_API_KEY` 环境变量。脚本会从私有 env 文件加载它，但不会从 vault 或仓库里读取秘钥。
+同步类脚本（`sync_weread_to_library.py` / `sync_weread_highlights.py` / `enrich_book_details.py`）直接调用微信读书 Agent API Gateway（`https://i.weread.qq.com/api/agent/gateway`），需要 `WEREAD_API_KEY` 环境变量。脚本会从私有 `config.yml` 的 `env.WEREAD_API_KEY` 加载它，但不会从 vault 或仓库里读取秘钥。
 
 这套 API 的完整能力文档由第三方 skill `weread-skills` 维护——**本 skill 只依赖它的 API 文档，不修改它的任何文件**。若环境里没装 `weread-skills`，同步脚本仍可独立运行（`WEREAD_API_KEY` 是唯一硬依赖，不依赖该 skill 本身的存在），只是失去了它文档里对各 API 字段含义的详细说明。
 
@@ -94,8 +94,8 @@ python3 gen_genre_library_md.py --base <vault-book-library-dir>
 
 | 场景 | 处理 |
 |------|------|
-| 未设置 `WEREAD_API_KEY` | 同步类脚本报错退出（`exit 1`），提示放入私有 env 文件 |
-| 未指定 `--vault` 且无 `OBSIDIAN_VAULT` env | 报错退出，提示传 `--vault` 或在私有 env 文件设置 |
+| 未设置 `WEREAD_API_KEY` | 同步类脚本报错退出（`exit 1`），提示放入私有 `config.yml` |
+| 未指定 `--vault` 且无 `OBSIDIAN_VAULT` env | 报错退出，提示传 `--vault` 或在私有 `config.yml` 设置 |
 | 书名在图书馆/阅读记录里找不到对应文件 | 跳过并打印警告，不中断批量流程（`--all` 模式） |
 | 微信读书书名与本地文件名对不上（含副标题/合集后缀） | `sync_weread_highlights.py` 优先按 `bookId` 精确匹配，标题匹配是兜底 |
 | 想干跑预览生成结果，不覆盖 vault 原文件 | 3 个 `gen_*` 脚本都支持 `--output <临时路径>` |

@@ -2,7 +2,7 @@
 
 把 vault 里未提交的改动，在每次 AI 会话/回合结束时自动追加一条摘要到
 `<会话日志目录>/<年>/<agent>/<日期>.md`。默认会话日志目录是
-`30_日志与思考/20_AI协作日志`，可通过 `--log-dir <vault内相对目录>` 或私有 env
+`30_日志与思考/20_AI协作日志`，可通过 `--log-dir <vault内相对目录>` 或私有 `config.yml`
 的 `SOIA_SESSION_LOG_DIR` 覆盖。底层脚本是
 `scripts/session_end_log.sh`（两平台共用），Codex 侧多一层
 `scripts/codex_notify_wrapper.sh`。
@@ -82,7 +82,7 @@ computer-use 客户端做提醒），不能直接覆盖，要用 `scripts/codex_
 
 1. 读用户现有 `config.toml` 里的 `notify = [...]`，记下原命令（程序路径 + 固定参数）。
    如果用户原本没有配置 `notify`，`ORIGINAL_NOTIFY_CMD` 留空数组即可。
-2. 不要修改 `codex_notify_wrapper.sh` 写死个人路径；vault 通过 `--vault` 或私有 env 文件里的 `OBSIDIAN_VAULT` 传入。
+2. 不要修改 `codex_notify_wrapper.sh` 写死个人路径；vault 通过 `--vault` 或私有 `config.yml` 里的 `OBSIDIAN_VAULT` 传入。
 3. 把 `config.toml` 的 `notify` 改成只指向 wrapper：
    ```toml
    notify = ["/绝对路径/soia-pkm-maintain/scripts/codex_notify_wrapper.sh", "--vault", "<vault绝对路径>", "--log-dir", "<vault内日志目录>"]

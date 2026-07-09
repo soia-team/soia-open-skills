@@ -22,7 +22,8 @@ or worktree management unless a GitHub operation is also required.
 - Use `gh auth status` before operations. If auth is missing or expired, stop
   and tell the user what needs to be configured.
 - Never put GitHub tokens in `SKILL.md`, shell history, scripts, issue bodies,
-  PR bodies, or comments. Use `gh auth login` or the user's private environment.
+  PR bodies, or comments. Use `gh auth login` for credentials; keep only non-token
+  defaults in the skill-specific private config.
 
 ## Repo Resolution
 
@@ -31,21 +32,14 @@ Resolve the target repository in this order:
 1. Explicit command argument: `--repo <owner>/<repo>`.
 2. Current git remote if the command runs inside a GitHub checkout.
 3. Environment variable: `GITHUB_REPOSITORY=<owner>/<repo>`.
-4. Optional private config: `~/.config/soia-dev-github-ops/env`.
+4. Optional private config: `~/.config/soia-skills/soia-open-skills/soia-dev/soia-dev-github-ops/config.yml`.
 5. Ask the user if the repo is still ambiguous.
 
-The optional config file is a user-owned shell env file, for example:
+The optional config file is a user-owned YAML file with an `env:` mapping, for example:
 
-```bash
-GITHUB_REPOSITORY=<owner>/<repo>
-```
-
-Load it only when needed:
-
-```bash
-set -a
-source ~/.config/soia-dev-github-ops/env
-set +a
+```yaml
+env:
+  GITHUB_REPOSITORY: "<owner>/<repo>"
 ```
 
 Do not hardcode maintainer-specific repositories in reusable commands.

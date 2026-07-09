@@ -22,7 +22,7 @@ vault 用久了会积累三类"基础设施债"：
 - Obsidian vault（任意目录结构，脚本不假设固定的分区命名）
 - Python 3，纯 stdlib（`lint_vault.py` / `gen_vault_map.py` 无第三方依赖）
 - bash（`session_end_log.sh` / `codex_notify_wrapper.sh`）
-- `--vault <path>`，或私有 env 文件里的 `OBSIDIAN_VAULT`（二选一，`--vault` 优先）
+- `--vault <path>`，或私有 `config.yml` 里的 `env.OBSIDIAN_VAULT`（二选一，`--vault` 优先）
 - 软依赖 `soia-pkm-organize`：MOC 重建、主题归类是它的职责，本 skill **只引用，不重复实现**——lint 报告里的"重复文件名"如果是需要合并 MOC 的场景，转给 `soia-pkm-organize` 处理
 
 ## 触发词
@@ -100,13 +100,13 @@ bash scripts/session_end_log.sh --vault <path> --agent Claude-Code
 bash scripts/session_end_log.sh --vault <path> --agent Codex
 ```
 
-所有脚本共享同一套参数化约定：`--vault <path>` 或私有 env 文件里的 `OBSIDIAN_VAULT`（二选一，`--vault` 优先），不硬编码任何具体 vault 路径。会话日志目录可用 `--log-dir <vault内相对目录>` 或私有 env 的 `SOIA_SESSION_LOG_DIR` 覆盖；默认是 `30_日志与思考/20_AI协作日志`。私有 env 优先级：`$SOIA_PKM_ENV_FILE` > `~/.config/soia-pkm/env` > `~/.soia-pkm.env`。
+所有脚本共享同一套参数化约定：`--vault <path>` 或私有 `config.yml` 的 `env.OBSIDIAN_VAULT`（二选一，`--vault` 优先），不硬编码任何具体 vault 路径。会话日志目录可用 `--log-dir <vault内相对目录>` 或私有配置的 `SOIA_SESSION_LOG_DIR` 覆盖；默认是 `30_日志与思考/20_AI协作日志`。私有配置优先级：`$SOIA_PKM_MAINTAIN_CONFIG_FILE`（或兼容别名 `$SOIA_PKM_MAINTAIN_ENV_FILE`）> `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-maintain/config.yml`。
 
 ## 边界与异常
 
 | 场景 | 处理 |
 |------|------|
-| 未指定 `--vault` 且私有 env 中无 `OBSIDIAN_VAULT` | 报错退出（`exit 1`），提示二选一 |
+| 未指定 `--vault` 且私有 `config.yml` 中无 `OBSIDIAN_VAULT` | 报错退出（`exit 1`），提示二选一 |
 | lint 四类发现都为空 | 周简报里写"无"，不是省略该小节 |
 | lint 报告里的重复文件名/标签漂移涉及主题归类判断 | 转交 `soia-pkm-organize`，本 skill 不做归类决策 |
 | 微信读书同步 / 书库总览生成需求 | 转交 `soia-pkm-library`，本 skill 不碰书库数据线 |

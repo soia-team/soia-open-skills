@@ -95,7 +95,7 @@ python3 scripts/validate_artifact_quality.py \
 
 适用：公众号 HTML / 草稿箱、X thread、小红书卡片。
 
-直接转交 `soia-pkm-publish`。微信公众号 AppID / AppSecret 只放私有 env 文件或 provider 安全存储，不进本仓库、不进 vault。
+直接转交 `soia-pkm-publish`。微信公众号 AppID / AppSecret 只放私有 config.yml或 provider 安全存储，不进本仓库、不进 vault。
 
 ## Local Markdown Provider
 

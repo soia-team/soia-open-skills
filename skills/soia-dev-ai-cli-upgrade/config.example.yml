@@ -1,0 +1,9 @@
+# soia-dev-ai-cli-upgrade private config example.
+# Copy to ~/.config/soia-skills/soia-open-skills/soia-dev/soia-dev-ai-cli-upgrade/config.yml.
+
+env:
+  DRY_RUN: "1"
+  NPM_PACKAGES: "codex,claude,gemini"
+  NPM_PREFIX: "$HOME/.npm-global"
+  LOG_DIR: "$HOME/.local/state/soia-dev-ai-cli-upgrade/logs"
+  CURSOR_UPGRADE_CMD: "<optional command>"

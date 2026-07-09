@@ -54,13 +54,14 @@ outputs/transform
 $OBSIDIAN_VAULT
 --vault <path>
 SOIA_PKM_TRANSFORM_CONFIG=/path/to/transform.yml
+~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/config.yml
 ```
 
 Chinese or highly personal directory names are allowed only in a user's private config, never as public defaults.
 
 ### 2. No secrets or account material
 
-Never commit real keys, tokens, cookies, session strings, usernames, passwords, or `.env` files.
+Never commit real keys, tokens, cookies, session strings, usernames, passwords, private `config.yml`, or `.env` files.
 
 Allowed public examples:
 
@@ -78,7 +79,7 @@ WEREAD_API_KEY=real-key
 TELEGRAM_SESSION_STRING=real-session
 ```
 
-Provider authentication must live in the provider's private auth flow or a user-owned env/config file outside this repo.
+Provider authentication must live in the provider's private auth flow or a user-owned config file outside this repo.
 
 ### 3. Keep personal context out of public skills
 
@@ -103,11 +104,44 @@ Use this order:
 
 1. CLI argument
 2. Environment variable
-3. User config file
-4. Auto-discovery from current working directory
+3. Skill-specific private `config.yml`
+4. Provider-owned login/config directory when the provider requires it
 5. Generic safe fallback
 
 Config templates must be generic and safe. They may show placeholders but not personal defaults.
+
+Default private config location:
+
+```text
+~/.config/soia-skills/soia-open-skills/<skill-type>/<skill-name>/config.yml
+```
+
+The file uses YAML with an `env:` mapping. Example:
+
+```yaml
+env:
+  OBSIDIAN_VAULT: "<vault-path>"
+  WEREAD_API_KEY: "<YOUR_API_KEY>"
+```
+
+Skill-specific override variables should be named `SOIA_<TYPE>_<SHORT>_CONFIG_FILE`.
+The older `SOIA_<TYPE>_<SHORT>_ENV_FILE` spelling may be accepted as a compatibility alias,
+but new docs should prefer `CONFIG_FILE`.
+
+Provider-owned login state may live under the skill directory only when the skill explicitly
+owns that provider home. Example: `soia-pkm-transform` may set `NOTEBOOKLM_HOME` to
+`~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm`.
+Other provider-owned stores such as `~/.config/aliyunpan/` stay with the provider; the
+skill config may only hold override pointers such as `ALIYUNPAN_CONFIG_DIR`.
+
+```mermaid
+flowchart LR
+  A["CLI args"] --> B["process env"]
+  B --> C["SOIA_<TYPE>_<SHORT>_CONFIG_FILE"]
+  C --> D["~/.config/soia-skills/<repo>/<type>/<skill>/config.yml"]
+  D --> E["provider-owned home override"]
+  E --> F["safe default / ask user"]
+```
 
 ### 5. Separate public examples from private examples
 
@@ -144,7 +178,7 @@ Before commit, verify:
 - [ ] `SKILL.md` has `name` and concise `description` with triggers.
 - [ ] No `metadata.json`; public skills use `SKILL.md` and optional `agents/openai.yaml`.
 - [ ] No maintainer-specific paths or vault directory names.
-- [ ] No real secrets, cookies, tokens, sessions, or `.env` files.
+- [ ] No real secrets, cookies, tokens, sessions, private `config.yml`, or `.env` files.
 - [ ] No private family/home/personal profile information.
 - [ ] User-specific behavior is in config, not code.
 - [ ] Examples use placeholders or generic paths.

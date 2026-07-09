@@ -17,6 +17,10 @@
 """
 import argparse, json, os, queue, re, subprocess, threading, time
 
+from soia_env import load_private_env
+
+load_private_env(required=False)
+
 ROW = re.compile(r"\s{2,}")
 
 def main():

@@ -24,9 +24,8 @@ Environment variables:
     OBSIDIAN_ARTICLES       Subdirectory for articles
                             (defaults to "Articles")
 
-Private env files are auto-loaded from SOIA_PKM_ENV_FILE,
-~/.config/soia-pkm/env, or ~/.soia-pkm.env. Do not store secrets in
-the vault or committed skill repo.
+Private config is auto-loaded from SOIA_PKM_CLIP_X_CONFIG_FILE or the
+skill-specific config.yml. Do not store secrets in the vault or committed skill repo.
 
 Usage:
     python3 sync_telegram_saved.py
@@ -96,7 +95,7 @@ def resolve_vault(cli_vault: str | None) -> Path:
             p = discover_vault_from_cwd()
             if not p:
                 print("❌ No vault path found. Run from the vault root, set OBSIDIAN_VAULT, or pass --vault <path>.", file=sys.stderr)
-                print(f"   Private env sources checked: {env_source_hint()}.", file=sys.stderr)
+                print(f"   private config sources checked: {env_source_hint()}.", file=sys.stderr)
                 sys.exit(1)
             print(f"ℹ️  Auto-detected vault from cwd: {p}", file=sys.stderr)
     if not p.exists() or not p.is_dir():
@@ -237,7 +236,7 @@ def main():
     ]
     if missing:
         print(f"❌ Missing env vars: {', '.join(missing)}", file=sys.stderr)
-        print(f"Load them from a private env file ({env_source_hint()}) or run generate_telegram_session.py first.", file=sys.stderr)
+        print(f"Load them from a private config.yml ({env_source_hint()}) or run generate_telegram_session.py first.", file=sys.stderr)
         sys.exit(1)
 
     if args.all:

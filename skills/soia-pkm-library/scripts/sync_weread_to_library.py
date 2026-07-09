@@ -75,7 +75,7 @@ def resolve_vault(args):
     env = os.environ.get("OBSIDIAN_VAULT")
     if env:
         return Path(env).expanduser()
-    print(f"❌ 未指定 vault：请传 --vault 或在私有 env 文件中设置 OBSIDIAN_VAULT（{env_source_hint()}）", file=sys.stderr)
+    print(f"❌ 未指定 vault：请传 --vault 或在私有 config.yml中设置 OBSIDIAN_VAULT（{env_source_hint()}）", file=sys.stderr)
     sys.exit(1)
 
 
@@ -92,7 +92,7 @@ def load_config(config_path):
 def weread_call(api_name, **params):
     api_key = os.environ.get("WEREAD_API_KEY")
     if not api_key:
-        print(f"❌ 未设置 WEREAD_API_KEY：请放到私有 env 文件（{env_source_hint()}），不要写入 vault 或开源 skill 仓库")
+        print(f"❌ 未设置 WEREAD_API_KEY：请放到私有 config.yml（{env_source_hint()}），不要写入 vault 或开源 skill 仓库")
         sys.exit(1)
     body = {"api_name": api_name, "skill_version": SKILL_VERSION, **params}
     req = urllib.request.Request(

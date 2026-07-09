@@ -139,7 +139,7 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
 
 
 def audit_text_file(root: Path, path: Path, findings: list[Finding]) -> None:
-    if path.suffix not in TEXT_SUFFIXES and path.name not in {"SKILL.md", ".env.example"}:
+    if path.suffix not in TEXT_SUFFIXES and path.name not in {"SKILL.md", "config.example.yml"}:
         return
     text = read_text(path)
     for i, line in enumerate(text.splitlines(), start=1):

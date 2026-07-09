@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """publish.py — 渲染 + 推微信公众号草稿箱。soia-pkm-publish 的发布器（框架）。
 
-凭据从环境变量 / .env 读 WECHAT_APP_ID / WECHAT_APP_SECRET。
+凭据从环境变量 / 私有 config.yml 读 WECHAT_APP_ID / WECHAT_APP_SECRET。
 --dry-run 只渲染不推送。安全：只建草稿（draft/add），绝不群发。
 
 用法：python3 publish.py --article <md> [--cover <png>] [--dry-run]
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from soia_env import load_private_env
 
-# 自动探测 $SOIA_PKM_ENV_FILE / ~/.config/soia-pkm/env / ~/.soia-pkm.env，
+# 自动探测 skill-specific 私有 config.yml，
 # 把 WECHAT_APP_ID / WECHAT_APP_SECRET 等 setdefault 进环境（不覆盖已有进程变量）。
 load_private_env()
 
@@ -43,7 +43,7 @@ def main():
     app_id = os.environ.get("WECHAT_APP_ID")
     secret = os.environ.get("WECHAT_APP_SECRET")
     if not (app_id and secret):
-        print("❌ 缺 WECHAT_APP_ID / WECHAT_APP_SECRET：请放到私有 env 文件或进程环境，勿提交 Git")
+        print("❌ 缺 WECHAT_APP_ID / WECHAT_APP_SECRET：请放到私有 config.yml或进程环境，勿提交 Git")
         sys.exit(1)
 
     # 3. 微信 API（待实现的框架）：

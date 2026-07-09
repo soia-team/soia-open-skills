@@ -68,7 +68,7 @@ def resolve_vault(args):
     env = os.environ.get("OBSIDIAN_VAULT")
     if env:
         return Path(env).expanduser()
-    print(f"❌ 未指定 vault：请传 --vault 或在私有 env 文件中设置 OBSIDIAN_VAULT（{env_source_hint()}）", file=sys.stderr)
+    print(f"❌ 未指定 vault：请传 --vault 或在私有 config.yml中设置 OBSIDIAN_VAULT（{env_source_hint()}）", file=sys.stderr)
     sys.exit(1)
 
 

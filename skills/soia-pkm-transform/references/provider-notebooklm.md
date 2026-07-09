@@ -28,7 +28,7 @@
 公共推荐：
 
 ```bash
-export NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}"
+export NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm}"
 mkdir -p "$NOTEBOOKLM_HOME"
 chmod 700 "$NOTEBOOKLM_HOME"
 ```
@@ -88,7 +88,7 @@ chmod 700 "$NOTEBOOKLM_HOME"
 ## 常见命令形态
 
 ```bash
-export NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}"
+export NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm}"
 export NOTEBOOKLM_HL="${NOTEBOOKLM_HL:-zh_Hans}"
 notebooklm auth check --test --json
 notebooklm create "Article Transform - <title>" --json

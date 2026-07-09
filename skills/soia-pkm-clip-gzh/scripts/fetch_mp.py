@@ -97,8 +97,8 @@ without notice.
     200040 invalid csrf token —— token 和 Cookie 不是同一次登录会话抓的
 
 Credentials (never commit): WECHAT_MP_TOKEN / WECHAT_MP_COOKIE, loaded from
-$SOIA_PKM_ENV_FILE / ~/.config/soia-pkm/env / ~/.soia-pkm.env (see
-scripts/soia_env.py), or plain process env vars. token 取自登录 mp 后台后
+SOIA_PKM_CLIP_GZH_CONFIG_FILE / skill-specific config.yml (see scripts/soia_env.py),
+or plain process env vars. token 取自登录 mp 后台后
 **地址栏 URL 里的 `token=` 那一串数字**（不是网络面板里某个请求参数名叫
 `appmsg_token` 的那个，两者是不同的票据，appmsgpublish 认的是地址栏 token）。
 
@@ -450,7 +450,7 @@ def main():
     missing = [name for name, val in [("WECHAT_MP_TOKEN", token), ("WECHAT_MP_COOKIE", cookie)] if not val]
     if missing:
         print(f"❌ 缺 {', '.join(missing)}", file=sys.stderr)
-        print(f"   放到私有 env 文件（{env_source_hint()}）。", file=sys.stderr)
+        print(f"   放到私有 config.yml（{env_source_hint()}）。", file=sys.stderr)
         print(
             "   获取方式：登录 mp.weixin.qq.com 后台，随便打开一篇文章编辑/列表页，F12 打开「网络」面板，"
             "从地址栏 URL 里复制 token 参数（不是网络面板某个请求参数名叫 appmsg_token 的那个）、"

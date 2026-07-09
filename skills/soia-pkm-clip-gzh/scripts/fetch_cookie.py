@@ -43,8 +43,8 @@ re-capture fresh values from your browser's Network panel and retry.
   「网络」面板里找同域请求，从请求 URL /请求头里复制。
 
 Credentials (never commit): WECHAT_BIZ / WECHAT_KEY / WECHAT_PASS_TICKET /
-WECHAT_COOKIE / WECHAT_APPMSG_TOKEN, loaded from $SOIA_PKM_ENV_FILE /
-~/.config/soia-pkm/env / ~/.soia-pkm.env, or plain process env vars.
+WECHAT_COOKIE / WECHAT_APPMSG_TOKEN, loaded from SOIA_PKM_CLIP_GZH_CONFIG_FILE /
+skill-specific config.yml, or plain process env vars.
 
 Usage:
     python3 fetch_cookie.py --biz <__biz> [--out <dir>] [--limit N]
@@ -198,7 +198,7 @@ def main():
     ]
     if missing:
         print(f"❌ 缺 {', '.join(missing)}", file=sys.stderr)
-        print(f"   放到私有 env 文件（{env_source_hint()}）。", file=sys.stderr)
+        print(f"   放到私有 config.yml（{env_source_hint()}）。", file=sys.stderr)
         print("   这几个值需要从已登录 mp.weixin.qq.com 的浏览器「网络」面板抓包，几小时到几天会过期。", file=sys.stderr)
         sys.exit(1)
 

@@ -13,7 +13,7 @@ description: 把 X/公众号/网页/Markdown 文章转换为 PDF、PPT、图片/
 
 - 不写死个人 vault 路径、账号、token、key、cookie、家庭信息或个人目录。
 - 配置只来自用户本轮指令、配置文件或环境变量；公共默认必须能在别人机器上工作。
-- 秘钥和登录态只放 provider 自己的私有位置，例如 `NOTEBOOKLM_HOME`、微信公众号私有 env、agent 密钥流程；不要写进 vault 或开源 skill。
+- 秘钥和登录态只放 provider 自己的私有位置，例如 `NOTEBOOKLM_HOME`、微信公众号私有 `config.yml`、agent 密钥流程；不要写进 vault 或开源 skill。
 - 不读取 `私有数据.md`、浏览器 cookie、账号配置文件，除非用户明确要求且 provider 官方流程需要。
 - 默认是转换，不是总结。只有用户明确说“总结/摘要/TL;DR”时才压缩内容。
 - 生成前先抽 source 的章节、概念、案例链和关键判断；产物必须覆盖这张清单的大部分内容。
@@ -37,9 +37,7 @@ description: 把 X/公众号/网页/Markdown 文章转换为 PDF、PPT、图片/
 
 1. 用户本轮明确指定的 provider / 输出目录 / 格式 / 参数
 2. `SOIA_PKM_TRANSFORM_CONFIG`
-3. `~/.config/soia-pkm/transform.yml` 或 `transform.json`
-4. `~/.soia-pkm/transform.yml` 或 `transform.json`
-5. vault / 项目内 `.soia/transform.yml` 或 `transform.json`（只放非敏感偏好）
+3. `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/transform.config.yml`（或 `.yaml` / `.json`）
 
 样例见 [assets/transform.config.example.yml](assets/transform.config.example.yml)。
 

@@ -5,7 +5,7 @@
 ## 前置检查
 
 ```bash
-export NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}"
+export NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm}"
 export NOTEBOOKLM_HL="${NOTEBOOKLM_HL:-zh_Hans}"
 python3 scripts/notebooklm_health.py --ensure-home --json
 NOTEBOOKLM_HOME="$NOTEBOOKLM_HOME" notebooklm auth check --test --json
@@ -63,7 +63,7 @@ python3 scripts/notebooklm_artifact_matrix.py \
 
 执行后必须报告：
 
-- `NOTEBOOKLM_HOME` 是否为公共推荐目录或用户自定义目录。
+- `NOTEBOOKLM_HOME` 是否为 skill-specific 私有目录或用户自定义目录。
 - CLI version 与 auth check 结果。
 - notebook_id、source_id。
 - 每个 artifact 的 task/artifact 状态、下载路径和验证结果。

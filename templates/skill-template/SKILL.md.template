@@ -10,8 +10,8 @@ description: 一句话说明这个 skill 做什么、何时触发。包含具体
 ## Safety Rules
 
 - Do not hardcode maintainer paths, local checkout paths, vault directory names, account names, secrets, cookies, session strings, or private context.
-- Put user-specific behavior in CLI args, environment variables, or user-owned config files.
-- For public skills, document variable names only. For private SOIA skills, follow this repo's `SKILL_SPEC.md` private env/config policy. Never commit real values.
+- Put user-specific behavior in CLI args, environment variables, or the skill-specific user-owned `config.yml`.
+- For public skills, document variable names only. For private SOIA skills, follow this repo's `SKILL_SPEC.md` private config/config policy. Never commit real values.
 - Read only the user-provided source files or the current task workspace.
 - Use placeholders in examples: `<path>`, `<repo-path>`, `<workspace>`, `<YOUR_KEY>`.
 

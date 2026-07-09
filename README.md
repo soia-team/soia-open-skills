@@ -88,7 +88,7 @@ npx skills add soia-team/soia-open-skills
 |-------|------|----------|------|
 | [`soia-pkm-distill`](./skills/soia-pkm-distill/) | **收藏 → 观点**：读原文 → 一次一问 → 你答 → 「我的看法」（内容是你的，AI 只落字）| ✅ 完全可用（已实战）| vault 里有文章（`clip-*` 产出）|
 | [`soia-pkm-compose`](./skills/soia-pkm-compose/) | **观点 → 文章草稿**（你的观点为骨、摘抄为料）| ✅ 可用（纯 LLM，无需脚本）| `distill` 产出的观点 |
-| [`soia-pkm-publish`](./skills/soia-pkm-publish/) | **一稿 → 多平台**：公众号排版+推草稿箱 / X thread / 小红书 | 🟡 渲染 `render.py` 可用；微信推送需配 `.env` 凭据 | `compose` 的草稿 + 微信公众号 API |
+| [`soia-pkm-publish`](./skills/soia-pkm-publish/) | **一稿 → 多平台**：公众号排版+推草稿箱 / X thread / 小红书 | 🟡 渲染 `render.py` 可用；微信推送需配私有 `config.yml` 凭据 | `compose` 的草稿 + 微信公众号 API |
 
 ### 🔁 转化 · 文章 → 产物
 
@@ -136,13 +136,14 @@ npx skills add soia-team/soia-open-skills
 
 ### 配置 vault 路径
 
-```bash
-# ~/.zshrc 或 ~/.bashrc
-export OBSIDIAN_VAULT=~/Documents/MyVault                 # 必须
-export OBSIDIAN_ARTICLES="<vault-relative-articles-dir>"   # 可选，归档子目录
+```yaml
+# ~/.config/soia-skills/soia-open-skills/<skill-type>/<skill-name>/config.yml
+env:
+  OBSIDIAN_VAULT: "<vault-path>"
+  OBSIDIAN_ARTICLES: "<vault-relative-articles-dir>"
 ```
 
-或每次调脚本时用 `--vault` 覆盖。
+或每次调脚本时用 `--vault` 覆盖。每个 skill 只读自己的 skill-specific 配置目录，避免多个技能共享一个大配置文件。
 
 ---
 
@@ -232,7 +233,7 @@ python3 scripts/audit_skills.py
 
 ## 贡献
 
-欢迎 PR / issue。加 skill 请：① 先读 [SKILL_SPEC.md](./SKILL_SPEC.md) ② 从 [templates/skill-template](./templates/skill-template/) 复制 ③ 放 `skills/<name>/` ④ 有 `SKILL.md`（仅 `name` + `description`，description 尽量 ≤200 字）⑤ 路径 / key / 个人数据全用配置或环境变量，严禁硬编码 ⑥ 跑 `python3 scripts/generate_skill_catalog.py && python3 scripts/audit_skills.py` ⑦ 至少 1 个端到端用例。详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+欢迎 PR / issue。加 skill 请：① 先读 [SKILL_SPEC.md](./SKILL_SPEC.md) ② 从 [templates/skill-template](./templates/skill-template/) 复制 ③ 放 `skills/<name>/` ④ 有 `SKILL.md`（仅 `name` + `description`，description 尽量 ≤200 字）⑤ 路径 / key / 个人数据全用 CLI 参数、环境变量或 skill-specific `config.yml`，严禁硬编码 ⑥ 跑 `python3 scripts/generate_skill_catalog.py && python3 scripts/audit_skills.py` ⑦ 至少 1 个端到端用例。详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
 ## License
 

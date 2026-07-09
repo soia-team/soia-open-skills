@@ -31,7 +31,7 @@ def parse_args():
     ap = argparse.ArgumentParser(description="生成 Obsidian vault 叶级地图")
     ap.add_argument(
         "--vault", default=os.environ.get("OBSIDIAN_VAULT"),
-        help="vault 根目录（或在私有 env 文件设置 OBSIDIAN_VAULT，二选一，--vault 优先）",
+        help="vault 根目录（或在私有 config.yml设置 OBSIDIAN_VAULT，二选一，--vault 优先）",
     )
     ap.add_argument(
         "--output", default=None,
@@ -93,7 +93,7 @@ def build_map(root):
 def main():
     args = parse_args()
     if not args.vault:
-        print(f"错误：未指定 --vault 且未在私有 env 文件设置 OBSIDIAN_VAULT（{env_source_hint()}）", file=sys.stderr)
+        print(f"错误：未指定 --vault 且未在私有 config.yml设置 OBSIDIAN_VAULT（{env_source_hint()}）", file=sys.stderr)
         sys.exit(1)
     vault = os.path.abspath(os.path.expandvars(os.path.expanduser(args.vault)))
     if not os.path.isdir(vault):

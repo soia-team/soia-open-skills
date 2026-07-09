@@ -37,12 +37,13 @@ accounts, private data, or SOIA internal workspace.
 
 ## Safety Rules
 
-- No real API keys, tokens, cookies, session strings, passwords, account ids, or
-  `.env` files.
+- No real API keys, tokens, cookies, session strings, passwords, account ids,
+  private `config.yml`, or `.env` files.
 - No maintainer-specific absolute paths such as `/Users/<name>/...`.
 - No private family, home, health, finance, or learner profile context.
-- Put user-specific behavior behind CLI args, env vars, or user-owned config
-  files outside this repo.
+- Put user-specific behavior behind CLI args, env vars, or skill-specific
+  user-owned config files outside this repo:
+  `~/.config/soia-skills/soia-open-skills/<skill-type>/<skill-name>/config.yml`.
 - Public examples must use placeholders such as `<path>`, `<repo>`, and
   `<YOUR_KEY>`.
 
@@ -80,7 +81,6 @@ Allowed during local testing:
 
 ```bash
 npx skills add "$PWD" -l --full-depth
-npx skills add "$PWD" -g -a '*' -s <skill-name> -y
 ```
 
 Rules:

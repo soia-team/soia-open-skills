@@ -38,26 +38,19 @@ version audit or batch workflow is needed.
 ## Configuration
 
 The script uses environment variables. If persistent local configuration is
-needed, keep it in the skill-specific private env file:
+needed, keep it in the skill-specific private `config.yml`:
 
 ```text
-~/.config/soia-dev-ai-cli-upgrade/env
+~/.config/soia-skills/soia-open-skills/soia-dev/soia-dev-ai-cli-upgrade/config.yml
 ```
 
 Example:
 
-```bash
-LOG_DIR="$HOME/.local/state/soia-dev-ai-cli-upgrade/logs"
-NPM_PACKAGES="codex,claude,gemini"
-NPM_PREFIX="$HOME/.npm-global"
-```
-
-Load it only for the current shell:
-
-```bash
-set -a
-source ~/.config/soia-dev-ai-cli-upgrade/env
-set +a
+```yaml
+env:
+  LOG_DIR: "$HOME/.local/state/soia-dev-ai-cli-upgrade/logs"
+  NPM_PACKAGES: "codex,claude,gemini"
+  NPM_PREFIX: "$HOME/.npm-global"
 ```
 
 Supported variables:

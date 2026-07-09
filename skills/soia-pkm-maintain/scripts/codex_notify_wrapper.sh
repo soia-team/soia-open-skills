@@ -5,8 +5,8 @@
 # 接入方式（写进 config.toml，见 ../references/session-log-setup.md）：
 #   notify = ["/绝对路径/soia-pkm-maintain/scripts/codex_notify_wrapper.sh", "--vault", "<vault绝对路径>", "--log-dir", "<vault内日志目录>"]
 #
-# 不要改这个脚本来写死个人路径。vault 通过 --vault 或私有 env 文件里的 OBSIDIAN_VAULT 传入。
-# 日志目录通过 --log-dir 或私有 env 文件里的 SOIA_SESSION_LOG_DIR 传入。
+# 不要改这个脚本来写死个人路径。vault 通过 --vault 或私有 config.yml 里的 OBSIDIAN_VAULT 传入。
+# 日志目录通过 --log-dir 或私有 config.yml 里的 SOIA_SESSION_LOG_DIR 传入。
 #
 # 如果原本已有 notify 需要保留，用 --original-count N -- 传入原命令的固定参数：
 #   notify = ["/path/codex_notify_wrapper.sh", "--vault", "<vault>", "--log-dir", "<vault内日志目录>", "--original-count", "2", "--", "/old/program", "turn-ended"]
@@ -22,22 +22,14 @@ POST_DASH=()
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 load_private_env() {
-  local candidates=()
-  [ -n "${SOIA_PKM_ENV_FILE:-}" ] && candidates+=("$SOIA_PKM_ENV_FILE")
-  candidates+=("$HOME/.config/soia-pkm/env" "$HOME/.soia-pkm.env")
-  local f
-  for f in "${candidates[@]}"; do
-    [ -f "$f" ] || continue
-    set -a
-    # shellcheck disable=SC1090
-    . "$f"
-    set +a
-    break
-  done
+  command -v python3 >/dev/null 2>&1 || return 0
+  [ -f "$SCRIPT_DIR/soia_env.py" ] || return 0
+  eval "$(python3 "$SCRIPT_DIR/soia_env.py" 2>/dev/null || true)"
 }
 
 load_private_env
 VAULT_PATH="${VAULT_PATH:-${OBSIDIAN_VAULT:-}}"
+SESSION_LOG_DIR="${SESSION_LOG_DIR:-${SOIA_SESSION_LOG_DIR:-}}"
 
 while [ $# -gt 0 ]; do
   case "$1" in

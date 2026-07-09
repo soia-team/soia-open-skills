@@ -42,7 +42,7 @@ description: 批量归档用户自己管理的微信公众号已发文章到 Obs
 ### 凭据与限制
 
 - `WECHAT_APP_ID` / `WECHAT_APP_SECRET`：获取路径、IP 白名单配置同 `soia-pkm-publish` SKILL.md「如何获取并配置微信公众号 AppID / AppSecret」一节，不重复贴——两个 skill 用同一套公众号开发凭据。
-- 私有 env 自动探测：`$SOIA_PKM_ENV_FILE` > `~/.config/soia-pkm/env` > `~/.soia-pkm.env`（与 `soia-pkm-publish`/`soia-pkm-clip-x` 同一套约定），秘钥不进 vault、不进这个开源 skill 仓库。
+- 私有配置自动探测：`$SOIA_PKM_CLIP_GZH_CONFIG_FILE`（或兼容别名 `$SOIA_PKM_CLIP_GZH_ENV_FILE`）> `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-clip-gzh/config.yml`。配置文件使用 YAML `env:` 映射，示例见 `config.example.yml`；秘钥不进 vault、不进这个开源 skill 仓库。
 
 ### 用法
 
@@ -97,7 +97,7 @@ python3 scripts/fetch_api.py [--out <vault内相对目录>] [--limit N] [--dry-r
 
 ### 凭据获取
 
-登录 `mp.weixin.qq.com` 后台，随便打开一篇文章编辑页或文章列表页，F12 打开浏览器开发者工具「网络」面板，从**地址栏 URL** 里复制 `token` 参数、从请求头复制完整 `Cookie` 字符串。填进 `.env.example` 对应的私有 env 文件（`WECHAT_MP_TOKEN` / `WECHAT_MP_COOKIE`）。
+登录 `mp.weixin.qq.com` 后台，随便打开一篇文章编辑页或文章列表页，F12 打开浏览器开发者工具「网络」面板，从**地址栏 URL** 里复制 `token` 参数、从请求头复制完整 `Cookie` 字符串。按 `config.example.yml` 填进私有 `config.yml` 的 `env.WECHAT_MP_TOKEN` / `env.WECHAT_MP_COOKIE`。
 
 ⚠️ 注意 `token` 要取地址栏 URL 里的那个（数字串），**不是**「网络」面板里某个请求参数名叫 `appmsg_token` 的那个票据——两者是不同的票据，`appmsgpublish` 认的是地址栏 `token`。
 
@@ -151,7 +151,7 @@ general_msg_list 解析后：
 
 ### 凭据获取
 
-登录 `mp.weixin.qq.com` 后台，打开该公众号任意一篇历史文章（或 `profile_ext?action=home`），在浏览器开发者工具「网络」面板里找同域请求，从请求 URL 里复制 `__biz`/`key`/`pass_ticket`/`appmsg_token`，从请求头复制完整 `Cookie` 字符串。填进 `.env.example` 对应的私有 env 文件。
+登录 `mp.weixin.qq.com` 后台，打开该公众号任意一篇历史文章（或 `profile_ext?action=home`），在浏览器开发者工具「网络」面板里找同域请求，从请求 URL 里复制 `__biz`/`key`/`pass_ticket`/`appmsg_token`，从请求头复制完整 `Cookie` 字符串。按 `config.example.yml` 填进私有 `config.yml`。
 
 ### 用法
 
@@ -167,7 +167,7 @@ python3 scripts/fetch_cookie.py --biz <__biz> [--out <目录>] [--limit N] [--dr
 ## 落地规范（三条路共用）
 
 - **中转区，不是终点**：落到 vault 的**收件箱层**，不是 `soia-pkm-organize` 归位后的最终位置——`organize` 上线前先囤在这里，之后随"作品库重构"一起归位到 40/50 区。
-- 默认输出目录：`Inbox/gzh-articles/<年>/`（vault 内相对路径，代码里的通用默认值）。这个 vault 建议设为你自己的中转区，例如 `<vault-inbox-dir>/gzh-articles/`——用 `--out <vault-relative-dir>` 或私有 env 里的 `OBSIDIAN_GZH_OUT` 覆盖（默认值刻意不硬编码具体中文路径，遵守本仓库 [SKILL_SPEC.md](../../SKILL_SPEC.md) 的"no hardcoded personal paths"规则）。
+- 默认输出目录：`Inbox/gzh-articles/<年>/`（vault 内相对路径，代码里的通用默认值）。这个 vault 建议设为你自己的中转区，例如 `<vault-inbox-dir>/gzh-articles/`——用 `--out <vault-relative-dir>` 或私有配置里的 `env.OBSIDIAN_GZH_OUT` 覆盖（默认值刻意不硬编码具体中文路径，遵守本仓库 [SKILL_SPEC.md](../../SKILL_SPEC.md) 的"no hardcoded personal paths"规则）。
 - 文件名：`<出版日期>-公众号-<账号显示名>-<标题>.md`，同名冲突时按 url 特征加短后缀。
 - frontmatter：`tags:[公众号原创, 待归位]`、`source: 公众号自有`、`url`、`title`、`author`、`published_at`、`captured_at`、`route: api|cookie|mp-backend`、`content_complete`、`topics: []`（`topics` 是本 skill 相对用户原始字段清单多加的一项，方便后续 `organize` 直接补分类，无内容时留空数组，不影响其他字段）。
 - 正文：HTML → Markdown 走 stdlib `html.parser`（零第三方依赖，和这个仓库其它脚本一致），不保证 100% 还原排版，复杂内联样式/公众号专属组件会被拍平成纯文本+图片链接。`content_complete: false` 表示正文抓取失败或为空，需要人工核对原文链接。

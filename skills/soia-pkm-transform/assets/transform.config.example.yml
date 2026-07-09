@@ -1,5 +1,6 @@
 # soia-pkm-transform public config example.
-# Copy to ~/.config/soia-pkm/transform.yml or point SOIA_PKM_TRANSFORM_CONFIG to it.
+# Copy to ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/transform.config.yml
+# or point SOIA_PKM_TRANSFORM_CONFIG to it.
 # Keep secrets out of this file. Store provider auth in each provider's private auth flow.
 
 version: 1
@@ -122,13 +123,13 @@ providers:
     install_command: uv tool install "notebooklm-py[browser,cookies]"
     command: notebooklm
     home_env: NOTEBOOKLM_HOME
-    home_default: "~/.config/soia-pkm/notebooklm"
+    home_default: "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm"
     profile_env: NOTEBOOKLM_PROFILE
     profile_default: default
-    auth_check: NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}" notebooklm auth check --test --json
-    login_command: NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}" notebooklm login
+    auth_check: NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm}" notebooklm auth check --test --json
+    login_command: NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm}" notebooklm login
     current_browser_cookie_login_policy: prefer_when_user_requests_current_chrome
-    current_chrome_login_command: NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-pkm/notebooklm}" notebooklm login --browser-cookies 'chrome::<profile>'
+    current_chrome_login_command: NOTEBOOKLM_HOME="${NOTEBOOKLM_HOME:-$HOME/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm}" notebooklm login --browser-cookies 'chrome::<profile>'
     language: zh_Hans
     prefer_for:
       - podcast

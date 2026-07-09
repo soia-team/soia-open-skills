@@ -15,9 +15,8 @@ Environment variables (alternative to --vault):
     OBSIDIAN_ARTICLES  Subdirectory within vault for archived articles
                        (defaults to "Articles")
 
-Private env files are auto-loaded from SOIA_PKM_ENV_FILE,
-~/.config/soia-pkm/env, or ~/.soia-pkm.env. Do not store secrets in
-the vault or committed skill repo.
+Private config is auto-loaded from SOIA_PKM_CLIP_X_CONFIG_FILE or the
+skill-specific config.yml. Do not store secrets in the vault or committed skill repo.
 """
 from __future__ import annotations
 

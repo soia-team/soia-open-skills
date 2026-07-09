@@ -17,8 +17,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from soia_env import load_private_env
 
-DEFAULT_HOME = "~/.config/soia-pkm/notebooklm"
+DEFAULT_HOME = "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm"
 NO_LANGUAGE_TARGETS = {"quiz", "flashcards"}
 
 
@@ -102,6 +103,7 @@ TARGETS: dict[str, dict[str, Any]] = {
 
 
 def notebooklm_env() -> dict[str, str]:
+    load_private_env()
     env = os.environ.copy()
     home = env.get("NOTEBOOKLM_HOME") or str(Path(DEFAULT_HOME).expanduser())
     env["NOTEBOOKLM_HOME"] = home

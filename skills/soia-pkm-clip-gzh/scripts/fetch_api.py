@@ -40,8 +40,8 @@ lands them as Markdown notes in an Obsidian vault.
     的老文）用路 B。
 
 Credentials (never commit): WECHAT_APP_ID / WECHAT_APP_SECRET, loaded from
-$SOIA_PKM_ENV_FILE / ~/.config/soia-pkm/env / ~/.soia-pkm.env (see
-scripts/soia_env.py) or plain process env vars.
+SOIA_PKM_CLIP_GZH_CONFIG_FILE / skill-specific config.yml (see scripts/soia_env.py)
+or plain process env vars.
 
 Usage:
     python3 fetch_api.py [--out <vault-relative-dir>] [--limit N] [--dry-run]
@@ -238,7 +238,7 @@ def main():
     secret = os.environ.get("WECHAT_APP_SECRET")
     if not (app_id and secret):
         print("❌ 缺 WECHAT_APP_ID / WECHAT_APP_SECRET", file=sys.stderr)
-        print(f"   放到私有 env 文件（{env_source_hint()}）或进程环境，勿提交 Git。", file=sys.stderr)
+        print(f"   放到私有 config.yml（{env_source_hint()}）或进程环境，勿提交 Git。", file=sys.stderr)
         sys.exit(1)
 
     print("🔑 换取 access_token …", file=sys.stderr)

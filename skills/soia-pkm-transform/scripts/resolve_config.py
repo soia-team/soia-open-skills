@@ -9,31 +9,29 @@ import os
 import sys
 from pathlib import Path
 
+from soia_env import load_private_env
 
 CONFIG_NAMES = (
+    "transform.config.yml",
+    "transform.config.yaml",
+    "transform.config.json",
     "transform.yml",
     "transform.yaml",
     "transform.json",
 )
+DEFAULT_CONFIG_DIR = "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform"
 
 
 def candidate_paths(cwd: Path) -> list[Path]:
+    load_private_env()
     paths: list[Path] = []
     env_path = os.environ.get("SOIA_PKM_TRANSFORM_CONFIG")
     if env_path:
         paths.append(Path(env_path).expanduser())
 
-    config_home = Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")).expanduser()
+    config_home = Path(DEFAULT_CONFIG_DIR).expanduser()
     for name in CONFIG_NAMES:
-        paths.append(config_home / "soia-pkm" / name)
-
-    for name in CONFIG_NAMES:
-        paths.append(Path("~/.soia-pkm").expanduser() / name)
-
-    cur = cwd.resolve()
-    for parent in (cur, *cur.parents):
-        for name in CONFIG_NAMES:
-            paths.append(parent / ".soia" / name)
+        paths.append(config_home / name)
 
     deduped: list[Path] = []
     seen: set[str] = set()
@@ -91,7 +89,7 @@ def main() -> int:
                 print(f"Warning: {result['warning']}", file=sys.stderr)
         else:
             print("No soia-pkm-transform config found.")
-            print("Set SOIA_PKM_TRANSFORM_CONFIG or create ~/.config/soia-pkm/transform.yml")
+            print(f"Set SOIA_PKM_TRANSFORM_CONFIG or create {DEFAULT_CONFIG_DIR}/transform.config.yml")
     return 0
 
 

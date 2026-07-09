@@ -4,13 +4,13 @@
 #
 # 用法：
 #   session_end_log.sh --vault <vault路径> [--agent <名称>] [--log-dir <vault内相对目录>]
-#   session_end_log.sh [--agent <名称>]  # 也可从私有 env 文件读取 OBSIDIAN_VAULT
+#   session_end_log.sh [--agent <名称>]  # 也可从私有 config.yml 读取 OBSIDIAN_VAULT
 #
 # 参数：
-#   --vault <path>   vault 根目录（未传时取私有 env 文件里的 OBSIDIAN_VAULT；两者都没有则静默退出）
+#   --vault <path>   vault 根目录（未传时取私有 config.yml 里的 OBSIDIAN_VAULT；两者都没有则静默退出）
 #   --agent <name>   agent 名称，决定日志子目录和节流状态文件（默认 Claude-Code；
 #                    Codex 场景传 --agent Codex）
-#   --log-dir <rel>  vault 内日志根目录；也可用私有 env 的 SOIA_SESSION_LOG_DIR 覆盖
+#   --log-dir <rel>  vault 内日志根目录；也可用私有 config.yml 的 SOIA_SESSION_LOG_DIR 覆盖
 #
 # 触发场景与节流：
 #   - Claude Code 的 SessionEnd hook 每次会话结束触发一次，天然是"一次会话一条快照"。
@@ -35,23 +35,16 @@
 
 AGENT="Claude-Code"
 SESSION_LOG_DIR="${SOIA_SESSION_LOG_DIR:-30_日志与思考/20_AI协作日志}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 load_private_env() {
-  local candidates=()
-  [ -n "${SOIA_PKM_ENV_FILE:-}" ] && candidates+=("$SOIA_PKM_ENV_FILE")
-  candidates+=("$HOME/.config/soia-pkm/env" "$HOME/.soia-pkm.env")
-  local f
-  for f in "${candidates[@]}"; do
-    [ -f "$f" ] || continue
-    set -a
-    # shellcheck disable=SC1090
-    . "$f"
-    set +a
-    break
-  done
+  command -v python3 >/dev/null 2>&1 || return 0
+  [ -f "$SCRIPT_DIR/soia_env.py" ] || return 0
+  eval "$(python3 "$SCRIPT_DIR/soia_env.py" 2>/dev/null || true)"
 }
 
 load_private_env
+SESSION_LOG_DIR="${SOIA_SESSION_LOG_DIR:-$SESSION_LOG_DIR}"
 VAULT="${OBSIDIAN_VAULT:-}"
 
 while [ $# -gt 0 ]; do

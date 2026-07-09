@@ -9,8 +9,8 @@ Prerequisites:
   3. Copy api_id and api_hash
 
 Usage:
-    # Put TELEGRAM_API_ID and TELEGRAM_API_HASH in a private env file
-    # such as ~/.config/soia-pkm/env, or pass SOIA_PKM_ENV_FILE.
+    # Put TELEGRAM_API_ID and TELEGRAM_API_HASH in a private config.yml,
+    # or pass SOIA_PKM_CLIP_X_CONFIG_FILE.
     python3 generate_telegram_session.py
 
 The script will prompt for:
@@ -18,9 +18,9 @@ The script will prompt for:
   - Confirmation code (sent via Telegram app, NOT SMS)
   - 2FA credential (if enabled)
 
-It prints a session_string. Save it to a private env file:
+It prints a session_string. Save it to a private config.yml:
 
-    ~/.config/soia-pkm/env
+    ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-clip-x/config.yml
 
 ⚠️ Session string is equivalent to an account credential. Keep it private.
    Never commit to git. If compromised, revoke via Telegram → Settings →
@@ -48,9 +48,9 @@ api_hash = os.environ.get("TELEGRAM_API_HASH")
 if not api_id or not api_hash:
     print("❌ Missing TELEGRAM_API_ID or TELEGRAM_API_HASH", file=sys.stderr)
     print()
-    print("Get them from https://my.telegram.org/auth, then put them in a private env file.")
+    print("Get them from https://my.telegram.org/auth, then put them in a private config.yml.")
     print(f"Supported sources: {env_source_hint()}")
-    print("Private env file should define these variable names:")
+    print("private config.yml should define these variable names:")
     print("  TELEGRAM_API_ID")
     print("  TELEGRAM_API_HASH")
     print("  python3 generate_telegram_session.py")
@@ -85,13 +85,13 @@ with TelegramClient(StringSession(), api_id, api_hash) as client:
     print()
     print(session_string)
     print()
-    print("Save to a private env file (do not commit; do not put it in the vault):")
+    print("Save to a private config.yml (do not commit; do not put it in the vault):")
     print()
-    print("  mkdir -p ~/.config/soia-pkm && chmod 700 ~/.config/soia-pkm")
-    print("  $EDITOR ~/.config/soia-pkm/env")
+    print("  mkdir -p ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-clip-x")
+    print("  $EDITOR ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-clip-x/config.yml")
     print()
-    print("Add the variable TELEGRAM_SESSION_STRING with the session string printed above.")
-    print("Keep TELEGRAM_API_ID and TELEGRAM_API_HASH in the same private env file; they are not echoed here.")
+    print("Add env.TELEGRAM_SESSION_STRING with the session string printed above.")
+    print("Keep TELEGRAM_API_ID and TELEGRAM_API_HASH in the same private config.yml; they are not echoed here.")
     print()
     print("Then test:")
     print("  python3 sync_telegram_saved.py --dry-run")

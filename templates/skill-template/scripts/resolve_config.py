@@ -10,8 +10,10 @@ from pathlib import Path
 
 
 CONFIG_NAMES = ("config.yml", "config.yaml", "config.json")
-ENV_NAME = "YOUR_SKILL_CONFIG"
-CONFIG_DIR = "your-skill-name"
+ENV_NAME = "YOUR_SKILL_CONFIG_FILE"
+REPO_NAME = "soia-open-skills"
+SKILL_TYPE = "your-skill-type"
+SKILL_NAME = "your-skill-name"
 
 
 def candidate_paths(cwd: Path) -> list[Path]:
@@ -20,14 +22,9 @@ def candidate_paths(cwd: Path) -> list[Path]:
     if env_path:
         paths.append(Path(env_path).expanduser())
 
-    config_home = Path(os.environ.get("XDG_CONFIG_HOME", "~/.config")).expanduser()
+    config_home = Path("~/.config/soia-skills").expanduser()
     for name in CONFIG_NAMES:
-        paths.append(config_home / CONFIG_DIR / name)
-
-    cur = cwd.resolve()
-    for parent in (cur, *cur.parents):
-        for name in CONFIG_NAMES:
-            paths.append(parent / ".soia" / CONFIG_DIR / name)
+        paths.append(config_home / REPO_NAME / SKILL_TYPE / SKILL_NAME / name)
 
     deduped: list[Path] = []
     seen: set[str] = set()
@@ -58,7 +55,10 @@ def main() -> int:
     elif found:
         print(f"Config: {found}")
     else:
-        print(f"No config found. Set {ENV_NAME} or create ~/.config/{CONFIG_DIR}/config.yml")
+        print(
+            "No config found. Set "
+            f"{ENV_NAME} or create ~/.config/soia-skills/{REPO_NAME}/{SKILL_TYPE}/{SKILL_NAME}/config.yml"
+        )
     return 0
 
 
