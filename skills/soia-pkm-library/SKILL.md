@@ -54,6 +54,36 @@ python3 gen_genre_library_md.py --base <vault-book-library-dir>
 - **私有配置加载**：脚本会自动读取 `$SOIA_PKM_LIBRARY_CONFIG_FILE`（或兼容别名 `$SOIA_PKM_LIBRARY_ENV_FILE`）以及默认路径 `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-library/config.yml`。配置文件使用 YAML `env:` 映射；秘钥只放这些私有文件，不放 vault、不放开源 skill 仓库。
 - 私有配置文件只记录变量名对应的本机值；文档和开源仓库只保留变量名，不保留真实值。
 
+### `WEREAD_API_KEY` 为什么不会自动初始化
+
+- 当前同步链路调用的是微信读书 Agent API Gateway：`https://i.weread.qq.com/api/agent/gateway`。
+- 这条链路的认证方式是显式的 `Authorization: Bearer <WEREAD_API_KEY>`，不是从微信读书 Cookie、浏览器登录态或 App 会话里自动换出来的。
+- 初始化时我只在旧配置里看到了 `WEREAD_COOKIE` / `WEREAD_COOKIE_B64` / `WEREAD_VID` 这些旧字段，而且它们是空值；没有任何可迁移的 `WEREAD_API_KEY`。
+- 所以 skill 只能帮你初始化 `config.yml` 结构，不能替你伪造一枚 key，也不会把旧 Cookie 冒充成 Bearer key。
+
+### `WEREAD_API_KEY` 如何申请
+
+当前仓库和本机已有文档只说明了**接口怎么用**，没有内置公开的自助申请页或发放后台。也就是说，这枚 key 不是像 OAuth 那样点网页自己生成的。
+
+正确申请路径是：
+
+1. 找当前维护这条微信读书 Agent API Gateway 的团队 / 同学申请一枚 `WEREAD_API_KEY`。
+2. 申请时附上用途：`soia-pkm-library` / `weread-skills` 要访问 `https://i.weread.qq.com/api/agent/gateway`，用于书架、划线、书籍详情同步。
+3. 拿到 key 后，写入 `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-library/config.yml`。
+4. 写法如下：
+
+```yaml
+env:
+  OBSIDIAN_VAULT: "/你的/vault/绝对路径"
+  WEREAD_API_KEY: "<对方发给你的真实 key>"
+```
+
+如果你暂时不确定找谁申请，最直接的线索就是：
+
+- 现在维护 `weread-skills` / `soia-pkm-library` 接入的人
+- 提供这条 `i.weread.qq.com/api/agent/gateway` 代理能力的人
+- 之前给其他人发过 `WEREAD_API_KEY` 的同事
+
 ## 目录契约
 
 本 skill 依赖书库遵循以下结构（具体目录名由 `--base` 决定，下面用相对路径描述，不代表写死的绝对路径）：
@@ -94,7 +124,7 @@ python3 gen_genre_library_md.py --base <vault-book-library-dir>
 
 | 场景 | 处理 |
 |------|------|
-| 未设置 `WEREAD_API_KEY` | 同步类脚本报错退出（`exit 1`），提示放入私有 `config.yml` |
+| 未设置 `WEREAD_API_KEY` | 同步类脚本报错退出（`exit 1`），提示放入私有 `config.yml`；如本机没有这枚 key，需要向微信读书 Agent API Gateway 维护方申请 |
 | 未指定 `--vault` 且无 `OBSIDIAN_VAULT` env | 报错退出，提示传 `--vault` 或在私有 `config.yml` 设置 |
 | 书名在图书馆/阅读记录里找不到对应文件 | 跳过并打印警告，不中断批量流程（`--all` 模式） |
 | 微信读书书名与本地文件名对不上（含副标题/合集后缀） | `sync_weread_highlights.py` 优先按 `bookId` 精确匹配，标题匹配是兜底 |
