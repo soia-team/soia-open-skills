@@ -71,5 +71,36 @@ npx skills add soia-team/soia-open-skills -l --full-depth
 npx skills add soia-team/soia-open-skills -g --all
 ```
 
+## Skill Debug Install Rules
+
+Local checkout installation is only for temporary debugging. It is not a release
+or user-facing install path.
+
+Allowed during local testing:
+
+```bash
+npx skills add "$PWD" -l --full-depth
+npx skills add "$PWD" -g -a '*' -s <skill-name> -y
+```
+
+Rules:
+
+- Use local checkout install only to test an uncommitted or unpublished skill.
+- Say "local debug install" in the work log or final response; do not call it
+  "installed latest" unless it came from the pushed remote package.
+- Do not put a maintainer absolute path in docs, examples, commit messages, or
+  user-facing instructions. Use `$PWD`, `<repo-path>`, or the remote package.
+- After merge/push, verify the real install from the remote package:
+
+```bash
+npx skills add soia-team/soia-open-skills -g -a '*' -s <skill-name> -y
+```
+
+Forbidden outside local testing:
+
+```bash
+npx skills add /absolute/local/path/to/soia-open-skills -g -a '*' -s <skill-name> -y
+```
+
 If validating SOIA AI consumption, sync from `~/.agents/skills` into
 `~/.soia/skills` with `soia-dev-sync-skills`; do not copy directories manually.
