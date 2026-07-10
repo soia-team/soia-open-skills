@@ -235,25 +235,31 @@ SOIA_DEV_AGENT_CLI_DISPATCH_CONFIG_FILE=<custom-config-path>
 
 十项不要求全部满足；按整体倾向把任务落到三档之一。落到 easy/medium 但执行结果不达标时，按「⚡ Anti-Fake-Fix Gate」的处置规则升级重试，不要在同一档位反复重试期待不同结果。
 
-### 推荐组合（占位，全部 `pending_benchmark`）
+### 推荐组合（P4 实证路由，2026-07-10 smoke matrix；部分家族仍是占位）
 
-下表按执行器家族给出候选模型/推理深度组合。**这些具体组合尚未经过真实执行矩阵验证**，全部标记 `pending_benchmark`：只是当前占位候选，不构成已验证的推荐依据。真实依据将来自 `scripts/run_matrix.py` 跑出的结果（P3），回填到 `references/model-catalog.yml` 每个模型的 `routing_profile` 字段（P4）后，本表才能升级为已验证推荐。
+下表按执行器家族给出模型/推理深度组合。**codex 与 claude 两行已经过真实执行矩阵验证**（2026-07-10，codex 侧 35 case + claude 侧 15 case），标记为「实证」；**gemini / kimi / opencode / qwen 三行尚未测试**，继续如实标记 `pending_benchmark`，不得包装成已验证推荐。完整逐 case 证据、原始数字和已知缺口见 `references/benchmark-2026-07-10.md`。
 
 | 执行器家族 | easy 候选 | medium 候选 | hard 候选 | 状态 |
 |---|---|---|---|---|
-| codex | gpt-5.6-luna | gpt-5.6-terra | gpt-5.6-sol（reasoning=high/xhigh） | `pending_benchmark` |
-| claude | claude-haiku-4-5 | claude-sonnet-5 | claude-opus-4-8 | `pending_benchmark` |
-| gemini | gemini-2.5-flash-lite | gemini-2.5-flash | gemini-2.5-pro / gemini-3.1-pro-preview | `pending_benchmark` |
-| kimi | kimi-k2.6（默认档） | kimi-k2.6 --thinking | kimi-k2.6 --thinking（更长上下文/更多轮次） | `pending_benchmark` |
-| opencode / qwen | 默认模型 | qwen-max 或等效中阶模型 | 项目已配置的最强可用模型 | `pending_benchmark` |
+| codex | `gpt-5.6-luna` @ low | `gpt-5.6-terra` @ medium（token 最省，实证） | `gpt-5.6-sol` @ high，穷尽才升到 xhigh（实证 xhigh 仅 sol 有质变） | **实证** — 依据：2026-07-10 smoke matrix（`references/benchmark-2026-07-10.md` §1） |
+| claude | `claude-haiku-4-5`（比 opus 便宜约 18 倍，实证；未按 effort 拆分数据） | `claude-sonnet-5` @ medium | *(暂无实证推荐——见下方反模式警示)* | **实证**（hard 档除外）— 依据：2026-07-10 smoke matrix（`references/benchmark-2026-07-10.md` §2） |
+| gemini | gemini-2.5-flash-lite | gemini-2.5-flash | gemini-2.5-pro / gemini-3.1-pro-preview | `pending_benchmark`（未测） |
+| kimi | kimi-k2.6（默认档） | kimi-k2.6 --thinking | kimi-k2.6 --thinking（更长上下文/更多轮次） | `pending_benchmark`（未测） |
+| opencode / qwen | 默认模型 | qwen-max 或等效中阶模型 | 项目已配置的最强可用模型 | `pending_benchmark`（未测） |
+
+#### 反模式警示（实证，依据：2026-07-10 smoke matrix）
+
+- **`claude-opus-4-8` 在简单任务上对 effort 无响应**：同一 fixture 上五档 effort（low/medium/high/xhigh/max）的 output token 数和 cost 完全相同（22 tokens / $0.0677）——五档都被 CLI 接受（非 unsupported），只是没有测量到差异。**这只在本次简单固定算术任务上成立**，难任务未测试，不要泛化成"opus 的 effort 参数整体无用"。因此本表 hard 档没有给 claude 侧推荐。依据：2026-07-10 smoke matrix。
+- **`gpt-5.6-luna` 的 `xhigh` 档烧钱不产出**：旧的「同题 8 跑深度调研」对照里，`xhigh` 档烧到 933k tokens（terra 的约 4.6 倍），产出体积却没有相应变大，因此 luna 只推荐 easy 档 + low 效力，不建议升到高档。依据：2026-07-10 同题 8 跑深度调研（见下文「codex 5.6 系实测分级」节）。
+- **结论：高 effort 是否有回报，取决于「这个模型」和「这个任务难度」两个变量共同作用，不是只看任务难度。** 同一个简单任务上，`claude-sonnet-5` 的 output 随 effort 单调增长（low 22 tokens → max 410 tokens），说明它确实在用 effort 换更多思考；`claude-opus-4-8` 完全不为所动——两个模型对同一个 effort 旋钮的反应可以截然不同。不要无脑对所有模型都开最高档，先确认该模型在类似任务上是否已有「effort 有效」的实证。依据：2026-07-10 smoke matrix。
 
 ### 与 model-catalog.yml 的关系
 
-`references/model-catalog.yml` 每个模型条目预留了 `routing_profile`（当前一律为 `null`）、`discovered_at`、`discovery_evidence` 三个字段。真实执行矩阵跑完后（P3/P4）才会回填 `routing_profile`；回填之前，本节表格是唯一路由参考，且明确标注为占位。**不得把 `pending_benchmark` 的组合包装成"已验证推荐"讲给客户听**；如实说明这是候选，不是结论。
+`references/model-catalog.yml` 每个模型条目预留了 `routing_profile`、`discovered_at`、`discovery_evidence` 三个字段。P4（2026-07-10）已把参与本轮 smoke matrix 的模型回填：`gpt-5.6-sol`/`gpt-5.6-terra`/`gpt-5.6-luna`/`claude-sonnet-5`/`claude-sonnet-5-2026-09-01`/`claude-opus-4-8`/`claude-haiku-4-5` 的 `routing_profile` 从 `null` 回填为实证的三档归属（`claude-opus-4-8` 回填为 `[]`——已测试、但当前证据不支持任何一档推荐，即上面的反模式）；`gpt-5.5`/`gpt-5.4`/`gpt-5.4-mini` 的 `discovered_at`/`discovery_evidence` 回填，但 `routing_profile` 保持 `[]`（已测试，"另需实测"缺口未补齐前不给路由推荐）。未参与本轮矩阵的模型（gemini/kimi/opencode/qwen 全家族、deepseek、其余 claude/openai 型号）保持 `null` 不变，仍是未知状态。**不得把仍是 `pending_benchmark` 的组合（gemini/kimi/opencode/qwen）包装成"已验证推荐"讲给客户听**；如实说明这是候选，不是结论。
 
 ## codex 5.6 系实测分级（2026-07-10，同题对照 8 跑）
 
-> **本节地位**：这是 Phase 1 之前留下的单任务单日期对照实验，样本有限，**待「自动路由」表格中的 `pending_benchmark` 被 `scripts/run_matrix.py` 全矩阵覆盖结果替换后，本节应视为历史参考并相应更新**，不要与上面「推荐组合」表混为一谈。
+> **本节地位（P4 更新，2026-07-10）**：「自动路由」表格中的 `pending_benchmark` 已被同一天跑出的 35+15 case smoke matrix 结果替换为实证路由（codex 与 claude 两个家族；gemini/kimi/opencode/qwen 仍是占位，见上文「推荐组合」表）。本节收录的是**另一批、更早**的「同题 8 跑深度调研」数据，回答的是"深度调研任务上哪个模型/档位物有所值"，与 smoke matrix 回答的"能不能正常跑、模型回显是否可信、effort 是否真的影响输出"是不同维度——两者互为补充、交叉引用，不重复摘录，也不互相替代。完整交叉引用与两批数据的关系说明见 `references/benchmark-2026-07-10.md` §3。
 >
 > 以下是 codex 5.6 系模型（`sol` / `terra` / `luna`）与 `gpt-5.5` 的一次同题对照实测（同一任务、同一天、8 次跑），用于补充上面「派发矩阵」里 codex 一栏的模型/档位选择经验。**这是单任务单日期的对照结论，样本有限**，不是长期基准——实际派发前仍以各自 `--version` 与当次真实表现为准，不要机械套用下表。
 
@@ -394,7 +400,7 @@ codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \
 1. **requested vs actual**：每次调用后比对 `requested_model` 与 `actual_model`。
 2. **降级判定**：
    - `codex`：stdout 头部若有 `model: xxx` 行，与 `requested_model` 不一致时，状态标记为 `fallback_or_downgrade`（`scripts/run_matrix.py::detect_actual_model` 已实现，只扫描 stdout 前 2000 字符内的 `model:` 行）。
-   - `claude`：headless 输出目前**没有**可靠的模型回显机制；Phase 1 里任何成功的 claude 调用一律标记 `actual_model_unverified`，**不允许**因为"看起来跑成功了"就报告为 `passed`。这是已知限制，不是 bug——一旦 claude CLI 提供可核验的模型回显，再改判定逻辑，不要在此之前假装已覆盖。
+   - `claude`：**P4（2026-07-10）更新**——纯文本模式（`cmd_template` 不含 `--output-format json`）下 headless 输出仍然**没有**可靠的模型回显机制，任何成功调用一律标记 `actual_model_unverified`，**不允许**因为"看起来跑成功了"就报告为 `passed`。但当 `cmd_template` 显式带 `--output-format json`（或 `--output-format=json`）时，`scripts/run_matrix.py::detect_actual_model` 会解析 stdout JSON 的 `modelUsage`（键名即模型 id）或顶层 `model` 字段作为 `actual_model`，与 `requested_model` 比对后可以正常判定 `passed` / `fallback_or_downgrade`，不再一律 `actual_model_unverified`。比对前会先剥离两种已在真实 CLI（2.1.206，2026-07-10 实测验证，非猜测）上观察到的修饰后缀：不带 `--model` 时回显可能带方括号执行模式后缀（如 `claude-opus-4-8[1m]`）；用短别名（如 `haiku`）请求时回显可能带日期后缀（如 `claude-haiku-4-5-20251001`）；显式传完整 catalog `model_id`（如 `claude-haiku-4-5`）时回显通常精确匹配、无后缀。stdout 不是合法 JSON 时仍然回退到 `actual_model_unverified`，不假装已验证。细节与原始验证 payload 见 `references/benchmark-2026-07-10.md`。
    - 其他执行器（gemini/kimi/opencode/qwen）：Phase 1 未实现模型回显检测，`notes` 会如实写明"model-echo verification is not implemented for this executor"，不假装已覆盖。
 3. **宿主模型变化**：`host_ai` 自身运行在哪个底层模型上，属于**仅可观测、不可控**的信息——本技能不能对宿主自己的模型完整性做强制门禁。如果宿主环境暴露了自身模型标识，记录下来即可；拿不到就写 `unknown`，不要推断。
 4. **能力限制声明**：任何一次 Model Integrity Gate 判定为 `actual_model_unverified` 或 `fallback_or_downgrade` 的调用，最终回执必须包含这次判定，不能只在内部日志里留痕、对客户只报"完成"。
@@ -568,6 +574,7 @@ git diff --stat HEAD~1..HEAD   # 或 git diff --stat（如未 commit）
 | 代码文件元数据头规范 | `references/metadata-header.md` | 任何代码写入前 |
 | 模型价格资料原文（2026-07-10 快照） | `references/model-pricing-2026-07-10.md` | 需要人工核对官方定价、或价格资料更新时 |
 | 模型价格/推理档运行时目录 | `references/model-catalog.yml` | `scripts/estimate_cost.py` / `scripts/run_matrix.py` 运行时读取；人工修改前后都跑一次 `scripts/catalog_lib.py --selftest` |
+| P4 实证路由的证据来源（2026-07-10 smoke matrix 全量结果） | `references/benchmark-2026-07-10.md` | 需要查「自动路由」表格具体依据、逐 case 明细或已知缺口时 |
 
 **加载原则**：派发决策确定执行器后，只加载对应执行器的 reference，不要全部加载。
 

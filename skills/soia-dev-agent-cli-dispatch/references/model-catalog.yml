@@ -43,7 +43,7 @@ providers:
         availability: available
         context_window: null
         supported_reasoning_levels: [low, medium, high, xhigh]
-        reasoning_levels_confidence: unverified
+        reasoning_levels_confidence: smoke_tested
         default_reasoning_level: medium
         pricing:
           input_per_1m: 5
@@ -61,9 +61,9 @@ providers:
           billing_mode_notes: "Priority tier per 1M: input $10 / cached $1 / write $12.50 / output $60. Long-context tier triggers above 272K input tokens per request (cached $1, write $12.50). Data-residency regional endpoints for models released on/after 2026-03-05 may add a 10% surcharge."
           effective_date: "2026-07-10"
           source_id: pricing-2026-07-10
-        routing_profile: null
-        discovered_at: null
-        discovery_evidence: null
+        routing_profile: [hard]
+        discovered_at: "2026-07-10"
+        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710"
       - model_id: gpt-5.6-terra
         display_name: "GPT-5.6 Terra"
         aliases: [terra]
@@ -71,7 +71,7 @@ providers:
         availability: available
         context_window: null
         supported_reasoning_levels: [low, medium, high, xhigh]
-        reasoning_levels_confidence: unverified
+        reasoning_levels_confidence: smoke_tested
         default_reasoning_level: medium
         pricing:
           input_per_1m: 2.5
@@ -89,9 +89,9 @@ providers:
           billing_mode_notes: "Priority tier per 1M: input $5 / cached $0.50 / write $6.25 / output $30. Long-context tier triggers above 272K input tokens per request (cached $0.50, write $6.25)."
           effective_date: "2026-07-10"
           source_id: pricing-2026-07-10
-        routing_profile: null
-        discovered_at: null
-        discovery_evidence: null
+        routing_profile: [medium]
+        discovered_at: "2026-07-10"
+        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710"
       - model_id: gpt-5.6-luna
         display_name: "GPT-5.6 Luna"
         aliases: [luna]
@@ -99,7 +99,7 @@ providers:
         availability: available
         context_window: null
         supported_reasoning_levels: [low, medium, high, xhigh]
-        reasoning_levels_confidence: unverified
+        reasoning_levels_confidence: smoke_tested
         default_reasoning_level: medium
         pricing:
           input_per_1m: 1
@@ -114,12 +114,12 @@ providers:
             input_per_1m: 0.5
             output_per_1m: 3
           reasoning_billing_rule: counted_as_output
-          billing_mode_notes: "Priority tier per 1M: input $2 / cached $0.20 / write $2.50 / output $12. Long-context tier triggers above 272K input tokens per request (cached $0.20, write $2.50). xhigh reasoning only produced a quality step-change for sol in the skill's own single-day 8-run comparison; for terra/luna it mainly increased token spend -- see the skill's codex-tiering note, itself an unverified single-sample observation."
+          billing_mode_notes: "Priority tier per 1M: input $2 / cached $0.20 / write $2.50 / output $12. Long-context tier triggers above 272K input tokens per request (cached $0.20, write $2.50). xhigh reasoning only produced a quality step-change for sol in the skill's own single-day 8-run comparison; for terra/luna it mainly increased token spend -- see the skill's codex-tiering note, itself an unverified single-sample observation. 2026-07-10 smoke matrix (run_id smoke-20260710) confirms low/medium/high/xhigh all pass (exit 0) for luna; recommended as the easy-tier default at --reasoning low, escalating to xhigh is not recommended given the cost-without-payoff finding above -- see references/benchmark-2026-07-10.md."
           effective_date: "2026-07-10"
           source_id: pricing-2026-07-10
-        routing_profile: null
-        discovered_at: null
-        discovery_evidence: null
+        routing_profile: [easy]
+        discovered_at: "2026-07-10"
+        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710"
       - model_id: gpt-5.5
         display_name: "GPT-5.5"
         aliases: []
@@ -142,12 +142,12 @@ providers:
             input_per_1m: 2.5
             output_per_1m: 15
           reasoning_billing_rule: counted_as_output
-          billing_mode_notes: "Priority tier per 1M: input $12.50 / output $75, no separate cache-write price listed. Long-context tier triggers above 272K input tokens per request."
+          billing_mode_notes: "Priority tier per 1M: input $12.50 / output $75, no separate cache-write price listed. Long-context tier triggers above 272K input tokens per request. 2026-07-10 smoke matrix (run_id smoke-20260710): reasoning=minimal failed (non-zero exit) on a fixed-arithmetic/model-echo fixture; low/medium/high/xhigh were not among the failing cases in that run but remain unconfirmed pending dedicated testing, not yet a positive 'supported' claim -- see references/benchmark-2026-07-10.md. Separately, an older single-day 8-run deep-audit comparison found this model fastest (190s) with shallower findings than the sol/terra/luna 5.6 family -- see SKILL.md 'codex 5.6 系实测分级'."
           effective_date: "2026-07-10"
           source_id: pricing-2026-07-10
-        routing_profile: null
-        discovered_at: null
-        discovery_evidence: null
+        routing_profile: []
+        discovered_at: "2026-07-10"
+        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710"
       - model_id: gpt-5.5-pro
         display_name: "GPT-5.5 Pro"
         aliases: []
@@ -198,12 +198,12 @@ providers:
             input_per_1m: 1.25
             output_per_1m: 7.5
           reasoning_billing_rule: counted_as_output
-          billing_mode_notes: "Priority tier per 1M: input $5 / cached $0.50 / output $30, no separate cache-write price listed."
+          billing_mode_notes: "Priority tier per 1M: input $5 / cached $0.50 / output $30, no separate cache-write price listed. 2026-07-10 smoke matrix (run_id smoke-20260710): reasoning=minimal failed (non-zero exit) on a fixed-arithmetic/model-echo fixture; low/medium/high/xhigh were not among the failing cases in that run but remain unconfirmed pending dedicated testing -- see references/benchmark-2026-07-10.md."
           effective_date: "2026-07-10"
           source_id: pricing-2026-07-10
-        routing_profile: null
-        discovered_at: null
-        discovery_evidence: null
+        routing_profile: []
+        discovered_at: "2026-07-10"
+        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710"
       - model_id: gpt-5.4-mini
         display_name: "GPT-5.4 Mini"
         aliases: []
@@ -223,12 +223,12 @@ providers:
             input_per_1m: 0.375
             output_per_1m: 2.25
           reasoning_billing_rule: counted_as_output
-          billing_mode_notes: "Source lists no separate long-context pricing tier for this model. Priority tier per 1M: input $1.50 / cached $0.15 / output $9."
+          billing_mode_notes: "Source lists no separate long-context pricing tier for this model. Priority tier per 1M: input $1.50 / cached $0.15 / output $9. 2026-07-10 smoke matrix (run_id smoke-20260710): reasoning=minimal failed (non-zero exit) on the same fixture; low/medium/high/xhigh were not among the failing cases in that run but remain unconfirmed pending dedicated testing -- see references/benchmark-2026-07-10.md."
           effective_date: "2026-07-10"
           source_id: pricing-2026-07-10
-        routing_profile: null
-        discovered_at: null
-        discovery_evidence: null
+        routing_profile: []
+        discovered_at: "2026-07-10"
+        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710"
       - model_id: gpt-5.4-nano
         display_name: "GPT-5.4 Nano"
         aliases: []
@@ -366,8 +366,8 @@ providers:
         model_family: claude-opus-4
         availability: available
         context_window: 1000000
-        supported_reasoning_levels: []
-        reasoning_levels_confidence: unverified
+        supported_reasoning_levels: [low, medium, high, xhigh, max]
+        reasoning_levels_confidence: smoke_tested
         default_reasoning_level: null
         pricing:
           input_per_1m: 5
@@ -380,12 +380,12 @@ providers:
             input_per_1m: 2.5
             output_per_1m: 12.5
           reasoning_billing_rule: counted_as_output
-          billing_mode_notes: "Full 1M context billed at standard rate. Fast mode available at $10/$50 input/output per 1M. inference_geo=us multiplies input/output/cache-write/cache-read by 1.1x. New tokenizer vs Sonnet 4.6 and earlier may produce ~30% more tokens for the same text."
+          billing_mode_notes: "Full 1M context billed at standard rate. Fast mode available at $10/$50 input/output per 1M. inference_geo=us multiplies input/output/cache-write/cache-read by 1.1x. New tokenizer vs Sonnet 4.6 and earlier may produce ~30% more tokens for the same text. ANTI-PATTERN (2026-07-10 smoke matrix, run_id smoke-claude-json-20260710, 15 cases via --output-format json): output and cost were flat across all 5 effort levels (22 tokens / $0.0677) on a fixed-arithmetic fixture -- effort had no measurable effect for this task class. All 5 levels were accepted (exit 0, no fallback), so this is not a 'model rejects the flag' finding, it is a 'flag accepted but made no measurable difference here' finding. This was only tested on a simple task; do not generalize to 'opus ignores effort on hard tasks' without task-specific verification -- see references/benchmark-2026-07-10.md."
           effective_date: "2026-07-10"
           source_id: pricing-2026-07-10
-        routing_profile: null
-        discovered_at: null
-        discovery_evidence: null
+        routing_profile: []
+        discovered_at: "2026-07-10"
+        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710"
       - model_id: claude-opus-4-7
         display_name: "Claude Opus 4.7"
         aliases: [opus-4-7, opus-4.7]
@@ -470,8 +470,8 @@ providers:
         model_family: claude-sonnet-5
         availability: available
         context_window: 1000000
-        supported_reasoning_levels: []
-        reasoning_levels_confidence: unverified
+        supported_reasoning_levels: [low, medium, high, xhigh, max]
+        reasoning_levels_confidence: smoke_tested
         default_reasoning_level: null
         pricing:
           input_per_1m: 2
@@ -484,20 +484,20 @@ providers:
             input_per_1m: 1
             output_per_1m: 5
           reasoning_billing_rule: counted_as_output
-          billing_mode_notes: "Promotional price active through 2026-08-31. The SAME provider model resumes standard pricing on 2026-09-01 -- see catalog entry claude-sonnet-5-2026-09-01 for those rates (that entry is not a distinct invocable model, only a second pricing row for this one). Full 1M context billed at standard rate. inference_geo=us multiplies input/output/cache-write/cache-read by 1.1x. New tokenizer vs Sonnet 4.6 and earlier may produce ~30% more tokens for the same text."
+          billing_mode_notes: "Promotional price active through 2026-08-31. The SAME provider model resumes standard pricing on 2026-09-01 -- see catalog entry claude-sonnet-5-2026-09-01 for those rates (that entry is not a distinct invocable model, only a second pricing row for this one). Full 1M context billed at standard rate. inference_geo=us multiplies input/output/cache-write/cache-read by 1.1x. New tokenizer vs Sonnet 4.6 and earlier may produce ~30% more tokens for the same text. 2026-07-10 smoke matrix (run_id smoke-claude-json-20260710, 15 cases via --output-format json, zero downgrades observed): output scaled with --effort from 22 tokens (low) to 410 tokens (max), cost $0.0445 to $0.0503 on a fixed-arithmetic fixture -- effort measurably bought more reasoning for this model, unlike claude-opus-4-8 in the same run. All 5 effort levels (low/medium/high/xhigh/max) were accepted (exit 0) -- see references/benchmark-2026-07-10.md."
           effective_date: "2026-07-10 through 2026-08-31 (promotional)"
           source_id: pricing-2026-07-10
-        routing_profile: null
-        discovered_at: null
-        discovery_evidence: null
+        routing_profile: [medium]
+        discovered_at: "2026-07-10"
+        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710"
       - model_id: claude-sonnet-5-2026-09-01
         display_name: "Claude Sonnet 5 (standard, from 2026-09-01)"
         aliases: []
         model_family: claude-sonnet-5
         availability: available
         context_window: 1000000
-        supported_reasoning_levels: []
-        reasoning_levels_confidence: unverified
+        supported_reasoning_levels: [low, medium, high, xhigh, max]
+        reasoning_levels_confidence: smoke_tested
         default_reasoning_level: null
         pricing:
           input_per_1m: 3
@@ -510,12 +510,12 @@ providers:
             input_per_1m: 1.5
             output_per_1m: 7.5
           reasoning_billing_rule: counted_as_output
-          billing_mode_notes: "This is NOT a separate provider model_id -- it is claude-sonnet-5's standard price after its 2026-08-31 promotional window ends. Modeled as its own catalog row (rather than a second price inside one entry) only so estimate_cost.py can resolve exactly one price per model_id without a date-conditional lookup. Deliberately left out of aliases so plain 'sonnet-5' lookups resolve to the current promotional entry as of this catalog's updated_at. Full 1M context billed at standard rate. inference_geo=us multiplies input/output/cache-write/cache-read by 1.1x."
+          billing_mode_notes: "This is NOT a separate provider model_id -- it is claude-sonnet-5's standard price after its 2026-08-31 promotional window ends. Modeled as its own catalog row (rather than a second price inside one entry) only so estimate_cost.py can resolve exactly one price per model_id without a date-conditional lookup. Deliberately left out of aliases so plain 'sonnet-5' lookups resolve to the current promotional entry as of this catalog's updated_at. Full 1M context billed at standard rate. inference_geo=us multiplies input/output/cache-write/cache-read by 1.1x. Reasoning-level and routing findings here are inherited from the claude-sonnet-5 promotional-price row's 2026-07-10 smoke matrix (run_id smoke-claude-json-20260710) since both rows model the same underlying provider model; only the price differs after 2026-09-01 -- see references/benchmark-2026-07-10.md."
           effective_date: "2026-09-01 onward"
           source_id: pricing-2026-07-10
-        routing_profile: null
-        discovered_at: null
-        discovery_evidence: null
+        routing_profile: [medium]
+        discovered_at: "2026-07-10"
+        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710 (inherited from claude-sonnet-5, same underlying model)"
       - model_id: claude-sonnet-4-6
         display_name: "Claude Sonnet 4.6"
         aliases: [sonnet-4-6, sonnet-4.6]
@@ -574,8 +574,8 @@ providers:
         model_family: claude-haiku-4
         availability: available
         context_window: null
-        supported_reasoning_levels: []
-        reasoning_levels_confidence: unverified
+        supported_reasoning_levels: [low, medium, high, xhigh, max]
+        reasoning_levels_confidence: smoke_tested
         default_reasoning_level: null
         pricing:
           input_per_1m: 1
@@ -588,12 +588,12 @@ providers:
             input_per_1m: 0.5
             output_per_1m: 2.5
           reasoning_billing_rule: counted_as_output
-          billing_mode_notes: "Lowest-cost Claude tier per source. Context window not stated in source for this row (kept null rather than assumed); not in the inference_geo=us 1.1x surcharge group."
+          billing_mode_notes: "Lowest-cost Claude tier per source. Context window not stated in source for this row (kept null rather than assumed); not in the inference_geo=us 1.1x surcharge group. 2026-07-10 smoke matrix (run_id smoke-claude-json-20260710): $0.0037/call, about 18x cheaper than claude-opus-4-8 ($0.0677/call) on the same fixed-arithmetic fixture, across the same 5 effort levels (low/medium/high/xhigh/max, all accepted). Per-effort-level output/cost breakdown was not separately captured for haiku in that run (unlike sonnet-5 and opus-4-8), so a level-by-level curve is not claimed here -- see references/benchmark-2026-07-10.md."
           effective_date: "2026-07-10"
           source_id: pricing-2026-07-10
-        routing_profile: null
-        discovered_at: null
-        discovery_evidence: null
+        routing_profile: [easy]
+        discovered_at: "2026-07-10"
+        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710"
   google:
     executor_cli: gemini
     models:

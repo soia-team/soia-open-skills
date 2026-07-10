@@ -88,6 +88,22 @@ UNSUPPORTED_RE = re.compile(r"not supported|invalid model|unknown model", re.IGN
 CODEX_MODEL_LINE_RE = re.compile(r"^model:\s*(\S+)", re.IGNORECASE | re.MULTILINE)
 CODEX_TOKENS_USED_RE = re.compile(r"tokens used", re.IGNORECASE)
 
+# claude Model Integrity Gate (P4, 2026-07-10): only a `--output-format json`
+# (or `--output-format=json`) invocation can be parsed for a verifiable model
+# echo. Plain-text-mode claude output has no reliable echo and keeps falling
+# back to actual_model_unverified -- see detect_actual_model() below.
+CLAUDE_OUTPUT_FORMAT_JSON_RE = re.compile(r"--output-format[=\s]+json\b", re.IGNORECASE)
+# Two decoration patterns confirmed against a live `claude` 2.1.206 CLI on
+# 2026-07-10 (see references/benchmark-2026-07-10.md for the raw payloads):
+#   - no --model flag (session/account default): modelUsage key came back
+#     bracketed, e.g. "claude-opus-4-8[1m]" (most likely a 1M-context-window
+#     execution-mode annotation).
+#   - --model <short alias> (e.g. "haiku"): modelUsage key came back dated,
+#     e.g. "claude-haiku-4-5-20251001".
+# --model <full catalog model_id> came back with no decoration at all.
+CLAUDE_MODEL_BRACKET_SUFFIX_RE = re.compile(r"\[[^\[\]]*\]$")
+CLAUDE_MODEL_DATE_SUFFIX_RE = re.compile(r"-\d{8}$")
+
 VERSION_COMMANDS = {
     "codex": ["codex", "--version"],
     "claude": ["claude", "--version"],
@@ -140,11 +156,90 @@ def parse_tokens(executor: str, stdout: str) -> int | None:
     return None
 
 
-def detect_actual_model(executor: str, stdout: str) -> str | None:
-    if executor != "codex":
+def _normalize_claude_model_id(value: str) -> str:
+    """Strip decorations a real `claude --output-format json` payload attaches
+    to a modelUsage key, so it can be compared against a plain catalog
+    model_id/requested_model string.
+
+    Verified directly against a live `claude` 2.1.206 CLI on 2026-07-10 (not
+    guessed -- see references/benchmark-2026-07-10.md for the raw payloads):
+    a bracketed execution-mode suffix (e.g. "[1m]") and/or a trailing 8-digit
+    date suffix (e.g. "-20251001") may appear depending on how --model was
+    (or was not) specified; requesting the full catalog model_id directly
+    came back with neither decoration.
+    """
+    stripped = CLAUDE_MODEL_BRACKET_SUFFIX_RE.sub("", value.strip())
+    stripped = CLAUDE_MODEL_DATE_SUFFIX_RE.sub("", stripped)
+    return stripped
+
+
+def _extract_claude_model_from_json(payload: Any) -> str | None:
+    """Extract the raw actual-model identifier from a parsed claude
+    --output-format json payload. Two known shapes:
+      - a top-level "model" string field (defensive fallback only -- not
+        observed in the live 2026-07-10 verification calls, kept in case a
+        future CLI version or subcommand adds one)
+      - a "modelUsage" mapping keyed by the served model id, e.g.
+        {"claude-sonnet-5": {...}} -- this is the shape actually observed
+        live and in the skill's 2026-07-10 smoke-claude-json matrix
+        (run_id smoke-claude-json-20260710).
+    Returns the RAW key/value (decorations included, if any); normalization
+    for comparison purposes happens separately in
+    _normalize_claude_model_id, so the record's actual_model field stays a
+    faithful, undoctored echo of what the CLI actually printed.
+    If modelUsage has more than one key (a multi-model session), the first
+    key in insertion order is returned -- Phase 1 dispatch calls are
+    expected to be single-model one-shot invocations.
+    """
+    if not isinstance(payload, dict):
         return None
-    match = CODEX_MODEL_LINE_RE.search(stdout[:2000])
-    return match.group(1) if match else None
+    model = payload.get("model")
+    if isinstance(model, str) and model:
+        return model
+    model_usage = payload.get("modelUsage")
+    if isinstance(model_usage, dict) and model_usage:
+        first_key = next(iter(model_usage))
+        if isinstance(first_key, str) and first_key:
+            return first_key
+    return None
+
+
+def _claude_model_matches(requested: str, actual: str) -> bool:
+    """True if a claude modelUsage-echoed actual model id refers to the same
+    model as requested_model, after stripping known decorations (bracket /
+    date suffix -- see _normalize_claude_model_id). Exact string equality is
+    checked first so an already-clean echo never depends on the stripping
+    heuristics at all.
+    """
+    if requested == actual:
+        return True
+    return _normalize_claude_model_id(actual) == _normalize_claude_model_id(requested)
+
+
+def detect_actual_model(executor: str, stdout: str, cmd: str | None = None) -> str | None:
+    """Best-effort actual-model echo detection.
+
+    codex: scans stdout for a leading "model: xxx" line (unchanged from
+    Phase 1).
+    claude: only attempts detection when `cmd` shows the call used
+    `--output-format json` (or `--output-format=json`); parses stdout as
+    JSON and looks for modelUsage/model (see _extract_claude_model_from_json).
+    Plain-text-mode claude calls (no cmd given, or cmd without the json
+    flag) return None -- the caller keeps reporting actual_model_unverified
+    for those, per the Model Integrity Gate.
+    """
+    if executor == "codex":
+        match = CODEX_MODEL_LINE_RE.search(stdout[:2000])
+        return match.group(1) if match else None
+    if executor == "claude":
+        if not cmd or not CLAUDE_OUTPUT_FORMAT_JSON_RE.search(cmd):
+            return None
+        try:
+            payload = json.loads(stdout)
+        except (json.JSONDecodeError, ValueError):
+            return None
+        return _extract_claude_model_from_json(payload)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -262,7 +357,7 @@ def run_one_case(
     else:
         record["api_equivalent_cost"] = None
 
-    actual_model = detect_actual_model(executor, stdout)
+    actual_model = detect_actual_model(executor, stdout, cmd)
     record["actual_model"] = actual_model
 
     if timed_out:
@@ -276,11 +371,26 @@ def run_one_case(
             record["status"] = "fallback_or_downgrade"
             record["notes"].append(f"codex echoed model={actual_model!r}, requested {model!r}")
         elif executor == "claude":
-            record["status"] = "actual_model_unverified"
-            record["notes"].append(
-                "claude headless output does not echo the served model id in Phase 1; "
-                "status is intentionally not reported as a clean pass (Model Integrity Gate)"
-            )
+            if actual_model and model:
+                if _claude_model_matches(model, actual_model):
+                    record["status"] = "passed"
+                    record["notes"].append(
+                        f"claude --output-format json echoed modelUsage/model={actual_model!r}; "
+                        f"matches requested {model!r} (Model Integrity Gate verified, not unverified)"
+                    )
+                else:
+                    record["status"] = "fallback_or_downgrade"
+                    record["notes"].append(
+                        f"claude echoed model={actual_model!r} via --output-format json, "
+                        f"requested {model!r} -- mismatch even after stripping known decorations"
+                    )
+            else:
+                record["status"] = "actual_model_unverified"
+                record["notes"].append(
+                    "claude headless text-mode output does not reliably echo the served model id; "
+                    "status is intentionally not reported as a clean pass (Model Integrity Gate). "
+                    "Re-run with --output-format json for a verifiable modelUsage/model echo."
+                )
         else:
             record["status"] = "passed"
             if executor not in ("codex", "claude"):
@@ -667,6 +777,134 @@ def run_selftest() -> int:
             str(recovered.get("previous_attempt")),
         )
 
+        # --- Claude Model Integrity Gate (P4, 2026-07-10): --output-format
+        # json mode should verify modelUsage/model against requested_model
+        # instead of always reporting actual_model_unverified. The mock
+        # stdout payloads below mirror the real shape captured from a live
+        # `claude` 2.1.206 CLI on 2026-07-10 (see
+        # references/benchmark-2026-07-10.md), including the two decoration
+        # patterns actually observed there: a bracketed mode suffix and a
+        # dated model id.
+        claude_json_dir = tmp_path / "manifest-claude-json"
+        claude_json_cases_path = tmp_path / "cases-claude-json.json"
+        claude_sonnet_stdout = (
+            '{"type":"result","subtype":"success","is_error":false,"result":"4",'
+            '"total_cost_usd":0.0445,"usage":{"input_tokens":4,"output_tokens":22},'
+            '"modelUsage":{"claude-sonnet-5":{"inputTokens":4,"outputTokens":22,"costUSD":0.0445}}}'
+        )
+        claude_dated_haiku_stdout = (
+            '{"type":"result","subtype":"success","is_error":false,"result":"4",'
+            '"total_cost_usd":0.0273,"usage":{"input_tokens":10,"output_tokens":78},'
+            '"modelUsage":{"claude-haiku-4-5-20251001":{"inputTokens":10,"outputTokens":78,"costUSD":0.0273}}}'
+        )
+        claude_mismatch_stdout = (
+            '{"type":"result","subtype":"success","is_error":false,"result":"4",'
+            '"total_cost_usd":0.0677,"usage":{"input_tokens":4,"output_tokens":22},'
+            '"modelUsage":{"claude-opus-4-8":{"inputTokens":4,"outputTokens":22,"costUSD":0.0677}}}'
+        )
+        claude_json_cases = [
+            {
+                "case_id": "claude-json-exact-match",
+                "provider": "anthropic",
+                "executor": "claude",
+                "model": "claude-sonnet-5",
+                "reasoning": "low",
+                "cmd_template": (
+                    f"printf '%s' '{claude_sonnet_stdout}'  "
+                    "# mocked: claude --print --output-format json --model claude-sonnet-5 --effort low"
+                ),
+            },
+            {
+                "case_id": "claude-json-dated-suffix-match",
+                "provider": "anthropic",
+                "executor": "claude",
+                "model": "claude-haiku-4-5",
+                "reasoning": "low",
+                "cmd_template": (
+                    f"printf '%s' '{claude_dated_haiku_stdout}'  "
+                    "# mocked: claude --print --output-format json --model claude-haiku-4-5 --effort low"
+                ),
+            },
+            {
+                "case_id": "claude-json-mismatch",
+                "provider": "anthropic",
+                "executor": "claude",
+                "model": "claude-sonnet-5",
+                "reasoning": "low",
+                "cmd_template": (
+                    f"printf '%s' '{claude_mismatch_stdout}'  "
+                    "# mocked: claude --print --output-format json --model claude-sonnet-5 (simulated silent fallback)"
+                ),
+            },
+            {
+                "case_id": "claude-json-unparseable-stdout",
+                "provider": "anthropic",
+                "executor": "claude",
+                "model": "claude-sonnet-5",
+                "reasoning": "low",
+                "cmd_template": (
+                    "printf 'not valid json'  "
+                    "# mocked: claude --print --output-format json (corrupted/partial output)"
+                ),
+            },
+            {
+                "case_id": "claude-text-mode-still-unverified",
+                "provider": "anthropic",
+                "executor": "claude",
+                "model": "claude-sonnet-5",
+                "reasoning": "low",
+                "cmd_template": "printf 'The answer is 4.\\n'  # mocked: claude --print (plain text mode)",
+            },
+        ]
+        claude_json_cases_path.write_text(json.dumps(claude_json_cases), encoding="utf-8")
+        claude_manifest = run_matrix(
+            cases=claude_json_cases,
+            run_id="selftest-claude-json",
+            manifest_dir=claude_json_dir,
+            cases_path=claude_json_cases_path,
+            resume=False,
+            host_ai="selftest-host",
+            skill_source_path=str(Path(__file__).resolve().parents[1]),
+            timeout_seconds=30,
+            catalog_data=None,
+        )
+        claude_by_id = {c["case_id"]: c for c in claude_manifest["cases"]}
+        check(
+            "claude json exact match -> passed, not unverified",
+            claude_by_id["claude-json-exact-match"]["status"] == "passed",
+            claude_by_id["claude-json-exact-match"]["status"],
+        )
+        check(
+            "claude json exact match -> actual_model echoed verbatim",
+            claude_by_id["claude-json-exact-match"]["actual_model"] == "claude-sonnet-5",
+            str(claude_by_id["claude-json-exact-match"]["actual_model"]),
+        )
+        check(
+            "claude json dated-suffix (real CLI decoration) still recognized as a match -> passed",
+            claude_by_id["claude-json-dated-suffix-match"]["status"] == "passed",
+            claude_by_id["claude-json-dated-suffix-match"]["status"],
+        )
+        check(
+            "claude json dated-suffix: raw actual_model keeps the date, not silently rewritten",
+            claude_by_id["claude-json-dated-suffix-match"]["actual_model"] == "claude-haiku-4-5-20251001",
+            str(claude_by_id["claude-json-dated-suffix-match"]["actual_model"]),
+        )
+        check(
+            "claude json real mismatch -> fallback_or_downgrade",
+            claude_by_id["claude-json-mismatch"]["status"] == "fallback_or_downgrade",
+            claude_by_id["claude-json-mismatch"]["status"],
+        )
+        check(
+            "claude json unparseable stdout -> falls back to actual_model_unverified, not a fabricated pass",
+            claude_by_id["claude-json-unparseable-stdout"]["status"] == "actual_model_unverified",
+            claude_by_id["claude-json-unparseable-stdout"]["status"],
+        )
+        check(
+            "claude plain text mode -> still actual_model_unverified (unchanged Phase 1 fallback)",
+            claude_by_id["claude-text-mode-still-unverified"]["status"] == "actual_model_unverified",
+            claude_by_id["claude-text-mode-still-unverified"]["status"],
+        )
+
         # --- Non-codex/non-claude executor gets an honest "not implemented" note, not a fabricated pass.
         check(
             "unsupported-detection: unrelated executor still reaches a status",
@@ -687,7 +925,56 @@ def run_selftest() -> int:
         "detect_actual_model: codex model line",
         detect_actual_model("codex", "model: gpt-5.6-terra\nok") == "gpt-5.6-terra",
     )
-    check("detect_actual_model: claude never echoes (Phase 1)", detect_actual_model("claude", "model: x") is None)
+    check(
+        "detect_actual_model: claude text-mode (no cmd) stays unverified",
+        detect_actual_model("claude", "model: x") is None,
+    )
+    check(
+        "detect_actual_model: claude cmd without --output-format json stays unverified even if stdout looks like JSON",
+        detect_actual_model(
+            "claude", '{"modelUsage":{"claude-sonnet-5":{}}}', cmd="claude --print -p hi"
+        )
+        is None,
+    )
+    check(
+        "detect_actual_model: claude json-mode cmd extracts the modelUsage key",
+        detect_actual_model(
+            "claude",
+            '{"modelUsage":{"claude-sonnet-5":{"outputTokens":1}}}',
+            cmd="claude --print --output-format json -p hi",
+        )
+        == "claude-sonnet-5",
+    )
+    check(
+        "detect_actual_model: claude json-mode with --output-format=json (equals form) also matches",
+        detect_actual_model(
+            "claude",
+            '{"modelUsage":{"claude-sonnet-5":{"outputTokens":1}}}',
+            cmd="claude --print --output-format=json -p hi",
+        )
+        == "claude-sonnet-5",
+    )
+    check(
+        "_normalize_claude_model_id: strips a real-world bracket suffix",
+        _normalize_claude_model_id("claude-opus-4-8[1m]") == "claude-opus-4-8",
+    )
+    check(
+        "_normalize_claude_model_id: strips a real-world dated suffix",
+        _normalize_claude_model_id("claude-haiku-4-5-20251001") == "claude-haiku-4-5",
+    )
+    check(
+        "_claude_model_matches: exact string match without needing normalization",
+        _claude_model_matches("claude-sonnet-5", "claude-sonnet-5"),
+    )
+    check(
+        "_claude_model_matches: real-world decorations do not cause a false mismatch",
+        _claude_model_matches("claude-opus-4-8", "claude-opus-4-8[1m]")
+        and _claude_model_matches("claude-haiku-4-5", "claude-haiku-4-5-20251001"),
+    )
+    check(
+        "_claude_model_matches: a genuinely different model is still flagged as a mismatch",
+        not _claude_model_matches("claude-sonnet-5", "claude-opus-4-8"),
+    )
 
     print("=== run_matrix.py selftest ===")
     all_passed = True
