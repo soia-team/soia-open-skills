@@ -170,6 +170,20 @@ flowchart LR
   E --> F["safe default / ask user"]
 ```
 
+### Script disk-write destinations
+
+Before a skill script writes any file to disk, classify it first — never default to a hardcoded cwd-relative path.
+
+| Category | Nature | Destination |
+|---|---|---|
+| A. Disposable run output | Run reports / temporary intermediates, useful only right after this run | `${TMPDIR:-/tmp}/<skill-name>/`; consider `LOG_KEEP`-style rotation |
+| B. Audit trail | Recorded deletions, publishes, syncs, or other system-state changes that must stay traceable | `${XDG_STATE_HOME:-~/.local/state}/<skill-name>/`, with rotation and an override hook |
+| C. User deliverable | Translations, images, generated documents the user asked for | A user-specified path, or the product's documented convention |
+| D. The product feature is the log | e.g. a session log that belongs in the vault | Whatever the product design says |
+| E. Pure stdout | Nothing here is worth keeping past this run | Do not write to disk |
+
+Test: does this file still have value after this run ends, and does it record a state change that cannot be replayed? A "yes" to either pushes it to at least category B. Resolve the destination from `$TMPDIR`, `$XDG_STATE_HOME`, an explicit CLI/config path, or the product's own design — not from `Path.cwd()` or a bare relative path.
+
 ### 5. Separate public examples from private examples
 
 Public examples must be reusable and anonymized. If a maintainer validates with their own vault, do not copy those concrete paths or filenames into docs.

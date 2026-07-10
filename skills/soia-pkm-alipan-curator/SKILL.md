@@ -96,6 +96,9 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 
 ### organize — 整理
 执行规范（每步终态验证，安全守则见 soia-pkm-alipan）：
+
+**硬约定（先记录后动手）**：AI 生成并将执行的移动/删除清单——即本 skill `scripts/gen_catalog.py` 的 `--moves` / `--deletes` / `--roots` 输入文件——标准落盘位置为 `${XDG_STATE_HOME:-~/.local/state}/soia-pkm-alipan-curator/moves/<YYYY-MM-DD>-<批次名>.jsonl`。执行云盘 `mv`/`rmdir` 前必须先把该清单落盘到此路径，不允许先动手再补记录；事后可凭这份清单追溯"哪天动了什么"。
+
 - **去营销尾巴**：目录名里的「公众号：XXX」「【xx.xGB】」「持续更新」等广告字样批量 rename 掉
 - **去套娃**：目录内只有一个子目录 → 内容上提一层、删壳
 - **删广告**：「↑↑订阅↑↑」目录、`800T资源.txt`、`福利码.txt` 之类直接 rm

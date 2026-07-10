@@ -38,7 +38,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from soia_env import env_source_hint, load_private_env
+from soia_env import env_source_hint, load_private_env, write_failure_log
 
 ARCHIVE_SCRIPT = Path(__file__).parent / "archive_x.py"
 
@@ -298,10 +298,7 @@ def main():
     print(f"  ❌ Failed: {fail}", file=sys.stderr)
 
     if failures:
-        fail_log = Path.cwd() / "telegram_sync_failures.json"
-        fail_log.write_text(
-            json.dumps(failures, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        fail_log = write_failure_log(failures)
         print(f"\nFailure log: {fail_log}", file=sys.stderr)
 
 

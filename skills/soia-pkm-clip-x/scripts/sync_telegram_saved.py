@@ -48,7 +48,7 @@ import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-from soia_env import env_source_hint, load_private_env
+from soia_env import env_source_hint, load_private_env, write_failure_log
 
 try:
     from telethon import TelegramClient
@@ -281,6 +281,7 @@ def main():
 
     print(f"🚀 Archiving {len(to_archive)}...", file=sys.stderr)
     ok, skip, fail = 0, 0, 0
+    failures = []
     for i, u in enumerate(to_archive, 1):
         print(f"[{i}/{len(to_archive)}] {u['url']}", file=sys.stderr)
         status, msg = call_archive(u["url"], vault, articles_dir=args.articles_dir, force=args.force)
@@ -293,8 +294,17 @@ def main():
         else:
             print(f"  ❌ {msg}", file=sys.stderr)
             fail += 1
+            failures.append({
+                "url": u["url"],
+                "date": u["msg_date"].strftime("%Y-%m-%d %H:%M"),
+                "error": msg[:200],
+            })
 
     print(f"\n=== Done ===\n  ✓ New: {ok}\n  ⏭️ Skipped: {skip}\n  ❌ Failed: {fail}", file=sys.stderr)
+
+    if failures:
+        fail_log = write_failure_log(failures)
+        print(f"\nFailure log: {fail_log}", file=sys.stderr)
 
 
 if __name__ == "__main__":
