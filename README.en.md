@@ -21,7 +21,7 @@ npx skills add soia-team/soia-open-skills
 
 Agent-agnostic — works with Claude Code, Cursor, Codex, Gemini, Kimi, and any [skills.sh](https://skills.sh)-compatible agent.
 
-[The loop](#pkm-loop-the-life-of-a-piece-of-content) · [Skills catalog](#skills-catalog-20) · [Frequently used skills](#frequently-used-skills) · [Installation](#installation) · [Telegram sync](#telegram-saved-messages-sync-clip-x) · [Design philosophy](#design-philosophy)
+[The loop](#pkm-loop-the-life-of-a-piece-of-content) · [Skills catalog](#skills-catalog) · [Frequently used skills](#frequently-used-skills) · [Installation](#installation) · [Telegram sync](#telegram-saved-messages-sync-clip-x) · [Design philosophy](#design-philosophy)
 
 </div>
 
@@ -59,7 +59,7 @@ Agent-agnostic — works with Claude Code, Cursor, Codex, Gemini, Kimi, and any 
 
 ---
 
-## Skills catalog (20)
+## Skills catalog
 
 > **Shared capabilities (common to every skill)**
 > - 🤖 **Supported AI**: agent-agnostic — Claude Code, Codex, Cursor, Gemini, Kimi, amp, Warp, Zed, and any AI compatible with the [skills.sh](https://skills.sh) standard. Write `SKILL.md` once, run it anywhere.
@@ -95,8 +95,11 @@ Core value: the real value-conversion stage of the loop — turning someone else
 
 | Skill | What it does | Ready now? | Dependencies |
 |-------|------|----------|------|
+| [`soia-pkm-translate`](./skills/soia-pkm-translate/) | **Foreign-language article → Chinese version**: quick (literal) / normal (analyze style, terminology, and audience first, default) / refined (adds proofreading + polish); long articles are mechanically chunked to keep terminology consistent; output is an independent `-中文版.md`, never overwrites the original | ✅ Usable (all three modes + chunking script complete) | Python 3 (hard dependency, runs the chunking script); PyYAML optional enhancement |
+| [`soia-pkm-interpret`](./skills/soia-pkm-interpret/) | **Saved content → AI reading**: a five-part structure (overview / key points / insights / critique / further reading) that helps you decide whether an article is worth distilling before you invest in `distill`; produces an independent `-AI解读.md`, never touches the original's "My Take" | ✅ Usable (pure LLM reading, no scripts needed) | No hard dependency (the `clip-*` family is a common upstream source) |
 | [`soia-pkm-distill`](./skills/soia-pkm-distill/) | **Saved content → opinion**: read the source → ask one question at a time → you answer → "my take" (the content is yours, AI only writes it down) | ✅ Fully usable (battle-tested) | Articles already in the vault (produced by `clip-*`) |
 | [`soia-pkm-compose`](./skills/soia-pkm-compose/) | **Opinion → article draft** (your opinion as the skeleton, excerpts as supporting material) | ✅ Usable (pure LLM, no scripts needed) | An opinion produced by `distill` |
+| [`soia-pkm-cover-image`](./skills/soia-pkm-cover-image/) | Generates a cover image for WeChat/X/RedNote articles (five parameters: type/palette/rendering/text/mood); output feeds directly into `publish --cover` | ✅ Usable (backend is codex CLI's built-in image generation; stops and prompts if not installed/logged in — never degrades silently) | codex CLI (`codex exec`, must be logged in) |
 | [`soia-pkm-publish`](./skills/soia-pkm-publish/) | **One draft → multiple platforms**: WeChat formatting + push to drafts / X thread / RedNote (Xiaohongshu) | 🟡 The `render.py` renderer is usable; WeChat push needs a private `config.yml` with credentials | A draft from `compose` + WeChat Official Account API |
 
 ### 🔁 Transform · article → artifacts
@@ -122,6 +125,9 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify diagram workflow: architecture / data-flow / workflow / sequence / lifecycle diagrams, maintaining a JSON IR and exporting README/docs PNGs | ✅ Usable (scripts complete; requires a local Archify install) | `ARCHIFY_BIN` or `ARCHIFY_ROOT`, with optional Playwright/Chrome for PNG export |
 | [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub operations workflow: issues / PRs / checks / reviews / run logs / releases, defaulting to structured `gh` queries with safety confirmation gates | ✅ Usable (no scripts; command templates already shared) | `gh` CLI logged in; target repo from `--repo` / the current git remote / `$GITHUB_REPOSITORY` |
 | [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | Bulk inventory and upgrade of AI/dev CLIs: Codex / Claude / Gemini / Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ Usable (scripts complete; supports dry-run and logging) | Node/npm; some tools need Homebrew or their own updater |
+| [`soia-dev-prompt-clarity`](./skills/soia-dev-prompt-clarity/) | General-purpose prompt-writing skill: draft from scratch with seven elements / diagnose & optimize on six dimensions / rewrite to avoid false-positive safety refusals — three modes; asks clarifying questions first when information is insufficient | ✅ Usable (pure methodology output, no scripts, no hard third-party dependency) | None |
+| [`soia-dev-agent-md-advisor`](./skills/soia-dev-agent-md-advisor/) | Design advisor for AGENTS.md / CLAUDE.md / `.claude` configuration: review & diagnose / draft for a new project / best-practice Q&A — three modes, with a six-dimension health check (length budget / actionability / section routing / duplication & contradiction / entry-point consistency / staleness) | ✅ Usable (pure methodology diagnosis, no scripts, no hard dependency) | None |
+| [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | Controlled dispatch of tasks to external coding CLIs (codex/gemini/kimi/opencode/qwen, etc.): task-boundary splitting, injection-resistant prompt patterns, a model-tiering matrix, and three-step Anti-Fake-Fix verification | ✅ Usable (command templates + tiering matrix complete) | The target coding CLI (codex/gemini/kimi/opencode/qwen, etc., as needed), installed and logged in |
 
 ---
 
@@ -309,9 +315,14 @@ soia-open-skills/
     ├── soia-pkm-reading-plan/ ├── soia-pkm-library/
     ├── soia-pkm-maintain/     ├── soia-pkm-alipan/
     ├── soia-pkm-alipan-curator/
+    ├── soia-pkm-translate/    ├── soia-pkm-interpret/
+    ├── soia-pkm-cover-image/
     ├── soia-dev-archify-diagrams/
     ├── soia-dev-github-ops/
-    └── soia-dev-ai-cli-upgrade/
+    ├── soia-dev-ai-cli-upgrade/
+    ├── soia-dev-prompt-clarity/
+    ├── soia-dev-agent-md-advisor/
+    └── soia-dev-agent-cli-dispatch/
 ```
 
 Every skill lives in its own folder with an independent `SKILL.md` (frontmatter holding just `name` + `description`) and its own `scripts/`.

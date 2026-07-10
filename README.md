@@ -21,7 +21,7 @@ npx skills add soia-team/soia-open-skills
 
 跨 agent 通用——Claude Code、Cursor、Codex、Gemini、Kimi 都能装。
 
-[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单20) · [高频技能速览](#高频技能速览) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
+[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单) · [高频技能速览](#高频技能速览) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
 
 </div>
 
@@ -59,7 +59,7 @@ npx skills add soia-team/soia-open-skills
 
 ---
 
-## Skills 清单（20）
+## Skills 清单
 
 > **通用能力（所有 skill 共享）**
 > - 🤖 **支持的 AI**：跨 agent 通用——Claude Code、Codex、Cursor、Gemini、Kimi、amp、Warp、Zed 等所有兼容 [skills.sh](https://skills.sh) 标准的 AI。一次写 `SKILL.md`，处处可用。
@@ -95,8 +95,11 @@ npx skills add soia-team/soia-open-skills
 
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
+| [`soia-pkm-translate`](./skills/soia-pkm-translate/) | **外文文章 → 中文版**：quick 直译 / normal 先分析文体术语受众再译（默认）/ refined 加审校+润色；长文机械分块保术语一致；产出独立 `-中文版.md`，绝不覆盖原文 | ✅ 可用（三模式 + 分块脚本齐全）| Python 3（强依赖，跑分块脚本）；PyYAML 可选增强 |
+| [`soia-pkm-interpret`](./skills/soia-pkm-interpret/) | **收藏 → AI 解读**：内容总览/核心要点/关键启发/批判视角/延伸阅读五段式，帮你在 `distill` 深挖前先判断值不值得读；产出独立 `-AI解读.md`，不碰原文「我的看法」| ✅ 可用（纯 LLM 解读，无需脚本）| 无强依赖（`clip-*` 系列为常见上游）|
 | [`soia-pkm-distill`](./skills/soia-pkm-distill/) | **收藏 → 观点**：读原文 → 一次一问 → 你答 → 「我的看法」（内容是你的，AI 只落字）| ✅ 完全可用（已实战）| vault 里有文章（`clip-*` 产出）|
 | [`soia-pkm-compose`](./skills/soia-pkm-compose/) | **观点 → 文章草稿**（你的观点为骨、摘抄为料）| ✅ 可用（纯 LLM，无需脚本）| `distill` 产出的观点 |
+| [`soia-pkm-cover-image`](./skills/soia-pkm-cover-image/) | 为公众号/X/小红书文章生成封面图（五维参数：type/palette/rendering/text/mood），产出接 `publish --cover` | ✅ 可用（后端为 codex CLI 内置生图；未装/未登录会停止并提示，绝不降级）| codex CLI（`codex exec`，需登录）|
 | [`soia-pkm-publish`](./skills/soia-pkm-publish/) | **一稿 → 多平台**：公众号排版+推草稿箱 / X thread / 小红书 | 🟡 渲染 `render.py` 可用；微信推送需配私有 `config.yml` 凭据 | `compose` 的草稿 + 微信公众号 API |
 
 ### 🔁 转化 · 文章 → 产物
@@ -122,6 +125,9 @@ npx skills add soia-team/soia-open-skills
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify 图表工作流：架构图 / 数据流 / 工作流 / 时序 / 生命周期图，维护 JSON IR 并导出 README/docs PNG | ✅ 可用（脚本齐全；需本机可用 Archify）| `ARCHIFY_BIN` 或 `ARCHIFY_ROOT`，可选 Playwright/Chrome 导出 PNG |
 | [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release，默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY` |
 | [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | AI/开发 CLI 批量盘点与升级：Codex / Claude / Gemini / Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ 可用（脚本齐全；支持 dry-run 和日志）| Node/npm；部分工具需要 Homebrew 或自身 updater |
+| [`soia-dev-prompt-clarity`](./skills/soia-dev-prompt-clarity/) | 通用提示词技能：从零七要素起草 / 六维诊断优化 / 防误伤改写三模式，信息不足先澄清再产出 | ✅ 可用（纯方法论输出，无脚本无第三方强依赖）| 无 |
+| [`soia-dev-agent-md-advisor`](./skills/soia-dev-agent-md-advisor/) | AGENTS.md / CLAUDE.md / `.claude` 配置设计顾问：审查诊断 / 新项目起草 / 最佳实践问答三模式，六维度体检（长度预算/可执行性/分区路由/重复矛盾/入口一致性/时效）| ✅ 可用（纯方法论诊断，无脚本无强依赖）| 无 |
+| [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | 受控派发任务给外部编码 CLI（codex/gemini/kimi/opencode/qwen 等）：任务边界拆分、防注入 prompt 写法、模型分级矩阵、Anti-Fake-Fix 三步验证 | ✅ 可用（命令模板 + 分级矩阵齐全）| 目标编码 CLI（按需 codex/gemini/kimi/opencode/qwen 等）已安装登录 |
 
 ---
 
@@ -309,9 +315,14 @@ soia-open-skills/
     ├── soia-pkm-reading-plan/ ├── soia-pkm-library/
     ├── soia-pkm-maintain/     ├── soia-pkm-alipan/
     ├── soia-pkm-alipan-curator/
+    ├── soia-pkm-translate/    ├── soia-pkm-interpret/
+    ├── soia-pkm-cover-image/
     ├── soia-dev-archify-diagrams/
     ├── soia-dev-github-ops/
-    └── soia-dev-ai-cli-upgrade/
+    ├── soia-dev-ai-cli-upgrade/
+    ├── soia-dev-prompt-clarity/
+    ├── soia-dev-agent-md-advisor/
+    └── soia-dev-agent-cli-dispatch/
 ```
 
 每个 skill 一个文件夹，独立 `SKILL.md`（frontmatter 含 `name` + `description`）+ 自己的 `scripts/`。
