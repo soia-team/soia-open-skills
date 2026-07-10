@@ -44,6 +44,17 @@ command with no orchestration, monitoring, or prompt-injection concerns.
 npx skills add soia-team/soia-open-skills -g -a '*' -s soia-dev-agent-cli-dispatch -y
 ```
 
+`npx skills` 会更新 `~/.agents/skills` 共享源，但不认识 SOIA 自定义目标，也可能保留 WorkBuddy 里指向旧 checkout 的链接。已安装私有 `soia-dev-sync-skills` 的 SOIA 环境应紧接着执行单项同步：
+
+```bash
+python3 ~/.agents/skills/soia-dev-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets soia,workbuddy \
+  --skills soia-dev-agent-cli-dispatch
+```
+
+最终验收应确认 `~/.soia/skills/soia-dev-agent-cli-dispatch` 与 `~/.workbuddy/skills/soia-dev-agent-cli-dispatch` 都是指向 `~/.agents/skills/soia-dev-agent-cli-dispatch` 的软链接；不要把本地源码 checkout 当成 npx 安装结果。
+
 配置约定：
 
 ```text
