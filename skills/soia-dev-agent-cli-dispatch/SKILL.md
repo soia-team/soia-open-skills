@@ -1,6 +1,6 @@
 ---
 name: soia-dev-agent-cli-dispatch
-description: 调用外部编码 CLI（codex/gemini/kimi/opencode/qwen 等，非 Claude Code 内置子代理）进行受控派发：任务边界拆分、独立 workdir、防注入 prompt 写法、模型分级矩阵、Worktree 审批门、Anti-Fake-Fix 三步验证。Triggers：「派活给 codex」「让 gemini 执行」「多 CLI 派发」「后台跑编码任务」等
+description: 调度外部编码 CLI（codex/claude/gemini/kimi/opencode/qwen，非宿主内置子代理）：显式指定执行器+模型+推理深度，或只给执行器家族按任务难度自动选型；调用后输出 Token/费用汇总、降级检测、额度预检与断点恢复。Triggers：「派活给 codex」「让 gemini 执行」「多 CLI 派发」等
 ---
 
 # soia-dev-agent-cli-dispatch
@@ -19,7 +19,7 @@ command with no orchestration, monitoring, or prompt-injection concerns.
 
 ### 这个技能可以做什么
 
-调用外部编码 CLI（codex/gemini/kimi/opencode/qwen 等，非 Claude Code 内置子代理）进行受控派发：任务边界拆分、独立 workdir、防注入 prompt 写法、模型分级矩阵、Worktree 审批门、Anti-Fake-Fix 三步验证。各执行器详细命令模板在 `references/` 子目录下按需加载。
+调度外部编码 CLI（codex/claude/gemini/kimi/opencode/qwen，非宿主内置子代理，`qodercli` 也有命令模板但未纳入下方精简清单）进行受控派发：任务边界拆分、独立 workdir、防注入 prompt 写法、模型分级矩阵、Worktree 审批门、Anti-Fake-Fix 三步验证。在此之上，可显式指定执行器 + 模型 + 推理深度，或只给执行器家族由任务难度自动选型（见「自动路由」）；每次调用后输出 Token/费用汇总（见「调用总结回执」）、模型降级检测（见「Model Integrity Gate」）、额度预检（见「额度预检」）与断点续跑（见「可恢复执行」）。各执行器详细命令模板在 `references/` 子目录下按需加载。
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
@@ -214,8 +214,47 @@ SOIA_DEV_AGENT_CLI_DISPATCH_CONFIG_FILE=<custom-config-path>
 
 **排除**：`Ollama` 不是编码代理执行器，属于本地模型运行时 / OpenAI-compatible provider，应放在你自己的 provider/runtime 层，不属于本技能的派发范围。
 
+## 自动路由 / Auto-routing
+
+覆盖「客户或上游编排层只给了执行器家族，没给具体模型/推理深度」的场景。**显式指定始终绝对优先**——本节只在没有显式指定模型/推理深度时才生效；只要给了具体模型或推理深度，跳过本节，直接使用给定值。
+
+### 判据（十项，用于把任务落到 easy / medium / hard）
+
+| # | 判据 | easy 倾向 | hard 倾向 |
+|---|------|-----------|-----------|
+| 1 | 改动文件数 | 1-2 个 | 跨模块多文件 |
+| 2 | 是否涉及并发 / 一致性 / 安全边界 | 否 | 是 |
+| 3 | 是否需要新增架构决策 | 否，照抄既有模式 | 是，需要设计取舍 |
+| 4 | 失败代价 | 可回退、易重试 | 不可逆或对外可见 |
+| 5 | 上下文窗口需求 | 单文件 / 局部 | 跨仓库 / 长历史 |
+| 6 | 是否需要多轮工具调用相互验证 | 一次编辑即可 | 需要反复读结果再改 |
+| 7 | 是否涉及安全 / 权限 / 凭据代码 | 否 | 是 |
+| 8 | 任务描述是否已给出精确 before/after | 是 | 否，需要探索式推理 |
+| 9 | 是评审 / 证据核验类还是编写类 | 简单核对 | 复杂 diff review 倾向 hard |
+| 10 | 预算 / 时间敏感度 | 需要快出结果 | 可以换更长运行时间 |
+
+十项不要求全部满足；按整体倾向把任务落到三档之一。落到 easy/medium 但执行结果不达标时，按「⚡ Anti-Fake-Fix Gate」的处置规则升级重试，不要在同一档位反复重试期待不同结果。
+
+### 推荐组合（占位，全部 `pending_benchmark`）
+
+下表按执行器家族给出候选模型/推理深度组合。**这些具体组合尚未经过真实执行矩阵验证**，全部标记 `pending_benchmark`：只是当前占位候选，不构成已验证的推荐依据。真实依据将来自 `scripts/run_matrix.py` 跑出的结果（P3），回填到 `references/model-catalog.yml` 每个模型的 `routing_profile` 字段（P4）后，本表才能升级为已验证推荐。
+
+| 执行器家族 | easy 候选 | medium 候选 | hard 候选 | 状态 |
+|---|---|---|---|---|
+| codex | gpt-5.6-luna | gpt-5.6-terra | gpt-5.6-sol（reasoning=high/xhigh） | `pending_benchmark` |
+| claude | claude-haiku-4-5 | claude-sonnet-5 | claude-opus-4-8 | `pending_benchmark` |
+| gemini | gemini-2.5-flash-lite | gemini-2.5-flash | gemini-2.5-pro / gemini-3.1-pro-preview | `pending_benchmark` |
+| kimi | kimi-k2.6（默认档） | kimi-k2.6 --thinking | kimi-k2.6 --thinking（更长上下文/更多轮次） | `pending_benchmark` |
+| opencode / qwen | 默认模型 | qwen-max 或等效中阶模型 | 项目已配置的最强可用模型 | `pending_benchmark` |
+
+### 与 model-catalog.yml 的关系
+
+`references/model-catalog.yml` 每个模型条目预留了 `routing_profile`（当前一律为 `null`）、`discovered_at`、`discovery_evidence` 三个字段。真实执行矩阵跑完后（P3/P4）才会回填 `routing_profile`；回填之前，本节表格是唯一路由参考，且明确标注为占位。**不得把 `pending_benchmark` 的组合包装成"已验证推荐"讲给客户听**；如实说明这是候选，不是结论。
+
 ## codex 5.6 系实测分级（2026-07-10，同题对照 8 跑）
 
+> **本节地位**：这是 Phase 1 之前留下的单任务单日期对照实验，样本有限，**待「自动路由」表格中的 `pending_benchmark` 被 `scripts/run_matrix.py` 全矩阵覆盖结果替换后，本节应视为历史参考并相应更新**，不要与上面「推荐组合」表混为一谈。
+>
 > 以下是 codex 5.6 系模型（`sol` / `terra` / `luna`）与 `gpt-5.5` 的一次同题对照实测（同一任务、同一天、8 次跑），用于补充上面「派发矩阵」里 codex 一栏的模型/档位选择经验。**这是单任务单日期的对照结论，样本有限**，不是长期基准——实际派发前仍以各自 `--version` 与当次真实表现为准，不要机械套用下表。
 
 | 模型 | 定位 | 关键实测数据 | 推荐场景 |
@@ -284,6 +323,144 @@ codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \
 - 启动方式（foreground / background）
 - 当前状态（RUNNING / BLOCKED / DONE）
 - 下一次检查点
+
+## 统一调用契约 / Unified invocation contract
+
+本节定义每一次外部 CLI 调度的输入/输出字段，供你自己的编排层和 `scripts/` 下的脚本共用。术语先对齐：
+
+| 术语 | 含义 |
+|---|---|
+| `host_ai` | 调用本技能的宿主（任意兼容 Agent；可以是 Claude Code，也可以不是——本技能不绑定单一宿主） |
+| `executor_cli` | 被调度的外部 CLI 进程：`codex` / `claude` / `gemini` / `kimi` / `opencode` / `qwen`（`qodercli` 有独立命令模板，见 `references/qodercli.md`，但 `model-catalog.yml` 未把它作为一个 provider 分组） |
+| `requested_model` | 本次调用要求使用的模型标识（可以是别名，见 `scripts/catalog_lib.py::find_model` 的宽松匹配规则） |
+| `actual_model` | 执行器实际使用的模型标识；只有执行器自己在输出里回显时才能拿到，拿不到就是 `null`，不得编造 |
+| `reasoning_or_effort` | 推理深度/强度参数（不同执行器命名不同：`model_reasoning_effort`、`--thinking`、`thinking=high` 等） |
+| `billing_mode` | `api`（按 token 计费）\| `subscription`（订阅额度）\| `unknown`。决定 `scripts/estimate_cost.py` 的输出是否等于真实扣费——订阅制下永远不等于 |
+
+**输入字段：**
+
+| 字段 | 必填 | 说明 |
+|---|---|---|
+| `case_id` | 是 | 本次调用在批次内的唯一标识 |
+| `provider` | 是 | `openai` / `anthropic` / `google` / `deepseek` / 其他 |
+| `executor` | 是 | 见上文 `executor_cli` |
+| `model` | 是 | `requested_model`；未显式指定时按「自动路由」选型后再填入 |
+| `reasoning` | 否 | 未指定时参考 `references/model-catalog.yml` 对应模型的 `default_reasoning_level`（可能为 `null`，即未知） |
+| `cmd_template` | 是 | 实际执行的 shell 命令（已按「Prompt 注入防护」写好 temp 文件引用） |
+| `timeout_seconds` | 否 | 默认 600 秒（见 `scripts/run_matrix.py --timeout-seconds`） |
+
+**输出字段：**
+
+| 字段 | 说明 |
+|---|---|
+| `status` | 见下方状态枚举 |
+| `exit_code` | 子进程退出码；超时未取到时为 `null` |
+| `tokens_used` | 整数，或字符串 `"unknown"`（解析不到时，不得编造数字） |
+| `actual_model` | 见上文；解析不到为 `null` |
+| `api_equivalent_cost` | 由 `scripts/estimate_cost.py` 计算的 API 等价费用估算，含 `confidence` |
+| `notes` | 字符串数组，记录本次调用的例外情况（降级、无法解析、计费 tier 回退等） |
+
+**状态枚举全集**（与 `scripts/run_matrix.py` 的 `ALL_STATUSES` 一致）：
+
+`pending` / `running` / `passed` / `failed` / `unsupported` / `blocked_auth` / `blocked_quota` / `blocked_paid_api` / `pending_quota` / `timeout` / `fallback_or_downgrade` / `actual_model_unverified` / `interrupted` / `not_tested`
+
+**unknown / unsupported 约定：**
+
+- 解析不到的字段一律写 `null`（JSON）或字符串 `"unknown"`，**禁止用 0、空字符串或猜测值填充**——那会被下游误读成"确实是 0"或"确实是这个值"。
+- `unsupported` 专指执行器明确表示"不支持该模型/参数"（stdout/stderr 命中 `not supported` / `invalid model` / `unknown model`），不要和"我们没测过"的 `not_tested` 混用。
+- 任何标记为 `unknown` / `unsupported` / `unavailable` 的字段，禁止在客户可见的总结文字里被复述成确定结论（不能说"token 用量为 0"，只能说"token 用量未知，原因是 xxx"）。
+
+## 额度预检 / Quota precheck
+
+对某个 executor 发起**第一次真实调用**之前（尤其是新会话、或距上次调用较久之后），先跑一次预检并向客户展示报告，字段固定：
+
+| 字段 | 说明 |
+|---|---|
+| `executor` | 目标执行器 |
+| `cli_installed` | `true` / `false`（`which <command>` 或等效检测） |
+| `cli_version` | 实际探测到的版本字符串，或 `"unavailable"` |
+| `auth_status` | `ok` / `expired` / `unknown`（跑一次最小只读命令观察，例如对应 CLI 的 `auth status` 或 `-p "ping"`） |
+| `last_known_quota_state` | 上一次派发记录里的额度状态；没有记录就是 `"unknown"` |
+| `recommendation` | `proceed` / `hold` / `skip`，附一句理由 |
+
+预检报告本身不消耗真实模型调用额度（只读版本探测 + 认证状态检查）。`recommendation` 为 `hold` 或 `skip` 时，不得继续派发，除非客户明确批准。
+
+`scripts/run_matrix.py` 在每次运行开始时会对本批次涉及的 executor 做只读版本探测（`<executor> --version`）并写入 manifest 的 `cli_versions` 字段；`--resume` 时会重新探测并在版本变化时打印警告。**当前脚本不做认证状态检查**——`auth_status` 仍需派发者在预检报告里人工核实或另行探测，脚本本身不会为了验证登录态而发起真实模型调用。
+
+## Model Integrity Gate
+
+保证"客户以为用的模型"和"实际用的模型"一致；出现偏差必须如实报告，不能包装成"任务成功"。
+
+1. **requested vs actual**：每次调用后比对 `requested_model` 与 `actual_model`。
+2. **降级判定**：
+   - `codex`：stdout 头部若有 `model: xxx` 行，与 `requested_model` 不一致时，状态标记为 `fallback_or_downgrade`（`scripts/run_matrix.py::detect_actual_model` 已实现，只扫描 stdout 前 2000 字符内的 `model:` 行）。
+   - `claude`：headless 输出目前**没有**可靠的模型回显机制；Phase 1 里任何成功的 claude 调用一律标记 `actual_model_unverified`，**不允许**因为"看起来跑成功了"就报告为 `passed`。这是已知限制，不是 bug——一旦 claude CLI 提供可核验的模型回显，再改判定逻辑，不要在此之前假装已覆盖。
+   - 其他执行器（gemini/kimi/opencode/qwen）：Phase 1 未实现模型回显检测，`notes` 会如实写明"model-echo verification is not implemented for this executor"，不假装已覆盖。
+3. **宿主模型变化**：`host_ai` 自身运行在哪个底层模型上，属于**仅可观测、不可控**的信息——本技能不能对宿主自己的模型完整性做强制门禁。如果宿主环境暴露了自身模型标识，记录下来即可；拿不到就写 `unknown`，不要推断。
+4. **能力限制声明**：任何一次 Model Integrity Gate 判定为 `actual_model_unverified` 或 `fallback_or_downgrade` 的调用，最终回执必须包含这次判定，不能只在内部日志里留痕、对客户只报"完成"。
+
+## 可恢复执行 / Resumable execution
+
+面向需要跑一批（多 case、多 executor、多模型）派发矩阵的场景，使用 `scripts/run_matrix.py`（严格串行，一次只跑一个 case，不并发）。
+
+**Manifest 位置**（遵循 `SKILL_SPEC.md`「脚本写盘决策规则」B 类——可追溯、记录状态变化的审计记录，不是一次性临时文件）：
+
+```text
+${XDG_STATE_HOME:-~/.local/state}/soia-dev-agent-cli-dispatch/runs/<run_id>/manifest.json
+```
+
+**首次运行：**
+
+```bash
+python3 scripts/run_matrix.py --cases cases.json --run-id <run_id> \
+  --manifest-dir "${XDG_STATE_HOME:-$HOME/.local/state}/soia-dev-agent-cli-dispatch/runs/<run_id>"
+```
+
+**断点续跑**（进程被杀、额度耗尽、或手动中断后）：
+
+```bash
+python3 scripts/run_matrix.py --cases cases.json --run-id <run_id> \
+  --manifest-dir "${XDG_STATE_HOME:-$HOME/.local/state}/soia-dev-agent-cli-dispatch/runs/<run_id>" \
+  --resume
+```
+
+manifest 里的 `resume_command` 字段会给出这条命令的现成版本，直接复制运行即可。
+
+行为约定：
+
+- 每个 case 跑完后立即原子写 manifest（临时文件 + `os.replace`），中途被杀不会破坏 manifest 文件本身。
+- 某个 provider 的某个 case 命中 `blocked_quota` 后，同一 provider 剩余的 case 立即标记 `pending_quota`（不再实际执行子进程），其他 provider 的 case 不受影响、按串行顺序继续跑。
+- `--resume` 时，已是终态（`passed` / `unsupported` / `blocked_paid_api` / `fallback_or_downgrade` / `actual_model_unverified`）的 case 直接跳过；残留 `running`（上次进程被杀留下的）会先标记 `interrupted`（证据保留在该 case 记录的 `previous_attempt` 字段里，不丢弃），再重新尝试一次。
+- `--resume` 时会重新探测本批次涉及执行器的 CLI 版本，和上次 manifest 里记录的版本不一致会打印警告（结果可能不可比较，但不会阻止运行）。
+
+## 调用总结回执 / Call summary receipt
+
+每次调用（无论成功、失败、超时、额度不足还是降级）结束后，必须输出以下最低回执格式：
+
+```text
+完成：<一句话说明本次调用做了什么>
+
+执行器与模型：
+- executor: <executor_cli>
+- requested_model: <requested_model>
+- actual_model: <actual_model，或 "unverified"，或 "unknown">
+- reasoning: <reasoning_or_effort，或 "unknown">
+
+Token 与费用：
+- tokens_used: <数字，或 "unknown">
+- api_equivalent_cost: <金额 币种，或 "unavailable">
+- confidence: <exact | estimated | unavailable>
+- 订阅制下实际扣费≠此估算（api_equivalent_estimate）
+
+状态：
+- status: <见「统一调用契约」状态枚举全集>
+- 降级/异常说明：<Model Integrity Gate 判定结果；没有异常写"无">
+
+问题与下一步：
+- <缺 key / 额度不足 / 需要客户确认 / resume_command；没有则写"无">
+```
+
+单次调用用这份回执；批量矩阵额外参考 manifest 的 `completed_cases` / `remaining_cases` / `stop_reason` 汇总整批状态。
 
 ## 危险目录 / Dangerous directories
 
@@ -371,6 +548,13 @@ git diff --stat HEAD~1..HEAD   # 或 git diff --stat（如未 commit）
 
 ---
 
+## 价格资料说明 / Pricing reference
+
+- `references/model-pricing-2026-07-10.md` 原样收录 2026-07-10 版模型价格调研原文（未改写数字），顶部注明来源与「正式预算以官方定价页为准」的声明。
+- `references/model-catalog.yml` 是从上述原文规范化提取的**运行时单一事实源**：`scripts/estimate_cost.py`、`scripts/run_matrix.py` 只读取这个 YAML 文件，不解析 Markdown。人工核对价格时，请以 Markdown 原文为准；脚本计算以 YAML 为准；两者数字不一致时先修 YAML 再核对来源，不要各自为政。
+- 更新价格时：先改 `model-pricing-2026-07-10.md`（或新增一份带日期的新快照文件），再同步改 `model-catalog.yml`，改完跑 `python3 scripts/catalog_lib.py --selftest` 确认结构仍然合法。
+- 「codex 5.6 系实测分级」一节（见上文）是**初步单日样本**，与本节的官方/半官方价格资料性质不同，不要混用：分级节是"哪个模型/档位在这次测试里表现更好"，本节是"这个模型每 1M token 官方标价多少"。分级节待全矩阵覆盖（P3 `scripts/run_matrix.py` 批量结果）后需要更新。
+
 ## References（按需加载）
 
 | 主题 | 文件 | 何时加载 |
@@ -382,5 +566,17 @@ git diff --stat HEAD~1..HEAD   # 或 git diff --stat（如未 commit）
 | qodercli 执行规范 | `references/qodercli.md` | 派发给 qodercli 时 |
 | OpenCode + Qwen 执行规范 | `references/opencode-qwen.md` | 派发给 opencode/qwen 时 |
 | 代码文件元数据头规范 | `references/metadata-header.md` | 任何代码写入前 |
+| 模型价格资料原文（2026-07-10 快照） | `references/model-pricing-2026-07-10.md` | 需要人工核对官方定价、或价格资料更新时 |
+| 模型价格/推理档运行时目录 | `references/model-catalog.yml` | `scripts/estimate_cost.py` / `scripts/run_matrix.py` 运行时读取；人工修改前后都跑一次 `scripts/catalog_lib.py --selftest` |
 
 **加载原则**：派发决策确定执行器后，只加载对应执行器的 reference，不要全部加载。
+
+## Scripts（按需调用）
+
+| 脚本 | 用途 | 自检命令 |
+|------|------|----------|
+| `scripts/catalog_lib.py` | 受限 YAML 子集解析器 + `model-catalog.yml` schema 校验（重复 model_id / 缺字段 / 负价拒绝，未知 reasoning level 标记为 WARN） | `python3 scripts/catalog_lib.py --selftest` |
+| `scripts/estimate_cost.py` | 给定 model + token 数，输出 API 等价费用估算（分项 + 总额 + `confidence`），未知模型给出近似候选并以 exit code 2 退出 | `python3 scripts/estimate_cost.py --selftest` |
+| `scripts/run_matrix.py` | 可恢复的串行派发矩阵执行器（P3 用；本文档阶段只用 mock 命令自检，不真实调用任何模型） | `python3 scripts/run_matrix.py --selftest` |
+
+三个脚本均为纯 Python 标准库实现，无第三方依赖。修改任意一个后，先跑对应 `--selftest`，再跑一遍其余两个确认没有连带破坏（`estimate_cost.py` 和 `run_matrix.py` 都从 `catalog_lib.py` 导入解析/校验逻辑）。

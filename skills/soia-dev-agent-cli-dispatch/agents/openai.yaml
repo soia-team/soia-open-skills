@@ -1,4 +1,4 @@
 interface:
   display_name: "Dev Agent CLI Dispatch"
-  short_description: "Dispatch coding/review/analysis sub-tasks to external coding CLIs (codex, gemini, kimi, opencode, qwen, claude) with controlled workdir, anti-injection prompts, model tiering, and Anti-Fake-Fix verification."
-  default_prompt: "Use soia-dev-agent-cli-dispatch: dispatch a coding/review/analysis sub-task to an external coding CLI (codex/gemini/kimi/opencode/qwen/claude) with controlled workdir, background monitoring, and Anti-Fake-Fix verification."
+  short_description: "Dispatch coding/review/analysis sub-tasks to external coding CLIs (codex, claude, gemini, kimi, opencode, qwen) with explicit executor+model+reasoning control or automatic difficulty-based routing, controlled workdir, Anti-Fake-Fix verification, post-call token/cost summaries, model-downgrade detection, quota precheck, and resumable multi-case runs."
+  default_prompt: "Use soia-dev-agent-cli-dispatch: dispatch a coding/review/analysis sub-task to an external coding CLI (codex/claude/gemini/kimi/opencode/qwen), either with an explicit executor+model+reasoning level or letting it auto-route by task difficulty, with controlled workdir, background monitoring, Anti-Fake-Fix verification, and a token/cost summary receipt."
