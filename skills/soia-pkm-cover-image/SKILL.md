@@ -114,6 +114,7 @@ python3 scripts/publish.py --article <文章md> --cover <output-dir>/cover.png
 1. **当前消息指定** —— 客户在这一轮明确点名了要用的后端，直接使用。
 2. **探测 codex CLI** —— 检查 `codex` 是否在 `PATH` 上可执行，且已完成登录（用官方提供的只读登录状态检查，具体子命令以当前 codex CLI 版本文档为准）。满足则委托它生成：以 `codex exec` 的形式调用，把落盘好的 prompt 文件内容、目标比例、输出路径一并交给 codex，由 codex 内部的 image_gen 能力完成实际生图，本技能只负责组织 prompt、传参和校验产物是否落地。
    - **落地路径注意**：codex exec 生成的图片默认落在 `~/.codex/generated_images/<session-id>/` 缓存目录下，**不会**自动出现在本技能约定的 `<output-dir>/cover.png`。调用后必须去该缓存目录定位刚生成的文件，再复制/移动到约定输出路径，然后才校验落地；不要只检查目标路径一次就判定"生成失败"。
+   - **模型版本注意（实测教训 2026-07-10）**：codex 在 PATH 且已登录 ≠ 能生图。账户/桌面端配置的默认模型可能比当前 CLI 版本更新（实测：默认 `gpt-5.6-sol` 在 CLI 0.142.5 上直接报 400 "requires a newer version of Codex"）。遇到"模型不支持"类报错，读 `~/.codex/models_cache.json` 找 `supported_in_api=true` 的模型，显式加 `-m <受支持模型>`（如 `-m gpt-5.5`）重试；**不要把这种失败误判为"后端不可用"而走停止分支**。
 3. **都不满足** —— 明确告知客户"codex CLI 不可用（未安装/未登录/探测失败，具体到哪一种）"，并询问客户要不要现在安装登录、换一台已装好的机器、或者暂缓生成。**绝不静默降级**成任何未声明的其它方式。
 
 ## ⛔ 两条红线（必须遵守）
