@@ -48,7 +48,7 @@ SOIA_DEV_AI_CLI_UPGRADE_CONFIG_FILE=<custom-config-path>
 
 - 如果本技能不需要私有配置，可以不创建 `config.yml`。
 - 如果需要 API key、cookie、session、provider home 或本机路径，只能放进私有 `config.yml`、进程环境或 provider 自己的登录态里，不能写进仓库、vault 正文或日志。
-- **日志位置与保留**：升级审计日志落 `${XDG_STATE_HOME:-~/.local/state}/soia-dev-ai-cli-upgrade/logs/`（XDG 状态目录——日志属于规范定义的 state 数据，用于事后追溯"哪天升了什么版本"，故不放 /tmp 这类会被系统清掉的临时目录）。脚本每次运行自动只保留最近 `LOG_KEEP`（默认 10）份，不会无限堆积；`LOG_DIR` 可整体改道。
+- **日志位置与保留**：升级日志定位为**用完即弃**——当次报告看完即无价值，默认落系统临时区 `${TMPDIR:-/tmp}/soia-dev-ai-cli-upgrade/logs/`（macOS 的 $TMPDIR 约 3 天自动清、/tmp 重启清），同日多次运行由 `LOG_KEEP`（默认 10）轮转防堆积。若确需留审计追溯（例如排查"哪天升了什么版本导致行为变化"），设 `LOG_DIR` 改道到持久位置（如 `~/.local/state/...`）。
 - 强依赖、可选依赖和第三方 skill 关系必须以本 `SKILL.md` 后续的“依赖 / 前置 / 资源 / 边界”说明为准；没有写清楚时，先补说明或询问客户，不要猜。
 - 第三方 skill 只能声明依赖和安装方式，不直接修改第三方 skill 文件。
 

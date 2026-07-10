@@ -43,8 +43,9 @@ PY
 )"
 fi
 
-state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
-log_dir="${LOG_DIR:-$state_home/soia-dev-ai-cli-upgrade/logs}"
+# logs are throwaway: default to the OS temp area (macOS $TMPDIR auto-purges
+# after ~3 days idle; /tmp clears on reboot). Set LOG_DIR to keep an audit trail.
+log_dir="${LOG_DIR:-${TMPDIR:-/tmp}/soia-dev-ai-cli-upgrade/logs}"
 mkdir -p "$log_dir"
 # retention: keep newest LOG_KEEP (default 10) upgrade logs, prune older ones
 log_keep="${LOG_KEEP:-10}"
