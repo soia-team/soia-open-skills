@@ -237,13 +237,13 @@ SOIA_DEV_AGENT_CLI_DISPATCH_CONFIG_FILE=<custom-config-path>
 
 ### 推荐组合（P4 实证路由，2026-07-10 smoke matrix；部分家族仍是占位）
 
-下表按执行器家族给出模型/推理深度组合。**codex 与 claude 两行已经过真实执行矩阵验证**（2026-07-10，codex 侧 35 case + claude 侧 15 case），标记为「实证」；**gemini / kimi / opencode / qwen 三行尚未测试**，继续如实标记 `pending_benchmark`，不得包装成已验证推荐。完整逐 case 证据、原始数字和已知缺口见 `references/benchmark-2026-07-10.md`。
+下表按执行器家族给出模型/推理深度组合。**codex 与 claude 两行已经过真实执行矩阵验证**（2026-07-10，codex 侧 35 case + claude 侧 15 case），标记为「实证」；**gemini 侧本轮尝试实测遇 blocked_auth(无凭据);kimi / opencode / qwen 尚未测试**，继续如实标记 `pending_benchmark`，不得包装成已验证推荐。完整逐 case 证据、原始数字和已知缺口见 `references/benchmark-2026-07-10.md`。
 
 | 执行器家族 | easy 候选 | medium 候选 | hard 候选 | 状态 |
 |---|---|---|---|---|
 | codex | `gpt-5.6-luna` @ low | `gpt-5.6-terra` @ medium（token 最省，实证） | `gpt-5.6-sol` @ high，穷尽才升到 xhigh（实证 xhigh 仅 sol 有质变） | **实证** — 依据：2026-07-10 smoke matrix（`references/benchmark-2026-07-10.md` §1） |
 | claude | `claude-haiku-4-5`（比 opus 便宜约 18 倍，实证；未按 effort 拆分数据） | `claude-sonnet-5` @ medium | *(暂无实证推荐——见下方反模式警示)* | **实证**（hard 档除外）— 依据：2026-07-10 smoke matrix（`references/benchmark-2026-07-10.md` §2） |
-| gemini | gemini-2.5-flash-lite | gemini-2.5-flash | gemini-2.5-pro / gemini-3.1-pro-preview | `pending_benchmark`（未测） |
+| gemini | gemini-2.5-flash-lite | gemini-2.5-flash | gemini-2.5-pro / gemini-3.1-pro-preview | `blocked_auth`（2026-07-10 实测：CLI 已装但无 `GEMINI_API_KEY`/无 Google 登录态，`gemini -p` 报要求配置 auth；命令模板已就绪，配好凭据即可测） |
 | kimi | kimi-k2.6（默认档） | kimi-k2.6 --thinking | kimi-k2.6 --thinking（更长上下文/更多轮次） | `pending_benchmark`（未测） |
 | opencode / qwen | 默认模型 | qwen-max 或等效中阶模型 | 项目已配置的最强可用模型 | `pending_benchmark`（未测） |
 
