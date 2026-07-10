@@ -51,6 +51,7 @@ def estimate(
     cache_write_ttl: str = "5m",
     batch: bool = False,
     long_context: bool = False,
+    as_of_date: str | None = None,
 ) -> dict[str, Any]:
     """Programmatic API used by both the CLI below and run_matrix.py.
 
@@ -80,8 +81,15 @@ def estimate(
         }
 
     entry = resolution["model"]
-    pricing = entry.get("pricing") or {}
     notes: list[str] = []
+    pricing = dict(entry.get("pricing") or {})
+    pricing_date = as_of_date or str(data.get("updated_at") or "")
+    future_pricing = pricing.pop("future_pricing", None)
+    if isinstance(future_pricing, dict):
+        effective_from = str(future_pricing.get("effective_from") or "")
+        if effective_from and pricing_date >= effective_from:
+            pricing.update({k: v for k, v in future_pricing.items() if k != "effective_from"})
+            notes.append(f"selected date-effective pricing period beginning {effective_from}")
     confidence = "exact" if resolution["match"] == "exact" else "estimated"
     if resolution["match"] == "loose":
         notes.append(f"matched via loose/normalized alias resolution, not an exact model_id/alias hit")
@@ -170,6 +178,8 @@ def estimate(
         "matched_alias": model if model != entry.get("model_id") else None,
         "currency": currency,
         "pricing_version": pricing_version,
+        "pricing_source": pricing.get("source_id"),
+        "pricing_effective_date": pricing.get("effective_date"),
         "confidence": confidence,
         "tier_used": tier_used,
         "breakdown": {
@@ -236,7 +246,7 @@ def run_selftest() -> int:
 
     # 2. Same alias resolved after promo window via the distinct catalog row:
     #    standard price 1M in + 1M out = $3 + $15 = $18.
-    r_future = estimate(data, "claude-sonnet-5-2026-09-01", 1_000_000, 1_000_000)
+    r_future = estimate(data, "claude-sonnet-5", 1_000_000, 1_000_000, as_of_date="2026-09-01")
     check(
         "sonnet-5 standard (post 2026-09-01): 1M in + 1M out == $18.00",
         r_future["confidence"] == "exact" and abs(r_future["total_cost"] - 18.0) < 1e-9,
@@ -343,6 +353,7 @@ def main() -> int:
         help="Force the model's long-context pricing tier. Applied automatically when input_tokens meets the model's threshold_tokens even without this flag.",
     )
     parser.add_argument("--catalog", help="Override path to model-catalog.yml.")
+    parser.add_argument("--pricing-date", help="ISO date used to select date-effective pricing, e.g. 2026-09-01.")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--selftest", action="store_true")
     args = parser.parse_args()
@@ -371,6 +382,7 @@ def main() -> int:
         cache_write_ttl=args.cache_write_ttl,
         batch=args.batch,
         long_context=args.long_context,
+        as_of_date=args.pricing_date,
     )
 
     if args.json:

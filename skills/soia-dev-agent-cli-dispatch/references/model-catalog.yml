@@ -20,9 +20,9 @@
 # gemini-3-flash-preview, gemini-2.5-pro, gemini-2.5-flash, gemini-2.5-flash-lite.
 # 10 OpenAI + 10 distinct Anthropic + 7 Google + 2 DeepSeek = 29 distinct real
 # models, matching the source document's own "29 模型" header count exactly.
-# Anthropic contributes 11 catalog rows (not 10) because Claude Sonnet 5's
-# promotional/standard price split is modeled as two rows sharing one real
-# provider model -- see claude-sonnet-5 / claude-sonnet-5-2026-09-01 below.
+# Anthropic contributes 10 invocable model rows. Claude Sonnet 5's promotional
+# and standard prices are modeled as date-effective tiers inside the same row;
+# a price period must never masquerade as a second provider model_id.
 schema_version: 1
 updated_at: "2026-07-10"
 currency: USD
@@ -484,38 +484,24 @@ providers:
             input_per_1m: 1
             output_per_1m: 5
           reasoning_billing_rule: counted_as_output
-          billing_mode_notes: "Promotional price active through 2026-08-31. The SAME provider model resumes standard pricing on 2026-09-01 -- see catalog entry claude-sonnet-5-2026-09-01 for those rates (that entry is not a distinct invocable model, only a second pricing row for this one). Full 1M context billed at standard rate. inference_geo=us multiplies input/output/cache-write/cache-read by 1.1x. New tokenizer vs Sonnet 4.6 and earlier may produce ~30% more tokens for the same text. 2026-07-10 smoke matrix (run_id smoke-claude-json-20260710, 15 cases via --output-format json, zero downgrades observed): output scaled with --effort from 22 tokens (low) to 410 tokens (max), cost $0.0445 to $0.0503 on a fixed-arithmetic fixture -- effort measurably bought more reasoning for this model, unlike claude-opus-4-8 in the same run. All 5 effort levels (low/medium/high/xhigh/max) were accepted (exit 0) -- see references/benchmark-2026-07-10.md."
+          billing_mode_notes: "Promotional price active through 2026-08-31. The same provider model resumes standard pricing on 2026-09-01 through future_pricing below; this is one invocable model, not two model IDs. Full 1M context billed at standard rate. inference_geo=us multiplies input/output/cache-write/cache-read by 1.1x. New tokenizer vs Sonnet 4.6 and earlier may produce ~30% more tokens for the same text. 2026-07-10 smoke matrix (run_id smoke-claude-json-20260710, 15 cases via --output-format json, zero downgrades observed): output scaled with --effort from 22 tokens (low) to 410 tokens (max), cost $0.0445 to $0.0503 on a fixed-arithmetic fixture -- effort measurably bought more reasoning for this model, unlike claude-opus-4-8 in the same run. All 5 effort levels (low/medium/high/xhigh/max) were accepted (exit 0) -- see references/benchmark-2026-07-10.md."
           effective_date: "2026-07-10 through 2026-08-31 (promotional)"
           source_id: pricing-2026-07-10
+          future_pricing:
+            effective_from: "2026-09-01"
+            input_per_1m: 3
+            cached_input_per_1m: 0.3
+            cache_write_5m_per_1m: 3.75
+            cache_write_1h_per_1m: 6
+            output_per_1m: 15
+            batch:
+              input_per_1m: 1.5
+              output_per_1m: 7.5
+            effective_date: "2026-09-01 onward"
+            source_id: pricing-2026-07-10
         routing_profile: [medium]
         discovered_at: "2026-07-10"
         discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710"
-      - model_id: claude-sonnet-5-2026-09-01
-        display_name: "Claude Sonnet 5 (standard, from 2026-09-01)"
-        aliases: []
-        model_family: claude-sonnet-5
-        availability: available
-        context_window: 1000000
-        supported_reasoning_levels: [low, medium, high, xhigh, max]
-        reasoning_levels_confidence: smoke_tested
-        default_reasoning_level: null
-        pricing:
-          input_per_1m: 3
-          cached_input_per_1m: 0.3
-          cache_write_5m_per_1m: 3.75
-          cache_write_1h_per_1m: 6
-          output_per_1m: 15
-          long_context: null
-          batch:
-            input_per_1m: 1.5
-            output_per_1m: 7.5
-          reasoning_billing_rule: counted_as_output
-          billing_mode_notes: "This is NOT a separate provider model_id -- it is claude-sonnet-5's standard price after its 2026-08-31 promotional window ends. Modeled as its own catalog row (rather than a second price inside one entry) only so estimate_cost.py can resolve exactly one price per model_id without a date-conditional lookup. Deliberately left out of aliases so plain 'sonnet-5' lookups resolve to the current promotional entry as of this catalog's updated_at. Full 1M context billed at standard rate. inference_geo=us multiplies input/output/cache-write/cache-read by 1.1x. Reasoning-level and routing findings here are inherited from the claude-sonnet-5 promotional-price row's 2026-07-10 smoke matrix (run_id smoke-claude-json-20260710) since both rows model the same underlying provider model; only the price differs after 2026-09-01 -- see references/benchmark-2026-07-10.md."
-          effective_date: "2026-09-01 onward"
-          source_id: pricing-2026-07-10
-        routing_profile: [medium]
-        discovered_at: "2026-07-10"
-        discovery_evidence: "2026-07-10 smoke matrix, run_id smoke-20260710 + smoke-claude-json-20260710 (inherited from claude-sonnet-5, same underlying model)"
       - model_id: claude-sonnet-4-6
         display_name: "Claude Sonnet 4.6"
         aliases: [sonnet-4-6, sonnet-4.6]

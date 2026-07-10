@@ -125,8 +125,18 @@ def now_iso() -> str:
 # ---------------------------------------------------------------------------
 
 
-def parse_tokens(executor: str, stdout: str) -> int | None:
-    """Best-effort token count extraction. Returns None (unknown) if not found."""
+def parse_usage(executor: str, stdout: str) -> dict[str, Any]:
+    """Extract structured usage without inventing an input/output split."""
+    empty = {
+        "input_tokens": None,
+        "cached_input_tokens": None,
+        "cache_write_tokens": None,
+        "output_tokens": None,
+        "total_tokens": None,
+        "usage_status": "unavailable",
+        "usage_source": "unavailable",
+        "provider_reported_cost_usd": None,
+    }
     if executor == "codex":
         lines = stdout.splitlines()
         for i, line in enumerate(lines):
@@ -134,8 +144,9 @@ def parse_tokens(executor: str, stdout: str) -> int | None:
                 for candidate in lines[i + 1 : i + 3]:
                     match = re.search(r"\d[\d,]*", candidate)
                     if match:
-                        return int(match.group(0).replace(",", ""))
-        return None
+                        total = int(match.group(0).replace(",", ""))
+                        return {**empty, "total_tokens": total, "usage_status": "partial", "usage_source": "codex_stdout_total"}
+        return empty
     if executor == "claude":
         try:
             payload = json.loads(stdout)
@@ -144,16 +155,38 @@ def parse_tokens(executor: str, stdout: str) -> int | None:
         if isinstance(payload, dict):
             usage = payload.get("usage")
             if isinstance(usage, dict):
-                input_t = usage.get("input_tokens", 0) or 0
-                output_t = usage.get("output_tokens", 0) or 0
-                if input_t or output_t:
-                    return int(input_t) + int(output_t)
+                has_primary = "input_tokens" in usage or "output_tokens" in usage
+                if has_primary:
+                    input_t = int(usage.get("input_tokens", 0) or 0)
+                    output_t = int(usage.get("output_tokens", 0) or 0)
+                    cached_t = int(usage.get("cache_read_input_tokens", 0) or 0)
+                    cache_write_t = int(usage.get("cache_creation_input_tokens", 0) or 0)
+                    reported = payload.get("total_cost_usd")
+                    if not isinstance(reported, (int, float)) or isinstance(reported, bool):
+                        reported = None
+                    return {
+                        "input_tokens": input_t,
+                        "cached_input_tokens": cached_t,
+                        "cache_write_tokens": cache_write_t,
+                        "output_tokens": output_t,
+                        "total_tokens": input_t + cached_t + cache_write_t + output_t,
+                        "usage_status": "measured",
+                        "usage_source": "claude_json_usage",
+                        "provider_reported_cost_usd": reported,
+                    }
         match = re.search(r"(\d[\d,]*)\s*tokens", stdout, re.IGNORECASE)
         if match:
-            return int(match.group(1).replace(",", ""))
-        return None
+            total = int(match.group(1).replace(",", ""))
+            return {**empty, "total_tokens": total, "usage_status": "partial", "usage_source": "claude_text_total"}
+        return empty
     # gemini/kimi/opencode/qwen: no confirmed parsing rule in Phase 1 scope.
-    return None
+    return empty
+
+
+def parse_tokens(executor: str, stdout: str) -> int | None:
+    """Backward-compatible aggregate accessor used by older callers/tests."""
+    total = parse_usage(executor, stdout)["total_tokens"]
+    return total if isinstance(total, int) else None
 
 
 def _normalize_claude_model_id(value: str) -> str:
@@ -312,13 +345,27 @@ def run_one_case(
         "executor": executor,
         "requested_model": model,
         "reasoning": reasoning,
+        "requested_reasoning_effort": reasoning,
+        "actual_reasoning_effort": None,
         "status": "running",
         "started_at": now_iso(),
         "completed_at": None,
         "duration_seconds": None,
         "exit_code": None,
         "tokens_used": None,
+        "input_tokens": None,
+        "cached_input_tokens": None,
+        "cache_write_tokens": None,
+        "output_tokens": None,
+        "total_tokens": None,
+        "usage_status": "unavailable",
+        "usage_source": "unavailable",
         "api_equivalent_cost": None,
+        "estimated_api_equivalent_usd": None,
+        "provider_reported_cost_usd": None,
+        "actual_charge_usd": None,
+        "pricing_source": None,
+        "pricing_date": None,
         "actual_model": None,
         "notes": [],
     }
@@ -344,18 +391,36 @@ def run_one_case(
     record["duration_seconds"] = round(duration, 3)
     record["exit_code"] = exit_code
 
-    tokens = parse_tokens(executor, stdout)
-    record["tokens_used"] = tokens if tokens is not None else "unknown"
+    usage = parse_usage(executor, stdout)
+    for key, value in usage.items():
+        record[key] = value
+    record["tokens_used"] = usage["total_tokens"] if isinstance(usage["total_tokens"], int) else "unknown"
 
-    if catalog_data is not None and isinstance(tokens, int) and model:
-        cost_result = estimate_cost.estimate(catalog_data, model, input_tokens=0, output_tokens=tokens)
+    can_price = all(isinstance(usage[key], int) for key in ("input_tokens", "cached_input_tokens", "cache_write_tokens", "output_tokens"))
+    if catalog_data is not None and can_price and model:
+        priced_input = usage["input_tokens"] + usage["cached_input_tokens"]
+        cost_result = estimate_cost.estimate(
+            catalog_data,
+            model,
+            input_tokens=priced_input,
+            output_tokens=usage["output_tokens"],
+            cached_tokens=usage["cached_input_tokens"],
+            cache_write_tokens=usage["cache_write_tokens"],
+        )
         record["api_equivalent_cost"] = {
             "total_cost": cost_result["total_cost"],
             "confidence": cost_result["confidence"],
-            "note": "tokens_used is a combined figure; billed entirely as output tokens for this rough estimate since executor stdout does not separate input/output.",
+            "note": "computed from executor-reported input/cache/output fields",
         }
+        record["estimated_api_equivalent_usd"] = cost_result["total_cost"]
+        record["pricing_source"] = cost_result.get("pricing_source")
+        record["pricing_date"] = cost_result.get("pricing_effective_date")
     else:
-        record["api_equivalent_cost"] = None
+        record["api_equivalent_cost"] = {
+            "total_cost": None,
+            "confidence": "unavailable",
+            "note": "input/output split or catalog pricing unavailable; total tokens were not misclassified as output",
+        }
 
     actual_model = detect_actual_model(executor, stdout, cmd)
     record["actual_model"] = actual_model
@@ -499,13 +564,27 @@ def run_matrix(
                 "executor": case.get("executor"),
                 "requested_model": case.get("model"),
                 "reasoning": case.get("reasoning"),
+                "requested_reasoning_effort": case.get("reasoning"),
+                "actual_reasoning_effort": None,
                 "status": "pending_quota",
                 "started_at": None,
                 "completed_at": None,
                 "duration_seconds": None,
                 "exit_code": None,
                 "tokens_used": None,
+                "input_tokens": None,
+                "cached_input_tokens": None,
+                "cache_write_tokens": None,
+                "output_tokens": None,
+                "total_tokens": None,
+                "usage_status": "unavailable",
+                "usage_source": "unavailable",
                 "api_equivalent_cost": None,
+                "estimated_api_equivalent_usd": None,
+                "provider_reported_cost_usd": None,
+                "actual_charge_usd": None,
+                "pricing_source": None,
+                "pricing_date": None,
                 "actual_model": None,
                 "notes": [f"skipped without executing: provider {provider!r} already blocked_quota this run"],
                 "previous_attempt": stale_running_evidence,
@@ -919,6 +998,30 @@ def run_selftest() -> int:
     check(
         "parse_tokens: claude JSON usage object",
         parse_tokens("claude", json.dumps({"usage": {"input_tokens": 10, "output_tokens": 5}})) == 15,
+    )
+    detailed_usage = parse_usage(
+        "claude",
+        json.dumps(
+            {
+                "total_cost_usd": 0.0445,
+                "usage": {
+                    "input_tokens": 4,
+                    "cache_read_input_tokens": 100,
+                    "cache_creation_input_tokens": 20,
+                    "output_tokens": 22,
+                },
+            }
+        ),
+    )
+    check(
+        "parse_usage: claude JSON preserves input/cache-write/cache-read/output",
+        detailed_usage["input_tokens"] == 4
+        and detailed_usage["cached_input_tokens"] == 100
+        and detailed_usage["cache_write_tokens"] == 20
+        and detailed_usage["output_tokens"] == 22
+        and detailed_usage["total_tokens"] == 146
+        and detailed_usage["provider_reported_cost_usd"] == 0.0445,
+        str(detailed_usage),
     )
     check("parse_tokens: unknown executor returns None", parse_tokens("gemini", "tokens used\n42") is None)
     check(
