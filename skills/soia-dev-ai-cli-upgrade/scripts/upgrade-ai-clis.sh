@@ -46,6 +46,11 @@ fi
 state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
 log_dir="${LOG_DIR:-$state_home/soia-dev-ai-cli-upgrade/logs}"
 mkdir -p "$log_dir"
+# retention: keep newest LOG_KEEP (default 10) upgrade logs, prune older ones
+log_keep="${LOG_KEEP:-10}"
+ls -1t "$log_dir"/cli-upgrade-*.log 2>/dev/null | tail -n +"$((log_keep + 1))" | while IFS= read -r old_log; do
+  rm -f "$old_log"
+done
 log_file="$log_dir/cli-upgrade-$(date +"%Y-%m-%d_%H-%M-%S").log"
 npm_prefix="${NPM_PREFIX:-$HOME/.npm-global}"
 
