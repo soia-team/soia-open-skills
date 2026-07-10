@@ -240,6 +240,17 @@ SOIA_DEV_AGENT_CLI_DISPATCH_CONFIG_FILE=<custom-config-path>
 
 十项不要求全部满足；按整体倾向把任务落到三档之一。落到 easy/medium 但执行结果不达标时，按「⚡ Anti-Fake-Fix Gate」的处置规则升级重试，不要在同一档位反复重试期待不同结果。
 
+### 可执行路由与固定回执
+
+不要只在自然语言里临时拍板。确定 easy/medium/hard 后调用 `scripts/route_model.py`；自动路由只选择同时具备 `routing_profile`、`discovered_at`、`discovery_evidence` 和已验证 reasoning levels 的模型。显式指定模型/档位始终优先，但未验证组合必须标记 `explicit_unverified`。
+
+```bash
+python3 scripts/route_model.py --executor codex --complexity hard
+python3 scripts/route_model.py --executor claude --complexity medium --model claude-sonnet-5 --reasoning high
+```
+
+每次路由必须输出 `selected_model`、`selected_reasoning_effort`、`task_complexity`、`selection_reason`、`estimated_cost_range`、`catalog_version` 和 `selection_status`，再把结果写入统一调用契约；没有 verified candidate 时返回阻断状态，不得从 `pending_benchmark` 候选中静默挑一个。
+
 ### 推荐组合（P4 部分实证路由，2026-07-10 smoke matrix）
 
 下表按执行器家族给出模型/推理深度组合。Codex 6 个型号的 35-case 与 Claude 3 个型号的 15-case 已有真实 smoke 聚合记录，但原始 manifest 未随交接提供，且未覆盖 catalog 中全部型号，因此统一标记 `partial_coverage`；表内推荐只对已覆盖组合有效。Gemini 本轮为 `blocked_auth`，Kimi/OpenCode/Qwen 仍是 `pending_benchmark`。不得把部分实证包装成全量完成，证据边界见 `references/benchmark-2026-07-10.md`。
@@ -416,6 +427,7 @@ codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \
    - 其他执行器（gemini/kimi/opencode/qwen）：Phase 1 未实现模型回显检测，`notes` 会如实写明"model-echo verification is not implemented for this executor"，不假装已覆盖。
 3. **宿主模型变化**：`host_ai` 自身运行在哪个底层模型上，属于**仅可观测、不可控**的信息——本技能不能对宿主自己的模型完整性做强制门禁。如果宿主环境暴露了自身模型标识，记录下来即可；拿不到就写 `unknown`，不要推断。
 4. **能力限制声明**：任何一次 Model Integrity Gate 判定为 `actual_model_unverified` 或 `fallback_or_downgrade` 的调用，最终回执必须包含这次判定，不能只在内部日志里留痕、对客户只报"完成"。
+5. **严格版本别名**：方括号执行模式后缀可以剥离；日期版模型标识不得通用截断，只能通过 catalog 的 `actual_model_aliases` 显式映射。未登记的日期版本必须判为 mismatch，防止真实换模被归一化掩盖。
 
 ## 可恢复执行 / Resumable execution
 
@@ -608,5 +620,6 @@ git diff --stat HEAD~1..HEAD   # 或 git diff --stat（如未 commit）
 | `scripts/catalog_lib.py` | 受限 YAML 子集解析器 + `model-catalog.yml` schema 校验（重复 model_id / 缺字段 / 负价拒绝，未知 reasoning level 标记为 WARN） | `python3 scripts/catalog_lib.py --selftest` |
 | `scripts/estimate_cost.py` | 给定 model + token 数，输出 API 等价费用估算（分项 + 总额 + `confidence`），未知模型给出近似候选并以 exit code 2 退出 | `python3 scripts/estimate_cost.py --selftest` |
 | `scripts/run_matrix.py` | 可恢复的串行派发矩阵执行器（P3 用；本文档阶段只用 mock 命令自检，不真实调用任何模型） | `python3 scripts/run_matrix.py --selftest` |
+| `scripts/route_model.py` | 从已验证 catalog 记录机械选择模型/推理档并输出固定路由回执；显式指定优先 | `python3 scripts/route_model.py --selftest` |
 
 三个脚本均为纯 Python 标准库实现，无第三方依赖。修改任意一个后，先跑对应 `--selftest`，再跑一遍其余两个确认没有连带破坏（`estimate_cost.py` 和 `run_matrix.py` 都从 `catalog_lib.py` 导入解析/校验逻辑）。

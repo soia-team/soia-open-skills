@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# @created_by unknown
+# @created_at unknown
+# @modified_by openai/gpt-5
+# @modified_at 2026-07-10 17:58:15
+# @version 0.2.0
+# @description Run resumable external AI dispatch matrices with usage and integrity evidence.
+# @changelog Use strict actual-model aliases and retry recovered quota cases in one resume.
 """Resumable, strictly-serial executor for a model/executor dispatch matrix.
 
 Phase 1 scope: this script is built and self-tested against mock commands
@@ -102,7 +109,6 @@ CLAUDE_OUTPUT_FORMAT_JSON_RE = re.compile(r"--output-format[=\s]+json\b", re.IGN
 #     e.g. "claude-haiku-4-5-20251001".
 # --model <full catalog model_id> came back with no decoration at all.
 CLAUDE_MODEL_BRACKET_SUFFIX_RE = re.compile(r"\[[^\[\]]*\]$")
-CLAUDE_MODEL_DATE_SUFFIX_RE = re.compile(r"-\d{8}$")
 
 VERSION_COMMANDS = {
     "codex": ["codex", "--version"],
@@ -201,9 +207,7 @@ def _normalize_claude_model_id(value: str) -> str:
     (or was not) specified; requesting the full catalog model_id directly
     came back with neither decoration.
     """
-    stripped = CLAUDE_MODEL_BRACKET_SUFFIX_RE.sub("", value.strip())
-    stripped = CLAUDE_MODEL_DATE_SUFFIX_RE.sub("", stripped)
-    return stripped
+    return CLAUDE_MODEL_BRACKET_SUFFIX_RE.sub("", value.strip())
 
 
 def _extract_claude_model_from_json(payload: Any) -> str | None:
@@ -237,16 +241,24 @@ def _extract_claude_model_from_json(payload: Any) -> str | None:
     return None
 
 
-def _claude_model_matches(requested: str, actual: str) -> bool:
+def _claude_model_matches(requested: str, actual: str, catalog_data: dict | None = None) -> bool:
     """True if a claude modelUsage-echoed actual model id refers to the same
     model as requested_model, after stripping known decorations (bracket /
     date suffix -- see _normalize_claude_model_id). Exact string equality is
     checked first so an already-clean echo never depends on the stripping
     heuristics at all.
     """
-    if requested == actual:
+    if requested == actual or requested == _normalize_claude_model_id(actual):
         return True
-    return _normalize_claude_model_id(actual) == _normalize_claude_model_id(requested)
+    if catalog_data is None:
+        return False
+    resolution = catalog_lib.find_model(catalog_data, requested)
+    entry = resolution.get("model")
+    if not isinstance(entry, dict):
+        return False
+    allowed = {entry.get("model_id")}
+    allowed.update(entry.get("actual_model_aliases") or [])
+    return _normalize_claude_model_id(actual) in allowed
 
 
 def detect_actual_model(executor: str, stdout: str, cmd: str | None = None) -> str | None:
@@ -412,7 +424,7 @@ def run_one_case(
             "confidence": cost_result["confidence"],
             "note": "computed from executor-reported input/cache/output fields",
         }
-        record["estimated_api_equivalent_usd"] = cost_result["total_cost"]
+        record["estimated_api_equivalent_usd"] = cost_result.get("total_cost_decimal") or cost_result["total_cost"]
         record["pricing_source"] = cost_result.get("pricing_source")
         record["pricing_date"] = cost_result.get("pricing_effective_date")
     else:
@@ -437,7 +449,7 @@ def run_one_case(
             record["notes"].append(f"codex echoed model={actual_model!r}, requested {model!r}")
         elif executor == "claude":
             if actual_model and model:
-                if _claude_model_matches(model, actual_model):
+                if _claude_model_matches(model, actual_model, catalog_data):
                     record["status"] = "passed"
                     record["notes"].append(
                         f"claude --output-format json echoed modelUsage/model={actual_model!r}; "
@@ -527,14 +539,11 @@ def run_matrix(
         "resume_command": build_resume_command(cases_path, run_id, manifest_dir),
     }
 
+    # A fresh invocation starts with no provider blocked. On --resume this lets
+    # the previously blocked case retry immediately; if quota is still
+    # exhausted, that retry re-adds the provider below and safely defers the
+    # remaining same-provider cases.
     blocked_providers: set[str] = set()
-    # Pre-seed blocked_providers from any prior blocked_quota/pending_quota case
-    # so a --resume that starts mid-list still honors an earlier provider stop
-    # until the operator explicitly re-tries by editing cases.json.
-    if existing:
-        for rec in existing.get("cases", []):
-            if rec.get("status") in {"blocked_quota"}:
-                blocked_providers.add(rec.get("provider"))
 
     final_records: list[dict] = []
     stop_reason = None
@@ -633,6 +642,8 @@ def run_matrix(
 
 def run_selftest() -> int:
     checks: list[tuple[str, bool, str]] = []
+    selftest_catalog_path = Path(__file__).resolve().parents[1] / "references" / "model-catalog.yml"
+    selftest_catalog_data = catalog_lib.load_catalog(selftest_catalog_path)
 
     def check(name: str, condition: bool, detail: str = "") -> None:
         checks.append((name, condition, detail))
@@ -736,10 +747,12 @@ def run_selftest() -> int:
             by_id2["case-1-pass"]["started_at"] == by_id["case-1-pass"]["started_at"],
         )
         check(
-            "resume: case-2 retried after being pre-seeded as blocked (still blocks this run)",
-            by_id2["case-2-quota"]["status"] in {"blocked_quota", "pending_quota"},
+            "resume: recovered quota case retried immediately in one resume",
+            by_id2["case-2-quota"]["status"] == "passed",
             by_id2["case-2-quota"]["status"],
         )
+        check("resume: remaining same-provider case also runs", by_id2["case-3-should-be-skipped"]["status"] == "passed")
+        check("resume: recovered run completes in one resume", manifest2["status"] == "done")
         check("resume: run_id stable across resume", manifest2["run_id"] == "selftest-run")
         check(
             "resume: started_at preserved across resume",
@@ -945,7 +958,7 @@ def run_selftest() -> int:
             host_ai="selftest-host",
             skill_source_path=str(Path(__file__).resolve().parents[1]),
             timeout_seconds=30,
-            catalog_data=None,
+            catalog_data=selftest_catalog_data,
         )
         claude_by_id = {c["case_id"]: c for c in claude_manifest["cases"]}
         check(
@@ -1062,8 +1075,8 @@ def run_selftest() -> int:
         _normalize_claude_model_id("claude-opus-4-8[1m]") == "claude-opus-4-8",
     )
     check(
-        "_normalize_claude_model_id: strips a real-world dated suffix",
-        _normalize_claude_model_id("claude-haiku-4-5-20251001") == "claude-haiku-4-5",
+        "_normalize_claude_model_id: does not generically strip dated versions",
+        _normalize_claude_model_id("claude-haiku-4-5-20251001") == "claude-haiku-4-5-20251001",
     )
     check(
         "_claude_model_matches: exact string match without needing normalization",
@@ -1071,12 +1084,16 @@ def run_selftest() -> int:
     )
     check(
         "_claude_model_matches: real-world decorations do not cause a false mismatch",
-        _claude_model_matches("claude-opus-4-8", "claude-opus-4-8[1m]")
-        and _claude_model_matches("claude-haiku-4-5", "claude-haiku-4-5-20251001"),
+        _claude_model_matches("claude-opus-4-8", "claude-opus-4-8[1m]", selftest_catalog_data)
+        and _claude_model_matches("claude-haiku-4-5", "claude-haiku-4-5-20251001", selftest_catalog_data),
     )
     check(
         "_claude_model_matches: a genuinely different model is still flagged as a mismatch",
-        not _claude_model_matches("claude-sonnet-5", "claude-opus-4-8"),
+        not _claude_model_matches("claude-sonnet-5", "claude-opus-4-8", selftest_catalog_data),
+    )
+    check(
+        "_claude_model_matches: an unlisted dated version is a mismatch",
+        not _claude_model_matches("claude-haiku-4-5", "claude-haiku-4-5-20251101", selftest_catalog_data),
     )
 
     print("=== run_matrix.py selftest ===")

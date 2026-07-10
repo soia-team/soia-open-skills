@@ -557,6 +557,7 @@ providers:
       - model_id: claude-haiku-4-5
         display_name: "Claude Haiku 4.5"
         aliases: [haiku-4-5, haiku-4.5]
+        actual_model_aliases: [claude-haiku-4-5-20251001]
         model_family: claude-haiku-4
         availability: available
         context_window: null

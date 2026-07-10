@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# @created_by unknown
+# @created_at unknown
+# @modified_by openai/gpt-5
+# @modified_at 2026-07-10 17:58:15
+# @version 0.2.0
+# @description Estimate API-equivalent dispatch cost from structured model pricing.
+# @changelog Use Decimal internally and expose exact decimal cost fields.
 """Estimate the API-equivalent cost of a dispatched call against model-catalog.yml.
 
 This never reads real usage from a provider; it takes token counts you
@@ -25,6 +32,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -33,12 +41,27 @@ import catalog_lib  # noqa: E402
 
 
 SUBSCRIPTION_DISCLAIMER = "订阅制下实际扣费≠此估算（api_equivalent_estimate）"
+MILLION = Decimal("1000000")
 
 
-def _num(value: Any) -> float | None:
+def _num(value: Any) -> Decimal | None:
     if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return float(value)
+        try:
+            return Decimal(str(value))
+        except InvalidOperation:
+            return None
     return None
+
+
+def _legacy_float(value: Decimal | None) -> float | None:
+    return float(value) if value is not None else None
+
+
+def _decimal_text(value: Decimal | None) -> str | None:
+    if value is None:
+        return None
+    text = format(value, "f").rstrip("0").rstrip(".")
+    return text or "0"
 
 
 def estimate(
@@ -73,6 +96,7 @@ def estimate(
             "tier_used": None,
             "breakdown": None,
             "total_cost": None,
+            "total_cost_decimal": None,
             "notes": [
                 "unknown_pricing: model not found in catalog",
             ],
@@ -132,7 +156,7 @@ def estimate(
             notes.append("batch requested but this model has no batch pricing tier; used standard rate")
             confidence = "estimated"
 
-    cache_write_rate: float | None = None
+    cache_write_rate: Decimal | None = None
     if cache_write_tokens:
         if "cache_write_5m_per_1m" in pricing or "cache_write_1h_per_1m" in pricing:
             key = "cache_write_1h_per_1m" if cache_write_ttl == "1h" else "cache_write_5m_per_1m"
@@ -161,16 +185,18 @@ def estimate(
     if ordinary_input_tokens != input_tokens:
         notes.append("cached_tokens is treated as a subset of input_tokens (billed at the cached rate instead of the standard input rate)")
 
-    input_cost = (ordinary_input_tokens / 1_000_000) * input_rate if input_rate is not None else None
-    cached_cost = (cached_tokens / 1_000_000) * cached_rate if cached_tokens and cached_rate is not None else 0.0
+    input_cost = (Decimal(ordinary_input_tokens) / MILLION) * input_rate if input_rate is not None else None
+    cached_cost = (Decimal(cached_tokens) / MILLION) * cached_rate if cached_tokens and cached_rate is not None else Decimal("0")
     cache_write_cost = (
-        (cache_write_tokens / 1_000_000) * cache_write_rate if cache_write_tokens and cache_write_rate is not None else 0.0
+        (Decimal(cache_write_tokens) / MILLION) * cache_write_rate
+        if cache_write_tokens and cache_write_rate is not None
+        else Decimal("0")
     )
-    output_cost = (output_tokens / 1_000_000) * output_rate if output_rate is not None else None
+    output_cost = (Decimal(output_tokens) / MILLION) * output_rate if output_rate is not None else None
 
     total = None
     if input_cost is not None and output_cost is not None:
-        total = input_cost + (cached_cost or 0.0) + (cache_write_cost or 0.0) + output_cost
+        total = input_cost + cached_cost + cache_write_cost + output_cost
 
     return {
         "requested_model": model,
@@ -184,16 +210,21 @@ def estimate(
         "tier_used": tier_used,
         "breakdown": {
             "input_tokens_billed": ordinary_input_tokens,
-            "input_cost": input_cost,
+            "input_cost": _legacy_float(input_cost),
+            "input_cost_decimal": _decimal_text(input_cost),
             "cached_tokens_billed": cached_tokens,
-            "cached_input_cost": cached_cost,
+            "cached_input_cost": _legacy_float(cached_cost),
+            "cached_input_cost_decimal": _decimal_text(cached_cost),
             "cache_write_tokens_billed": cache_write_tokens,
-            "cache_write_cost": cache_write_cost,
+            "cache_write_cost": _legacy_float(cache_write_cost),
+            "cache_write_cost_decimal": _decimal_text(cache_write_cost),
             "cache_write_ttl": cache_write_ttl if cache_write_tokens else None,
             "output_tokens_billed": output_tokens,
-            "output_cost": output_cost,
+            "output_cost": _legacy_float(output_cost),
+            "output_cost_decimal": _decimal_text(output_cost),
         },
-        "total_cost": total,
+        "total_cost": _legacy_float(total),
+        "total_cost_decimal": _decimal_text(total),
         "notes": notes,
         "near_candidates": [],
         "subscription_disclaimer": SUBSCRIPTION_DISCLAIMER,
@@ -216,6 +247,7 @@ def _print_text(result: dict[str, Any]) -> None:
         print(f"  cache_write: {breakdown['cache_write_tokens_billed']} tok ({breakdown['cache_write_ttl'] or 'n/a'}) -> {breakdown['cache_write_cost']}")
         print(f"  output:      {breakdown['output_tokens_billed']} tok -> {breakdown['output_cost']}")
     print(f"total_cost: {result['total_cost']}")
+    print(f"total_cost_decimal: {result.get('total_cost_decimal')}")
     if result["near_candidates"]:
         print(f"near_candidates: {', '.join(result['near_candidates'])}")
     for note in result["notes"]:
@@ -240,7 +272,7 @@ def run_selftest() -> int:
     r = estimate(data, "claude-sonnet-5", 1_000_000, 1_000_000)
     check(
         "sonnet-5 promo: 1M in + 1M out == $12.00",
-        r["confidence"] == "exact" and abs(r["total_cost"] - 12.0) < 1e-9,
+        r["confidence"] == "exact" and r["total_cost_decimal"] == "12",
         f"got {r['total_cost']}",
     )
 
@@ -249,7 +281,7 @@ def run_selftest() -> int:
     r_future = estimate(data, "claude-sonnet-5", 1_000_000, 1_000_000, as_of_date="2026-09-01")
     check(
         "sonnet-5 standard (post 2026-09-01): 1M in + 1M out == $18.00",
-        r_future["confidence"] == "exact" and abs(r_future["total_cost"] - 18.0) < 1e-9,
+        r_future["confidence"] == "exact" and r_future["total_cost_decimal"] == "18",
         f"got {r_future['total_cost']}",
     )
 

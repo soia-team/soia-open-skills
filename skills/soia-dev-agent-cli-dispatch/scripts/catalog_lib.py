@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# @created_by unknown
+# @created_at unknown
+# @modified_by openai/gpt-5
+# @modified_at 2026-07-10 17:58:15
+# @version 0.2.0
+# @description Parse, validate, and resolve the dispatch model catalog.
+# @changelog Enforce routing, discovery, pricing-source, and actual-model alias contracts.
 """Restricted YAML-subset parser and schema validator for model-catalog.yml.
 
 This is NOT a general YAML parser. It only understands the subset that
@@ -19,6 +26,7 @@ The functions below are also imported directly by ``estimate_cost.py`` and
 from __future__ import annotations
 
 import argparse
+import copy
 import re
 import sys
 from pathlib import Path
@@ -215,7 +223,16 @@ def load_catalog(path: Path) -> dict:
 
 REQUIRED_TOP_KEYS = ("schema_version", "updated_at", "currency", "pricing_unit", "sources", "providers")
 REQUIRED_PROVIDER_KEYS = ("executor_cli", "models")
-REQUIRED_MODEL_KEYS = ("model_id", "display_name", "availability", "pricing")
+REQUIRED_MODEL_KEYS = (
+    "model_id", "display_name", "aliases", "model_family", "availability",
+    "context_window", "supported_reasoning_levels", "reasoning_levels_confidence",
+    "default_reasoning_level", "pricing", "routing_profile", "discovered_at",
+    "discovery_evidence",
+)
+NON_NULL_MODEL_KEYS = (
+    "model_id", "display_name", "aliases", "model_family", "availability",
+    "supported_reasoning_levels", "reasoning_levels_confidence", "pricing",
+)
 PRICE_KEY_HINT = re.compile(r"per_1m|per_1m_tokens|per_hour")
 
 
@@ -272,10 +289,13 @@ def validate_catalog(data: dict) -> dict[str, list[str]]:
                 errors.append(f"provider {provider_name!r}.models[{idx}] must be a mapping")
                 continue
             for req_key in REQUIRED_MODEL_KEYS:
-                if req_key not in model or model[req_key] in (None, ""):
+                if req_key not in model:
                     errors.append(
                         f"provider {provider_name!r}.models[{idx}] missing required key: {req_key}"
                     )
+            for req_key in NON_NULL_MODEL_KEYS:
+                if req_key in model and model[req_key] in (None, ""):
+                    errors.append(f"provider {provider_name!r}.models[{idx}] key must not be null: {req_key}")
             model_id = model.get("model_id")
             if isinstance(model_id, str) and model_id:
                 if model_id in seen_model_ids:
@@ -288,14 +308,55 @@ def validate_catalog(data: dict) -> dict[str, list[str]]:
 
             confidence = model.get("reasoning_levels_confidence")
             levels = model.get("supported_reasoning_levels")
+            if not isinstance(levels, list):
+                errors.append(f"model {model_id!r}: supported_reasoning_levels must be a list")
+                levels = []
+            if confidence not in {"unverified", "official_docs", "smoke_tested", "verified"}:
+                errors.append(f"model {model_id!r}: invalid reasoning_levels_confidence {confidence!r}")
             if confidence == "unverified" or not levels:
                 warnings.append(
                     f"model {model_id!r}: supported_reasoning_levels unverified or empty"
                 )
 
+            default_level = model.get("default_reasoning_level")
+            if default_level is not None and default_level not in levels:
+                errors.append(f"model {model_id!r}: default_reasoning_level {default_level!r} is not supported")
+
+            routing_profile = model.get("routing_profile")
+            if routing_profile is not None and not isinstance(routing_profile, list):
+                errors.append(f"model {model_id!r}: routing_profile must be a list or null")
+            if routing_profile:
+                invalid_profiles = sorted(set(routing_profile) - {"easy", "medium", "hard"})
+                if invalid_profiles:
+                    errors.append(f"model {model_id!r}: invalid routing_profile values {invalid_profiles}")
+                if not model.get("discovered_at") or not model.get("discovery_evidence"):
+                    errors.append(f"model {model_id!r}: routed models require discovered_at and discovery_evidence")
+                if not levels:
+                    errors.append(f"model {model_id!r}: routed models require verified reasoning levels")
+
+            if confidence in {"smoke_tested", "verified"} and (
+                not model.get("discovered_at") or not model.get("discovery_evidence")
+            ):
+                errors.append(f"model {model_id!r}: verified reasoning requires discovery evidence")
+
+            for alias_key in ("aliases", "actual_model_aliases"):
+                aliases = model.get(alias_key, [])
+                if not isinstance(aliases, list) or any(not isinstance(alias, str) or not alias for alias in aliases):
+                    errors.append(f"model {model_id!r}: {alias_key} must be a list of non-empty strings")
+
             pricing = model.get("pricing")
             if isinstance(pricing, dict):
                 _walk_price_fields(pricing, f"models[{model_id}].pricing", errors)
+                if not pricing.get("effective_date") or not pricing.get("source_id"):
+                    errors.append(f"model {model_id!r}: pricing requires effective_date and source_id")
+                future_pricing = pricing.get("future_pricing")
+                if future_pricing is not None:
+                    if not isinstance(future_pricing, dict):
+                        errors.append(f"model {model_id!r}: future_pricing must be a mapping")
+                    else:
+                        for key in ("effective_from", "effective_date", "source_id", "input_per_1m", "output_per_1m"):
+                            if future_pricing.get(key) in (None, ""):
+                                errors.append(f"model {model_id!r}: future_pricing missing {key}")
             elif "pricing" in model:
                 errors.append(f"model {model_id!r}.pricing must be a mapping")
 
@@ -510,10 +571,17 @@ sources:
                     {
                         "model_id": "c",
                         "display_name": "C",
+                        "aliases": [],
+                        "model_family": "c",
                         "availability": "available",
-                        "pricing": {"input_per_1m": 1},
+                        "context_window": None,
+                        "pricing": {"input_per_1m": 1, "output_per_1m": 2, "effective_date": "2026-07-10", "source_id": "test"},
                         "supported_reasoning_levels": [],
                         "reasoning_levels_confidence": "unverified",
+                        "default_reasoning_level": None,
+                        "routing_profile": None,
+                        "discovered_at": None,
+                        "discovery_evidence": None,
                     }
                 ],
             }
@@ -523,6 +591,14 @@ sources:
     check(
         "validate: unverified reasoning level -> warning not error",
         any("unverified" in w for w in result["warnings"]) and not result["errors"],
+    )
+
+    invalid_routing = copy.deepcopy(unverified)
+    invalid_routing["providers"]["openai"]["models"][0]["routing_profile"] = ["medium"]
+    result = validate_catalog(invalid_routing)
+    check(
+        "validate: routed model without discovery evidence rejected",
+        any("routed models require" in e for e in result["errors"]),
     )
 
     # 7. find_model: exact, alias, loose, and unknown resolution.
