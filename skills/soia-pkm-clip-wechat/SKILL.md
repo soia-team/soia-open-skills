@@ -35,15 +35,15 @@ description: 归档单篇微信公众号文章到 Obsidian vault：抓取静态 
 npx skills add soia-team/soia-open-skills -g -a '*' -s soia-pkm-clip-wechat -y
 ```
 
-配置约定：
+当前脚本的配置入口：
 
 ```text
-~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-clip-wechat/config.yml
-SOIA_PKM_CLIP_WECHAT_CONFIG_FILE=<custom-config-path>
+OBSIDIAN_VAULT=<vault-path>
+OBSIDIAN_ARTICLES=<vault-relative-articles-dir>
 ```
 
-- 如果本技能不需要私有配置，可以不创建 `config.yml`。
-- 如果需要 API key、cookie、session、provider home 或本机路径，只能放进私有 `config.yml`、进程环境或 provider 自己的登录态里，不能写进仓库、vault 正文或日志。
+- CLI `--vault` / `--articles-dir` 优先于环境变量；都未提供时，仅从当前目录向上寻找真实 `.obsidian/` 标志。
+- 当前 stdlib 脚本不解析 YAML `config.yml`，也不需要 API key、cookie 或其他凭据；不要创建一个不会生效的配置文件。
 - 强依赖、可选依赖和第三方 skill 关系必须以本 `SKILL.md` 后续的“依赖 / 前置 / 资源 / 边界”说明为准；没有写清楚时，先补说明或询问客户，不要猜。
 - 第三方 skill 只能声明依赖和安装方式，不直接修改第三方 skill 文件。
 
@@ -73,16 +73,34 @@ SOIA_PKM_CLIP_WECHAT_CONFIG_FILE=<custom-config-path>
 ## 抓取
 
 - 输入：`https://mp.weixin.qq.com/s/...`
-- 公众号文章是**静态 HTML**（比 X 好抓，不需 API）：`requests` 拉页面 → 解析 `#js_content`（正文）、`#activity-name`（标题）、`#js_name`（公众号名）、`publish_time`（发布时间）。
-- 图片：提取 `data-src`，可选下载或保留链接。
-- 脚本：`scripts/archive_wechat.py <url> --vault <path>`（规格对标 clip-x 的 archive_x.py）。
+- 公众号文章是**静态 HTML**（比 X 好抓，不需 API）：stdlib `urllib.request` 拉页面 → 解析 `#js_content`（正文）、`#activity-name` / `og:title`（标题）、author meta（署名作者）、`#js_name`（公众号名）、`createTime` / `oriCreateTime`（发布时间 fallback）。
+- 图片：提取 `data-src` 并保留为远程链接；当前脚本不下载图片，离线化由后续流程处理。
+- 脚本：`scripts/archive_wechat.py <url> --vault <path>`（纯 Python 标准库；支持 `--dry-run`、`--json`、URL 去重、正文质量门和原子写）。
+
+```bash
+python3 scripts/archive_wechat.py <url> \
+  --vault <vault-path> \
+  --articles-dir <vault-relative-articles-dir> \
+  --dry-run --json
+```
+
+先 dry-run 核对标题、作者、发布时间、`body_chars`、图片数与 `content_complete`，再去掉 `--dry-run` 写入。找不到 `#js_content`、正文异常短或命中拦截页关键词时默认拒绝写入；只有客户明确接受不完整归档时才使用 `--allow-incomplete`。
 
 ## 落地（clip 家族统一规范）
 
-- 路径：`<vault-articles-dir>/<年>/YYYY-MM-DD-公众号-<作者>-<标题>.md`
-- frontmatter：`tags:[文章摘抄]`、`source: 公众号`、`url`、`author`、`published_at`、`captured_at`、`topics:[]`、`content_complete`
+- 路径：`<vault-articles-dir>/<年>/<月>/YYYY-MM-DD-公众号-<作者>-<标题>.md`
+- frontmatter：`tags:[文章摘抄]`、`source: 公众号`、`url`、`author`、`publisher`、`published_at`、`captured_at`、`topics:[]`、`content_complete`
 - 正文段：`## 摘要`（AI 补）、`## 原文`、`## 我的看法`（留空）、`## 关联`
-- 归档后 AI 补摘要 + topics；之后走 `organize` 归位到月份。
+- 归档后 AI 补摘要 + topics；脚本已按发布月份归位。
+
+## 验证
+
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py'
+python3 -m py_compile scripts/archive_wechat.py
+```
+
+仓库维护者从 repo 根运行时，把路径替换为 `skills/soia-pkm-clip-wechat/tests` 与 `skills/soia-pkm-clip-wechat/scripts/archive_wechat.py`。这两项检查专门防止 SKILL 再次声明一个未随安装包交付的脚本。
 
 ## 归档后导出 PDF
 

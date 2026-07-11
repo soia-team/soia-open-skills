@@ -75,9 +75,9 @@ npx skills add soia-team/soia-open-skills
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
 | [`soia-pkm-clip-x`](./skills/soia-pkm-clip-x/) | X 推文/thread/长文 → vault | ✅ 完全可用（脚本齐全，已多次实测）| 无（Telegram 同步可选）|
-| [`soia-pkm-clip-wechat`](./skills/soia-pkm-clip-wechat/) | 公众号文章 → vault | 🟡 SKILL.md 就绪，抓取脚本待 AI 生成 | 无 |
-| [`soia-pkm-clip-web`](./skills/soia-pkm-clip-web/) | 通用网页/博客 → vault | 🟡 同上 | Python `trafilatura` |
-| [`soia-pkm-clip-drive`](./skills/soia-pkm-clip-drive/) | 云盘 PDF/Word → vault | 🟡 同上 | Python `pypdf`/`python-docx` |
+| [`soia-pkm-clip-wechat`](./skills/soia-pkm-clip-wechat/) | 公众号文章 → vault | ✅ 可用（stdlib 抓取、质量门、URL 去重、dry-run、原子写） | 无 |
+| [`soia-pkm-clip-web`](./skills/soia-pkm-clip-web/) | 通用网页/博客 → vault | 🟡 SKILL.md 已就绪，抓取脚本待实现 | Python `trafilatura` |
+| [`soia-pkm-clip-drive`](./skills/soia-pkm-clip-drive/) | 云盘 PDF/Word → vault | 🟡 SKILL.md 已就绪，导入脚本待实现 | Python `pypdf`/`python-docx` |
 | [`soia-pkm-clip-repo`](./skills/soia-pkm-clip-repo/) | GitHub 开源项目仓库 → vault「开源项目图书馆」索引 | ✅ 可用（脚本齐全：单仓归档 + 批量刷新）| 无（需本机一个 upstream clone 目录）|
 | [`soia-pkm-clip-gzh`](./skills/soia-pkm-clip-gzh/) | 自己管理的公众号已发文章批量 → vault | ✅ 可用（官方 API / 登录态 Cookie 两条路线）| 微信公众号开发凭据或登录态 Cookie |
 
