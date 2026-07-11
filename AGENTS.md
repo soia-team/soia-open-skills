@@ -4,8 +4,9 @@ Rules for all AI agents editing this repository.
 
 ## Audience
 
-This file is the shared repository rulebook for Codex, Claude Code, Gemini CLI,
-OpenCode, Kimi, Cursor, and any other AI agent that reads project instructions.
+This file is the shared repository rulebook for Codex, Claude Code,
+Antigravity CLI, Gemini CLI, OpenCode, Kimi, Cursor, and any other AI agent
+that reads project instructions.
 Tool-specific commands below are examples or optional validation helpers; they
 do not make this a Codex-only file.
 

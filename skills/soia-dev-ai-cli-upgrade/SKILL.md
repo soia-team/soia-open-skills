@@ -1,6 +1,6 @@
 ---
 name: soia-dev-ai-cli-upgrade
-description: Audit and upgrade AI/developer CLIs (codex, claude, gemini, kimi, qwen, opencode, cursor, etc.) with dry-run reports and logs. Triggers：「升级 AI CLI」「更新 codex/claude/gemini」「检查 CLI 版本」
+description: Audit and upgrade AI CLIs with dry-run logs; use agy for consumer Google login and keep gemini opt-in for enterprise/API Key/Vertex. Triggers：「升级 AI CLI」「更新 agy/gemini」「检查 CLI 版本」
 ---
 
 # soia-dev-ai-cli-upgrade
@@ -15,7 +15,9 @@ version audit or batch workflow is needed.
 
 ### 这个技能可以做什么
 
-Audit and upgrade AI/developer CLIs (codex, claude, gemini, kimi, qwen, opencode, cursor, etc.) with dry-run reports and logs
+Audit and upgrade AI/developer CLIs (codex, claude, Antigravity/agy,
+Gemini's supported non-consumer lanes, kimi, qwen, opencode, cursor, etc.)
+with dry-run reports and logs.
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
@@ -81,7 +83,8 @@ SOIA_DEV_AI_CLI_UPGRADE_CONFIG_FILE=<custom-config-path>
 |---|---|---|
 | Codex | `codex` | `npm install -g --prefix <npm-prefix> @openai/codex` |
 | Claude Code | `claude` | `npm install -g --prefix <npm-prefix> @anthropic-ai/claude-code` |
-| Gemini CLI | `gemini` | `npm install -g --prefix <npm-prefix> @google/gemini-cli` |
+| Antigravity CLI (consumer Google accounts) | `agy` | Official successor to Gemini CLI consumer Google login; native `agy update`; missing-command install is gated by `AGY_INSTALL=1` |
+| Gemini CLI (non-consumer lanes) | `gemini` | Retained for Code Assist Standard/Enterprise, Gemini API Key, and Vertex AI; explicit opt-in upgrade with `TOOLS=gemini` |
 | Qwen Code | `qwen` | `npm install -g --prefix <npm-prefix> @qwen-code/qwen-code` |
 | MiniMax CLI | `mmx` | `npm install -g --prefix <npm-prefix> mmx-cli` |
 | Kimi Code | `kimi` | `brew upgrade kimi-code`, install if missing |
@@ -89,15 +92,55 @@ SOIA_DEV_AI_CLI_UPGRADE_CONFIG_FILE=<custom-config-path>
 | Qoder CLI | `qodercli` | `qodercli update` |
 | Cursor | `cursor` | version audit only unless `CURSOR_UPGRADE_CMD` is set |
 
+Why both rows remain: `agy` is the replacement for Gemini CLI's consumer
+Google-login path. `gemini` stays only so this skill can audit explicitly
+supported Standard/Enterprise, API Key, and Vertex AI installations; it is no
+longer part of the default batch.
+
 ## Safety Model
 
 - Start with `DRY_RUN=1` unless the user explicitly asked to upgrade.
 - Never edit shell profiles or PATH files automatically.
+- Missing `agy` is installed only when `AGY_INSTALL=1`. The helper downloads
+  Google's HTTPS installer to a temporary directory, syntax-checks it, and runs
+  it with an isolated temporary `HOME`; `--dir` places the native binary in
+  `AGY_INSTALL_DIR` without letting vendor setup edit the user's real profiles.
 - Never write API keys, tokens, cookies, or login material to logs.
 - Treat `CURSOR_UPGRADE_CMD` as user-supplied code. Only run it when the user
   has explicitly provided or approved that command.
 - If an updater requires interactive login or privileged access, stop and report
   the blocker instead of guessing.
+
+## Gemini consumer migration and Antigravity authentication
+
+These are two separate executables and authentication products. `agy` replaces
+Gemini CLI only for the consumer **Login with Google** path; it is not a 1:1
+command alias. Keep `gemini` coverage for supported non-consumer lanes, but do
+not reinstall or upgrade it in the default batch. Never alias `gemini` to
+`agy`, delete Gemini CLI without explicit authorization, or silently move an
+account or billing channel.
+
+- Since June 18, 2026, Gemini Code Assist consumer accounts can no longer use
+  **Sign in with Google** in Gemini CLI. Google directs consumer users to
+  Antigravity. Re-check the current [Google deprecation notice](https://developers.google.com/gemini-code-assist/docs/deprecations/code-assist-individuals)
+  and [migration guide](https://antigravity.google/docs/gcli-migration) before
+  acting.
+- Gemini Code Assist Standard and Enterprise remain supported in Gemini CLI.
+  Gemini API-key and Vertex AI authentication are also separate supported lanes;
+  preserve them and follow the current [Gemini CLI authentication guide](https://github.com/google-gemini/gemini-cli/blob/main/docs/get-started/authentication.mdx).
+- Antigravity CLI uses the system keyring when a session is available and falls
+  back to Google Sign-In. The batch upgrade script does not inspect the keyring,
+  open a browser, read auth files, or send a model prompt.
+
+After installation, launch `agy` in a PTY only when the user explicitly asked to
+log in. If a browser, account chooser, consent screen, paid-credit choice, or
+first-launch migration checklist appears, return `blocked_user_action` and wait
+for the user. Do not log OAuth URLs, state values, cookies, tokens, account ids,
+or credential-file contents. A successful `agy --version` proves only that the
+binary runs; it does not prove authentication.
+
+`agy plugin import gemini` writes migrated plugin configuration. Run it only
+after the user reviews and approves that separate migration action.
 
 ## Configuration
 
@@ -113,8 +156,10 @@ Example:
 ```yaml
 env:
   LOG_DIR: "$HOME/.local/state/soia-dev-ai-cli-upgrade/logs"
-  NPM_PACKAGES: "codex,claude,gemini"
+  TOOLS: "codex,claude,agy"
   NPM_PREFIX: "$HOME/.npm-global"
+  AGY_INSTALL: "0"
+  AGY_INSTALL_DIR: "$HOME/.local/bin"
 ```
 
 Supported variables:
@@ -122,9 +167,12 @@ Supported variables:
 | Variable | Purpose | Default |
 |---|---|---|
 | `DRY_RUN=1` | Print current versions without upgrading | `0` |
-| `NPM_PACKAGES="codex,claude"` | Limit the tool list | all supported tools |
+| `TOOLS="codex,claude,agy"` | Limit the tool list | consumer-safe default set; `gemini` is opt-in |
+| `NPM_PACKAGES="codex,claude"` | Backward-compatible alias for `TOOLS`; ignored when `TOOLS` is set | unset |
 | `NPM_PREFIX=<path>` | npm global prefix for npm-based CLIs | `$HOME/.npm-global` |
-| `LOG_DIR=<path>` | Upgrade log directory | `${XDG_STATE_HOME:-$HOME/.local/state}/soia-dev-ai-cli-upgrade/logs` |
+| `AGY_INSTALL=1` | Allow a missing `agy` to be installed from Google's fixed official HTTPS endpoint | `0` |
+| `AGY_INSTALL_DIR=<path>` | Native `agy` installation and fallback detection directory | `$HOME/.local/bin` |
+| `LOG_DIR=<path>` | Upgrade log directory | `${TMPDIR:-/tmp}/soia-dev-ai-cli-upgrade/logs` |
 | `CURSOR_UPGRADE_CMD=<command>` | Optional Cursor updater command | unset |
 
 ## Standard Workflow
@@ -138,8 +186,16 @@ DRY_RUN=1 bash skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
 # Upgrade all supported tools
 bash skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
 
-# Upgrade a subset
-NPM_PACKAGES="codex,claude,gemini" \
+# Upgrade a consumer-safe subset
+TOOLS="codex,claude,agy" \
+  bash skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
+
+# Upgrade Gemini CLI only after confirming a supported non-consumer lane
+TOOLS="gemini" \
+  bash skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
+
+# Explicitly install agy if it is missing; this does not perform login
+AGY_INSTALL=1 TOOLS="agy" \
   bash skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
 ```
 
@@ -157,8 +213,46 @@ The script writes one timestamped log file and prints a table:
 | `COMMAND` | executable checked |
 | `OLD` | version before upgrade or current version in dry-run |
 | `NEW` | version after upgrade, or `N/A` in dry-run |
-| `STATUS` | `UPDATED`, `ALREADY_LATEST`, `NOT_INSTALLED`, `SKIP_DRY_RUN`, `MANUAL`, `FAILED` |
+| `STATUS` | `INSTALLED`, `UPDATED`, `ALREADY_LATEST`, `NOT_INSTALLED`, `SKIP_DRY_RUN`, `MANUAL`, `FAILED` |
 | `NOTE` | short reason or next action |
+
+`MANUAL` for `agy` can mean installation or update succeeded but the resolved
+binary directory is absent from PATH, or PATH resolves to a different binary.
+The script reports the absolute resolved path and never edits PATH itself.
+
+## Antigravity diagnosis
+
+Use non-sensitive checks first:
+
+```bash
+type -a agy || true
+agy --version
+agy models
+DRY_RUN=1 TOOLS="agy" \
+  bash skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
+```
+
+`agy models` is a model-list discovery request, not a model prompt. Its output
+is scoped to the authenticated account, plan, and current service state; do not
+hardcode its count, order, display names, aliases, or a default model. If it
+requires browser interaction, return `blocked_user_action`. Do not use
+`agy -p` as an auth or model-list check because that is a real model call and
+may consume quota or credits.
+
+On macOS, source verification can also inspect the installed executable without
+reading authentication state:
+
+```bash
+agy_bin="$(command -v agy)"
+file "$agy_bin"
+codesign -dv --verbose=4 "$agy_bin" 2>&1
+spctl -a -vv -t execute "$agy_bin"
+```
+
+Compare the signing identity, executable architecture, and current release with
+Google's [official repository](https://github.com/google-antigravity/antigravity-cli)
+and [CLI documentation](https://antigravity.google/docs/cli-overview). Do not
+hardcode a release version or checksum in this public skill.
 
 ## Validation
 
@@ -166,7 +260,8 @@ Before claiming the skill or script changed safely:
 
 ```bash
 bash -n skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
-DRY_RUN=1 NPM_PACKAGES="codex" \
+bash skills/soia-dev-ai-cli-upgrade/tests/test_upgrade_ai_clis.sh
+DRY_RUN=1 TOOLS="codex,agy" \
   bash skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
 python3 scripts/audit_skills.py
 ```
@@ -187,4 +282,11 @@ Before final response:
 - Include the log file path.
 - Summarize each tool status.
 - Call out any `FAILED`, `MANUAL`, or interactive-login blockers.
+- Treat a non-zero script exit as at least one true `FAILED` row; the script
+  still processes the remaining selected tools before returning failure.
+- State that authentication was not checked unless an explicit PTY login flow
+  was completed by the user. Use `blocked_user_action` while waiting.
+- When model discovery was requested, report `model_source=runtime_account_scoped`
+  and the display names returned by `agy models`; do not invent stable model ids,
+  aliases, a default, or plan eligibility from that output.
 - If live upgrades were run, report old and new versions where available.

@@ -19,7 +19,7 @@
 npx skills add soia-team/soia-open-skills
 ```
 
-跨 agent 通用——Claude Code、Cursor、Codex、Gemini、Kimi 都能装。
+跨 agent 通用——Claude Code、Cursor、Codex、Antigravity、Gemini、Kimi 都能装。
 
 [闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单) · [高频技能速览](#高频技能速览) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
 
@@ -62,7 +62,7 @@ npx skills add soia-team/soia-open-skills
 ## Skills 清单
 
 > **通用能力（所有 skill 共享）**
-> - 🤖 **支持的 AI**：跨 agent 通用——Claude Code、Codex、Cursor、Gemini、Kimi、amp、Warp、Zed 等所有兼容 [skills.sh](https://skills.sh) 标准的 AI。一次写 `SKILL.md`，处处可用。
+> - 🤖 **支持的 AI**：跨 agent 通用——Claude Code、Codex、Cursor、Antigravity、Gemini、Kimi、amp、Warp、Zed 等所有兼容 [skills.sh](https://skills.sh) 标准的 AI。一次写 `SKILL.md`，处处可用。
 > - 📚 **适用知识库**：Obsidian vault（推荐 PARA 结构；没有现成的？用 `bootstrap` 一键搭）。底层是纯 Markdown + YAML frontmatter，不锁定平台。
 > - 🔗 **依赖链**：`clip-*` 是入口（独立可用）→ `organize` / `distill` 需 vault 里有内容 → `compose` 需 distill 的观点 → `publish` 需 compose 的草稿。
 > - 🧩 **第三方 skill 口径**：只在本仓库自建 skill 里声明依赖 / 可选增强 / 方法参考，**不改第三方 skill 文件**；具体来源以 `~/.agents/.skill-lock.json` 为准。
@@ -124,10 +124,10 @@ npx skills add soia-team/soia-open-skills
 | [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | 云盘资源顾问：盘点核对（inventory）/规范整理（organize）/索引落 OB（catalog）/孩子学习计划（plan）| ✅ 可用（纯方法论层，命令全走 alipan）| `soia-pkm-alipan`（原子层）|
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify 图表工作流：架构图 / 数据流 / 工作流 / 时序 / 生命周期图，维护 JSON IR 并导出 README/docs PNG | ✅ 可用（脚本齐全；需本机可用 Archify）| `ARCHIFY_BIN` 或 `ARCHIFY_ROOT`，可选 Playwright/Chrome 导出 PNG |
 | [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release，默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY` |
-| [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | AI/开发 CLI 批量盘点与升级：Codex / Claude / Gemini / Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ 可用（脚本齐全；支持 dry-run 和日志）| Node/npm；部分工具需要 Homebrew 或自身 updater |
+| [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | AI/开发 CLI 批量盘点与升级：Codex / Claude / Antigravity (`agy`，消费者 Google 登录后继) / Gemini（仅企业、API Key、Vertex）/ Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ 可用（脚本齐全；支持 dry-run 和日志）| Node/npm；部分工具使用官方 installer、Homebrew 或自身 updater |
 | [`soia-dev-prompt-clarity`](./skills/soia-dev-prompt-clarity/) | 通用提示词技能：从零七要素起草 / 六维诊断优化 / 防误伤改写 / 模糊需求扩展成可验证规格 四模式，信息不足先澄清再产出 | ✅ 可用（纯方法论输出，无脚本无第三方强依赖）| 无 |
 | [`soia-dev-agent-md-advisor`](./skills/soia-dev-agent-md-advisor/) | AGENTS.md / CLAUDE.md / `.claude` 配置设计顾问：审查诊断 / 新项目起草 / 最佳实践问答三模式，六维度体检（长度预算/可执行性/分区路由/重复矛盾/入口一致性/时效）| ✅ 可用（纯方法论诊断，无脚本无强依赖）| 无 |
-| [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | 受控派发任务给外部编码 CLI（codex/gemini/kimi/opencode/qwen 等）：任务边界拆分、防注入 prompt 写法、模型分级矩阵、Anti-Fake-Fix 三步验证 | ✅ 可用（命令模板 + 分级矩阵齐全）| 目标编码 CLI（按需 codex/gemini/kimi/opencode/qwen 等）已安装登录 |
+| [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | 受控派发任务给外部编码 CLI（codex/agy/gemini/kimi/opencode/qwen 等）：任务边界拆分、防注入 prompt 写法、模型分级矩阵、Anti-Fake-Fix 三步验证 | ✅ 可用（命令模板 + 分级矩阵齐全）| 目标编码 CLI（按需 codex/agy/gemini/kimi/opencode/qwen 等）已安装登录 |
 
 ---
 
@@ -228,7 +228,7 @@ python3 gen_records_md.py
 npx skills add soia-team/soia-open-skills
 ```
 
-会把 `skills/` 下所有 skill 装到你 agent 的目录，**跨 agent 通用**（Claude Code / Codex / Cursor / Gemini / Kimi …）。装后直接说：
+会把 `skills/` 下所有 skill 装到你 agent 的目录，**跨 agent 通用**（Claude Code / Codex / Cursor / Antigravity / Gemini / Kimi …）。装后直接说：
 
 | 你说 | 触发 |
 |------|------|
@@ -243,6 +243,11 @@ npx skills add soia-team/soia-open-skills
 | `给 README 画一张架构图` / `用 Archify 重画流程图` | soia-dev-archify-diagrams |
 | `查这个 PR checks` / `看最近 GitHub Actions 失败原因` | soia-dev-github-ops |
 | `升级本机 AI CLI` / `dry-run 看 codex/claude 版本` | soia-dev-ai-cli-upgrade |
+
+Antigravity CLI 的命令是 `agy`：全局技能目录为
+`~/.gemini/antigravity-cli/skills/`，workspace 技能目录为 `.agents/skills/`。
+消费者 Google OAuth 从 Gemini CLI 迁到 Antigravity；Gemini 企业、API Key、
+Vertex AI 通道仍保留，不能用 alias 把 `gemini` 静默替换成 `agy`。
 
 ### 配置 vault 路径
 

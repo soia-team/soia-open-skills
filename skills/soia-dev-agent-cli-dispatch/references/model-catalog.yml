@@ -23,6 +23,9 @@
 # Anthropic contributes 10 invocable model rows. Claude Sonnet 5's promotional
 # and standard prices are modeled as date-effective tiers inside the same row;
 # a price period must never masquerade as a second provider model_id.
+# Antigravity/agy is intentionally absent: its account-scoped Gemini/third-party
+# roster and plan/credit billing are not equivalent to these API model ids or
+# per-token prices. Discover agy display names at runtime with `agy models`.
 schema_version: 1
 updated_at: "2026-07-10"
 currency: USD

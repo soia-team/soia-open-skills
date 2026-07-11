@@ -19,7 +19,7 @@
 npx skills add soia-team/soia-open-skills
 ```
 
-Agent-agnostic — works with Claude Code, Cursor, Codex, Gemini, Kimi, and any [skills.sh](https://skills.sh)-compatible agent.
+Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, Kimi, and any [skills.sh](https://skills.sh)-compatible agent.
 
 [The loop](#pkm-loop-the-life-of-a-piece-of-content) · [Skills catalog](#skills-catalog) · [Frequently used skills](#frequently-used-skills) · [Installation](#installation) · [Telegram sync](#telegram-saved-messages-sync-clip-x) · [Design philosophy](#design-philosophy)
 
@@ -62,7 +62,7 @@ Agent-agnostic — works with Claude Code, Cursor, Codex, Gemini, Kimi, and any 
 ## Skills catalog
 
 > **Shared capabilities (common to every skill)**
-> - 🤖 **Supported AI**: agent-agnostic — Claude Code, Codex, Cursor, Gemini, Kimi, amp, Warp, Zed, and any AI compatible with the [skills.sh](https://skills.sh) standard. Write `SKILL.md` once, run it anywhere.
+> - 🤖 **Supported AI**: agent-agnostic — Claude Code, Codex, Cursor, Antigravity, Gemini, Kimi, amp, Warp, Zed, and any AI compatible with the [skills.sh](https://skills.sh) standard. Write `SKILL.md` once, run it anywhere.
 > - 📚 **Target knowledge base**: an Obsidian vault (PARA structure recommended; don't have one yet? use `bootstrap` to set one up in one shot). The underlying storage is plain Markdown + YAML frontmatter — no platform lock-in.
 > - 🔗 **Dependency chain**: `clip-*` is the entry point (usable standalone) → `organize` / `distill` need content already in the vault → `compose` needs an opinion produced by `distill` → `publish` needs a draft produced by `compose`.
 > - 🧩 **Third-party skill policy**: this repo's own skills only *declare* dependencies / optional enhancements / methodology references on third-party skills — it never modifies third-party skill files. The actual source of truth is `~/.agents/.skill-lock.json`.
@@ -124,10 +124,10 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 | [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | Cloud-drive resource advisor: inventory checks / standardized organizing / cataloging into Obsidian / study plans for kids | ✅ Usable (pure methodology layer, all commands routed through alipan) | `soia-pkm-alipan` (atomic layer) |
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify diagram workflow: architecture / data-flow / workflow / sequence / lifecycle diagrams, maintaining a JSON IR and exporting README/docs PNGs | ✅ Usable (scripts complete; requires a local Archify install) | `ARCHIFY_BIN` or `ARCHIFY_ROOT`, with optional Playwright/Chrome for PNG export |
 | [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub operations workflow: issues / PRs / checks / reviews / run logs / releases, defaulting to structured `gh` queries with safety confirmation gates | ✅ Usable (no scripts; command templates already shared) | `gh` CLI logged in; target repo from `--repo` / the current git remote / `$GITHUB_REPOSITORY` |
-| [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | Bulk inventory and upgrade of AI/dev CLIs: Codex / Claude / Gemini / Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ Usable (scripts complete; supports dry-run and logging) | Node/npm; some tools need Homebrew or their own updater |
+| [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | Bulk inventory and upgrade of AI/dev CLIs: Codex / Claude / Antigravity (`agy`, consumer Google-login successor) / Gemini (enterprise, API Key, and Vertex only) / Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ Usable (scripts complete; supports dry-run and logging) | Node/npm; some tools use an official installer, Homebrew, or their own updater |
 | [`soia-dev-prompt-clarity`](./skills/soia-dev-prompt-clarity/) | General-purpose prompt-writing skill: draft from scratch with seven elements / diagnose & optimize on six dimensions / rewrite to avoid false-positive safety refusals / compile vague requirements into verifiable specs — four modes; asks clarifying questions first when information is insufficient | ✅ Usable (pure methodology output, no scripts, no hard third-party dependency) | None |
 | [`soia-dev-agent-md-advisor`](./skills/soia-dev-agent-md-advisor/) | Design advisor for AGENTS.md / CLAUDE.md / `.claude` configuration: review & diagnose / draft for a new project / best-practice Q&A — three modes, with a six-dimension health check (length budget / actionability / section routing / duplication & contradiction / entry-point consistency / staleness) | ✅ Usable (pure methodology diagnosis, no scripts, no hard dependency) | None |
-| [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | Controlled dispatch of tasks to external coding CLIs (codex/gemini/kimi/opencode/qwen, etc.): task-boundary splitting, injection-resistant prompt patterns, a model-tiering matrix, and three-step Anti-Fake-Fix verification | ✅ Usable (command templates + tiering matrix complete) | The target coding CLI (codex/gemini/kimi/opencode/qwen, etc., as needed), installed and logged in |
+| [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | Controlled dispatch of tasks to external coding CLIs (codex/agy/gemini/kimi/opencode/qwen, etc.): task-boundary splitting, injection-resistant prompt patterns, a model-tiering matrix, and three-step Anti-Fake-Fix verification | ✅ Usable (command templates + tiering matrix complete) | The target coding CLI (codex/agy/gemini/kimi/opencode/qwen, etc., as needed), installed and logged in |
 
 ---
 
@@ -228,7 +228,7 @@ python3 gen_records_md.py
 npx skills add soia-team/soia-open-skills
 ```
 
-This installs every skill under `skills/` into your agent's skill directory — **agent-agnostic** (Claude Code / Codex / Cursor / Gemini / Kimi …). Once installed, just say:
+This installs every skill under `skills/` into your agent's skill directory — **agent-agnostic** (Claude Code / Codex / Cursor / Antigravity / Gemini / Kimi …). Once installed, just say:
 
 | You say | Triggers |
 |------|------|
@@ -243,6 +243,12 @@ This installs every skill under `skills/` into your agent's skill directory — 
 | `Draw an architecture diagram for the README` / `Redraw this flow with Archify` | soia-dev-archify-diagrams |
 | `Check this PR's checks` / `Find out why the recent GitHub Actions run failed` | soia-dev-github-ops |
 | `Upgrade my local AI CLIs` / `Dry-run to check codex/claude versions` | soia-dev-ai-cli-upgrade |
+
+Antigravity CLI uses the `agy` command. Its global skill directory is
+`~/.gemini/antigravity-cli/skills/`, and workspace skills live under
+`.agents/skills/`. Consumer Google OAuth migrates from Gemini CLI to
+Antigravity; Gemini enterprise, API-key, and Vertex AI lanes remain separate,
+so never silently alias `gemini` to `agy`.
 
 ### Configuring the vault path
 

@@ -272,6 +272,7 @@ into that agent's skills directory.
 |---|---:|---:|---|
 | Claude Code | yes | no direct runtime dependency | Claude Code discovers installed skills from `~/.claude/skills/<name>/SKILL.md`; keep all required instructions in `SKILL.md`. |
 | Codex / OpenAI-style surfaces | yes | optional | `agents/openai.yaml` provides display name, short description, and default prompt for friendlier UI/catalog text. |
+| Antigravity CLI | yes | no direct runtime dependency | Global skills live under `~/.gemini/antigravity-cli/skills/`; workspace skills live under `.agents/skills/`. Keep `AGENTS.md` / `GEMINI.md`; do not alias `gemini` to `agy` or copy authentication files. |
 | SOIA runtime / registry | yes | optional via generator | Use `python3 scripts/generate_skill_catalog.py --registry-out <soia-repo>/runtime/registry/skills`; the generator merges `SKILL.md` with optional `agents/openai.yaml`. |
 | Other skills.sh-compatible agents | yes | no assumption | Treat `SKILL.md` as the portable contract. Do not rely on agent-specific yaml unless that agent explicitly documents support. |
 

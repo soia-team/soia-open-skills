@@ -139,6 +139,8 @@ Do not copy the Archify upstream source into a skill repository. Use one of thes
 2. Command arg: `--archify-root <path-to-archify-root>`
 3. Explicit root: `ARCHIFY_ROOT=<path-to-archify-root>`
 4. Installed skill locations:
+   - `.agents/skills/archify` (current workspace)
+   - `~/.gemini/antigravity-cli/skills/archify`
    - `~/.agents/skills/archify`
    - `~/.codex/skills/archify`
    - `~/.claude/skills/archify`

@@ -50,7 +50,7 @@ npx skills add Tencent/WeChatReading -g
 安装后至少应存在一个入口：
 
 ```bash
-ls -ld ~/.agents/skills/weread-skills ~/.codex/skills/weread-skills ~/.claude/skills/weread-skills
+ls -ld .agents/skills/weread-skills ~/.gemini/antigravity-cli/skills/weread-skills ~/.agents/skills/weread-skills ~/.codex/skills/weread-skills ~/.claude/skills/weread-skills
 ```
 
 ### 3. 获取 `WEREAD_API_KEY`
@@ -158,7 +158,7 @@ python3 gen_genre_library_md.py --base <vault-book-library-dir>
 
 执行微信读书同步前，先做两件事：
 
-1. 检查依赖 skill 是否已安装：`~/.agents/skills/weread-skills`、`~/.codex/skills/weread-skills` 或 `~/.claude/skills/weread-skills` 至少存在一个。
+1. 检查依赖 skill 是否已安装：workspace 的 `.agents/skills/weread-skills`、`~/.gemini/antigravity-cli/skills/weread-skills`、`~/.agents/skills/weread-skills`、`~/.codex/skills/weread-skills` 或 `~/.claude/skills/weread-skills` 至少存在一个。
 2. 如果没有安装，先执行官方安装命令：`npx skills add Tencent/WeChatReading -g`。
 3. 打开 `https://weread.qq.com/r/weread-skills`，登录微信读书并获取 API Key。
 4. 拿到 key 后，写入 `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-library/config.yml`。
@@ -198,7 +198,7 @@ env:
 
 同步类脚本（`sync_weread_to_library.py` / `sync_weread_highlights.py` / `enrich_book_details.py`）强依赖微信读书官方 `weread-skills`，并直接调用微信读书 Agent API Gateway（`https://i.weread.qq.com/api/agent/gateway`）。执行同步前必须满足：
 
-- `weread-skills` 已安装：`~/.agents/skills/weread-skills`、`~/.codex/skills/weread-skills` 或 `~/.claude/skills/weread-skills` 至少存在一个。
+- `weread-skills` 已安装：workspace 的 `.agents/skills/weread-skills`、`~/.gemini/antigravity-cli/skills/weread-skills`、`~/.agents/skills/weread-skills`、`~/.codex/skills/weread-skills` 或 `~/.claude/skills/weread-skills` 至少存在一个。
 - `WEREAD_API_KEY` 已写入私有 `config.yml` 的 `env.WEREAD_API_KEY`，或由进程环境提供。
 - `OBSIDIAN_VAULT` 已配置，或命令行传入 `--vault <path>`。
 - 本机可联网访问 `https://i.weread.qq.com/api/agent/gateway`。
@@ -218,10 +218,10 @@ env:
 执行同步前应检查强依赖 skill 是否已安装。推荐检查路径：
 
 ```bash
-ls -ld ~/.agents/skills/weread-skills ~/.codex/skills/weread-skills ~/.claude/skills/weread-skills
+ls -ld .agents/skills/weread-skills ~/.gemini/antigravity-cli/skills/weread-skills ~/.agents/skills/weread-skills ~/.codex/skills/weread-skills ~/.claude/skills/weread-skills
 ```
 
-若三处都不存在，提示用户先按官方页面安装：
+若以上入口都不存在，提示用户先按官方页面安装：
 
 ```bash
 npx skills add Tencent/WeChatReading -g

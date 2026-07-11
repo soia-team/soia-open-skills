@@ -1,16 +1,16 @@
 ---
 name: soia-dev-agent-cli-dispatch
-description: 通用外部 AI 模型/CLI 调度器（codex/claude/gemini/kimi/opencode/qwen，非宿主内置子代理），可由任意宿主 AI 用于编码、审查、分析、研究、文档和内容任务：支持显式模型+推理深度或按难度自动选型，并输出 Token/费用、模型完整性、额度与恢复回执。Triggers：「派活给 codex」「让 claude 分析」「调用外部 AI」「多 CLI 派发」等
+description: 通用外部 AI 模型/CLI 调度器（codex/claude/agy/gemini/kimi/opencode/qwen，非宿主内置子代理），可由任意宿主 AI 用于编码、审查、分析、研究、文档和内容任务：支持显式模型+推理深度或按难度自动选型，并输出 Token/费用、模型完整性、额度与恢复回执。Triggers：「派活给 codex」「让 claude 分析」「调用 agy」「调用外部 AI」「多 CLI 派发」等
 ---
 
 # soia-dev-agent-cli-dispatch
 
 Use this skill when any host AI needs to dispatch coding, review, analysis,
 research, documentation, or content work to an external AI model/CLI — Codex,
-Gemini CLI, Kimi CLI, OpenCode, Qwen Code, or a separately-launched Claude Code
-process — instead of continuing directly in the current agent session. This is
-about calling an external AI process; it is **not** about a host's built-in
-sub-agents.
+Antigravity CLI, Gemini CLI, Kimi CLI, OpenCode, Qwen Code, or a
+separately-launched Claude Code process — instead of continuing directly in the
+current agent session. This is about calling an external AI process; it is
+**not** about a host's built-in sub-agents.
 
 Do not use it when the current agent can just finish the task itself with no
 external process involved, or when you only need a one-off local shell
@@ -20,7 +20,7 @@ command with no orchestration, monitoring, or prompt-injection concerns.
 
 ### 这个技能可以做什么
 
-调度外部 AI 模型/CLI（codex/claude/gemini/kimi/opencode/qwen，非宿主内置子代理，`qodercli` 也有命令模板但未纳入下方精简清单）进行受控派发，覆盖编码、审查、分析、研究、文档和内容任务：任务边界拆分、独立 workdir、防注入 prompt 写法、模型分级矩阵、Worktree 审批门、Anti-Fake-Fix 三步验证。在此之上，可显式指定执行器 + 模型 + 推理深度，或只给执行器家族由任务难度自动选型（见「自动路由」）；每次调用后输出 Token/费用汇总（见「调用总结回执」）、模型完整性检测（见「Model Integrity Gate」）、额度预检（见「额度预检」）与断点续跑（见「可恢复执行」）。各执行器详细命令模板在 `references/` 子目录下按需加载。
+调度外部 AI 模型/CLI（codex/claude/agy/gemini/kimi/opencode/qwen，非宿主内置子代理，`qodercli` 也有命令模板但未纳入下方精简清单）进行受控派发，覆盖编码、审查、分析、研究、文档和内容任务：任务边界拆分、独立 workdir、防注入 prompt 写法、模型分级矩阵、Worktree 审批门、Anti-Fake-Fix 三步验证。在此之上，可显式指定执行器 + 模型 + 推理深度，或只给执行器家族由任务难度自动选型（见「自动路由」）；每次调用后输出 Token/费用汇总（见「调用总结回执」）、模型完整性检测（见「Model Integrity Gate」）、额度预检（见「额度预检」）与断点续跑（见「可恢复执行」）。各执行器详细命令模板在 `references/` 子目录下按需加载。
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
@@ -109,11 +109,18 @@ SOIA_DEV_AGENT_CLI_DISPATCH_CONFIG_FILE=<custom-config-path>
 不要假设某个 CLI 一定可服务。派发前按下面顺序自查，把结果记在你自己的可用性记录里，而不是照抄本文档里的任何示例状态（示例会过期）：
 
 1. **CLI 是否已安装**：`which <command>` 或 `<command> --version`；版本号以实际输出为准。
-2. **认证 / 套餐是否有效**：跑一次最小只读命令（如 `<command> -p "ping"` 或 `<command> auth status`），观察是否报登录失效、套餐到期或 quota 错误。
+2. **认证 / 套餐是否有效**：优先使用官方的本地状态命令。若 CLI 没有不调用模型的 auth-status 命令（当前 `agy` 即如此），不得把 `<command> -p "ping"` 伪装成“零额度只读检查”；模型调用可能消耗额度，必须先获客户确认。需要浏览器登录时在 PTY 启动，状态记为 `blocked_user_action`，由客户本人完成账号选择与授权。
 3. **上一次派发是否失败**：如果最近一次该执行器的任务返回非预期错误或反复超时，先记为暂不可服务，等你验证修复后再恢复派发。
 4. **维护你自己的可用性表**：建议自建一张「执行器 / CLI 可用 / 套餐-Key 状态 / 可服务 / 备注」的表格，随你的编排层状态变化更新。
 
 不可服务的执行器不得派发；等状态恢复、你自己验证通过后再更新记录、再派发。
+
+**Google 认证通道不得混用**：Gemini CLI 的消费者 Google OAuth 自
+2026-06-18 起已停止服务，应迁移到独立命令 `agy`；Gemini Code Assist
+Standard/Enterprise、Gemini API Key 和 Vertex AI 通道仍保留在 `gemini`
+执行器中。禁止 alias、静默替换命令、复制 OAuth 文件或把一个通道的
+套餐/计费结论套到另一个通道。详见 `references/antigravity-cli.md` 与
+`references/gemini-cli.md`。
 
 ### 全量 benchmark 覆盖闭环
 
@@ -156,10 +163,10 @@ SOIA_DEV_AGENT_CLI_DISPATCH_CONFIG_FILE=<custom-config-path>
 │       详见 references/opencode-qwen.md / references/kimi-cli.md / references/qodercli.md
 │
 ├── 文档/内容写作
-│   ├── gemini -p "..." (只读)
-│   ├── gemini -p "..." --yolo (需要写文件)
+│   ├── 消费者 Google 账号：agy -p "..."（需先确认额度；显式派发）
+│   ├── Gemini 企业/API Key/Vertex：gemini -p "..."
 │   └── qwen "..." / qwen -m qwen-max "..."
-│       详见 references/gemini-cli.md / references/opencode-qwen.md
+│       详见 references/antigravity-cli.md / references/gemini-cli.md / references/opencode-qwen.md
 │
 ├── 中等复杂度编码 / 快速迭代
 │   └── kimi -w <wt> -m kimi-k2.6 --thinking --skills-dir <your-skills-dir> --print -p "..."
@@ -193,14 +200,16 @@ SOIA_DEV_AGENT_CLI_DISPATCH_CONFIG_FILE=<custom-config-path>
 │       详见 references/claude-code.md
 │
 ├── 大上下文分析 / 结构化输出
-│   ├── gemini -p "..." --output-format json
-│   ├── gemini -p "..." --output-format stream-json
+│   ├── 消费者 Google 账号：agy --model "<agy models 显示名>" -p "..."
+│   ├── Gemini 非消费者通道：gemini -p "..." --output-format json
+│   ├── Gemini 非消费者通道：gemini -p "..." --output-format stream-json
 │   └── claude --permission-mode bypassPermissions --print --output-format json
-│       详见 references/gemini-cli.md / references/claude-code.md
+│       详见 references/antigravity-cli.md / references/gemini-cli.md / references/claude-code.md
 │
 ├── 高隔离分析（沙箱）
-│   └── gemini --sandbox -y -p "..."
-│       详见 references/gemini-cli.md
+│   ├── 消费者 Google 账号：agy --sandbox --mode plan -p "..."
+│   └── Gemini 非消费者通道：gemini --sandbox -y -p "..."
+│       详见 references/antigravity-cli.md / references/gemini-cli.md
 │
 └── Qwen 生态编码/评审
     └── qwen / qwen -i / qwen -m qwen-max
@@ -216,15 +225,16 @@ SOIA_DEV_AGENT_CLI_DISPATCH_CONFIG_FILE=<custom-config-path>
 | 中等任务 | opencode / kimi | `run` / `kimi-k2.6 --thinking --print` | `references/opencode-qwen.md` / `references/kimi-cli.md` |
 | 中等任务 | qodercli | `--dangerously-skip-permissions` | `references/qodercli.md` |
 | 中等复杂度编码 / 快速迭代 | kimi | `--thinking` | `references/kimi-cli.md` |
-| 文档/内容 | gemini / qwen | `-p --yolo` / `qwen-max` | `references/gemini-cli.md` / `references/opencode-qwen.md` |
+| Antigravity 消费者账号 | agy | 显式派发；当前不自动选模 | `references/antigravity-cli.md` |
+| 文档/内容 | agy（消费者）/ gemini（非消费者）/ qwen | agy 显式运行时显示名 / `gemini -p --yolo` / `qwen-max` | `references/antigravity-cli.md` / `references/gemini-cli.md` / `references/opencode-qwen.md` |
 | 复杂代码（常见默认） | codex | high reasoning | `references/codex.md` |
 | 代码审核 | codex | high reasoning | `references/codex.md` |
 | 新增/高风险 | codex | high reasoning | `references/codex.md` |
 | 调度 / 审查 / 规划 / 复杂推理 | Claude Code | 高阶推理档（thinking=high） | `references/claude-code.md` |
 | 代码编写 / 中等任务 | Claude Code | 中阶档 | `references/claude-code.md` |
 | 轻量 Edit / Read / Grep | Claude Code | 轻量档 | `references/claude-code.md` |
-| 大上下文分析 | gemini / claude | JSON / stream-json | `references/gemini-cli.md` / `references/claude-code.md` |
-| 高隔离沙箱 | gemini | `--sandbox -y -p` | `references/gemini-cli.md` |
+| 大上下文分析 | agy（消费者）/ gemini（非消费者）/ claude | agy 显式派发 / Gemini JSON 或 stream-json | `references/antigravity-cli.md` / `references/gemini-cli.md` / `references/claude-code.md` |
+| 高隔离沙箱 | agy（消费者）/ gemini（非消费者） | `agy --sandbox --mode plan -p` / `gemini --sandbox -y -p` | `references/antigravity-cli.md` / `references/gemini-cli.md` |
 | headless agent | opencode | `run` / `serve` | `references/opencode-qwen.md` |
 | Qwen 栈 | qwen | `qwen` / `qwen -i` | `references/opencode-qwen.md` |
 
@@ -264,13 +274,14 @@ python3 scripts/route_model.py --executor claude --complexity medium --model cla
 
 ### 推荐组合（P4 部分实证路由，2026-07-10 smoke matrix）
 
-下表按执行器家族给出模型/推理深度组合。Codex 6 个型号的 35-case 与 Claude 3 个型号的 15-case 已有真实 smoke 聚合记录，但原始 manifest 未随交接提供，且未覆盖 catalog 中全部型号，因此统一标记 `partial_coverage`；表内推荐只对已覆盖组合有效。Gemini 本轮为 `blocked_auth`，Kimi/OpenCode/Qwen 仍是 `pending_benchmark`。不得把部分实证包装成全量完成，证据边界见 `references/benchmark-2026-07-10.md`。
+下表按执行器家族给出模型/推理深度组合。Codex 6 个型号的 35-case 与 Claude 3 个型号的 15-case 已有真实 smoke 聚合记录，但原始 manifest 未随交接提供，且未覆盖 catalog 中全部型号，因此统一标记 `partial_coverage`；表内推荐只对已覆盖组合有效。Gemini 本轮为 `blocked_auth`，Antigravity 未获准运行付费/额度模型评测，Kimi/OpenCode/Qwen 仍是 `pending_benchmark`。不得把部分实证包装成全量完成，证据边界见 `references/benchmark-2026-07-10.md`。
 
 | 执行器家族 | easy 候选 | medium 候选 | hard 候选 | 状态 |
 |---|---|---|---|---|
 | codex | `gpt-5.6-luna` @ low | `gpt-5.6-terra` @ medium（token 最省，已覆盖组合内实证） | `gpt-5.6-sol` @ high，穷尽才升到 xhigh（已覆盖组合内实证） | `partial_coverage` — 6 个型号有聚合记录，缺全 catalog 覆盖与原始 manifest |
 | claude | `claude-haiku-4-5`（比 opus 便宜约 18 倍；未按 effort 拆分数据） | `claude-sonnet-5` @ medium | *(暂无 hard 档实证推荐，见下方反模式警示)* | `partial_coverage` — 3 个型号有聚合记录，缺全 catalog 覆盖与原始 manifest |
-| gemini | gemini-2.5-flash-lite | gemini-2.5-flash | gemini-2.5-pro / gemini-3.1-pro-preview | `blocked_auth`（2026-07-10 实测：CLI 已装但无 `GEMINI_API_KEY`/无 Google 登录态，`gemini -p` 报要求配置 auth；命令模板已就绪，配好凭据即可测） |
+| agy | — | — | — | `availability_discovered`（`agy models` 已无 prompt 验证；账号级显示名见 `references/antigravity-cli.md`，但未做真实模型 benchmark，禁止自动路由） |
+| gemini | gemini-2.5-flash-lite | gemini-2.5-flash | gemini-2.5-pro / gemini-3.1-pro-preview | `blocked_auth`（2026-07-10 实测：消费者 OAuth 浏览器回调成功后被服务端以弃用策略拒绝；Standard/Enterprise、API Key、Vertex AI 仍是受支持的独立通道，本轮未测） |
 | kimi | kimi-k2.6（默认档） | kimi-k2.6 --thinking | kimi-k2.6 --thinking（更长上下文/更多轮次） | `pending_benchmark`（未测） |
 | opencode / qwen | 默认模型 | qwen-max 或等效中阶模型 | 项目已配置的最强可用模型 | `pending_benchmark`（未测） |
 
@@ -364,7 +375,7 @@ codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \
 | 术语 | 含义 |
 |---|---|
 | `host_ai` | 调用本技能的宿主（任意兼容 Agent；可以是 Claude Code，也可以不是——本技能不绑定单一宿主） |
-| `executor_cli` | 被调度的外部 CLI 进程：`codex` / `claude` / `gemini` / `kimi` / `opencode` / `qwen`（`qodercli` 有独立命令模板，见 `references/qodercli.md`，但 `model-catalog.yml` 未把它作为一个 provider 分组） |
+| `executor_cli` | 被调度的外部 CLI 进程：`codex` / `claude` / `agy` / `gemini` / `kimi` / `opencode` / `qwen`（`qodercli` 有独立命令模板，见 `references/qodercli.md`；`agy` 有账号级运行时模型发现，但没有 API catalog 路由候选） |
 | `requested_model` | 本次调用要求使用的模型标识（可以是别名，见 `scripts/catalog_lib.py::find_model` 的宽松匹配规则） |
 | `actual_model` | 执行器实际使用的模型标识；只有执行器自己在输出里回显时才能拿到，拿不到就是 `null`，不得编造 |
 | `requested_reasoning_effort` | 请求的推理深度/强度参数（不同执行器命名不同） |
@@ -376,7 +387,7 @@ codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \
 | 字段 | 必填 | 说明 |
 |---|---|---|
 | `case_id` | 是 | 本次调用在批次内的唯一标识 |
-| `provider` | 是 | `openai` / `anthropic` / `google` / `deepseek` / 其他 |
+| `provider` | 是 | `openai` / `anthropic` / `google` / `deepseek` / `antigravity` / 其他；`agy` 使用 `antigravity`，不要按底层模型厂商套 API 价 |
 | `executor` | 是 | 见上文 `executor_cli` |
 | `model` | 是 | `requested_model`；未显式指定时按「自动路由」选型后再填入 |
 | `reasoning` | 否 | `requested_reasoning_effort`；未指定时参考 catalog 的 `default_reasoning_level` |
@@ -419,11 +430,11 @@ codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \
 | `executor` | 目标执行器 |
 | `cli_installed` | `true` / `false`（`which <command>` 或等效检测） |
 | `cli_version` | 实际探测到的版本字符串，或 `"unavailable"` |
-| `auth_status` | `ok` / `expired` / `unknown`（跑一次最小只读命令观察，例如对应 CLI 的 `auth status` 或 `-p "ping"`） |
+| `auth_status` | `ok` / `expired` / `unknown` / `blocked_user_action`；优先本地 auth-status。没有该命令时，不得未经确认用模型调用代替 |
 | `last_known_quota_state` | 上一次派发记录里的额度状态；没有记录就是 `"unknown"` |
 | `recommendation` | `proceed` / `hold` / `skip`，附一句理由 |
 
-预检报告本身不消耗真实模型调用额度（只读版本探测 + 认证状态检查）。`recommendation` 为 `hold` 或 `skip` 时，不得继续派发，除非客户明确批准。
+预检默认不消耗真实模型调用额度（只做版本探测与官方本地状态检查）。浏览器登录、账号选择或任何 `-p` 模型调用不属于默认预检；前者进入 `blocked_user_action`，后者必须先确认可能的额度/费用。`recommendation` 为 `hold` 或 `skip` 时，不得继续派发，除非客户明确批准。
 
 `scripts/run_matrix.py` 在每次运行开始时会对本批次涉及的 executor 做只读版本探测（`<executor> --version`）并写入 manifest 的 `cli_versions` 字段；`--resume` 时会重新探测并在版本变化时打印警告。**当前脚本不做认证状态检查**——`auth_status` 仍需派发者在预检报告里人工核实或另行探测，脚本本身不会为了验证登录态而发起真实模型调用。
 
@@ -435,7 +446,7 @@ codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \
 2. **降级判定**：
    - `codex`：stdout 头部若有 `model: xxx` 行，与 `requested_model` 不一致时，状态标记为 `fallback_or_downgrade`（`scripts/run_matrix.py::detect_actual_model` 已实现，只扫描 stdout 前 2000 字符内的 `model:` 行）。
    - `claude`：**P4（2026-07-10）更新**——纯文本模式（`cmd_template` 不含 `--output-format json`）下 headless 输出仍然**没有**可靠的模型回显机制，任何成功调用一律标记 `actual_model_unverified`，**不允许**因为"看起来跑成功了"就报告为 `passed`。但当 `cmd_template` 显式带 `--output-format json`（或 `--output-format=json`）时，`scripts/run_matrix.py::detect_actual_model` 会解析 stdout JSON 的 `modelUsage`（键名即模型 id）或顶层 `model` 字段作为 `actual_model`，与 `requested_model` 比对后可以正常判定 `passed` / `fallback_or_downgrade`，不再一律 `actual_model_unverified`。比对前会先剥离两种已在真实 CLI（2.1.206，2026-07-10 实测验证，非猜测）上观察到的修饰后缀：不带 `--model` 时回显可能带方括号执行模式后缀（如 `claude-opus-4-8[1m]`）；用短别名（如 `haiku`）请求时回显可能带日期后缀（如 `claude-haiku-4-5-20251001`）；显式传完整 catalog `model_id`（如 `claude-haiku-4-5`）时回显通常精确匹配、无后缀。stdout 不是合法 JSON 时仍然回退到 `actual_model_unverified`，不假装已验证。细节与原始验证 payload 见 `references/benchmark-2026-07-10.md`。
-   - 其他执行器（gemini/kimi/opencode/qwen）：Phase 1 未实现模型回显检测，`notes` 会如实写明"model-echo verification is not implemented for this executor"，不假装已覆盖。
+   - 其他执行器（agy/gemini/kimi/opencode/qwen）：Phase 1 未实现模型回显检测，`notes` 会如实写明"model-echo verification is not implemented for this executor"，不假装已覆盖。
 3. **宿主模型变化**：`host_ai` 自身运行在哪个底层模型上，属于**仅可观测、不可控**的信息——本技能不能对宿主自己的模型完整性做强制门禁。如果宿主环境暴露了自身模型标识，记录下来即可；拿不到就写 `unknown`，不要推断。
 4. **能力限制声明**：任何一次 Model Integrity Gate 判定为 `actual_model_unverified` 或 `fallback_or_downgrade` 的调用，最终回执必须包含这次判定，不能只在内部日志里留痕、对客户只报"完成"。
 5. **严格版本别名**：方括号执行模式后缀可以剥离；日期版模型标识不得通用截断，只能通过 catalog 的 `actual_model_aliases` 显式映射。未登记的日期版本必须判为 mismatch，防止真实换模被归一化掩盖。
@@ -613,6 +624,7 @@ git diff --stat HEAD~1..HEAD   # 或 git diff --stat（如未 commit）
 |------|------|----------|
 | Codex 执行规范（常用编码主力） | `references/codex.md` | 派发给 codex 时 |
 | Claude Code 执行规范 | `references/claude-code.md` | 派发给 claude 时 |
+| Antigravity CLI 执行规范 | `references/antigravity-cli.md` | 派发给 agy 或迁移消费者 Google 账号时 |
 | Gemini CLI 执行规范 | `references/gemini-cli.md` | 派发给 gemini 时 |
 | Kimi CLI 执行规范 | `references/kimi-cli.md` | 派发给 kimi 时 |
 | qodercli 执行规范 | `references/qodercli.md` | 派发给 qodercli 时 |

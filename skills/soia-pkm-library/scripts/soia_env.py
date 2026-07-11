@@ -1,3 +1,10 @@
+# @created_by  unknown
+# @created_at  unknown
+# @modified_by openai/gpt-5
+# @modified_at 2026-07-11 00:15:52
+# @version     0.1.0
+# @description Resolve public SOIA PKM library configuration and skill dependencies.
+# @changelog   Discover weread-skills from Antigravity global and workspace skill roots.
 from __future__ import annotations
 
 import os
@@ -93,10 +100,13 @@ def env_source_hint() -> str:
 
 def weread_skills_installed() -> bool:
     home = Path.home()
+    workspace_roots = (Path.cwd(), *Path.cwd().parents)
     return any(
         path.exists()
         for path in (
+            *(root / ".agents/skills/weread-skills" for root in workspace_roots),
             home / ".agents/skills/weread-skills",
+            home / ".gemini/antigravity-cli/skills/weread-skills",
             home / ".codex/skills/weread-skills",
             home / ".claude/skills/weread-skills",
         )

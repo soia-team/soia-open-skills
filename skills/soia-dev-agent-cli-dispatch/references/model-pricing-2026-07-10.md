@@ -34,7 +34,7 @@
 - 推理/思考 Token 的计费方式；
 - 联网搜索、文件搜索和代码执行等常见工具附加费。
 
-本文件**不把 ChatGPT、Claude Code、Gemini App 等月度订阅额度混入 API 价格**。也不完整展开专用图像、视频、实时语音和 TTS 模型，因为它们使用不同的模态或按秒/分钟计价。
+本文件**不把 ChatGPT、Claude Code、Gemini App 等月度订阅额度混入 API 价格**。Antigravity CLI 的套餐额度、账号级模型可用性和 AI credit overage 也不在本表范围内；不得用这里的 Gemini/Claude API 单价推导 `agy` 实际扣费。也不完整展开专用图像、视频、实时语音和 TTS 模型，因为它们使用不同的模态或按秒/分钟计价。
 
 ### 统一计算公式
 

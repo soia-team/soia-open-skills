@@ -160,3 +160,12 @@ $ claude --print --output-format json --permission-mode bypassPermissions --mode
 - opus-4-8"对本任务 effort 无效"的结论只在这一个简单 fixture 上成立；本文件明确不把它泛化成"opus 的
   effort 参数整体无用"，硬任务上的表现需要专门测试。
 - gemini / kimi / opencode / qwen 全家族在本轮完全未测试，路由表对应行继续标 `pending_benchmark`。
+
+## 7. 2026-07-11 Antigravity 后续说明
+
+`agy` 未参加本文件的 2026-07-10 prompt/smoke matrix，不能从 Gemini CLI
+结果推导它的质量、Token、费用或模型完整性。2026-07-11 只完成了
+`agy --version`、`agy --help`、`agy models --help` 和 `agy models` 的无 prompt
+发现；确认当前账号可返回非空显示名称列表，但没有验证任何稳定 model id、
+默认模型、实际模型回显或计费。自动路由继续阻断，真实调用仍需客户先确认
+可能消耗套餐额度或 AI credits。

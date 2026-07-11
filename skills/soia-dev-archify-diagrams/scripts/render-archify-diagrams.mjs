@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+/**
+ * @created_by  unknown
+ * @created_at  unknown
+ * @modified_by openai/gpt-5
+ * @modified_at 2026-07-11 00:15:52
+ * @version     0.1.0
+ * @description Resolve Archify and render validated diagram assets.
+ * @changelog   Discover Archify from Antigravity global and workspace skill roots.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -80,6 +89,8 @@ function findArchifyBin(args) {
   const roots = [
     args.archifyRoot,
     process.env.ARCHIFY_ROOT,
+    path.join(process.cwd(), '.agents/skills/archify'),
+    path.join(os.homedir(), '.gemini/antigravity-cli/skills/archify'),
     path.join(os.homedir(), '.agents/skills/archify'),
     path.join(os.homedir(), '.codex/skills/archify'),
     path.join(os.homedir(), '.claude/skills/archify'),

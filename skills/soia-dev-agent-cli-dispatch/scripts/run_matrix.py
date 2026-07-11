@@ -2,10 +2,10 @@
 # @created_by unknown
 # @created_at unknown
 # @modified_by openai/gpt-5
-# @modified_at 2026-07-10 17:58:15
-# @version 0.2.0
+# @modified_at 2026-07-11 12:00:00
+# @version 0.2.2
 # @description Run resumable external AI dispatch matrices with usage and integrity evidence.
-# @changelog Use strict actual-model aliases and retry recovered quota cases in one resume.
+# @changelog Assert that Antigravity preflight stays version-only with unavailable usage/model evidence.
 """Resumable, strictly-serial executor for a model/executor dispatch matrix.
 
 Phase 1 scope: this script is built and self-tested against mock commands
@@ -113,6 +113,7 @@ CLAUDE_MODEL_BRACKET_SUFFIX_RE = re.compile(r"\[[^\[\]]*\]$")
 VERSION_COMMANDS = {
     "codex": ["codex", "--version"],
     "claude": ["claude", "--version"],
+    "agy": ["agy", "--version"],
     "gemini": ["gemini", "--version"],
     "kimi": ["kimi", "--version"],
     "opencode": ["opencode", "--version"],
@@ -1037,6 +1038,16 @@ def run_selftest() -> int:
         str(detailed_usage),
     )
     check("parse_tokens: unknown executor returns None", parse_tokens("gemini", "tokens used\n42") is None)
+    check(
+        "agy preflight command is version-only and never sends a prompt",
+        VERSION_COMMANDS.get("agy") == ["agy", "--version"],
+        str(VERSION_COMMANDS.get("agy")),
+    )
+    check("parse_tokens: agy usage stays unavailable", parse_tokens("agy", "tokens used\n42") is None)
+    check(
+        "detect_actual_model: agy has no fabricated model echo",
+        detect_actual_model("agy", "Gemini 3.5 Flash (Medium)") is None,
+    )
     check(
         "detect_actual_model: codex model line",
         detect_actual_model("codex", "model: gpt-5.6-terra\nok") == "gpt-5.6-terra",

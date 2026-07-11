@@ -2,10 +2,10 @@
 # @created_by openai/gpt-5
 # @created_at 2026-07-10 17:58:15
 # @modified_by openai/gpt-5
-# @modified_at 2026-07-10 17:58:15
-# @version 0.1.0
+# @modified_at 2026-07-11 12:00:00
+# @version 0.1.2
 # @description Select a verified executor model and reasoning effort from model-catalog.yml.
-# @changelog Initial creation.
+# @changelog Keep account-scoped agy models isolated from Gemini API catalog routing.
 """Mechanically route an executor family to a verified model/effort pair."""
 
 from __future__ import annotations
@@ -125,6 +125,18 @@ def run_selftest() -> int:
         checks.append(("no verified claude hard candidate blocks", True))
     else:
         checks.append(("no verified claude hard candidate blocks", False))
+    try:
+        route_model(data, "agy", "easy")
+    except RouteError:
+        checks.append(("agy blocks without verified catalog candidate", True))
+    else:
+        checks.append(("agy blocks without verified catalog candidate", False))
+    try:
+        route_model(data, "agy", "easy", "gemini-3.5-flash")
+    except RouteError:
+        checks.append(("agy rejects Gemini API catalog ids even when explicitly requested", True))
+    else:
+        checks.append(("agy rejects Gemini API catalog ids even when explicitly requested", False))
     receipt = route_model(data, "claude", "medium")
     checks.append(("route receipt has fixed fields", all(key in receipt for key in ("selected_model", "selected_reasoning_effort", "task_complexity", "selection_reason", "estimated_cost_range", "catalog_version", "selection_status"))))
     print("=== route_model.py selftest ===")
@@ -137,7 +149,7 @@ def run_selftest() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--executor", choices=["codex", "claude", "gemini", "kimi", "opencode", "qwen"])
+    parser.add_argument("--executor", choices=["codex", "claude", "agy", "gemini", "kimi", "opencode", "qwen"])
     parser.add_argument("--complexity", choices=["easy", "medium", "hard"])
     parser.add_argument("--model")
     parser.add_argument("--reasoning")

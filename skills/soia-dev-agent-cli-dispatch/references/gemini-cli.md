@@ -1,5 +1,19 @@
 # Gemini CLI 执行规范 / Gemini CLI rules
 
+## 认证通道边界
+
+- 自 2026-06-18 起，Gemini CLI 的消费者 Google OAuth 已停止服务；浏览器
+  显示认证成功后仍可能被产品服务端拒绝。消费者账号改用独立的 `agy`，见
+  `antigravity-cli.md`。
+- Gemini Code Assist Standard/Enterprise、Gemini API Key 和 Vertex AI 仍是
+  受支持路径，继续使用 `gemini`。不得因为消费者迁移而卸载 CLI、删除配置、
+  alias 到 `agy`，或改写这些通道。
+- 诊断时只报告 auth 类型与状态，不读取或输出 token、API Key、OAuth URL/state
+  或完整认证文件。
+
+以下所有 `gemini` 命令模板只适用于已确认的 Standard/Enterprise、API Key
+或 Vertex AI 通道；不得把它们作为消费者 Google 登录失败后的重试路径。
+
 ## 模式选择
 
 - **交互式探索 / 长任务协作**：使用 `gemini`，并放在 PTY 会话中运行。
@@ -102,7 +116,7 @@ Gemini CLI headless 执行至少要按以下退出码判断：
 2. 判断是否属于 prompt 问题、环境问题、认证问题或任务规模过大。
 3. 不要直接把失败归因为"模型不稳定"。
 
-## 推荐使用法
+## 推荐使用法（仅受支持的非消费者通道）
 
 - **Gemini 交互式任务**：走 PTY，会话可持续观察。
 - **Gemini 批量分析任务**：优先 `-p` + `--output-format json`

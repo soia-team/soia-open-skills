@@ -25,6 +25,7 @@ MCP 安装写入用户 agent 配置，必须先 dry-run：
 ```bash
 od mcp install codex --print
 od mcp install claude --print
+od mcp install antigravity --print
 od mcp install gemini --print
 od mcp install opencode --print
 ```

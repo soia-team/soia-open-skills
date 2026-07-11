@@ -3,7 +3,10 @@
 
 env:
   DRY_RUN: "1"
-  NPM_PACKAGES: "codex,claude,gemini"
+  # Add gemini only for confirmed Standard/Enterprise, API Key, or Vertex AI use.
+  TOOLS: "codex,claude,agy"
   NPM_PREFIX: "$HOME/.npm-global"
+  AGY_INSTALL: "0"
+  AGY_INSTALL_DIR: "$HOME/.local/bin"
   LOG_DIR: "$HOME/.local/state/soia-dev-ai-cli-upgrade/logs"
   CURSOR_UPGRADE_CMD: "<optional command>"
