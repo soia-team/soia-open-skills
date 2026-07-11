@@ -36,6 +36,27 @@ claude --permission-mode bypassPermissions --print "Summarize the refactor plan 
 claude --permission-mode bypassPermissions --print --output-format json "Review this diff and return findings"
 ```
 
+### 2.1 从文件安全传入长 prompt（推荐）
+
+```bash
+python3 scripts/run_claude_prompt.py \
+  --prompt-file <prompt-file> \
+  --permission-mode dontAsk \
+  --tools Read,Grep,Glob \
+  --model <model-id> \
+  --effort high \
+  --output-format json
+```
+
+脚本通过 stdin 传 prompt，正文不会进入 shell 插值、命令行参数或进程列表。若不用脚本而把文件内容作为位置参数传给 Claude，必须加参数终止符：
+
+```bash
+claude --permission-mode dontAsk --print --output-format json -- \
+  "$(< "<prompt-file>")"
+```
+
+prompt 可能以 YAML `---` 或单个 `-` 开头；省略 `--` 会被 Claude CLI 当成未知选项。长 prompt 优先使用 stdin 脚本，不用位置参数方案。
+
 ### 3. 流式 JSON 输出
 
 ```bash
@@ -58,3 +79,6 @@ claude --continue
 - `--permission-mode bypassPermissions` 只在你已经明确接受该工作目录的改动风险时使用。
 - 若任务只需要分析，不应默认放大到可编辑会话。
 - 若要结构化消费输出，必须显式带 `--output-format`。
+- 从文件传入 prompt 时优先用 `scripts/run_claude_prompt.py`；不得用缺少 `--` 的 `"$(cat prompt.txt)"` 位置参数写法。
+- `--output-format json` 会在长任务结束时一次性返回结果，数分钟无 stdout 不等于卡死。设置足够的 timeout（脚本默认 900 秒），并用进程存活/CPU/最终 exit code 判断，不要仅因暂时无输出重复派发。
+- `--tools Read,Grep,Glob` 只限制模型可调用的工具，不能禁用 Claude Code 本机 hooks。hooks 仍可能写会话日志；要求“文件系统零写入”时，应先检查 hooks，在中性工作目录运行，并对调用前后 `git status` 做差分，不能只凭 tool allowlist 声称完全只读。

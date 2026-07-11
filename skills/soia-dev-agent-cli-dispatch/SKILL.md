@@ -327,7 +327,7 @@ python3 scripts/route_model.py --executor claude --complexity medium --model cla
 
 ## Prompt 注入防护（通用）
 
-含单引号、特殊字符的 prompt **不能**直接嵌入 `bash -c "..."` 或 `"..."` 参数。**必须**先写 temp 文件：
+含单引号、特殊字符或 YAML frontmatter 的 prompt **不能**直接嵌入 `bash -c "..."`，也不能不加参数终止符就作为位置参数传入。prompt 以 `-` / `---` 开头时，CLI 可能把正文误判成命令选项。**必须**先写独立文件，并优先通过 stdin 传入：
 
 ```bash
 # 1. 把 prompt 写入临时文件（按任务 ID 隔离）
@@ -337,10 +337,18 @@ cat > "${TMPDIR:-/tmp}/soia-dev-agent-cli-dispatch/<task-id>/prompt.txt" << 'PRO
 你的 prompt 内容，可以包含任意引号和特殊字符...
 PROMPT_EOF
 
-# 2. 用 $() 传入执行器
-codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \
-  "$(cat "${TMPDIR:-/tmp}/soia-dev-agent-cli-dispatch/<task-id>/prompt.txt")"
+# 2a. Codex：用 `-` 明确从 stdin 读取
+codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check - \
+  < "${TMPDIR:-/tmp}/soia-dev-agent-cli-dispatch/<task-id>/prompt.txt"
+
+# 2b. Claude：用本技能脚本从 stdin 读取，prompt 不进入 argv / ps 输出
+python3 scripts/run_claude_prompt.py \
+  --prompt-file "${TMPDIR:-/tmp}/soia-dev-agent-cli-dispatch/<task-id>/prompt.txt" \
+  --model <model-id> --effort high --permission-mode dontAsk \
+  --tools Read,Grep,Glob --output-format json
 ```
+
+如果某个 CLI 不支持 stdin、只能接收位置参数，必须写成 `command [options] -- "$(< "$PROMPT_FILE")"`；其中 `--` 不得省略。长 prompt 仍优先 stdin，避免命令行长度上限和正文暴露在进程列表中。
 
 **prompt 文件命名规范**：`${TMPDIR:-/tmp}/soia-dev-agent-cli-dispatch/<task-id>/prompt.txt`
 - 不同任务放不同子目录（按 task-id 隔离），避免并行派发互相覆盖
@@ -644,5 +652,6 @@ git diff --stat HEAD~1..HEAD   # 或 git diff --stat（如未 commit）
 | `scripts/estimate_cost.py` | 给定 model + token 数，输出 API 等价费用估算（分项 + 总额 + `confidence`），未知模型给出近似候选并以 exit code 2 退出 | `python3 scripts/estimate_cost.py --selftest` |
 | `scripts/run_matrix.py` | 可恢复的串行派发矩阵执行器（P3 用；本文档阶段只用 mock 命令自检，不真实调用任何模型） | `python3 scripts/run_matrix.py --selftest` |
 | `scripts/route_model.py` | 从已验证 catalog 记录机械选择模型/推理档并输出固定路由回执；显式指定优先 | `python3 scripts/route_model.py --selftest` |
+| `scripts/run_claude_prompt.py` | 从 UTF-8 prompt 文件经 stdin 调用 Claude Code，防 YAML `---` 被误判为选项，并保留结构化 stdout | `python3 scripts/run_claude_prompt.py --selftest` |
 
-三个脚本均为纯 Python 标准库实现，无第三方依赖。修改任意一个后，先跑对应 `--selftest`，再跑一遍其余两个确认没有连带破坏（`estimate_cost.py` 和 `run_matrix.py` 都从 `catalog_lib.py` 导入解析/校验逻辑）。
+所有脚本均为纯 Python 标准库实现，无第三方依赖。修改任意一个后，先跑对应 `--selftest`，再跑其余脚本的自检，确认没有连带破坏（`estimate_cost.py` 和 `run_matrix.py` 都从 `catalog_lib.py` 导入解析/校验逻辑）。
