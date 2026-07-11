@@ -10,6 +10,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
+
 
 ALLOWED_FRONTMATTER = {"name", "description"}
 DISALLOWED_SKILL_DOCS = {
@@ -89,22 +91,42 @@ def read_text(path: Path) -> str:
 
 
 def parse_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
-    if not text.startswith("---\n"):
+    lines = text.replace("\r\n", "\n").splitlines()
+    if not lines or lines[0] != "---":
         return {}, ["missing YAML frontmatter"]
-    end = text.find("\n---", 4)
-    if end == -1:
+    try:
+        end = lines.index("---", 1)
+    except ValueError:
         return {}, ["unterminated YAML frontmatter"]
-    raw = text[4:end].strip().splitlines()
+    try:
+        data = yaml.safe_load("\n".join(lines[1:end]))
+    except yaml.YAMLError as exc:
+        return {}, [f"invalid YAML frontmatter: {exc}"]
+    if not isinstance(data, dict):
+        return {}, ["YAML frontmatter must be a mapping"]
+    errors: list[str] = []
+    for key in ("name", "description"):
+        if key in data and not isinstance(data[key], str):
+            errors.append(f"frontmatter {key} must be a string")
+    return data, errors
+
+
+def parse_openai_interface(path: Path) -> tuple[dict[str, str], list[str]]:
+    try:
+        document = yaml.safe_load(read_text(path))
+    except yaml.YAMLError as exc:
+        return {}, [f"invalid YAML metadata: {exc}"]
+    if not isinstance(document, dict) or not isinstance(document.get("interface"), dict):
+        return {}, ["missing interface mapping"]
+    interface = document["interface"]
     data: dict[str, str] = {}
     errors: list[str] = []
-    for line in raw:
-        if not line.strip() or line.lstrip().startswith("#"):
-            continue
-        if ":" not in line:
-            errors.append(f"cannot parse frontmatter line: {line}")
-            continue
-        key, value = line.split(":", 1)
-        data[key.strip()] = value.strip().strip('"').strip("'")
+    for key in ("display_name", "short_description", "default_prompt"):
+        value = interface.get(key, "")
+        if not isinstance(value, str):
+            errors.append(f"interface.{key} must be a string")
+        else:
+            data[key] = value
     return data, errors
 
 
@@ -126,10 +148,13 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
 
     if fm.get("name") != skill_name:
         findings.append(Finding("ERROR", rel(skill_md, root), f"frontmatter name must match folder name: {skill_name!r}"))
-    if not fm.get("description"):
+    description = fm.get("description")
+    if not isinstance(description, str) and description is not None:
+        pass  # parse_frontmatter already emitted the type error
+    elif not description:
         findings.append(Finding("ERROR", rel(skill_md, root), "missing frontmatter description"))
-    elif len(fm["description"]) > 220:
-        findings.append(Finding("WARN", rel(skill_md, root), f"description is long ({len(fm['description'])} chars); keep trigger metadata concise"))
+    elif len(description) > 220:
+        findings.append(Finding("WARN", rel(skill_md, root), f"description is long ({len(description)} chars); keep trigger metadata concise"))
 
     extras = sorted(set(fm) - ALLOWED_FRONTMATTER)
     if extras:
@@ -155,50 +180,76 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
                 findings.append(Finding("WARN", rel(path, root), "nested references should stay one level below references/"))
 
     audit_skill_links(root, skill_dir, findings)
+    audit_openai_metadata(root, skill_dir, findings)
+
+
+def audit_openai_metadata(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
+    path = skill_dir / "agents" / "openai.yaml"
+    if not path.is_file():
+        return
+    _, errors = parse_openai_interface(path)
+    for error in errors:
+        findings.append(Finding("ERROR", rel(path, root), error))
 
 
 def check_link_target(root: Path, skill_dir: Path, source_file: Path, target: str) -> str | None:
-    """Return an error message if a relative link target escapes the skill directory."""
+    """Return an error when a relative link escapes the skill directory or is missing."""
     target = target.strip()
-    if not target or target.startswith("#"):
+    if not target or target.startswith("#") or target in {"...", "…"}:
         return None
     if "://" in target or target.startswith("mailto:"):
         return None
     if target.startswith("<") or "{{" in target or "TODO" in target:
         return None  # placeholder text, not a concrete path
+    if re.search(r"\s", target):
+        # `](path "title")` → keep the path token only.
+        target = target.split(None, 1)[0]
 
     path_part = target.split("#", 1)[0].split("?", 1)[0].strip()
     if not path_part or path_part.startswith("/"):
         return None  # absolute paths are covered by the hardcoded-path check
-    if ".." not in path_part.split("/"):
-        return None  # cannot escape the skill directory without a ".." segment
+    if any(char in path_part for char in "<>{}*$"):
+        return None  # placeholder or glob, not a concrete packaged path
 
     resolved = (source_file.parent / path_part).resolve()
     skill_root = skill_dir.resolve()
     try:
         resolved.relative_to(skill_root)
-        return None  # still inside the skill directory
     except ValueError:
-        pass
+        root_resolved = root.resolve()
+        if resolved.parent == root_resolved and resolved.name in ALLOWED_ROOT_DOC_LINKS:
+            if not resolved.exists():
+                return f"relative link target not found: {target}"
+            return None  # explicit repo-level doc link, established usage
+        return f"relative link escapes skill directory: {target}"
 
-    root_resolved = root.resolve()
-    if resolved.parent == root_resolved and resolved.name in ALLOWED_ROOT_DOC_LINKS:
-        return None  # explicit repo-level doc link, established usage
+    if not resolved.exists():
+        return f"relative link target not found: {target}"
+    return None
 
-    return f"relative link escapes skill directory: {target}"
+
+def iter_non_fenced_lines(text: str):
+    """Yield (line_no, line) outside fenced code blocks; fences hold examples, not real links."""
+    fence = False
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        stripped = line.lstrip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            fence = not fence
+            continue
+        if not fence:
+            yield line_no, line
 
 
 def audit_skill_links(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
     md_files = [skill_dir / "SKILL.md"]
     references_dir = skill_dir / "references"
     if references_dir.is_dir():
-        md_files.extend(sorted(references_dir.glob("*.md")))
+        md_files.extend(sorted(references_dir.rglob("*.md")))
 
     for md_file in md_files:
         if not md_file.is_file():
             continue
-        text = read_text(md_file)
-        for i, line in enumerate(text.splitlines(), start=1):
+        for i, line in iter_non_fenced_lines(read_text(md_file)):
             for match in LINK_TARGET_RE.finditer(line):
                 message = check_link_target(root, skill_dir, md_file, match.group(1))
                 if message:
@@ -249,7 +300,13 @@ def collect_findings(root: Path) -> list[Finding]:
         audit_skill(root, skill_dir, findings)
 
     # SKILL_SPEC.md intentionally contains forbidden examples; scanning it would create false positives.
-    scan_roots = [root / "AGENTS.md", root / "README.md", root / "CONTRIBUTING.md", skills_root]
+    scan_roots = [
+        root / "AGENTS.md",
+        root / "README.md",
+        root / "README.en.md",
+        root / "CONTRIBUTING.md",
+        skills_root,
+    ]
     for scan_root in scan_roots:
         if scan_root.is_file():
             audit_text_file(root, scan_root, findings)

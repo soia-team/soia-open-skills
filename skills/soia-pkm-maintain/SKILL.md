@@ -163,7 +163,7 @@ bash scripts/session_end_log.sh --vault <path> --agent Claude-Code
 bash scripts/session_end_log.sh --vault <path> --agent Codex
 ```
 
-所有脚本共享同一套参数化约定：`--vault <path>` 或私有 `config.yml` 的 `env.OBSIDIAN_VAULT`（二选一，`--vault` 优先），不硬编码任何具体 vault 路径。会话日志目录可用 `--log-dir <vault内相对目录>` 或私有配置的 `SOIA_SESSION_LOG_DIR` 覆盖；默认是 `30_日志与思考/20_AI协作日志`。私有配置优先级：`$SOIA_PKM_MAINTAIN_CONFIG_FILE`（或兼容别名 `$SOIA_PKM_MAINTAIN_ENV_FILE`）> `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-maintain/config.yml`。
+所有脚本共享同一套参数化约定：`--vault <path>` 或私有 `config.yml` 的 `env.OBSIDIAN_VAULT`（二选一，`--vault` 优先），不硬编码任何具体 vault 路径。会话日志目录可用 `--log-dir <vault内相对目录>` 或私有配置的 `SOIA_SESSION_LOG_DIR` 覆盖；默认是 `30_日志与思考/20_Agent工作日志`。私有配置优先级：`$SOIA_PKM_MAINTAIN_CONFIG_FILE`（或兼容别名 `$SOIA_PKM_MAINTAIN_ENV_FILE`）> `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-maintain/config.yml`。
 
 ## 边界与异常
 

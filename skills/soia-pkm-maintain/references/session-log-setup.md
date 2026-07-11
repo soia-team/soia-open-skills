@@ -2,7 +2,7 @@
 
 把 vault 里未提交的改动，在每次 AI 会话/回合结束时自动追加一条摘要到
 `<会话日志目录>/<年>/<agent>/<日期>.md`。默认会话日志目录是
-`30_日志与思考/20_AI协作日志`，可通过 `--log-dir <vault内相对目录>` 或私有 `config.yml`
+`30_日志与思考/20_Agent工作日志`，可通过 `--log-dir <vault内相对目录>` 或私有 `config.yml`
 的 `SOIA_SESSION_LOG_DIR` 覆盖。底层脚本是
 `scripts/session_end_log.sh`（两平台共用），Codex 侧多一层
 `scripts/codex_notify_wrapper.sh`。

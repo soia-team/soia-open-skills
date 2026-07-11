@@ -6,7 +6,7 @@
 - **一次性批处理**：使用 `codex exec`。
 - **差异评审**：使用 `codex review`。
 - **去沙箱全权限（常见默认候选）**：`--dangerously-bypass-approvals-and-sandbox`（注意：`--full-auto` 与此互斥，两者只能二选一，按你的编排约定选定后固定使用）。
-- **多 Agent 并行**：`[features] multi_agent = true`（在 `~/.codex/config.toml` 开启）——主 agent 自动派生子 agent 并行执行独立子任务；prompt 中明确列出并行任务列表即可触发。
+- **多 Agent 并行**：`[features] multi_agent = true` 只适用于当前 Codex runtime 确实有可用 thread/collaboration 上下文的场景。外部 `codex exec` 不得仅因全局开关已启用就假设能 spawn；先做 capability probe。
 - **去沙箱全权限模式**：`--dangerously-bypass-approvals-and-sandbox` — 仅在用户已明确同意（系统级或本次任务级授权）时使用；不要把它当成无需确认的默认状态。
 
 ## 模型分级
@@ -106,6 +106,13 @@ codex exec -m <model> -c model_reasoning_effort="high" \
   1. stdout 实际内容是否包含预期的错误/警告文字（不要只看 exit code）。
   2. 产物是否真的产生：`git diff --stat`（代码类任务）或直接检查目标输出文件是否存在、内容是否符合预期。
 - 只有“exit code 为 0 + stdout 无异常 + 产物核实存在”三者同时成立，才能判定本次执行成功。
+
+## 外部 exec 的多 Agent 降级边界（2026-07-11 实测）
+
+- 外部 `codex exec` 即使读到 `multi_agent=true`，也可能没有可派生的 thread；实测表现为 spawn 返回 `no thread`，随后模型仍尝试等待，最终形成“对 0 个 agent 等待”的空转。
+- 需要 SOL/Codex 只做 leader 裁决而不依赖子 agent 时，显式加 `--disable multi_agent`，并在 prompt 里写明“禁止 spawn/wait”。这不是能力降级伪装，而是把本轮角色固定为单 leader。
+- 确实需要多 Agent 时先探针：必须拿到至少一个成功的 spawn receipt 与非空 agent id；spawn 失败或 agent 集合为空时立即返回 `blocked_subagent_unverified`，禁止调用 wait。
+- 只读沙箱可能禁止 `mktemp`/临时测试写入；这种环境失败只能标为 `environment_blocked`，不能推断代码测试失败。由宿主在正常可写环境重新跑并单独出回执。
 
 ## Prompt 注入防护
 

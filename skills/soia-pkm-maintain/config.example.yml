@@ -3,4 +3,4 @@
 
 env:
   OBSIDIAN_VAULT: "<vault-path>"
-  SOIA_SESSION_LOG_DIR: "30_日志与思考/20_AI协作日志"
+  SOIA_SESSION_LOG_DIR: "30_日志与思考/20_Agent工作日志"

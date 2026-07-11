@@ -16,6 +16,14 @@ do not make this a Codex-only file.
 be safe for users who do not share the maintainer's machine, vault layout,
 accounts, private data, or SOIA internal workspace.
 
+## Routing Boundary
+
+Maintaining this repository is skill-package work, not SOIA product work. The
+repository name and SOIA examples do not authorize or trigger product
+`proposal` / `board` / `task-execute` / product-release governance. Follow this
+repository's own validation and release rules; use product governance only when
+the actual target is an explicitly confirmed SOIA product workspace.
+
 ## Read First
 
 - `README.md` for the public catalog, install path, and visible skill list.
@@ -53,6 +61,8 @@ accounts, private data, or SOIA internal workspace.
 Before committing skill changes, run:
 
 ```bash
+python3 -m pip install -r requirements-dev.txt  # once per machine; the audit uses PyYAML
+python3 -m unittest discover -s tests -p 'test_*.py'
 python3 scripts/generate_skill_catalog.py --check
 python3 scripts/audit_skills.py
 git diff --check

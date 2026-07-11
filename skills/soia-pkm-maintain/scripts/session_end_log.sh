@@ -18,7 +18,7 @@
 #     日志会刷屏。所以本脚本用 git status --porcelain 输出内容的 md5 做节流：跟上次
 #     落盘时的状态一致就直接退出，不重复写快照，只有改动内容变化时才追加。
 #   - 节流状态文件：<vault>/.git/soia-session-log-<agent>.state
-#   - 节流对比前会先过滤掉本脚本自己写的日志目录（默认 30_日志与思考/20_AI协作日志，
+#   - 节流对比前会先过滤掉本脚本自己写的日志目录（默认 30_日志与思考/20_Agent工作日志，
 #     可由 --log-dir / SOIA_SESSION_LOG_DIR 覆盖），
 #     否则第一次创建当天日志文件后，这个新文件本身在 git status 里从"不存在"变成
 #     "??"，会被误判成"内容变了"，多写一条空快照——过滤掉这个自引用噪音后，只有
@@ -34,7 +34,7 @@
 #   - 不做任何 git 操作（不 add/commit/push），只读 git status。
 
 AGENT="Claude-Code"
-SESSION_LOG_DIR="${SOIA_SESSION_LOG_DIR:-30_日志与思考/20_AI协作日志}"
+SESSION_LOG_DIR="${SOIA_SESSION_LOG_DIR:-30_日志与思考/20_Agent工作日志}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 load_private_env() {

@@ -3,7 +3,7 @@
   "extends_default": true,
   "directories": {
     "remove": [
-      "30_日志与思考/20_AI协作日志"
+      "30_日志与思考/20_Agent工作日志"
     ],
     "add": [
       "30_日志与思考/20_会话日志"

@@ -75,7 +75,7 @@ SOIA_PKM_CLIP_DRIVE_CONFIG_FILE=<custom-config-path>
 - 输入：文件路径 / 目录（PDF、DOCX、TXT、Markdown）
 - 提取：`pypdf` / `pdfplumber`（PDF）、`python-docx`（Word）提取文本；原文件留到 `_附件/`。
 - 大批量：目录批处理，每个文件 → 一篇笔记。
-- 脚本：`scripts/import_drive.py <路径> --vault <path> [--recursive]`。
+- 提取与落地当前由 agent 按本节流程手工执行（专用批量导入脚本待补充到本 skill 的 `scripts/`）。
 
 ## 落地
 

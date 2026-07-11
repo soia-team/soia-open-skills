@@ -73,6 +73,14 @@ claude --continue
 
 - 需要在同目录续接最近一次 Claude Code 会话。
 
+### 5. 自定义 subagent 终审（2026-07-11 实测约束）
+
+- `--safe-mode` 会禁用 custom agents；需要 `--agents` 时不得同时使用 safe mode。改在中性工作目录运行，配合 `--setting-sources local`、显式工具白名单和空 MCP。
+- 空 MCP 的有效 schema 是 `--mcp-config '{"mcpServers":{}}' --strict-mcp-config`；直接传 `{}` 会在进入模型前报 `Invalid MCP configuration`。
+- 先做 capability probe：要求每个自定义 agent 返回不同固定 marker，并使用 `--output-format stream-json --verbose`。只有 stream 中出现对应的 `Agent` tool event、`task_started/task_notification` 和 `resolvedModel` 才算真实运行；主模型口头声称“已调用”不算证据。
+- 任一 agent 未真实运行时返回 `blocked_subagent_unverified` / `partial_review`，禁止静默退化成主模型单审。
+- `--output-format json` 长任务没有中间 stdout；需要观察 subagent 事件时必须用 `stream-json`，否则只用进程存活与最终 exit code 判断。
+
 ## 关键约束
 
 - 默认推荐 `--print`，因为它更适合自动化编排、减少 PTY/TUI 交互开销。

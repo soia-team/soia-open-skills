@@ -75,7 +75,7 @@ SOIA_PKM_CLIP_WEB_CONFIG_FILE=<custom-config-path>
 - 输入：任意文章 URL（博客 / Substack / Medium / 新闻 / 知乎等）
 - 正文抽取：`trafilatura` 或 `readability-lxml` 抽正文（去广告 / 导航），提取标题、作者、发布时间。
 - 抓不到正文 → `content_complete: false`，**绝不静默截断**。
-- 脚本：`scripts/archive_web.py <url> --vault <path>`。
+- 抓取与落地当前由 agent 按本节流程手工执行（专用归档脚本待补充到本 skill 的 `scripts/`）。
 - 手机端可用 Obsidian Web Clipper 落到 `<vault-inbox-dir>/`，再由本 skill 迁入。
 
 ## 抓取质量强制复核
