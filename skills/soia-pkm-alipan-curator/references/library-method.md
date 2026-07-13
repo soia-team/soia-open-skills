@@ -8,10 +8,10 @@
 
 > **🔑 生成器铁律**：`00_馆藏总览` 和 `_全文检索/` 都由本 skill 的 `scripts/gen_catalog.py` 产出，**靠调用技能生成，绝不把脚本写进用户的 OB vault**（OB 只放产出）。扫描数据（JSONL）是运行时数据，放 `/tmp` 或私有 config.yml，不进 vault 也不进 skill 仓库。
 > **⚠️ 网盘深链格式（实盘校准，别猜）**：备份盘文件夹 = `https://www.alipan.com/drive/file/all/backup/<file_id>`（`folder/<id>` 会弹回首页）；用 `--url-prefix` 传，默认已是此格式；file_id 来自扫描数据。
-> 命令：`python3 <本skill>/scripts/gen_catalog.py --scan-dir <扫描JSONL目录> --out <总览.md> --search-dir <检索目录> [--moves f --deletes f --roots f --junk <碎片前缀>]`
+> 命令：`python3 <本skill>/scripts/gen_catalog.py --scan-dir <扫描JSONL目录> --out <总览.md> --search-dir <检索目录> [--moves f --deletes f --roots f --junk <碎片前缀> --max-heading-depth N]`
 
-### 1. 00_馆藏总览（浏览：折叠树 + 叶文件夹表格）
-`gen_catalog.py` 从全盘扫描 JSONL 生成：**分类夹（`NN_` 前缀）→ 可折叠标题**（`#`/`##`/…，Obsidian 大纲面板直接跳转）；标题下的表格**下探到叶文件夹**（真实文件所在的最末层），每行 = 一个叶文件夹（相对位置 / 媒介 / 文件数 / 大小 / 🔗直达该文件夹）。同一资源下 >12 个子文件夹压缩为「前2+计数+末1」。总览本身**不铺 15 万个文件**（实测全铺=41k 行乱成一团；叶文件夹+压缩 = ~1200 行，可折叠）。方括号 `[]`、竖线 `|` 要转义。
+### 1. 00_馆藏总览（浏览：目录树标题 + 叶文件夹表格）
+`gen_catalog.py` 从全盘扫描 JSONL 生成：**每一级非叶目录都成为标题**（从根开始的编号链 + 语义名 + 🔗直达，Obsidian 大纲面板直接跳转）；直接含文件且无子目录的叶文件夹保留为标题下的表格行（相对位置 / 媒介 / 文件数 / 大小 / 🔗直达该文件夹）。同一父目录下 >12 个叶文件夹压缩为「前2+计数+末1」。标题最多到 H6，或用 `--max-heading-depth N` 提前降级为随层级缩进的加粗行。总览本身不铺单个文件，方括号 `[]`、竖线 `|` 要转义。
 
 ### 1b. 全文检索索引（检索：搜到任意单文件）
 `--search-dir` 触发：按区各出一份 `_全文检索/<区>.md`，每个资源一个 `##` 标题下**「文件 | 大小」表格**列出全部文件（相对路径）。**只搜不看**（Ctrl+F / 全局搜），文件大所以别在编辑模式久留；`--junk` 排除无检索价值的碎片区（如 Office 模板 8 万碎片）。
