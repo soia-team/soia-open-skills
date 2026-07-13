@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""catalog 工作流：从全盘扫描 JSONL 生成「折叠树标题 + 叶文件夹表格」的馆藏总览 + 全文检索索引。
+"""catalog 工作流：从全盘扫描 JSONL 生成「目录树标题 + 叶文件夹表格」的馆藏总览 + 全文检索索引。
 
 通用、无私有数据硬编码。用法：
   gen_catalog.py --scan-dir DIR --out FILE [--moves f --deletes f --roots f --title T
-                 --search-dir DIR --junk PREFIX --url-prefix URL]
+                 --search-dir DIR --junk PREFIX --url-prefix URL --max-heading-depth N]
 
 JSONL 每行：{"path","name","id","dir","size"[,"agg_files","agg_size"]}
 约定：整理时的分类夹带 `NN_` 数字前缀（10_/20_…），真实资源用原名。
-渲染：分类夹（NN_）→ 可折叠标题（每个带 🔗）；标题下的表格**下探到叶文件夹**（真实文件所在的最末层），
-每行 = 一个叶文件夹（位置/媒介/文件数/大小 + 🔗直达）。同一资源下 >12 个子文件夹压缩为 前2+计数+末1。
+渲染：只有带 `NN_` / `NN.` 前缀的业务目录成为标题，标题文本直接使用当前实体目录名 + 🔗直达；
+无编号的内部素材目录不进入大纲，按相对路径保持为表格行。同一业务目录下 >12 个素材文件夹压缩为 前2+计数+末1。
+标题最多使用 H6；超过 H6 或 `--max-heading-depth` 时停留在最大标题级别，不输出 HTML 缩进实体。
 点 🔗 落到文件所在文件夹；搜单个文件用 --search-dir 出的全文检索索引。
 
 --url-prefix：阿里云盘网页版文件夹深链前缀。备份盘实测格式 = `https://www.alipan.com/drive/file/all/backup/<file_id>`
@@ -73,7 +74,7 @@ def load(scan_dir, moves_f, del_f, roots_f):
 def build(recs):
     ch=defaultdict(list)
     for p in recs:
-        par=p.rsplit('/',1)[0] if p.count('/')>1 else ''
+        par=p.rsplit('/',1)[0] if '/' in p else ''
         ch[par].append(p)
     for parent in list(ch):
         if parent and parent in recs: recs[parent]['dir']=True
@@ -89,6 +90,8 @@ def main():
     ap.add_argument('--junk',default='',help='逗号分隔的路径前缀,其下文件不入检索索引(如模板碎片区)')
     ap.add_argument('--url-prefix',default='https://www.alipan.com/drive/file/all/backup/',
                     help='网盘文件夹深链前缀(拼 file_id);备份盘实测 file/all/backup/')
+    ap.add_argument('--max-heading-depth',type=int,default=None,
+                    help='标题最大深度;更深的编号目录停留在该标题级别')
     a=ap.parse_args()
     U=a.url_prefix
     recs=load(a.scan_dir,a.moves,a.deletes,a.roots); ch=build(recs)
@@ -101,25 +104,20 @@ def main():
                 dd,ff,ss=stats(c); d+=1+dd; f+=ff+r.get('agg_files',0); s+=ss+(r.get('agg_size') or 0)
             else: f+=1; s+=r.get('size') or 0
         return d,f,s
-    def media(p):
+    def media(p, direct=False):
         e=Counter()
         def rec(q):
             for c in ch.get(q,[]):
-                if recs[c].get('dir'): rec(c)
-                else:
+                if recs[c].get('dir') and not direct: rec(c)
+                elif not recs[c].get('dir'):
                     nm=recs[c]['name']; e[nm.rsplit('.',1)[-1].lower() if '.' in nm else '?']+=1
         rec(p); tot=sum(e.values()) or 1
         v=sum(e[x] for x in VID);au=sum(e[x] for x in AUD);d=sum(e[x] for x in DOC);i=sum(e[x] for x in IMG)
         top=max([('🎬视频',v),('🎧音频',au),('📄文档',d),('🖼图片',i)],key=lambda x:x[1])
         return top[0] if top[1]/tot>=0.5 else '📦混合'
-    def leaf_folders(node):
-        subs=[c for c in ch.get(node,[]) if recs[c].get('dir')]
-        if not subs: return [node]
-        r=[]
-        for c in subs: r+=leaf_folders(c)
-        return r
-
-    roots=sorted([p for p in recs if p.count('/')==1], key=lambda p:recs[p]['name'])
+    roots=sorted([p for p,r in recs.items() if r.get('dir') and
+                  (p.rsplit('/',1)[0] if '/' in p else '') not in recs],
+                 key=lambda p:recs[p]['name'])
     EMOJI={'孩子':'👶','个人':'📖','技术':'🔧','影视':'🎬','书籍':'📚','存档':'🗄️'}
     out=[]
     tot_d=tot_f=tot_s=0; rowsum=[]
@@ -127,10 +125,10 @@ def main():
         d,f,s=stats(r); tot_d+=d+1; tot_f+=f; tot_s+=s; rowsum.append((recs[r]['name'],d+1,f,s,recs[r].get('id')))
     out.append(f"---\ntype: moc\ntitle: {a.title}\ntags: [MOC, 云盘, 全盘索引]\n---\n")
     out.append(f"# ☁️ {a.title}\n")
-    out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 折叠标题浏览，**表格已下探到叶文件夹**（真实文件所在层），点 🔗 直达该文件夹")
+    out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 编号目录标题浏览，**表格保留无编号素材文件夹**（真实文件所在层），点 🔗 直达该文件夹")
     search_nav = " ▸ **搜单个文件** → `20_云盘地图/_全文检索/`（每区一份全文件清单，Ctrl+F/全局搜）" if a.search_dir else ""
     out.append(f"> 三样各司其职：**本文件**=浏览+直达文件夹；[[云盘馆藏.base|🃏 精选卡]]=15张策展卡；**_全文检索/**=搜任意单文件。{search_nav}")
-    out.append("> 分类逻辑见 `20_云盘地图/` 各《深度分类方案》。同一资源下 >12 个子文件夹已压缩为「前2+计数+末1」。\n")
+    out.append("> 分类逻辑见 `20_云盘地图/` 各《深度分类方案》。同一编号目录下 >12 个素材文件夹已压缩为「前2+计数+末1」。\n")
     out.append("| 区 | 直达 | 目录 | 文件 | 体量 |")
     out.append("|---|---|---:|---:|---:|")
     for nm,d,f,s,fid in rowsum:
@@ -139,42 +137,71 @@ def main():
         out.append(f"| {e} **{nm}** | {lk} | {d:,} | {f:,} | {human(s)} |")
     out.append("")
 
-    def rowfor(leaf, base):
+    def rowfor(leaf, base, direct=False):
         fid=recs[leaf].get('id'); _,f,s=stats(leaf)
+        if direct:
+            files=[c for c in ch.get(leaf,[]) if not recs[c].get('dir')]
+            f=len(files); s=sum(recs[c].get('size') or 0 for c in files)
         rel=esc(leaf[len(base)+1:] if leaf.startswith(base+'/') else recs[leaf]['name'])
         lk=f"[{rel} 🔗]({U}{fid})" if fid else rel
-        return f"| {lk} | {media(leaf)} | {f:,} | {human(s)} |"
+        return f"| {lk} | {media(leaf,direct)} | {f:,} | {human(s)} |"
 
-    def emit(path, level):
-        subs=[c for c in ch.get(path,[]) if recs[c].get('dir')]
-        nn=[c for c in subs if NN.match(recs[c]['name'])]
-        nonnn=[c for c in subs if not NN.match(recs[c]['name'])]
+    def title_line(path, root, level, emoji=None):
+        prefix=f"{emoji} " if emoji else ''
+        fid=recs[path].get('id')
+        lk=f" [🔗打开]({U}{fid})" if emoji and fid else (f" [🔗]({U}{fid})" if fid else '')
+        text=f"{prefix}{recs[path]['name']}"
+        requested_depth = a.max_heading_depth if a.max_heading_depth is not None else 6
+        max_heading_level = max(1, min(6, requested_depth))
+        heading_level = min(level, max_heading_level)
+        return f"{'#'*heading_level} {text}{lk}"
+
+    def emit(path, level, root):
         direct_files=[c for c in ch.get(path,[]) if not recs[c].get('dir')]
-        groups=[(c, leaf_folders(c)) for c in nonnn]
-        if not nonnn and direct_files: groups=[(None,[path])]
-        if groups:
+        material_rows=[]
+        numbered_children=[]
+
+        def walk_unnumbered(node):
+            for child in dirs_for(node):
+                if NN.match(recs[child]['name']):
+                    numbered_children.append(child)
+                    continue
+                if direct_files_for(child):
+                    material_rows.append(child)
+                walk_unnumbered(child)
+
+        walk_unnumbered(path)
+        collapse_material_tree = bool(material_rows) and not numbered_children
+        if direct_files or material_rows:
             out.append("\n| 位置（🔗直达文件夹） | 类型 | 文件 | 大小 |")
             out.append("|---|---|---:|---:|")
-            for resnode,leaves in groups:
-                if len(leaves)>SERIES_CAP:
-                    out.append(rowfor(leaves[0],path)); out.append(rowfor(leaves[1],path))
-                    rfid=recs[resnode].get('id') if resnode else None
-                    rn=esc(recs[resnode]['name'] if resnode else recs[path]['name'])
-                    mid=f"[…{rn}（共{len(leaves)}个子文件夹）🔗]({U}{rfid})" if rfid else f"…{rn}（共{len(leaves)}个子文件夹）"
-                    out.append(f"| {mid} | | | |")
-                    out.append(rowfor(leaves[-1],path))
-                else:
-                    for leaf in leaves: out.append(rowfor(leaf,path))
-        for c in nn:
-            fid=recs[c].get('id'); lk=f" [🔗]({U}{fid})" if fid else ""
-            out.append(f"\n{'#'*min(level+1,6)} {recs[c]['name']}{lk}")
-            emit(c, level+1)
+            if collapse_material_tree:
+                out.append(rowfor(path,path,False))
+            elif direct_files:
+                out.append(rowfor(path,path,True))
+            if not collapse_material_tree and len(material_rows)>SERIES_CAP:
+                for leaf in material_rows[:2]: out.append(rowfor(leaf,path,True))
+                fid=recs[path].get('id'); rn=esc(recs[path]['name'])
+                mid=f"[…{rn}（共{len(material_rows)}个素材文件夹）🔗]({U}{fid})" if fid else f"…{rn}（共{len(material_rows)}个素材文件夹）"
+                out.append(f"| {mid} | | | |")
+                out.append(rowfor(material_rows[-1],path,True))
+            elif not collapse_material_tree:
+                for leaf in material_rows: out.append(rowfor(leaf,path,True))
+        for c in numbered_children:
+            out.append("\n"+title_line(c,root,level+1))
+            emit(c, level+1, root)
+
+    def direct_files_for(node):
+        return [c for c in ch.get(node,[]) if not recs[c].get('dir')]
+
+    def dirs_for(node):
+        return [c for c in ch.get(node,[]) if recs[c].get('dir')]
 
     for r in roots:
-        e=next((v for k,v in EMOJI.items() if k in recs[r]['name']),'📁')
-        fid=recs[r].get('id')
-        out.append(f"\n# {e} {recs[r]['name']}" + (f" [🔗打开]({U}{fid})" if fid else ""))
-        emit(r, 1)
+        nm=recs[r]['name']
+        e=next((v for k,v in EMOJI.items() if k in nm),'📁')
+        out.append("\n"+title_line(r,r,1,e))
+        emit(r, 1, r)
     open(a.out,'w').write("\n".join(x for x in out if x is not None)+"\n")
     print(f"OK {a.out} · {sum(1 for x in out if x)} 行 · {tot_d} 目录")
 
@@ -183,7 +210,10 @@ def main():
         junk=[j for j in a.junk.split(',') if j]
         def resource_of(p):
             segs=p.split('/')
-            for i in range(2,len(segs)):
+            # The final segment is the file itself.  When every physical
+            # directory is NN_-prefixed, inspecting that segment would turn
+            # each file into a fake "resource folder" in the search index.
+            for i in range(2,len(segs)-1):
                 if not NN.match(segs[i]): return '/'.join(segs[:i+1])
             return '/'.join(segs[:-1])
         zfiles=defaultdict(list)
