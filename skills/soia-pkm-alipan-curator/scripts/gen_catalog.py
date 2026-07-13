@@ -7,9 +7,9 @@
 
 JSONL 每行：{"path","name","id","dir","size"[,"agg_files","agg_size"]}
 约定：整理时的分类夹带 `NN_` 数字前缀（10_/20_…），真实资源用原名。
-渲染：目录树每一级目录都成为标题，标题文本为从根目录开始的编号链 + 语义名 + 🔗直达；
-直接含文件且无子目录的叶文件夹保持表格行，挂在父目录标题下，同一父目录下 >12 个叶文件夹压缩为 前2+计数+末1。
-标题最多使用 H6；超过 H6 或 `--max-heading-depth` 的目录改用以 HTML 实体随层级缩进的加粗行。
+渲染：只有带 `NN_` / `NN.` 前缀的业务目录成为标题，标题文本直接使用当前实体目录名 + 🔗直达；
+无编号的内部素材目录不进入大纲，按相对路径保持为表格行。同一业务目录下 >12 个素材文件夹压缩为 前2+计数+末1。
+标题最多使用 H6；超过 H6 或 `--max-heading-depth` 时停留在最大标题级别，不输出 HTML 缩进实体。
 点 🔗 落到文件所在文件夹；搜单个文件用 --search-dir 出的全文检索索引。
 
 --url-prefix：阿里云盘网页版文件夹深链前缀。备份盘实测格式 = `https://www.alipan.com/drive/file/all/backup/<file_id>`
@@ -91,7 +91,7 @@ def main():
     ap.add_argument('--url-prefix',default='https://www.alipan.com/drive/file/all/backup/',
                     help='网盘文件夹深链前缀(拼 file_id);备份盘实测 file/all/backup/')
     ap.add_argument('--max-heading-depth',type=int,default=None,
-                    help='标题最大深度;超过此深度的目录改用缩进加粗行')
+                    help='标题最大深度;更深的编号目录停留在该标题级别')
     a=ap.parse_args()
     U=a.url_prefix
     recs=load(a.scan_dir,a.moves,a.deletes,a.roots); ch=build(recs)
@@ -125,10 +125,10 @@ def main():
         d,f,s=stats(r); tot_d+=d+1; tot_f+=f; tot_s+=s; rowsum.append((recs[r]['name'],d+1,f,s,recs[r].get('id')))
     out.append(f"---\ntype: moc\ntitle: {a.title}\ntags: [MOC, 云盘, 全盘索引]\n---\n")
     out.append(f"# ☁️ {a.title}\n")
-    out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 目录标题浏览，**表格保留叶文件夹**（真实文件所在层），点 🔗 直达该文件夹")
+    out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 编号目录标题浏览，**表格保留无编号素材文件夹**（真实文件所在层），点 🔗 直达该文件夹")
     search_nav = " ▸ **搜单个文件** → `20_云盘地图/_全文检索/`（每区一份全文件清单，Ctrl+F/全局搜）" if a.search_dir else ""
     out.append(f"> 三样各司其职：**本文件**=浏览+直达文件夹；[[云盘馆藏.base|🃏 精选卡]]=15张策展卡；**_全文检索/**=搜任意单文件。{search_nav}")
-    out.append("> 分类逻辑见 `20_云盘地图/` 各《深度分类方案》。同一父目录下 >12 个叶文件夹已压缩为「前2+计数+末1」。\n")
+    out.append("> 分类逻辑见 `20_云盘地图/` 各《深度分类方案》。同一编号目录下 >12 个素材文件夹已压缩为「前2+计数+末1」。\n")
     out.append("| 区 | 直达 | 目录 | 文件 | 体量 |")
     out.append("|---|---|---:|---:|---:|")
     for nm,d,f,s,fid in rowsum:
@@ -146,49 +146,48 @@ def main():
         lk=f"[{rel} 🔗]({U}{fid})" if fid else rel
         return f"| {lk} | {media(leaf,direct)} | {f:,} | {human(s)} |"
 
-    def title_text(path, root):
-        root_parts=root.split('/'); path_parts=path.split('/')
-        names=[recs[root]['name']]
-        for i in range(len(root_parts),len(path_parts)):
-            child='/'.join(path_parts[:i+1])
-            names.append(recs.get(child,{}).get('name',path_parts[i]))
-        chain=[]
-        for name in names:
-            m=NN.match(name); chain.append(m.group(0)[:2] if m else '-')
-        m=NN.match(recs[path]['name'])
-        semantic=recs[path]['name'][len(m.group(0)):] if m else recs[path]['name']
-        return '.'.join(chain), semantic
-
     def title_line(path, root, level, emoji=None):
-        chain,semantic=title_text(path,root)
         prefix=f"{emoji} " if emoji else ''
         fid=recs[path].get('id')
         lk=f" [🔗打开]({U}{fid})" if emoji and fid else (f" [🔗]({U}{fid})" if fid else '')
-        text=f"{prefix}{chain} {semantic}"
-        max_heading_level = min(6, a.max_heading_depth) if a.max_heading_depth is not None else 6
-        if level<=max_heading_level:
-            return f"{'#'*level} {text}{lk}"
-        indent = max(0, level - max_heading_level - 1)
-        return f"{'&nbsp;&nbsp;'*indent}**{text}**{lk}"
+        text=f"{prefix}{recs[path]['name']}"
+        requested_depth = a.max_heading_depth if a.max_heading_depth is not None else 6
+        max_heading_level = max(1, min(6, requested_depth))
+        heading_level = min(level, max_heading_level)
+        return f"{'#'*heading_level} {text}{lk}"
 
     def emit(path, level, root):
-        subs=[c for c in ch.get(path,[]) if recs[c].get('dir')]
         direct_files=[c for c in ch.get(path,[]) if not recs[c].get('dir')]
-        leaves=[c for c in subs if direct_files_for(c) and not dirs_for(c)]
-        if direct_files or leaves:
+        material_rows=[]
+        numbered_children=[]
+
+        def walk_unnumbered(node):
+            for child in dirs_for(node):
+                if NN.match(recs[child]['name']):
+                    numbered_children.append(child)
+                    continue
+                if direct_files_for(child):
+                    material_rows.append(child)
+                walk_unnumbered(child)
+
+        walk_unnumbered(path)
+        collapse_material_tree = bool(material_rows) and not numbered_children
+        if direct_files or material_rows:
             out.append("\n| 位置（🔗直达文件夹） | 类型 | 文件 | 大小 |")
             out.append("|---|---|---:|---:|")
-            if direct_files: out.append(rowfor(path,path,True))
-            if len(leaves)>SERIES_CAP:
-                for leaf in leaves[:2]: out.append(rowfor(leaf,path))
+            if collapse_material_tree:
+                out.append(rowfor(path,path,False))
+            elif direct_files:
+                out.append(rowfor(path,path,True))
+            if not collapse_material_tree and len(material_rows)>SERIES_CAP:
+                for leaf in material_rows[:2]: out.append(rowfor(leaf,path,True))
                 fid=recs[path].get('id'); rn=esc(recs[path]['name'])
-                mid=f"[…{rn}（共{len(leaves)}个子文件夹）🔗]({U}{fid})" if fid else f"…{rn}（共{len(leaves)}个子文件夹）"
+                mid=f"[…{rn}（共{len(material_rows)}个素材文件夹）🔗]({U}{fid})" if fid else f"…{rn}（共{len(material_rows)}个素材文件夹）"
                 out.append(f"| {mid} | | | |")
-                out.append(rowfor(leaves[-1],path))
-            else:
-                for leaf in leaves: out.append(rowfor(leaf,path))
-        for c in subs:
-            if c in leaves: continue
+                out.append(rowfor(material_rows[-1],path,True))
+            elif not collapse_material_tree:
+                for leaf in material_rows: out.append(rowfor(leaf,path,True))
+        for c in numbered_children:
             out.append("\n"+title_line(c,root,level+1))
             emit(c, level+1, root)
 
@@ -199,7 +198,7 @@ def main():
         return [c for c in ch.get(node,[]) if recs[c].get('dir')]
 
     for r in roots:
-        nm=title_text(r,r)[1]
+        nm=recs[r]['name']
         e=next((v for k,v in EMOJI.items() if k in nm),'📁')
         out.append("\n"+title_line(r,r,1,e))
         emit(r, 1, r)
@@ -211,7 +210,10 @@ def main():
         junk=[j for j in a.junk.split(',') if j]
         def resource_of(p):
             segs=p.split('/')
-            for i in range(2,len(segs)):
+            # The final segment is the file itself.  When every physical
+            # directory is NN_-prefixed, inspecting that segment would turn
+            # each file into a fake "resource folder" in the search index.
+            for i in range(2,len(segs)-1):
                 if not NN.match(segs[i]): return '/'.join(segs[:i+1])
             return '/'.join(segs[:-1])
         zfiles=defaultdict(list)

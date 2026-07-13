@@ -71,7 +71,37 @@ class CatalogRendererTests(unittest.TestCase):
                 sys.argv = old_argv
             return out.read_text(encoding="utf-8")
 
-    def test_number_chain_and_unprefixed_placeholder(self) -> None:
+    def run_catalog_with_search(self, records: list[dict]) -> tuple[str, str]:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            scan_dir = root / "scan"
+            search_dir = root / "search"
+            scan_dir.mkdir()
+            (scan_dir / "scan.jsonl").write_text(
+                "\n".join(json.dumps(record, ensure_ascii=False) for record in records) + "\n",
+                encoding="utf-8",
+            )
+            out = root / "catalog.md"
+            old_argv = sys.argv
+            sys.argv = [
+                "gen_catalog.py",
+                "--scan-dir",
+                str(scan_dir),
+                "--out",
+                str(out),
+                "--search-dir",
+                str(search_dir),
+                "--url-prefix",
+                "https://example.test/f/",
+            ]
+            try:
+                gen_catalog.main()
+            finally:
+                sys.argv = old_argv
+            search = (search_dir / "10_孩子.md").read_text(encoding="utf-8")
+            return out.read_text(encoding="utf-8"), search
+
+    def test_only_numbered_directories_enter_outline(self) -> None:
         records = [
             folder("10_孩子", "root"),
             folder("10_孩子/10_视频", "video"),
@@ -81,16 +111,24 @@ class CatalogRendererTests(unittest.TestCase):
             folder("10_孩子/10_视频/贝瓦儿歌", "beva"),
             folder("10_孩子/10_视频/贝瓦儿歌/01_第一集", "beva-one"),
             file_record("10_孩子/10_视频/贝瓦儿歌/01_第一集/01.mp4"),
+            folder("10_孩子/10_视频/assets", "assets"),
+            folder("10_孩子/10_视频/assets/banner", "banner"),
+            file_record("10_孩子/10_视频/assets/banner/cover.png"),
         ]
 
         output = self.run_catalog(records, "--url-prefix", "https://example.test/f/")
 
-        self.assertIn("# 👶 10 孩子 [🔗打开](https://example.test/f/root)", output)
-        self.assertIn("## 10.10 视频 [🔗](https://example.test/f/video)", output)
-        self.assertIn("### 10.10.10 儿歌动画正片 [🔗](https://example.test/f/songs)", output)
-        self.assertIn("### 10.10.- 贝瓦儿歌 [🔗](https://example.test/f/beva)", output)
+        self.assertIn("# 👶 10_孩子 [🔗打开](https://example.test/f/root)", output)
+        self.assertIn("## 10_视频 [🔗](https://example.test/f/video)", output)
+        self.assertIn("### 10_儿歌动画正片 [🔗](https://example.test/f/songs)", output)
+        self.assertIn("### 01_第一集 [🔗](https://example.test/f/beva-one)", output)
+        self.assertIn("| [assets/banner 🔗](https://example.test/f/banner) |", output)
+        self.assertIsNone(re.search(r"^#{1,6} .*贝瓦儿歌", output, re.MULTILINE))
+        self.assertIsNone(re.search(r"^#{1,6} .*banner", output, re.MULTILINE))
+        self.assertNotIn("&nbsp;", output)
+        self.assertNotIn(".-", output)
 
-    def test_depth_seven_uses_indented_bold_line(self) -> None:
+    def test_depth_seven_stays_at_h6_without_html_indent(self) -> None:
         records = []
         parts = []
         for index, name in enumerate(
@@ -104,13 +142,13 @@ class CatalogRendererTests(unittest.TestCase):
         output = self.run_catalog(records)
 
         self.assertIsNone(re.search(r"^#{7,}(?:\s|$)", output, re.MULTILINE))
-        self.assertRegex(
-            output,
-            re.compile(r"^\*\*10\.10\.10\.10\.10\.10\.10 六\b\*\* \[🔗\]\(", re.MULTILINE),
-            msg=output,
-        )
+        self.assertIn("###### 10_六 [🔗]", output)
+        self.assertIn("###### 01_内容 [🔗]", output)
+        self.assertNotIn("10.10.10.10", output)
+        self.assertNotIn("&nbsp;", output)
+        self.assertNotRegex(output, re.compile(r"^\*\*10\.", re.MULTILINE))
 
-    def test_max_heading_depth_degrades_earlier(self) -> None:
+    def test_max_heading_depth_caps_markdown_heading_level(self) -> None:
         records = [
             folder("10_孩子", "root"),
             folder("10_孩子/10_视频", "video"),
@@ -121,11 +159,47 @@ class CatalogRendererTests(unittest.TestCase):
 
         output = self.run_catalog(records, "--max-heading-depth", "2")
 
-        self.assertIn("## 10.10 视频", output)
-        self.assertRegex(
-            output,
-            re.compile(r"^\*\*10\.10\.10 儿歌动画正片\b\*\* \[🔗\]\(", re.MULTILINE),
+        self.assertIn("## 10_视频", output)
+        self.assertIn("## 10_儿歌动画正片 [🔗]", output)
+        self.assertIn("## 01_正片 [🔗]", output)
+        self.assertNotIn("10.10.10", output)
+        self.assertNotIn("&nbsp;", output)
+        self.assertNotRegex(output, re.compile(r"^\*\*10\.", re.MULTILINE))
+
+    def test_technical_subtree_collapses_into_numbered_parent_row(self) -> None:
+        records = [
+            folder("10_孩子", "root"),
+            folder("10_孩子/10_视频", "video"),
+            folder("10_孩子/10_视频/20_官网离线资料", "website"),
+            folder("10_孩子/10_视频/20_官网离线资料/images", "images"),
+            folder("10_孩子/10_视频/20_官网离线资料/images/banner", "banner"),
+            file_record("10_孩子/10_视频/20_官网离线资料/index.html"),
+            file_record("10_孩子/10_视频/20_官网离线资料/images/banner/header.png"),
+        ]
+
+        output = self.run_catalog(records, "--url-prefix", "https://example.test/f/")
+
+        self.assertIn("### 20_官网离线资料 [🔗](https://example.test/f/website)", output)
+        self.assertIn("| [20_官网离线资料 🔗](https://example.test/f/website) |", output)
+        self.assertNotIn("| [images", output)
+        self.assertNotRegex(output, re.compile(r"^#{1,6} .*\b(?:images|banner)\b", re.MULTILINE))
+
+    def test_search_index_does_not_treat_a_file_as_a_resource_folder(self) -> None:
+        records = [
+            folder("/10_孩子", "root"),
+            folder("/10_孩子/10_视频", "video"),
+            folder("/10_孩子/10_视频/10_课程", "course"),
+            file_record("/10_孩子/10_视频/10_课程/lesson.mp4"),
+        ]
+
+        _, search = self.run_catalog_with_search(records)
+
+        self.assertIn(
+            "## 10_视频/10_课程 [🔗打开文件夹](https://example.test/f/course)",
+            search,
         )
+        self.assertNotIn("## 10_视频/10_课程/lesson.mp4", search)
+        self.assertIn("| lesson.mp4 | 10B |", search)
 
 
 if __name__ == "__main__":
