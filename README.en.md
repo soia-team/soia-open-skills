@@ -132,11 +132,12 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 
 ### 🏢 CWork · enterprise collaboration
 
-`soia-cwork-*` targets enterprise work systems rather than an Obsidian vault. These skills connect to Feishu and other collaboration platforms to read and analyze work documents, cloud drives, knowledge bases, permissions, and metadata. They default to read-only behavior; credentials, tenant scope, and resource authorization stay with the user.
+`soia-cwork-*` targets enterprise work systems rather than an Obsidian vault. These skills connect to Feishu and other collaboration platforms to read and analyze work documents, cloud drives, knowledge bases, permissions, and metadata, and can mirror authorized work content into Git/Obsidian/VitePress. They default to read-only behavior; credentials, tenant scope, and resource authorization stay with the user.
 
 | Skill | What it does | Ready now? | Dependencies |
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | Uses the official `lark-cli` with app credentials (bot identity) to inventory Feishu drives, cloud documents, wikis, comments, permissions, and metadata in read-only mode | ✅ Usable (configure Feishu app credentials and grant access to target resources) | Official Feishu `lark-cli`; app credentials; target docs/wikis must be visible to the app |
+| [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | Mirrors a Feishu wiki by stable `node_token` while preserving hierarchy, using incremental Markdown sync for Git, Obsidian, and VitePress; event targets are optional and write-back is not enabled by default | ✅ Usable (run a dry-run and establish a baseline first; grant the target space document read scopes) | `soia-cwork-feishu-cli`; `lark-cli`; Python 3.10+; PyYAML; Git/VitePress/Obsidian optional |
 
 #### Minimal Feishu setup
 
@@ -152,6 +153,17 @@ Then copy [`assets/config.example.yml`](./skills/soia-cwork-feishu-cli/assets/co
 - Permission page: `https://open.feishu.cn/app/<APP_ID>/auth`
 - Default identity: app credentials with `tenant_access_token` / bot; no silent fallback to user OAuth
 - Default boundary: read-only; no create, edit, delete, move, upload, or public sharing actions
+
+### soia-cwork-feishu-doc-git-sync
+
+Mirrors a Feishu wiki into local Markdown so the same content can be backed up in Git and viewed in Obsidian or VitePress. The default direction is read-only “Feishu → local”; `10_飞书镜像/` is generated, while `20_本地补录/` is preserved for local additions.
+
+```text
+Mirror my Feishu wiki to Git/Obsidian/VitePress
+Run a dry-run first, then sync after checking node counts, permissions, and output paths
+```
+
+See [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) for the config template, permission layers, ID-based incremental flow, and event boundary. Bidirectional sync requires an explicit ownership model, conflict policy, and Feishu write scopes.
 
 ---
 
@@ -280,6 +292,7 @@ This installs every skill under `skills/` into your agent's skill directory — 
 | `Check this PR's checks` / `Find out why the recent GitHub Actions run failed` | soia-dev-github-ops |
 | `Upgrade my local AI CLIs` / `Dry-run to check codex/claude versions` | soia-dev-ai-cli-upgrade |
 | `Research my Feishu drive/wiki` / `Read a Feishu work document` | soia-cwork-feishu-cli |
+| `Mirror my Feishu wiki to Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
 
 Antigravity CLI uses the `agy` command. Its global skill directory is
 `~/.gemini/antigravity-cli/skills/`, and workspace skills live under
@@ -305,6 +318,14 @@ Keep Feishu credentials in the skill-specific private config. Do not commit them
 ```
 
 See [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) for the template and permission workflow.
+
+The wiki mirror uses a separate skill-specific config:
+
+```text
+~/.config/soia-skills/soia-open-skills/cwork/soia-cwork-feishu-doc-git-sync/config.yml
+```
+
+Do not commit enterprise wiki URLs, node tokens, or app secrets to the public skill repository.
 
 Or override it per invocation with `--vault`. Each skill only reads its own skill-specific config directory, so no two skills share one large config file.
 

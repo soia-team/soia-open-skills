@@ -1,0 +1,59 @@
+version: 1
+
+modes:
+  mirror:
+    default: true
+    source_of_truth: feishu
+    local_generated_dir: 10_飞书镜像
+    local_manual_dir: 20_本地补录
+    remote_writes: never_by_default
+    delete_local_files: false
+  local:
+    source_of_truth: local
+    local_generated_dir: null
+    local_manual_dir: 20_本地补录
+    remote_writes: never
+  managed:
+    source_of_truth: explicit_per_document
+    local_generated_dir: 10_飞书镜像
+    local_manual_dir: 20_本地补录
+    remote_writes: explicit_confirmation_only
+    conflict_policy: stop_and_report
+
+state:
+  stable_key: node_token
+  object_key: obj_token
+  content_revision: docs.fetch.data.document.revision_id
+  remote_change_marker:
+    preferred: wiki.node_get.data.obj_edit_time
+    fallback: wiki.node_get.data.updated_at
+  manifest: 90_同步元数据/manifest.json
+  state_file: 90_同步元数据/sync-state.json
+  preserve_deleted_files_when_prune_false: true
+
+incremental:
+  first_run: full_content_baseline
+  subsequent_runs:
+    - reconcile_tree_by_parent_node_token
+    - use_event_targets_when_available
+    - otherwise_probe_wiki_node_metadata
+    - fetch_only_new_failed_or_changed_document_nodes
+    - reuse_existing_markdown_for_unchanged_node_token
+  force_full_content_flag: --full-content
+  changed_node_flags:
+    - --changed-node-token
+    - --changed-obj-token
+    - --event-file
+
+tree:
+  source_of_truth: "Feishu node parent_node_token"
+  sibling_order_source: "Feishu wiki +node-list response order"
+  sibling_order_policy: "preserve_remote_order; never sort by title"
+  max_local_path_component_length: 48
+  long_title_policy: "保留 full title in frontmatter/sidebar text; truncate local component and append node_token prefix"
+  leaf_node: "<parent-dir>/<node-title>.md"
+  node_with_children: "<parent-dir>/<node-title>/<node-title>.md"
+  child_of_node_with_children: "<parent-dir>/<node-title>/<child-title>..."
+  forbid_same_level_file_and_folder_with_same_name: true
+  collision_suffix: "--node--<node_token_prefix> or --leaf--<node_token_prefix>"
+  refresh_tree_only_flag: "--rebuild-tree --refresh-tree-only"

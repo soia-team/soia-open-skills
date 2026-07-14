@@ -132,11 +132,12 @@ npx skills add soia-team/soia-open-skills
 
 ### 🏢 CWork · 企业协作
 
-`soia-cwork-*` 面向企业日常工作系统，不绑定 Obsidian。它负责连接飞书等协作平台，读取和分析工作文档、云盘、知识库、权限与元数据；默认采用只读策略，应用凭据、租户范围和具体授权由使用者配置。
+`soia-cwork-*` 面向企业日常工作系统，不绑定 Obsidian。它负责连接飞书等协作平台，读取和分析工作文档、云盘、知识库、权限与元数据，也可以把经过授权的工作资料镜像到 Git/Obsidian/VitePress；默认采用只读策略，应用凭据、租户范围和具体授权由使用者配置。
 
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | 通过官方 `lark-cli` 以应用凭证（bot）只读盘点飞书云盘、云文档、知识库、评论、权限和元数据 | ✅ 可用（需配置飞书应用凭据并授予目标资源权限） | 飞书官方 `lark-cli`；应用凭证；目标文档/知识库需对应用可见 |
+| [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | 将飞书知识库按 `node_token` 保留树形结构并增量镜像为 Markdown，接入 Git、Obsidian 与 VitePress；可接收事件目标但不默认写回飞书 | ✅ 可用（先执行 dry-run，再建立基线；需按目标空间授予文档只读权限） | `soia-cwork-feishu-cli`；`lark-cli`；Python 3.10+；PyYAML；Git/VitePress/Obsidian 可选 |
 
 #### 飞书技能最小上手
 
@@ -152,6 +153,17 @@ npx skills add larksuite/cli -g -y
 - 权限入口：`https://open.feishu.cn/app/<APP_ID>/auth`
 - 默认身份：应用凭证 `tenant_access_token` / bot；不自动切换到 user OAuth
 - 默认边界：只读，不创建、编辑、删除、移动、上传或公开分享飞书内容
+
+### soia-cwork-feishu-doc-git-sync
+
+把飞书知识库同步为本地 Markdown，并让同一份内容同时服务 Git 备份、Obsidian 和 VitePress。默认只读方向是“飞书 → 本地”；`10_飞书镜像/` 由同步程序维护，`20_本地补录/` 保留本地新增内容。
+
+```text
+同步飞书知识库到 Git，并生成 VitePress/Obsidian 可查看的本地镜像
+先 dry-run，确认节点数、权限和输出目录，再执行同步
+```
+
+配置模板、权限分层、按 ID 增量同步和事件边界见 [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/)。双向同步需要另行确定文档归属、冲突策略和飞书写权限，不能把只读镜像当作双向同步。
 
 ---
 
@@ -280,6 +292,7 @@ npx skills add soia-team/soia-open-skills
 | `查这个 PR checks` / `看最近 GitHub Actions 失败原因` | soia-dev-github-ops |
 | `升级本机 AI CLI` / `dry-run 看 codex/claude 版本` | soia-dev-ai-cli-upgrade |
 | `调研飞书云盘/知识库` / `读取飞书工作文档` | soia-cwork-feishu-cli |
+| `同步飞书知识库到 Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
 
 Antigravity CLI 的命令是 `agy`：全局技能目录为
 `~/.gemini/antigravity-cli/skills/`，workspace 技能目录为 `.agents/skills/`。
@@ -304,6 +317,14 @@ env:
 ```
 
 配置模板和权限申请步骤见 [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/)。
+
+知识库镜像同步使用独立配置：
+
+```text
+~/.config/soia-skills/soia-open-skills/cwork/soia-cwork-feishu-doc-git-sync/config.yml
+```
+
+不要把企业知识库 URL、节点 token 或应用密钥提交到公开 skill 仓库。
 
 或每次调脚本时用 `--vault` 覆盖。每个 skill 只读自己的 skill-specific 配置目录，避免多个技能共享一个大配置文件。
 

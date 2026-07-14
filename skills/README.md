@@ -2,7 +2,7 @@
 
 > Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.
 > Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.
-> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 27 skills.
+> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 28 skills.
 
 ## Source Fields
 
@@ -41,6 +41,7 @@
 | Skill | Description | Default Prompt |
 |---|---|---|
 | [`soia-cwork-feishu-cli`](./soia-cwork-feishu-cli/) | 先提醒最小权限和应用发布，再用官方 lark-cli 只读盘点飞书云盘、文档和知识库。 | 用 soia-cwork-feishu-cli 先核对并提醒飞书应用所需的最小只读权限，再以应用凭证只读调研我的飞书工作云盘和知识库，不要修改远端内容。 |
+| [`soia-cwork-feishu-doc-git-sync`](./soia-cwork-feishu-doc-git-sync/) | 同步飞书知识库到 Markdown、Git、Obsidian 和 VitePress | 使用 soia-cwork-feishu-doc-git-sync，以只读镜像模式检查并同步指定飞书知识库到本地 Git 知识库。 |
 
 ## Development
 

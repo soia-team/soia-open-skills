@@ -1,0 +1,28 @@
+version: 1
+
+policy:
+  apply_to:
+    - terminal_logs
+    - progress_reports
+    - error_messages
+    - final_responses
+  forbidden:
+    - local_absolute_paths
+    - local_file_names
+    - operating_system_usernames
+    - usernames
+    - passwords
+    - app_secrets
+    - access_tokens
+    - cookies
+    - private_download_urls
+  allowed:
+    - operation_status
+    - counts
+    - public_object_types
+    - generic_placeholders
+  placeholders:
+    local_location: "<private-location>"
+    credential_value: "<redacted>"
+    identity: "bot identity"
+  rule: "只报告可验证的状态和数量；需要定位本地结果时使用脱敏占位符，不输出本地路径或文件名。"
