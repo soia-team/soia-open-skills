@@ -146,6 +146,18 @@ python3 '<skill-dir>/scripts/apply_reclass_bulk.py' \
   --batch-size 20 --execute --resume
 ```
 
+超长系列不要在会话临时脚本里手拼计划。先把本次阈值、主媒体、集号和侧车规则写成运行包内的 JSON，再由公共规划器生成可审阅计划；无法匹配的直属文件默认使规划失败，只有明确决定原地保留时才设置 `direct_file_policy=leave`：
+
+```bash
+python3 '<skill-dir>/scripts/plan_series_chunks.py' \
+  --scan '<run-dir>/inventory/current.scan.jsonl' \
+  --rules '<run-dir>/plans/series-rules.json' \
+  --out-plan '<run-dir>/actions/40-long-series.plan.jsonl' \
+  --out-report '<run-dir>/analysis/series-plan-report.json'
+```
+
+规划器只写本地计划和报告，不调用云盘。主控必须先审核报告中的 `errors/unresolved/protected`、抽查首尾分组及同课配套文件，再把计划交给恢复型执行器；已有输出默认拒绝覆盖，重算时保留旧证据或显式使用新的批次文件名。
+
 若写命令后登录态/网络在终态回读时中断，账本会留下 `failed` 而不会假装成功。恢复登录后用 `--resume`：执行器先检查源与目标；源已消失且目标同名实体已存在时追加 `verified + idempotent-resume`，否则才重试或保留 `skipped`，避免制造 `(1)` 重复目录。
 
 ## AI 复核与机械验收

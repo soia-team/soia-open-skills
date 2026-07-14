@@ -78,6 +78,7 @@
 - 源编号缺失只报告缺集，不能为了“连续”重编号或创建占位文件。
 - 终态用 `chunk_layers` 审计：根目录无散文件、每组非空、每组主项目数不超过 `max_items`；视频带字幕/XML、音频带封面等侧车时，用 `count_pattern` 只计主媒体，侧车仍必须跟随入组。技术依赖目录逐名写入 `exclude`，未匹配且未豁免的同级目录必须报错。
 - 同一源父目录需要移动大量实体时，可使用 `apply_reclass_bulk.py --batch-size 20`；计划必须把同源同目标 action 连续排列。批量只减少 CLI 往返，不降低证据粒度：批前/批后都读取源与目标，并为每个 action 单独写 `verified/failed`。
+- 多个超长系列先用 `plan_series_chunks.py` 从逐文件扫描和本次规则生成计划，不在临时目录另写 builder。规则要逐系列声明主媒体、可选集号、侧车和保护项；未匹配直属文件默认阻断，主控审核报告后才执行。
 - 再用 `flat_series_discovery` 做全区第二遍发现，专门找未进入 `chunk_layers` 的超限平铺目录。自然月份等稳定语义桶如需保留，必须在本次合同中用路径正则显式排除；公共技能不内置例外。
 - 发现审计必须喂逐文件终态扫描，不能使用 `agg_files` 聚合或 `no-descend`。运行时把扫描错误 sidecar 传给 `--scan-errors`；缺失、非空或路径写错都失败。路径/文件规则零匹配也默认失败，只有已独立确认确实为空时才设 `allow_empty=true`；仅在另有完整性证据时才使用 `--allow-missing-scan-errors`。
 
