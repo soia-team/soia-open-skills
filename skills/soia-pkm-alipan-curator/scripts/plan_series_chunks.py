@@ -196,26 +196,30 @@ def _episode(pattern: re.Pattern[str] | None, name: str) -> str | None:
 def _display_value(value: str) -> str:
     """Keep the real label but prevent it from becoming a path component."""
 
-    return value.replace("/", "-").replace("\\", "-")
-
-
-def _numeric_label(name: str) -> str | None:
-    match = re.search(r"\d+", name)
-    return match.group(0) if match else None
+    value = value.replace("/", "-").replace("\\", "-")
+    if re.fullmatch(r"[\d\s]+", value):
+        return re.sub(r"\s+", "", value)
+    return value
 
 
 def _group_suffix(group: dict[str, Any], use_episode: bool) -> str:
-    primary = group["primary"]
     if use_episode:
         first = _display_value(str(group["units"][0]["key"]))
         last = _display_value(str(group["units"][-1]["key"]))
     else:
-        first = _numeric_label(primary[0]["name"])
-        last = _numeric_label(primary[-1]["name"])
-        if first is None or last is None:
-            first = str(group["first_order"])
-            last = str(group["last_order"])
+        width = max(3, len(str(group["last_order"])))
+        first = f"{group['first_order']:0{width}d}"
+        last = f"{group['last_order']:0{width}d}"
     return first if first == last else f"{first}-{last}"
+
+
+def _episodes_are_natural_numbers(units: list[dict[str, Any]]) -> bool:
+    """Return true when every episode key is a numeric/compound numeric label."""
+
+    return bool(units) and all(
+        re.fullmatch(r"[\d\s._-]+", str(unit["key"])) is not None
+        for unit in units
+    )
 
 
 def _parent_matches(rows: list[dict[str, Any]], parent: str) -> bool:
@@ -385,6 +389,8 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
                     })
             for index, unit in enumerate(units, 1):
                 unit["last_order"] = unit["first_order"] + len(unit["primary"]) - 1
+            if _episodes_are_natural_numbers(units):
+                units.sort(key=lambda unit: natural_sort_key(re.sub(r"\s+", "", str(unit["key"]))))
         else:
             for offset in range(0, len(primary), rule["max_items"]):
                 part = primary[offset:offset + rule["max_items"]]

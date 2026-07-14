@@ -52,6 +52,8 @@ class PlanSeriesChunksTests(unittest.TestCase):
             f"{self.parent}/Episode 2.mp4",
             f"{self.parent}/Episode 10.mp4",
         ])
+        groups = [item["group"] for item in first if item["op"] == "mkdir"]
+        self.assertEqual(groups, ["10_001-002", "20_003"])
 
     def test_same_episode_regular_and_listening_media_stays_together(self) -> None:
         names = [
@@ -86,6 +88,61 @@ class PlanSeriesChunksTests(unittest.TestCase):
     def test_nul_in_cloud_path_is_rejected(self) -> None:
         with self.assertRaises(planner.InputError):
             planner.normalize_cloud_path("/library/bad\x00name")
+
+    def test_numeric_episode_sort_ignores_spacing_variants(self) -> None:
+        rows = [
+            file_row(self.parent, "Lesson64 Part 1.mp4"),
+            file_row(self.parent, "Lesson64 Part 2.mp4"),
+            file_row(self.parent, "Lesson 61 Part 1.mp4"),
+            file_row(self.parent, "Lesson 62.mp4"),
+            file_row(self.parent, "Lesson 63.mp4"),
+        ]
+        rules = [{
+            "parent": self.parent,
+            "max_items": 3,
+            "primary_pattern": r"\.mp4$",
+            "episode_pattern": r"Lesson\s*(?P<episode>\d+)",
+        }]
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rules.json"
+            path.write_text(json.dumps({"series": rules}), encoding="utf-8")
+            actions, _, ok = planner.build_plan(rows, planner.load_rules(path))
+        self.assertTrue(ok)
+        groups = [item["group"] for item in actions if item["op"] == "mkdir"]
+        self.assertEqual(groups, ["10_61-63", "20_64"])
+        moves = [item for item in actions if item["op"] == "mv"]
+        self.assertEqual(
+            {item["from"]: item["group"] for item in moves},
+            {
+                f"{self.parent}/Lesson 61 Part 1.mp4": "10_61-63",
+                f"{self.parent}/Lesson 62.mp4": "10_61-63",
+                f"{self.parent}/Lesson 63.mp4": "10_61-63",
+                f"{self.parent}/Lesson64 Part 1.mp4": "20_64",
+                f"{self.parent}/Lesson64 Part 2.mp4": "20_64",
+            },
+        )
+
+    def test_spaced_digit_episode_labels_are_compacted_in_group_names(self) -> None:
+        rows = [
+            file_row(self.parent, "第0 1集：一.mp4"),
+            file_row(self.parent, "第0 2集：二.mp4"),
+            file_row(self.parent, "第0 3集：三.mp4"),
+        ]
+        rules = [{
+            "parent": self.parent,
+            "max_items": 2,
+            "primary_pattern": r"\.mp4$",
+            "episode_pattern": r"第(?P<episode>\d\s*\d)集",
+        }]
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rules.json"
+            path.write_text(json.dumps({"series": rules}), encoding="utf-8")
+            actions, _, ok = planner.build_plan(rows, planner.load_rules(path))
+        self.assertTrue(ok)
+        self.assertEqual(
+            [item["group"] for item in actions if item["op"] == "mkdir"],
+            ["10_01-02", "20_03"],
+        )
 
     def test_subtitle_sidecar_follows_primary(self) -> None:
         rows = [
