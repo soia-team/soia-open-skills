@@ -426,6 +426,17 @@ def prepare_incremental(
             }
         )
 
+    stale_partitions = []
+    for partition in sorted(set(old_partitions) - set(next_partitions)):
+        old = old_partitions.get(partition, {})
+        stale_partitions.append(
+            {
+                "partition": partition,
+                "cache": old.get("cache", str(partition_cache_dir / f"{partition}.json")),
+                "output": old.get("output", str(detail_dir / f"{partition}.xlsx")),
+            }
+        )
+
     catalog_hash = sha256_file(catalog_path)
     catalog = parse_catalog(catalog_path)
     aggregate_payload = aggregate(catalog, partition_caches)
@@ -435,6 +446,7 @@ def prepare_incremental(
     build_master = (
         force
         or bool(changed_partitions)
+        or bool(stale_partitions)
         or old_manifest.get("catalogSha256") != catalog_hash
         or not output_path.exists()
     )
@@ -459,6 +471,7 @@ def prepare_incremental(
         "verify": verify,
         "partitions": partition_plan,
         "changedPartitions": changed_partitions,
+        "stalePartitions": stale_partitions,
         "nextManifest": next_manifest,
         "manifestPath": str(manifest_path),
     }

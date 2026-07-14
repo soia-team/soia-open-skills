@@ -55,8 +55,9 @@
 2. 按数据源指纹缓存解析结果到 `${XDG_CACHE_HOME:-$HOME/.cache}/soia-pkm-alipan-curator/catalog-xlsx/`。
 3. 普通运行只重建源 SHA-256 已变化或输出缺失的分区工作簿。
 4. 任一分区或 `00_馆藏总览.md` 变化时，额外重建轻量总入口。
-5. 全部输入不变时返回 `status=unchanged`、`changedPartitions=[]`、`rebuilt=[]`。
-6. 生成失败时不提交新 manifest，防止半成品被误判为最新。
+5. 分区改名或删除时，只有在新工作簿成功生成并提交 manifest 后，才清理已从 `_全文检索` 消失的旧分区工作簿与缓存，避免新旧名称并存。
+6. 全部输入不变时返回 `status=unchanged`、`changedPartitions=[]`、`rebuilt=[]`。
+7. 生成失败时不提交新 manifest，防止半成品被误判为最新。
 
 只有首次生成、缓存丢失或生成规则/样式整体升级时使用 `--force`。日常刷新无理由加 `--force` 会退化为每次全量生成。
 

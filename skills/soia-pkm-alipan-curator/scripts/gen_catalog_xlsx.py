@@ -96,6 +96,28 @@ def cleanup_inspection_sidecars(outputs: list[Path]) -> None:
         Path(f"{output}.inspect.ndjson").unlink(missing_ok=True)
 
 
+def cleanup_stale_partition_outputs(plan: dict) -> list[str]:
+    """成功提交新 manifest 后，移除已从检索源消失的旧分区产物。"""
+    detail_dir = Path(plan["detailDir"]).resolve()
+    partition_cache_dir = Path(plan["cacheDir"]).resolve() / "partitions"
+    managed = {Path(item["output"]).resolve() for item in plan["partitions"]}
+    candidates = {item.resolve() for item in detail_dir.glob("*.xlsx") if item.resolve() not in managed}
+    candidates.update(Path(item["output"]).resolve() for item in plan.get("stalePartitions", []))
+    removed = []
+    for output in sorted(candidates):
+        if output.parent != detail_dir or output.suffix.lower() != ".xlsx":
+            raise RuntimeError(f"拒绝清理分区明细目录之外的旧产物：{output}")
+        Path(f"{output}.inspect.ndjson").unlink(missing_ok=True)
+        if output.exists():
+            output.unlink()
+            removed.append(str(output))
+    for item in plan.get("stalePartitions", []):
+        cache = Path(item["cache"]).resolve()
+        if cache.parent == partition_cache_dir and cache.suffix.lower() == ".json":
+            cache.unlink(missing_ok=True)
+    return removed
+
+
 def run() -> dict:
     args = parse_args()
     validate_inputs(args)
@@ -113,6 +135,7 @@ def run() -> dict:
     managed_outputs = [Path(plan["outputPath"])]
     managed_outputs.extend(Path(item["output"]) for item in plan["partitions"])
     outputs = []
+    removed_outputs = []
     if plan["buildMaster"]:
         outputs.append(Path(plan["outputPath"]))
     outputs.extend(Path(item["output"]) for item in plan["partitions"] if item["changed"])
@@ -139,6 +162,7 @@ def run() -> dict:
         if args.soffice:
             recalculate_with_soffice(args.soffice, outputs, cache_dir)
         commit_manifest(plan)
+    removed_outputs = cleanup_stale_partition_outputs(plan)
     cleanup_inspection_sidecars(managed_outputs)
 
     payload = {
@@ -148,6 +172,8 @@ def run() -> dict:
         "changedPartitions": changed,
         "rebuilt": [str(item) for item in outputs],
         "reusedPartitions": [item["partition"] for item in plan["partitions"] if not item["changed"]],
+        "removedPartitions": [item["partition"] for item in plan.get("stalePartitions", [])],
+        "removedOutputs": removed_outputs,
         "cacheDir": str(cache_dir),
         "elapsedSeconds": round(time.monotonic() - started, 3),
         "verified": args.verify,

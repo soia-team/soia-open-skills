@@ -21,7 +21,10 @@ from catalog_xlsx.cache import (  # noqa: E402
     parse_search_markdown,
     prepare_incremental,
 )
-from gen_catalog_xlsx import cleanup_inspection_sidecars  # noqa: E402
+from gen_catalog_xlsx import (  # noqa: E402
+    cleanup_inspection_sidecars,
+    cleanup_stale_partition_outputs,
+)
 
 
 def search_markdown(partition: str, folder: str, rows: list[tuple[str, str]]) -> str:
@@ -176,6 +179,62 @@ class IncrementalCatalogTests(unittest.TestCase):
                 [item["partition"] for item in third["partitions"] if not item["changed"]],
                 ["20_阅读"],
             )
+
+    def test_removed_partition_rebuilds_master_and_cleans_stale_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            search_dir = root / "search"
+            search_dir.mkdir()
+            catalog = root / "00_馆藏总览.md"
+            catalog.write_text(catalog_markdown(), encoding="utf-8")
+            child = search_dir / "10_孩子.md"
+            reading = search_dir / "20_阅读.md"
+            child.write_text(
+                search_markdown("10_孩子", "10_孩子/10_英语", [("a.mp4", "1MB")]),
+                encoding="utf-8",
+            )
+            reading.write_text(
+                search_markdown("20_阅读", "20_阅读/10_书籍", [("b.pdf", "2MB")]),
+                encoding="utf-8",
+            )
+            output = root / "00_阿里云盘馆藏总索引.xlsx"
+            cache_dir = root / "cache"
+            first = prepare_incremental(
+                catalog_path=catalog,
+                search_dir=search_dir,
+                output_path=output,
+                cache_dir=cache_dir,
+            )
+            output.touch()
+            for item in first["partitions"]:
+                Path(item["output"]).parent.mkdir(parents=True, exist_ok=True)
+                Path(item["output"]).touch()
+            commit_manifest(first)
+
+            reading.unlink()
+            second = prepare_incremental(
+                catalog_path=catalog,
+                search_dir=search_dir,
+                output_path=output,
+                cache_dir=cache_dir,
+            )
+            self.assertTrue(second["buildMaster"])
+            self.assertEqual(
+                [item["partition"] for item in second["stalePartitions"]],
+                ["20_阅读"],
+            )
+            stale_output = Path(second["stalePartitions"][0]["output"])
+            self.assertTrue(stale_output.exists())
+            unmanaged_output = stale_output.parent / "旧分区.xlsx"
+            unmanaged_output.touch()
+            removed = cleanup_stale_partition_outputs(second)
+            self.assertEqual(
+                removed,
+                sorted([str(stale_output.resolve()), str(unmanaged_output.resolve())]),
+            )
+            self.assertFalse(stale_output.exists())
+            self.assertFalse(unmanaged_output.exists())
+            self.assertTrue((stale_output.parent / "10_孩子.xlsx").exists())
 
 
 if __name__ == "__main__":
