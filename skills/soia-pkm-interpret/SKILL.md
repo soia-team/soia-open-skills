@@ -1,6 +1,6 @@
 ---
 name: soia-pkm-interpret
-description: 对 vault 里 clip 进来的长文/论文，AI 给出解读：内容总览/核心要点/关键启发/批判视角/延伸阅读五段式，产出独立 `<原文件名>-AI解读.md`，不碰原文`## 我的看法`。distill 苏格拉底提问炼用户观点，interpret 是 AI 解读，帮你判断值不值得深挖。默认快读，说「精读」升级逐节展开。Triggers：「解读这篇」「这篇讲了什么」「帮我快速理解」「AI 解读」「值得细读吗」
+description: 对 vault 里 clip 进来的长文/论文，AI 给出解读：内容总览/核心要点/关键启发/批判视角/延伸阅读五段式，产出独立的“原文件名-AI解读.md”，不碰原文的“我的看法”段。distill 苏格拉底提问炼用户观点，interpret 是 AI 解读，帮你判断值不值得深挖。默认快读，说「精读」升级逐节展开。Triggers：「解读这篇」「这篇讲了什么」「帮我快速理解」「AI 解读」「值得细读吗」
 ---
 
 # soia-pkm-interpret

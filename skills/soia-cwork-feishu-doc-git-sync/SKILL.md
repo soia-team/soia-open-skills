@@ -187,3 +187,7 @@ python3 scripts/sync_feishu_wiki.py --help
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --dry-run
 git diff --check
 ```
+
+### Forward test
+
+Before a real sync, run a dry-run or a small authorized representative scope and verify the tree, stable node-ID mapping, ordering, incremental selection, asset references, and failure receipt. A zero exit code alone is not evidence that the mirror is complete.

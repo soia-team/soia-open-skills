@@ -174,3 +174,7 @@ python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py <skill-p
 ```
 
 仓库级验证由 `soia-open-skills/AGENTS.md` 规定，至少运行单元测试、技能目录生成检查、技能审计和 `git diff --check`。
+
+### 前向测试
+
+复杂调研或权限变更前，先用脱敏 fixture 或客户明确授权的代表性只读对象执行一次前向测试：核对权限提示、bot 身份、数量分页、失败分类和最终回执；不得把命令成功退出当成内容完整性的证据。
