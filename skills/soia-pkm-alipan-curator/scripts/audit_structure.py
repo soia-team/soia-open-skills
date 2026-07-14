@@ -724,8 +724,15 @@ def audit_scan_errors(path: Path | None, *, required: bool = False) -> tuple[int
     }]
 
 
-def scan_contains_file(rows: list[dict], target: str) -> bool:
-    return bool(matching_file_rows(rows, target))
+def scan_contains_target(rows: list[dict], target: str) -> bool:
+    """Return whether a file or directory target exists in a scan."""
+    normalized_target = normalize_cloud_path(target)
+    for row in rows:
+        path = normalize_cloud_path(str(row.get("path", "")))
+        name = str(row.get("name", "")).strip()
+        if name and normalize_cloud_path(f"{path}/{name}") == normalized_target:
+            return True
+    return False
 
 
 def audit_unclear_manifest(
@@ -766,7 +773,7 @@ def audit_unclear_manifest(
                 "row": index,
                 "status": status,
             })
-        if final and scan_rows is not None and not scan_contains_file(scan_rows, target):
+        if final and scan_rows is not None and not scan_contains_target(scan_rows, target):
             violations.append({
                 "kind": "unclear_target_missing",
                 "row": index,

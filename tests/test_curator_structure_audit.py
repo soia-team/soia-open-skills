@@ -272,6 +272,26 @@ class StructureAuditTests(unittest.TestCase):
             },
         )
 
+    def test_unclear_item_can_be_an_intact_directory_package(self) -> None:
+        checked, violations = audit.audit_unclear_manifest(
+            [{
+                "source": "/learning/ambiguous-package",
+                "reason": "package contents are incomplete",
+                "target": "/review/incomplete/ambiguous-package",
+                "status": "verified",
+            }],
+            "/review",
+            final=True,
+            scan_rows=[{
+                "path": "/review/incomplete",
+                "name": "ambiguous-package",
+                "id": "package-dir",
+                "dir": True,
+            }],
+        )
+        self.assertEqual(checked, 1)
+        self.assertEqual(violations, [])
+
     def test_contract_requires_explicit_guide_name(self) -> None:
         with self.assertRaisesRegex(ValueError, "guide_name is required"):
             audit.validate_contract({

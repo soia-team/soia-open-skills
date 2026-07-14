@@ -63,7 +63,7 @@
 
 ## 八、完成定义（DoD）
 
-区内：目标结构落地；若方案选择编号，则所声明层级的漏号数为 0；若设置长系列上限，则系列根散文件数为 0、空分组数为 0、超限分组数为 0、未声明超限平铺目录为 0；若选择学习导览，则根级与分类级导览缺失数为 0、正式说明文件缺失数为 0；关键云端 Excel/说明在 `required_artifacts` 中按路径、字节、SHA1 和可选 file_id 精确对账；若指定复核区，则 `unclear` 全部位于该根下、状态已验证且目标文件存在于终态扫描；账本齐全、删除项可回滚。使用 `scripts/audit_structure.py` 对终态 scan JSONL 复现这些结论。区外：索引三查通过，`resource_maps` 中要求的最终 file_id 都以真实 Markdown 链接存在，方案文档变更史回填、遗留项显式列在「待拍板」。正文声称“可直达”不算证据。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
+区内：目标结构落地；若方案选择编号，则所声明层级的漏号数为 0；若设置长系列上限，则系列根散文件数为 0、空分组数为 0、超限分组数为 0、未声明超限平铺目录为 0；若选择学习导览，则根级与分类级导览缺失数为 0、正式说明文件缺失数为 0；关键云端 Excel/说明在 `required_artifacts` 中按路径、字节、SHA1 和可选 file_id 精确对账；若指定复核区，则 `unclear` 全部位于该根下、状态已验证且目标文件或完整资源包目录存在于终态扫描；账本齐全、删除项可回滚。使用 `scripts/audit_structure.py` 对终态 scan JSONL 复现这些结论。区外：索引三查通过，`resource_maps` 中要求的最终 file_id 都以真实 Markdown 链接存在，方案文档变更史回填、遗留项显式列在「待拍板」。正文声称“可直达”不算证据。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
 
 结构合同使用通用 JSON，不写用户目录进公共 skill：
 
