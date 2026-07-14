@@ -415,9 +415,13 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
 
         episode_to_group: dict[str, int] = {}
         stem_to_group: dict[str, int] = {}
+        prefix_width = max(
+            2,
+            len(str(len(groups) * rule["group_prefix_step"])),
+        )
         for group_index, group in enumerate(groups):
             prefix = (group_index + 1) * rule["group_prefix_step"]
-            group_name = f"{prefix:02d}_{_group_suffix(group, episode_pattern is not None)}"
+            group_name = f"{prefix:0{prefix_width}d}_{_group_suffix(group, episode_pattern is not None)}"
             target = child_path(parent, group_name)
             group["name"] = group_name
             group["target"] = target

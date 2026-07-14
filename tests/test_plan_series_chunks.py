@@ -144,6 +144,21 @@ class PlanSeriesChunksTests(unittest.TestCase):
             ["10_01-02", "20_03"],
         )
 
+    def test_group_prefix_width_keeps_more_than_nine_groups_sorted(self) -> None:
+        rows = [file_row(self.parent, f"Episode {number}.mp4") for number in range(1, 12)]
+        rules = [{"parent": self.parent, "max_items": 1, "primary_pattern": r"\.mp4$"}]
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rules.json"
+            path.write_text(json.dumps({"series": rules}), encoding="utf-8")
+            actions, _, ok = planner.build_plan(rows, planner.load_rules(path))
+        self.assertTrue(ok)
+        groups = [item["group"] for item in actions if item["op"] == "mkdir"]
+        self.assertEqual(groups[0], "010_001")
+        self.assertEqual(groups[8], "090_009")
+        self.assertEqual(groups[9], "100_010")
+        self.assertEqual(groups[10], "110_011")
+        self.assertEqual(groups, sorted(groups))
+
     def test_subtitle_sidecar_follows_primary(self) -> None:
         rows = [
             file_row(self.parent, "Episode 01.mp4"),
