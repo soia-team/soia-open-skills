@@ -284,6 +284,23 @@ class BulkApplyReclassTests(unittest.TestCase):
             self.assertEqual(stopped.exception.code, 2)
             run.assert_not_called()
 
+    def test_two_way_mode_rejects_batch_larger_than_ten(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            plan = self.write_plan(
+                root,
+                [{"action_id": "A1", "op": "mkdir", "to": "/library/one", "reason": "limit"}],
+            )
+            ledger = root / "ledger.jsonl"
+            with mock.patch.object(bulk, "run_aliyunpan") as run:
+                with self.assertRaises(SystemExit) as stopped:
+                    self.run_main(
+                        "--plan", str(plan), "--driveId", "drive-1", "--root", self.ROOT,
+                        "--ledger", str(ledger), "--execute", "--max-parallel", "2", "--batch-size", "11",
+                    )
+            self.assertEqual(stopped.exception.code, 2)
+            run.assert_not_called()
+
     def test_history_is_appended_not_overwritten(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

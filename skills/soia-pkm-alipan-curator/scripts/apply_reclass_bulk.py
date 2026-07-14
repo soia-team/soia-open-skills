@@ -449,6 +449,9 @@ def main() -> None:
     )
     args = ap.parse_args()
 
+    if args.max_parallel == 2 and args.batch_size > 10:
+        ap.error("--max-parallel 2 时 --batch-size 不能超过 10；大批次可能在超时前只完成一部分")
+
     try:
         roots = [posixpath.normpath(args.root)]
         if args.archive_root:
