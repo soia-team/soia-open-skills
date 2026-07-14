@@ -134,7 +134,7 @@
 2. 有可靠原序号时按序号范围分组；存在两个各自从 01 开始的子系列时，先按子系列拆开，再分别按上限分段。
 3. 无可靠序号时按内容阶段或模块分组，不按修改时间猜顺序。
 4. 缺集只在回执中记录，不补空文件、不改后续原编号；附件跟随对应主课所在分组。
-5. 合同声明 `parent / child_pattern / max_items`；确需保留的同级技术目录放入显式 `exclude`，不允许用通配豁免。终态要求系列根无散文件、未声明同级目录为 0、分组非空、每组直接文件数不超过上限。
+5. 合同声明 `parent / child_pattern / max_items`；规划器生成分组后，还要从规划报告的 `groups[].name` 写入非空、唯一的 `required_children`，逐项固定本轮实际预期组。`child_pattern` 只验证命名格式，不能用一个宽 regex 代替精确组清单：缺组报告 `missing_required_chunk`，多出任何匹配格式但不在清单中的组报告 `unexpected_chunk`。确需保留的同级技术目录或配套资料目录放入显式 `exclude`，不允许用通配豁免；`exclude` 不是必需组，也不能据此推导 `required_children`。未超过上限、允许保持平铺且规划报告未生成组时，省略 `required_children`，不能填写空数组。终态要求系列根无散文件、未声明同级目录为 0、分组非空、每组直接文件数不超过上限。
 6. 已声明的 `chunk_layers` 只能证明“知道的系列”整理正确，不能证明全区没有漏项。终态再用 `flat_series_discovery` 扫描本次范围内所有直接文件目录；`root / max_items / path_pattern / file_pattern / exclude_path_patterns` 全部由本次方案给出。自然月份、原出版卷册等稳定语义桶可显式例外，但不能靠技能内置名称静默跳过。发现审计只接受逐文件终态扫描；`agg_files` 聚合行、非空或缺失的扫描错误证明、路径零匹配、文件规则零匹配都必须失败，确知空范围时才显式传 `allow_empty=true`。
 
 ### 5.2 导览合同

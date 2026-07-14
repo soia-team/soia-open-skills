@@ -160,6 +160,21 @@ python3 '<skill-dir>/scripts/plan_series_chunks.py' \
 
 规划器只写本地计划和报告，不调用云盘。主控必须先审核报告中的 `errors/unresolved/protected/planned_protected`、抽查首尾分组及同课配套文件，再把计划交给恢复型执行器；已有输出默认拒绝覆盖，重算时保留旧证据或显式使用新的批次文件名。
 
+规划报告审核通过后，把每个系列 `groups[].name` 的实际预期组逐项写入 `structure-contract.json` 的 `chunk_layers[].required_children`，不要只抄一个能匹配任意编号目录的宽 `child_pattern`：
+
+```json
+{
+  "parent": "/<series-parent>",
+  "child_pattern": "^\\d{2}_\\d{3}(?:-\\d{3})?$",
+  "required_children": ["10_001-020", "20_021-035"],
+  "count_pattern": "(?i)\\.mp4$",
+  "max_items": 20,
+  "exclude": ["assets", "配套资料"]
+}
+```
+
+`child_pattern` 只验证组名格式；`required_children` 才定义本轮终态的精确组集合。缺少任一预期组会报告 `missing_required_chunk`，出现匹配格式但不在清单中的组会报告 `unexpected_chunk`。`exclude` 只豁免明确保留的非分组兄弟目录，不能当作必需组，也不会自动加入 `required_children`。未生成分组且允许保持平铺的系列不要填写空数组，直接省略 `required_children` 以保留兼容行为。
+
 `protect` 只表示“命中保护规则”。缺省不提供 `protected_dir` 时，命中文件继续原地保留，只出现在 `protected` 报告中，不生成移动动作。只有在语义明确、确实属于该系列的配套资料（例如该课的字幕、讲义或说明）时，才显式提供 `protected_dir`；它必须是单个安全相对目录名。此时规划器会生成 `<parent>/<protected_dir>` 的 `mkdir` 和逐文件 `mv`，并在 `planned_protected` 中列出对应动作。无法确认归属的文件不要用这个字段“顺手收纳”，应继续报告为 `unresolved`，或按用户明确指定的边界留在 `90_存档`（或等价存档区）。
 
 启用 `protected_dir` 后，若该目录或生成的 group 目标已在扫描中存在，或其名称与本次生成的 group 名相同，规划器必须报错并且不写计划；不要依赖执行器覆盖已有实体。

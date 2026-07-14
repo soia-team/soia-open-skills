@@ -169,8 +169,33 @@ def validate_contract(contract: dict) -> None:
                 "not smaller than required_ids"
             )
     for index, rule in enumerate(contract.get("chunk_layers", [])):
-        if not str(rule.get("child_pattern", "")).strip():
+        child_pattern_text = str(rule.get("child_pattern", ""))
+        if not child_pattern_text.strip():
             raise ValueError(f"contract.chunk_layers[{index}].child_pattern is required")
+        if "required_children" in rule:
+            required_children = rule["required_children"]
+            if not isinstance(required_children, list) or not required_children:
+                raise ValueError(
+                    f"contract.chunk_layers[{index}].required_children "
+                    "must be a non-empty array"
+                )
+            for child_index, child in enumerate(required_children):
+                if not isinstance(child, str) or not child.strip():
+                    raise ValueError(
+                        f"contract.chunk_layers[{index}].required_children[{child_index}] "
+                        "must be a non-empty string"
+                    )
+            if len(set(required_children)) != len(required_children):
+                raise ValueError(
+                    f"contract.chunk_layers[{index}].required_children must be unique"
+                )
+            child_pattern = re.compile(child_pattern_text)
+            for child_index, child in enumerate(required_children):
+                if child_pattern.search(child) is None:
+                    raise ValueError(
+                        f"contract.chunk_layers[{index}].required_children[{child_index}] "
+                        "must match child_pattern"
+                    )
         if "count_pattern" in rule and (
             not isinstance(rule["count_pattern"], str) or not rule["count_pattern"].strip()
         ):
@@ -519,6 +544,12 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
         count_pattern = re.compile(count_pattern_text) if count_pattern_text else None
         max_items = int(rule.get("max_items", 0))
         excludes = {str(item) for item in rule.get("exclude", [])}
+        required_children = (
+            [str(item) for item in rule["required_children"]]
+            if "required_children" in rule
+            else None
+        )
+        required_child_names = set(required_children or [])
         all_children = child_dirs(rows, parent)
         chunks = [row for row in all_children if pattern.search(str(row.get("name", "")))]
         unexpected_children = [
@@ -534,6 +565,28 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
             if count_pattern is None or count_pattern.search(str(row.get("name", "")))
         ]
 
+        if required_children is not None:
+            actual_chunk_names = {str(row.get("name", "")) for row in chunks}
+            for child_name in required_children:
+                if child_name not in actual_chunk_names:
+                    violations.append({
+                        "kind": "missing_required_chunk",
+                        "rule": index,
+                        "parent": parent,
+                        "name": child_name,
+                        "expected_pattern": pattern_text,
+                    })
+            for chunk in chunks:
+                chunk_name = str(chunk.get("name", ""))
+                if chunk_name not in required_child_names:
+                    violations.append({
+                        "kind": "unexpected_chunk",
+                        "rule": index,
+                        "parent": parent,
+                        "name": chunk_name,
+                        "id": chunk.get("id"),
+                    })
+
         for child in unexpected_children:
             violations.append({
                 "kind": "unexpected_non_chunk_directory",
@@ -546,7 +599,7 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
 
         if not chunks:
             checked += 1
-            if all_children and not loose_files:
+            if required_children is None and all_children and not loose_files:
                 violations.append({
                     "kind": "missing_chunk_directory",
                     "rule": index,
