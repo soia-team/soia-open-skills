@@ -3,7 +3,8 @@
 
 通用、无私有数据硬编码。用法：
   gen_catalog.py --scan-dir DIR --out FILE [--moves f --deletes f --roots f --title T
-                 --search-dir DIR --junk PREFIX --url-prefix URL --max-heading-depth N]
+                 --search-dir DIR --junk PREFIX --url-prefix URL --catalog-link LINK
+                 --cards-link LINK --classification-link LINK --max-heading-depth N]
 
 JSONL 每行：{"path","name","id","dir","size"[,"agg_files","agg_size"]}
 约定：整理时的分类夹带 `NN_` 数字前缀（10_/20_…），真实资源用原名。
@@ -12,8 +13,8 @@ JSONL 每行：{"path","name","id","dir","size"[,"agg_files","agg_size"]}
 标题最多使用 H6；超过 H6 或 `--max-heading-depth` 时停留在最大标题级别，不输出 HTML 缩进实体。
 点击课程标题或表格名称，直达对应文件夹；搜单个文件用 --search-dir 出的全文检索索引。
 
---url-prefix：阿里云盘网页版文件夹深链前缀。备份盘实测格式 = `https://www.alipan.com/drive/file/all/backup/<file_id>`
-（`folder/<id>` 不工作会弹回首页）。不同盘位（资源盘/backup）末段不同，按实盘地址栏校准。
+--url-prefix：阿里云盘网页版文件夹深链前缀。不同盘位的 URL 可能不同，必须由调用方显式传入
+或通过 SOIA_ALIPAN_URL_PREFIX 提供，不在公共 skill 中写死用户盘位。
 """
 import json, re, argparse, os
 from datetime import date
@@ -222,11 +223,17 @@ def main():
     ap.add_argument('--moves'); ap.add_argument('--deletes'); ap.add_argument('--roots')
     ap.add_argument('--merge-existing',help='把本次唯一根分区增量合并进现有全盘总览')
     ap.add_argument('--merge-date',default=date.today().isoformat(),help='增量状态日期 YYYY-MM-DD')
-    ap.add_argument('--title',default='云盘馆藏总览'); ap.add_argument('--drive',default='备份盘')
+    ap.add_argument('--title',default='云盘馆藏总览'); ap.add_argument('--drive',default='云盘')
     ap.add_argument('--search-dir',help='额外输出:按区分的全文检索索引目录(每文件一行,只搜不看)')
     ap.add_argument('--junk',default='',help='逗号分隔的路径前缀,其下文件不入检索索引(如模板碎片区)')
-    ap.add_argument('--url-prefix',default='https://www.alipan.com/drive/file/all/backup/',
-                    help='网盘文件夹深链前缀(拼 file_id);备份盘实测 file/all/backup/')
+    ap.add_argument('--url-prefix',default=os.environ.get('SOIA_ALIPAN_URL_PREFIX'),
+                    help='网盘文件夹深链前缀(拼 file_id);也可用 SOIA_ALIPAN_URL_PREFIX')
+    ap.add_argument('--catalog-link',default='',
+                    help='可选：写入全文检索页的馆藏总览 wikilink 目标，不含 [[ ]]')
+    ap.add_argument('--cards-link',default='',
+                    help='可选：写入总览说明的精选卡 wikilink 目标，不含 [[ ]]')
+    ap.add_argument('--classification-link',default='',
+                    help='可选：写入总览说明的分类方案 wikilink 目标，不含 [[ ]]')
     ap.add_argument('--max-heading-depth',type=int,default=None,
                     help='标题最大深度;更深的编号目录停留在该标题级别')
     a=ap.parse_args()
@@ -238,6 +245,8 @@ def main():
         return
     if not a.scan_dir:
         ap.error('--scan-dir 与 --linkify-existing 至少提供一个')
+    if not a.url_prefix:
+        ap.error('--url-prefix 或 SOIA_ALIPAN_URL_PREFIX 必须提供，公共 skill 不猜用户盘位')
     U=a.url_prefix
     recs=load(a.scan_dir,a.moves,a.deletes,a.roots); ch=build(recs)
 
@@ -274,9 +283,11 @@ def main():
     out.append(f"---\ntype: moc\ntitle: {a.title}\ntags: [MOC, 云盘, 全盘索引]\n---\n")
     out.append(f"# ☁️ {a.title}\n")
     out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 编号目录标题浏览，**表格保留无编号素材文件夹**（真实文件所在层），点击课程标题或表格名称直达该文件夹")
-    search_nav = " ▸ **搜单个文件** → `20_云盘地图/_全文检索/`（每区一份全文件清单，Ctrl+F/全局搜）" if a.search_dir else ""
-    out.append(f"> 三样各司其职：**本文件**=浏览+直达文件夹；[[云盘馆藏.base|🃏 精选卡]]=15张策展卡；**_全文检索/**=搜任意单文件。{search_nav}")
-    out.append("> 分类逻辑见 `20_云盘地图/` 各《深度分类方案》。同一编号目录下 >12 个素材文件夹已压缩为「前2+计数+末1」。\n")
+    search_nav = "；已生成分区全文检索文件，可用 Ctrl+F/全局搜索" if a.search_dir else ""
+    cards_nav = f"[[{a.cards_link}|精选卡]]" if a.cards_link else "精选卡（可选）"
+    out.append(f"> 三样各司其职：**本文件**=浏览+直达文件夹；{cards_nav}=策展；全文检索=搜任意单文件{search_nav}。")
+    classification = f"分类方案入口：[[{a.classification_link}]]。" if a.classification_link else "分类逻辑以用户确认的方案为准。"
+    out.append(f"> {classification}同一编号目录下 >12 个素材文件夹已压缩为「前2+计数+末1」。\n")
     out.append("| 区 | 直达 | 目录 | 文件 | 体量 |")
     out.append("|---|---|---:|---:|---:|")
     for nm,d,f,s,fid in rowsum:
@@ -381,9 +392,10 @@ def main():
             files=sorted(zfiles[zone]); idx_total+=len(files)
             by_res=defaultdict(list)
             for p in files: by_res[resource_of(p)].append(p)
+            catalog_ref=f"[[{a.catalog_link}]]" if a.catalog_link else "本次馆藏总览产物"
             lines=[f"---\ntags: [云盘检索]\n区: {zone}\n---\n",
                    f"# 🔍 {zone} · 全文检索索引\n",
-                   f"> 仅供 Ctrl+F / 全局搜索定位**单个文件**（共 {len(files):,} 个）；浏览/直达文件夹用 [[00_馆藏总览]]。**别在编辑模式久留（文件大）**。\n"]
+                   f"> 仅供 Ctrl+F / 全局搜索定位**单个文件**（共 {len(files):,} 个）；浏览/直达文件夹用 {catalog_ref}。**别在编辑模式久留（文件大）**。\n"]
             for res in sorted(by_res):
                 rname=res.split('/',2)[-1] if res.count('/')>=2 else res
                 rfid=recs.get(res,{}).get('id'); rlk=f" [🔗打开文件夹]({U}{rfid})" if rfid else ""

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
 import sys
 import tempfile
@@ -63,6 +64,8 @@ class CatalogRendererTests(unittest.TestCase):
                 str(scan_dir),
                 "--out",
                 str(out),
+                "--url-prefix",
+                "https://example.test/f/",
                 *extra_args,
             ]
             try:
@@ -142,8 +145,8 @@ class CatalogRendererTests(unittest.TestCase):
         output = self.run_catalog(records)
 
         self.assertIsNone(re.search(r"^#{7,}(?:\s|$)", output, re.MULTILINE))
-        self.assertIn("###### [10_六](https://www.alipan.com/drive/file/all/backup/dir-6)", output)
-        self.assertIn("###### [01_内容](https://www.alipan.com/drive/file/all/backup/leaf)", output)
+        self.assertIn("###### [10_六](https://example.test/f/dir-6)", output)
+        self.assertIn("###### [01_内容](https://example.test/f/leaf)", output)
         self.assertNotIn("10.10.10.10", output)
         self.assertNotIn("&nbsp;", output)
         self.assertNotRegex(output, re.compile(r"^\*\*10\.", re.MULTILINE))
@@ -159,9 +162,9 @@ class CatalogRendererTests(unittest.TestCase):
 
         output = self.run_catalog(records, "--max-heading-depth", "2")
 
-        self.assertIn("## [10_视频](https://www.alipan.com/drive/file/all/backup/video)", output)
-        self.assertIn("## [10_儿歌动画正片](https://www.alipan.com/drive/file/all/backup/songs)", output)
-        self.assertIn("## [01_正片](https://www.alipan.com/drive/file/all/backup/songs-main)", output)
+        self.assertIn("## [10_视频](https://example.test/f/video)", output)
+        self.assertIn("## [10_儿歌动画正片](https://example.test/f/songs)", output)
+        self.assertIn("## [01_正片](https://example.test/f/songs-main)", output)
         self.assertNotIn("10.10.10", output)
         self.assertNotIn("&nbsp;", output)
         self.assertNotRegex(output, re.compile(r"^\*\*10\.", re.MULTILINE))
@@ -276,6 +279,18 @@ type: moc
             roots = gen_catalog.catalog_roots(recs, str(roots_path))
 
         self.assertEqual(roots, ["/10_孩子"])
+
+    def test_url_prefix_must_be_explicit(self) -> None:
+        old_argv = sys.argv
+        old_env = os.environ.pop("SOIA_ALIPAN_URL_PREFIX", None)
+        sys.argv = ["gen_catalog.py", "--scan-dir", "missing", "--out", "out.md"]
+        try:
+            with self.assertRaises(SystemExit):
+                gen_catalog.main()
+        finally:
+            sys.argv = old_argv
+            if old_env is not None:
+                os.environ["SOIA_ALIPAN_URL_PREFIX"] = old_env
 
 
 if __name__ == "__main__":

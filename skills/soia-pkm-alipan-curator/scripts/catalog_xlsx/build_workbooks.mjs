@@ -15,7 +15,6 @@ import {
 } from "./workbook_style.mjs";
 
 
-const ROOT_URL = "https://www.alipan.com/drive/file/all/backup";
 const MB = 1024 ** 2;
 const GB = 1024 ** 3;
 
@@ -163,7 +162,7 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   usage.getRange("A8:J12").values = [
     ["1", "找目录", "打开 01_目录索引，按完整路径或主要类型筛选；点击链接直接进入阿里云盘。", "", "", "", "", "", "", ""],
     ["2", "找文件", "打开 02_明细入口，选择分区并点击“打开明细”；在分区工作簿按文件类型、扩展名或大小筛选。", "", "", "", "", "", "", ""],
-    ["3", "看全盘分布", "03_类型统计、04_分区统计、05_扩展名统计由六份分区缓存聚合，可快速判断资源所在区域。", "", "", "", "", "", "", ""],
+    ["3", "看全盘分布", `03_类型统计、04_分区统计、05_扩展名统计由 ${partitionStats.length} 份分区缓存聚合，可快速判断资源所在区域。`, "", "", "", "", "", "", ""],
     ["4", "增量更新", "生成器比较 Markdown SHA-256；只重建变化分区及本总入口，未变化分区工作簿直接复用。", "", "", "", "", "", "", ""],
     ["5", "强制全量", "仅在生成规则或样式整体变化时使用 --force；普通索引刷新不要全量重建。", "", "", "", "", "", "", ""],
   ];
@@ -176,19 +175,19 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   usage.getRange("A15:J15").values = [["口径与限制"]];
   usage.getRange("A15:J15").format = { fill: COLORS.teal, font: { bold: true, color: COLORS.white } };
   noteBand(usage, "A16:J17", `馆藏总览口径：${catalog.totalDirs.toLocaleString()} 个目录 / ${catalog.totalFiles.toLocaleString()} 个文件 / ${catalog.totalSize}。全文检索 Markdown 展开 ${indexedFiles.toLocaleString()} 个文件，覆盖率 ${(indexedFiles / catalog.totalFiles * 100).toFixed(1)}%。未展开差额主要来自采用聚合索引的分区。`, true);
-  usage.getRange("A19:B23").values = [["字段", "值"], ["生成时间", generatedAt], ["云盘入口", ROOT_URL], ["Bytes/MB", MB], ["Bytes/GB", GB]];
+  usage.getRange("A19:B23").values = [["字段", "值"], ["生成时间", generatedAt], ["云盘入口", "见目录索引与分区统计中的链接"], ["Bytes/MB", MB], ["Bytes/GB", GB]];
   styleHeader(usage.getRange("A19:B19"));
   usage.getRange("B22:B23").format.numberFormat = "#,##0";
   usage.getRange("A25:J25").merge();
   usage.getRange("A25:J25").values = [["数据源"]];
   usage.getRange("A25:J25").format = { fill: COLORS.teal, font: { bold: true, color: COLORS.white } };
-  const sourceRows = [[catalog.sourceName, catalog.source], ...plan.partitions.map((item) => [path.basename(item.source), item.source])];
+  const sourceRows = [[catalog.sourceName, "馆藏总览"], ...plan.partitions.map((item) => [path.basename(item.source), "分区全文检索"] )];
   usage.getRange(`A26:B${25 + sourceRows.length}`).values = sourceRows;
   usage.freezePanes.freezeRows(2);
   setColumnWidths(usage, { A: 16, B: 30, C: 22, D: 15, E: 15, F: 15, G: 15, H: 15, I: 15, J: 15 }, 33);
 
   titleBand(directoriesSheet, "A1:P1", "目录索引");
-  noteBand(directoriesSheet, "A2:P2", `共 ${directories.length.toLocaleString()} 行：由六份分区缓存反推目录树；可按分区、层级、主要类型、完整路径组合筛选。`);
+  noteBand(directoriesSheet, "A2:P2", `共 ${directories.length.toLocaleString()} 行：由 ${partitionStats.length} 份分区缓存反推目录树；可按分区、层级、主要类型、完整路径组合筛选。`);
   const directoryHeaders = ["序号", "分区", "层级", "课程/目录名（点击直达）", "完整路径", "父目录", "主要类型", "直接文件数", "子树文件数", "直接大小(Bytes)", "子树大小(Bytes)", "子树大小(GB)", "直接子目录数", "文件夹URL", "快捷打开", "来源"];
   directoriesSheet.getRange("A4:P4").values = [directoryHeaders];
   const directoryValues = directories.map((row, index) => [index + 1, row.partition, row.depth, null, row.path, row.parent, row.dominantType, row.directFiles, row.subtreeFiles, row.directBytes, row.subtreeBytes, null, row.childDirCount, row.url, null, row.source]);
@@ -216,7 +215,7 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   setColumnWidths(directoriesSheet, { A: 9, B: 20, C: 8, D: 38, E: 58, F: 45, G: 16, H: 13, I: 13, J: 18, K: 18, L: 15, M: 14, N: 46, O: 18, P: 20 }, directories.length + 4);
 
   titleBand(entrySheet, "A1:M1", "分区文件明细入口");
-  noteBand(entrySheet, "A2:M2", "文件明细拆成 6 个独立工作簿。点击“打开明细”进入对应文件；点击“打开云盘”直接进入该分区。相对路径便于整套复制或上传。" );
+  noteBand(entrySheet, "A2:M2", `文件明细拆成 ${partitionStats.length} 个独立工作簿。点击“打开明细”进入对应文件；点击“打开云盘”直接进入该分区。相对路径便于整套复制或上传。` );
   const entryHeaders = ["分区", "全盘口径目录数", "全盘口径文件数", "已展开明细", "明细覆盖率", "明细估算大小(Bytes)", "明细估算大小(GB)", "全盘口径体量", "分区URL", "打开云盘", "明细工作簿相对路径", "打开明细", "来源Markdown"];
   entrySheet.getRange("A4:M4").values = [entryHeaders];
   const detailByPartition = new Map(plan.partitions.map((item) => [item.partition, item.output]));
@@ -245,7 +244,7 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   setColumnWidths(entrySheet, { A: 22, B: 18, C: 18, D: 16, E: 14, F: 22, G: 18, H: 16, I: 48, J: 16, K: 48, L: 16, M: 22 }, partitionEnd);
 
   titleBand(typeSheet, "A1:G1", "按文件类型统计");
-  noteBand(typeSheet, "A2:G2", "由六份分区缓存聚合；文件数和体量是生成器实算值，占比、GB 与平均大小使用工作表公式。" );
+  noteBand(typeSheet, "A2:G2", `由 ${partitionStats.length} 份分区缓存聚合；文件数和体量是生成器实算值，占比、GB 与平均大小使用工作表公式。` );
   const typeHeaders = ["文件类型", "文件数", "明细占比", "估算大小(Bytes)", "估算大小(GB)", "平均大小(MB)", "说明"];
   typeSheet.getRange("A4:G4").values = [typeHeaders];
   typeSheet.getRangeByIndexes(4, 0, typeStats.length, 7).values = typeStats.map((row) => [row.type, row.count, null, row.bytes, null, null, TYPE_NOTES[row.type] || ""]);
@@ -265,7 +264,7 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   setColumnWidths(typeSheet, { A: 20, B: 14, C: 14, D: 20, E: 16, F: 16, G: 38 }, typeStats.length + 4);
 
   titleBand(partitionSheet, "A1:J1", "按分区统计与明细覆盖率");
-  noteBand(partitionSheet, "A2:J2", "全盘口径来自 00_馆藏总览；明细口径来自各分区缓存。覆盖率低表示该分区在 Markdown 中采用聚合索引，不代表文件丢失。", true);
+  noteBand(partitionSheet, "A2:J2", "全盘口径来自馆藏总览输入；明细口径来自各分区缓存。覆盖率低表示该分区在 Markdown 中采用聚合索引，不代表文件丢失。", true);
   const partitionHeaders = ["分区", "全盘口径目录数", "全盘口径文件数", "Markdown明细文件数", "明细覆盖率", "明细估算大小(Bytes)", "明细估算大小(GB)", "全盘口径体量", "分区URL", "点击直达云盘"];
   partitionSheet.getRange("A4:J4").values = [partitionHeaders];
   partitionSheet.getRangeByIndexes(4, 0, partitionStats.length, 10).values = partitionStats.map((row) => [row.partition, row.dirs, row.files, row.indexedFiles, null, row.indexedBytes, null, row.volume, row.url, null]);
@@ -327,7 +326,7 @@ function buildPartitionWorkbook(Workbook, partitionCache, generatedAt) {
   const extensionSheet = workbook.worksheets.add("03_扩展名统计");
   for (const sheet of [usage, filesSheet, typeSheet, extensionSheet]) prepareSheet(sheet);
 
-  const { partition, files, source, sourceName } = partitionCache;
+  const { partition, files, sourceName } = partitionCache;
   const typeStats = typeStatsFromFiles(files);
   const extensionStats = extensionStatsFromFiles(files);
   const fileEnd = files.length + 4;
@@ -345,7 +344,7 @@ function buildPartitionWorkbook(Workbook, partitionCache, generatedAt) {
   usage.getRange("A12:H12").merge();
   usage.getRange("A12:H12").values = [["使用建议：先在 02_类型统计或 03_扩展名统计判断资源分布，再回到 01_文件明细筛选；“点击直达云盘”进入文件所在文件夹。"]];
   usage.getRange("A12:H12").format = { fill: COLORS.pale, font: { color: COLORS.navy }, wrapText: true };
-  usage.getRange("A15:B16").values = [["源文件", source], ["云盘入口", ROOT_URL]];
+  usage.getRange("A15:B16").values = [["源文件", sourceName], ["云盘入口", "见文件明细中的文件夹URL"]];
   usage.freezePanes.freezeRows(2);
   setColumnWidths(usage, { A: 20, B: 16, C: 18, D: 16, E: 16, F: 20, G: 24, H: 22 }, 16);
 
@@ -432,7 +431,10 @@ async function main() {
   const { SpreadsheetFile, Workbook } = await loadArtifactTool(path.resolve(args.artifactRuntime));
   const plan = JSON.parse(await fs.readFile(path.resolve(args.plan), "utf8"));
   const aggregate = JSON.parse(await fs.readFile(plan.aggregatePath, "utf8"));
-  const generatedAt = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+  const dateTimeOptions = { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false };
+  const configuredTimeZone = process.env.SOIA_CATALOG_TIME_ZONE?.trim();
+  if (configuredTimeZone) dateTimeOptions.timeZone = configuredTimeZone;
+  const generatedAt = new Intl.DateTimeFormat("sv-SE", dateTimeOptions).format(new Date());
   const results = [];
 
   if (plan.buildMaster) {

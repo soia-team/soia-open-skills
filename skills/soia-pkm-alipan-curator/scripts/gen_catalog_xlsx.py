@@ -24,8 +24,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="把 OB 云盘馆藏 Markdown 增量生成成轻量总索引 + 分区明细 Excel。"
     )
-    parser.add_argument("--catalog", type=Path, required=True, help="00_馆藏总览.md")
-    parser.add_argument("--search-dir", type=Path, required=True, help="_全文检索 Markdown 目录")
+    parser.add_argument("--catalog", type=Path, required=True, help="馆藏总览 Markdown 文件")
+    parser.add_argument("--search-dir", type=Path, required=True, help="分区全文检索 Markdown 目录")
     parser.add_argument("--output", type=Path, required=True, help="总索引 xlsx 输出路径")
     parser.add_argument("--cache-dir", type=Path, help="增量缓存目录；默认按数据源路径生成用户级缓存")
     parser.add_argument("--node", default=os.environ.get("SOIA_ARTIFACT_NODE", "node"), help="Node.js 可执行文件")
@@ -119,7 +119,9 @@ def run() -> dict:
 
     if outputs:
         environment = os.environ.copy()
-        environment.setdefault("NODE_OPTIONS", "--max-old-space-size=8192")
+        node_options = os.environ.get("SOIA_ARTIFACT_NODE_OPTIONS")
+        if node_options:
+            environment["NODE_OPTIONS"] = node_options
         command = [
             args.node,
             str(BUILDER),

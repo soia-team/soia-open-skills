@@ -23,20 +23,79 @@ function parseArgs(argv) {
   const args = {};
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
+    if (value === "--help" || value === "-h") args.help = true;
     if (value === "--input") args.input = argv[++index];
     else if (value === "--output") args.output = argv[++index];
     else if (value === "--artifact-runtime") args.artifactRuntime = argv[++index];
     else if (value === "--qa-dir") args.qaDir = argv[++index];
     else if (value === "--soffice") args.soffice = argv[++index];
-    else throw new Error(`未知参数：${value}`);
+    else if (value !== "--help" && value !== "-h") throw new Error(`未知参数：${value}`);
   }
+  if (args.help) return args;
   if (!args.input || !args.output || !args.artifactRuntime) {
-    throw new Error(
-      "用法：gen_family_nav_xlsx.mjs --input <navigation.json> --output <file.xlsx> " +
-      "--artifact-runtime <含 node_modules 的目录> [--qa-dir <目录>] [--soffice <可执行文件>]"
-    );
+    throw new Error("缺少必填参数。运行 --help 查看用法。");
   }
   return args;
+}
+
+
+function usageText() {
+  return `用法：
+  gen_family_nav_xlsx.mjs \\
+    --input <navigation.json> \\
+    --output <file.xlsx> \\
+    --artifact-runtime <含 node_modules/@oai/artifact-tool 的目录> \\
+    [--qa-dir <预览图片目录>] \\
+    [--soffice <LibreOffice/soffice 可执行文件>]
+
+输入 JSON 必填字段：
+  title, summary, generatedAt, partition
+  guidance[]: {label, text}
+  rows[]: {category, name, audience, type, usage, pace, path, url}
+
+输出工作表：
+  01_先看这里、02_资源导航
+
+说明：
+  资源名称和“打开云盘”都会链接到 row.url。
+  row.url 必须是 https://www.alipan.com/drive/file/all/backup/<40位file_id>。
+  建议提供 --qa-dir 和 --soffice 完成交付验收。
+  完整规范见 references/family-navigation-excel.md。`;
+}
+
+
+function validateInput(input) {
+  const requiredText = ["title", "summary", "generatedAt", "partition"];
+  for (const field of requiredText) {
+    if (typeof input[field] !== "string" || !input[field].trim()) {
+      throw new Error(`input.${field} 必须是非空字符串`);
+    }
+  }
+  if (!Array.isArray(input.guidance)) throw new Error("input.guidance 必须是数组");
+  input.guidance.forEach((item, index) => {
+    for (const field of ["label", "text"]) {
+      if (typeof item?.[field] !== "string" || !item[field].trim()) {
+        throw new Error(`input.guidance[${index}].${field} 必须是非空字符串`);
+      }
+    }
+  });
+  if (!Array.isArray(input.rows) || !input.rows.length) {
+    throw new Error("input.rows 必须是非空数组");
+  }
+  const rowFields = ["category", "name", "audience", "type", "usage", "pace", "path", "url"];
+  const driveUrl = /^https:\/\/(?:www\.)?(?:alipan|aliyundrive)\.com\/drive\/file\/all\/backup\/[0-9a-f]{40}(?:[/?#].*)?$/i;
+  input.rows.forEach((row, index) => {
+    for (const field of rowFields) {
+      if (typeof row?.[field] !== "string" || !row[field].trim()) {
+        throw new Error(`input.rows[${index}].${field} 必须是非空字符串`);
+      }
+    }
+    if (!driveUrl.test(row.url)) {
+      throw new Error(
+        `input.rows[${index}].url 必须是 file/all/backup/<40位file_id> 云盘直达链接`
+      );
+    }
+  });
 }
 
 
@@ -204,8 +263,12 @@ function buildWorkbook(Workbook, input) {
 
 async function run() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.help) {
+    console.log(usageText());
+    return;
+  }
   const input = JSON.parse(await fs.readFile(args.input, "utf8"));
-  if (!Array.isArray(input.rows) || !input.rows.length) throw new Error("input.rows 必须是非空数组");
+  validateInput(input);
   const { Workbook, SpreadsheetFile } = await loadArtifactTool(args.artifactRuntime);
   const built = buildWorkbook(Workbook, input);
   const errors = await built.workbook.inspect({

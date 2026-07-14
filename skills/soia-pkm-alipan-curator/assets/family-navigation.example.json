@@ -1,0 +1,28 @@
+{
+  "title": "示例分区 · 家庭学习导航",
+  "summary": "先了解资源，再选一条主线短时、持续使用；不要把所有课程同时开工。",
+  "generatedAt": "YYYY-MM-DD",
+  "partition": "10_示例学习区",
+  "guidance": [
+    {
+      "label": "先选主线",
+      "text": "一次只选一套主资源，连续使用一段时间后再评估。"
+    },
+    {
+      "label": "短时高频",
+      "text": "低龄资源优先每天短时间接触，不追求一次学完。"
+    }
+  ],
+  "rows": [
+    {
+      "category": "10_启蒙课程",
+      "name": "示例课程",
+      "audience": "启蒙阶段",
+      "type": "视频+音频",
+      "usage": "先看一遍，再跟做或跟唱。",
+      "pace": "每周 4 次，每次 10 分钟",
+      "path": "/10_示例学习区/10_启蒙课程/示例课程",
+      "url": "https://www.alipan.com/drive/file/all/backup/<40位file_id>"
+    }
+  ]
+}

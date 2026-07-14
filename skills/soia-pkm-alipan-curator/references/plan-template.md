@@ -7,9 +7,9 @@
 ---
 tags: [学习计划]
 title: <学习者代号> · <主题>学习计划
-scenario: <如：某学段假期提分 / 幼小衔接英语启蒙>
+scenario: <如：某学段假期提分 / 幼小衔接语言启蒙>
 learner: <学习者A/学习者B>
-duration: <如：2026-07-07 → 08-30，8周>
+duration: <开始日期 → 结束日期，共N周>
 status: 待确认
 created: YYYY-MM-DD
 source: "<成绩单截图/学情来源说明>"
