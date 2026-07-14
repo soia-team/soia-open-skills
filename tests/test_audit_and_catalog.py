@@ -107,6 +107,37 @@ class FrontmatterYamlTests(unittest.TestCase):
             self.assertTrue(any("frontmatter description must be a string" in message for message in messages))
 
 
+class AuthoringQualityTests(unittest.TestCase):
+    def test_long_skill_is_flagged_for_refactoring(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            body = "\n".join(f"line-{index}" for index in range(audit_skills.MAX_SKILL_LINES + 1))
+            skill = write_skill(root, "soia-long-skill", body)
+            findings = audit_skills.collect_findings(root)
+            self.assertTrue(
+                any(
+                    finding.path == str(skill.relative_to(root) / "SKILL.md")
+                    and finding.severity == "INFO"
+                    and "split durable detail" in finding.message
+                    for finding in findings
+                )
+            )
+
+    def test_complex_skill_gets_forward_test_recommendation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            skill = write_skill(root, "soia-complex-skill", "正文。")
+            (skill / "scripts").mkdir()
+            findings = audit_skills.collect_findings(root)
+            self.assertTrue(
+                any(
+                    finding.severity == "INFO"
+                    and "forward test" in finding.message
+                    for finding in findings
+                )
+            )
+
+
 class OpenaiMetadataYamlTests(unittest.TestCase):
     def test_invalid_yaml_metadata_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

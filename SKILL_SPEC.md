@@ -33,6 +33,41 @@ Do not rename this directory to `open-skill-template`. The repository name
 already scopes the public/private difference, while a shared template path keeps
 agent instructions and contributor commands consistent.
 
+### 0.5 Common skill design principles
+
+The public and private repositories share the same authoring principles. Only
+distribution, privacy, and release acceptance differ.
+
+- **Progressive disclosure:** frontmatter is trigger metadata, the first screen
+  explains the customer workflow, and the main `SKILL.md` keeps only stable
+  instructions. Variant-specific details belong in `references/`, linked from
+  the main file with no more than one additional hop. Keep the main file under
+  500 lines whenever practical; split it when it becomes a reference manual.
+- **Freedom follows risk:** leave room for judgment in low-risk analysis, use
+  explicit parameters for configurable workflows, and constrain fragile or
+  destructive actions with previews, dry-runs, allowlists, and confirmation.
+  Deletion, overwrite, send, publish, and remote-state changes need an explicit
+  safety boundary.
+- **Validation has evidence:** define the acceptance evidence before execution.
+  Distinguish static checks from fixture/forward tests and end-to-end checks;
+  claim only the checks that actually ran. Complex skills with scripts,
+  external APIs, or generated artifacts should have at least one realistic
+  forward test that verifies the output, not only the exit code.
+- **One source of truth:** keep mutable mappings and provider facts in a
+  machine-readable reference or config, and make prose link to it. Do not copy
+  the same list into several files.
+- **No documentation clutter:** required workflow stays in `SKILL.md`; do not
+  add per-skill `README`, install guide, changelog, quick reference, or
+  architecture files. Use `references/` for durable supporting material.
+- **Portable language:** write instructions in imperative/infinitive form,
+  explain the customer's next action, and never rely on maintainer paths,
+  accounts, secrets, or private context.
+
+Recommended authoring loop: identify concrete triggers and outputs → decide the
+resource layout → implement the smallest reliable workflow → run static and
+realistic output checks → attack the riskiest assumption → trim duplicated or
+nonessential instructions.
+
 ### Customer-readable `SKILL.md` contract
 
 Every skill must make its first screen understandable to a customer, not only to
@@ -227,6 +262,7 @@ Before commit, verify:
 - [ ] Scripts accept CLI args and/or env vars for paths.
 - [ ] Root `README.md` and `README.en.md` describe new skills/domains, installation, configuration, and trigger examples; generated `skills/README.md` is refreshed.
 - [ ] Machine-readable references have one source of truth and Markdown guides link to it instead of duplicating mutable lists.
+- [ ] Main `SKILL.md` is concise (target: under 500 lines); complex skills have a realistic forward test or fixture-backed output check.
 - [ ] Validation commands and limits are documented.
 - [ ] `git diff --check` passes.
 

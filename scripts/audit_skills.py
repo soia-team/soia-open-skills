@@ -14,6 +14,7 @@ import yaml
 
 
 ALLOWED_FRONTMATTER = {"name", "description"}
+MAX_SKILL_LINES = 500
 DISALLOWED_SKILL_DOCS = {
     "README.md",
     "INSTALLATION_GUIDE.md",
@@ -142,6 +143,24 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
         return
 
     text = read_text(skill_md)
+    line_count = len(text.splitlines())
+    if line_count > MAX_SKILL_LINES:
+        findings.append(
+            Finding(
+                "INFO",
+                rel(skill_md, root),
+                f"SKILL.md is long ({line_count} lines); split durable detail into references/ (target <= {MAX_SKILL_LINES})",
+            )
+        )
+    if (skill_dir / "scripts").is_dir() or (skill_dir / "references").is_dir():
+        if not re.search(r"(?i)(forward[- ]?test|前向测试|真实输出|端到端|e2e|验收)", text):
+            findings.append(
+                Finding(
+                    "INFO",
+                    rel(skill_md, root),
+                    "complex skill should document a fixture or realistic forward test that verifies the output",
+                )
+            )
     fm, errors = parse_frontmatter(text)
     for error in errors:
         findings.append(Finding("ERROR", rel(skill_md, root), error))
