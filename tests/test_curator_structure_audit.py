@@ -147,6 +147,99 @@ class StructureAuditTests(unittest.TestCase):
         )
         self.assertEqual(violations[0]["kind"], "required_guide_file_too_small")
 
+    def test_required_artifact_verifies_exact_cloud_identity(self) -> None:
+        rows = [{
+            "path": "/learning/01_guide",
+            "name": "start-here.xlsx",
+            "id": "file-id",
+            "dir": False,
+            "size": 128,
+            "sha1": "A" * 40,
+        }]
+        checked, violations = audit.audit_required_artifacts(
+            rows,
+            [{
+                "path": "/learning/01_guide/start-here.xlsx",
+                "id": "file-id",
+                "size": 128,
+                "sha1": "a" * 40,
+            }],
+        )
+        self.assertEqual(checked, 1)
+        self.assertEqual(violations, [])
+
+        _, violations = audit.audit_required_artifacts(
+            rows,
+            [{
+                "path": "/learning/01_guide/start-here.xlsx",
+                "id": "other-id",
+                "size": 129,
+                "sha1": "B" * 40,
+            }],
+        )
+        self.assertEqual(
+            {item["kind"] for item in violations},
+            {
+                "required_artifact_id_mismatch",
+                "required_artifact_size_mismatch",
+                "required_artifact_sha1_mismatch",
+            },
+        )
+
+    def test_required_artifact_reports_missing_and_duplicate_paths(self) -> None:
+        rule = [{"path": "/learning/file.xlsx", "size": 1, "sha1": "A" * 40}]
+        _, missing = audit.audit_required_artifacts([], rule)
+        self.assertEqual(missing[0]["kind"], "required_artifact_missing")
+        duplicate_rows = [
+            {"path": "/learning", "name": "file.xlsx", "dir": False},
+            {"path": "/learning", "name": "file.xlsx", "dir": False},
+        ]
+        _, duplicate = audit.audit_required_artifacts(duplicate_rows, rule)
+        self.assertEqual(duplicate[0]["kind"], "required_artifact_duplicate_path")
+
+    def test_resource_map_requires_clickable_markdown_cloud_links(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            map_path = root / "map.md"
+            prefix = "https://drive.example/files/"
+            map_path.write_text(
+                "Claims it is clickable: https://drive.example/files/root-id\n",
+                encoding="utf-8",
+            )
+            rule = [{
+                "path": "map.md",
+                "url_prefix": prefix,
+                "required_ids": ["root-id", "course-id"],
+                "min_links": 2,
+            }]
+            checked, violations = audit.audit_resource_maps(rule, root)
+            self.assertEqual(checked, 1)
+            self.assertEqual(
+                {item["kind"] for item in violations},
+                {
+                    "resource_map_has_too_few_cloud_links",
+                    "resource_map_missing_required_link",
+                },
+            )
+
+            map_path.write_text(
+                "[root](https://drive.example/files/root-id)\n"
+                "[course](https://drive.example/files/course-id)\n",
+                encoding="utf-8",
+            )
+            _, violations = audit.audit_resource_maps(rule, root)
+            self.assertEqual(violations, [])
+
+    def test_contract_rejects_incomplete_artifact_and_map_rules(self) -> None:
+        with self.assertRaisesRegex(ValueError, "sha1 must be 40 hexadecimal"):
+            audit.validate_contract({
+                "required_artifacts": [{"path": "/file.xlsx", "size": 1, "sha1": "bad"}],
+            })
+        with self.assertRaisesRegex(ValueError, "required_ids must be a non-empty array"):
+            audit.validate_contract({
+                "resource_maps": [{"path": "map.md", "url_prefix": "https://example/"}],
+            })
+
     def test_unclear_items_must_be_inside_review_root_and_verified(self) -> None:
         checked, violations = audit.audit_unclear_manifest(
             [

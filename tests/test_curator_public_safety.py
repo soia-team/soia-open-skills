@@ -102,6 +102,8 @@ class CuratorPublicSafetyTests(unittest.TestCase):
             "编号可配置且必须闭环",
             "学习导航必须闭环",
             "required_guides",
+            "required_artifacts",
+            "resource_maps",
             "flat_series_discovery",
             "audit_structure.py",
             "不确定项可隔离复核",

@@ -74,6 +74,8 @@ def validate_contract(contract: dict) -> None:
         "numbered_layers",
         "guide_layers",
         "required_guides",
+        "required_artifacts",
+        "resource_maps",
         "chunk_layers",
         "flat_series_discovery",
     ):
@@ -117,6 +119,54 @@ def validate_contract(contract: dict) -> None:
         if isinstance(min_bytes, bool) or not isinstance(min_bytes, int) or min_bytes <= 0:
             raise ValueError(
                 f"contract.required_guides[{index}].min_bytes must be a positive integer"
+            )
+    for index, rule in enumerate(contract.get("required_artifacts", [])):
+        if not str(rule.get("path", "")).strip():
+            raise ValueError(f"contract.required_artifacts[{index}].path is required")
+        size = rule.get("size")
+        if isinstance(size, bool) or not isinstance(size, int) or size <= 0:
+            raise ValueError(
+                f"contract.required_artifacts[{index}].size must be a positive integer"
+            )
+        sha1 = rule.get("sha1")
+        if not isinstance(sha1, str) or re.fullmatch(r"[0-9A-Fa-f]{40}", sha1) is None:
+            raise ValueError(
+                f"contract.required_artifacts[{index}].sha1 must be 40 hexadecimal characters"
+            )
+        if "id" in rule and (
+            not isinstance(rule["id"], str) or not rule["id"].strip()
+        ):
+            raise ValueError(
+                f"contract.required_artifacts[{index}].id must be a non-empty string"
+            )
+    for index, rule in enumerate(contract.get("resource_maps", [])):
+        for field in ("path", "url_prefix"):
+            if not isinstance(rule.get(field), str) or not rule[field].strip():
+                raise ValueError(
+                    f"contract.resource_maps[{index}].{field} is required and must be non-empty"
+                )
+        required_ids = rule.get("required_ids")
+        if not isinstance(required_ids, list) or not required_ids:
+            raise ValueError(
+                f"contract.resource_maps[{index}].required_ids must be a non-empty array"
+            )
+        for target_index, target in enumerate(required_ids):
+            if not isinstance(target, str) or not target.strip():
+                raise ValueError(
+                    f"contract.resource_maps[{index}].required_ids[{target_index}] "
+                    "must be a non-empty string"
+                )
+        if len(set(required_ids)) != len(required_ids):
+            raise ValueError(f"contract.resource_maps[{index}].required_ids must be unique")
+        min_links = rule.get("min_links", len(required_ids))
+        if (
+            isinstance(min_links, bool)
+            or not isinstance(min_links, int)
+            or min_links < len(required_ids)
+        ):
+            raise ValueError(
+                f"contract.resource_maps[{index}].min_links must be an integer "
+                "not smaller than required_ids"
             )
     for index, rule in enumerate(contract.get("chunk_layers", [])):
         if not str(rule.get("child_pattern", "")).strip():
@@ -328,6 +378,120 @@ def audit_required_guides(rows: list[dict], rules: list[dict]) -> tuple[int, lis
                 "id": guides[0].get("id"),
             })
     return checked, violations
+
+
+def matching_file_rows(rows: list[dict], target: str) -> list[dict]:
+    normalized_target = normalize_cloud_path(target)
+    target_path = PurePosixPath(normalized_target)
+    parent = normalize_cloud_path(str(target_path.parent))
+    name = target_path.name
+    return [
+        row
+        for row in rows
+        if row.get("dir") is not True
+        and normalize_cloud_path(str(row.get("path", ""))) == parent
+        and str(row.get("name", "")) == name
+    ]
+
+
+def audit_required_artifacts(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
+    """Verify critical cloud files by exact path, byte size, SHA1, and optional file id."""
+    violations: list[dict] = []
+    for index, rule in enumerate(rules):
+        target = normalize_cloud_path(str(rule.get("path", "")))
+        matches = matching_file_rows(rows, target)
+        if not matches:
+            violations.append({
+                "kind": "required_artifact_missing",
+                "rule": index,
+                "path": target,
+            })
+            continue
+        if len(matches) > 1:
+            violations.append({
+                "kind": "required_artifact_duplicate_path",
+                "rule": index,
+                "path": target,
+                "count": len(matches),
+            })
+            continue
+        row = matches[0]
+        actual_size = int(row.get("size") or 0)
+        expected_size = int(rule["size"])
+        if actual_size != expected_size:
+            violations.append({
+                "kind": "required_artifact_size_mismatch",
+                "rule": index,
+                "path": target,
+                "expected": expected_size,
+                "actual": actual_size,
+            })
+        actual_sha1 = str(row.get("sha1") or "").upper()
+        expected_sha1 = str(rule["sha1"]).upper()
+        if actual_sha1 != expected_sha1:
+            violations.append({
+                "kind": "required_artifact_sha1_mismatch",
+                "rule": index,
+                "path": target,
+                "expected": expected_sha1,
+                "actual": actual_sha1 or None,
+            })
+        if "id" in rule and str(row.get("id") or "") != str(rule["id"]):
+            violations.append({
+                "kind": "required_artifact_id_mismatch",
+                "rule": index,
+                "path": target,
+                "expected": str(rule["id"]),
+                "actual": str(row.get("id") or "") or None,
+            })
+    return len(rules), violations
+
+
+def audit_resource_maps(rules: list[dict], contract_dir: Path) -> tuple[int, list[dict]]:
+    """Require actual Markdown cloud links instead of an unverified textual claim."""
+    violations: list[dict] = []
+    for index, rule in enumerate(rules):
+        configured_path = str(rule["path"])
+        map_path = Path(configured_path).expanduser()
+        if not map_path.is_absolute():
+            map_path = contract_dir / map_path
+        if not map_path.is_file():
+            violations.append({
+                "kind": "resource_map_missing",
+                "rule": index,
+                "path": configured_path,
+            })
+            continue
+        text = map_path.read_text(encoding="utf-8")
+        url_prefix = str(rule["url_prefix"])
+        cloud_link_pattern = re.compile(
+            r"\]\(\s*(" + re.escape(url_prefix) + r"[^)\s]+)"
+        )
+        cloud_urls = set(cloud_link_pattern.findall(text))
+        min_links = int(rule.get("min_links", len(rule["required_ids"])))
+        if len(cloud_urls) < min_links:
+            violations.append({
+                "kind": "resource_map_has_too_few_cloud_links",
+                "rule": index,
+                "path": configured_path,
+                "expected_minimum": min_links,
+                "actual_unique_links": len(cloud_urls),
+            })
+        for target in rule["required_ids"]:
+            expected_url = f"{url_prefix}{target}"
+            if not any(
+                url == expected_url
+                or url.startswith(expected_url + "?")
+                or url.startswith(expected_url + "#")
+                for url in cloud_urls
+            ):
+                violations.append({
+                    "kind": "resource_map_missing_required_link",
+                    "rule": index,
+                    "path": configured_path,
+                    "target": target,
+                })
+    return len(rules), violations
 
 
 def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
@@ -561,16 +725,7 @@ def audit_scan_errors(path: Path | None, *, required: bool = False) -> tuple[int
 
 
 def scan_contains_file(rows: list[dict], target: str) -> bool:
-    normalized_target = normalize_cloud_path(target)
-    target_path = PurePosixPath(normalized_target)
-    parent = normalize_cloud_path(str(target_path.parent))
-    name = target_path.name
-    return any(
-        row.get("dir") is not True
-        and normalize_cloud_path(str(row.get("path", ""))) == parent
-        and str(row.get("name", "")) == name
-        for row in rows
-    )
+    return bool(matching_file_rows(rows, target))
 
 
 def audit_unclear_manifest(
@@ -665,6 +820,12 @@ def main() -> int:
     required_guides_checked, required_guides = audit_required_guides(
         rows, contract.get("required_guides", [])
     )
+    required_artifacts_checked, required_artifacts = audit_required_artifacts(
+        rows, contract.get("required_artifacts", [])
+    )
+    resource_maps_checked, resource_maps = audit_resource_maps(
+        contract.get("resource_maps", []), args.contract.parent
+    )
     chunk_rules = contract.get("chunk_layers", [])
     chunks_checked, chunks = audit_chunks(rows, chunk_rules)
     discovery_stats, discovery = audit_flat_series_discovery(
@@ -680,6 +841,8 @@ def main() -> int:
         numbering
         + guides
         + required_guides
+        + required_artifacts
+        + resource_maps
         + chunks
         + discovery
         + unclear
@@ -692,6 +855,8 @@ def main() -> int:
             "numbered_directories": numbered_checked,
             "guide_parents": guides_checked,
             "required_guides": required_guides_checked,
+            "required_artifacts": required_artifacts_checked,
+            "resource_maps": resource_maps_checked,
             "chunk_groups": chunks_checked,
             "flat_series_matching_parents": discovery_stats["matching_parents"],
             "flat_series_skipped_by_chunk": discovery_stats["skipped_by_chunk"],

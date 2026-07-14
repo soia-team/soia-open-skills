@@ -117,6 +117,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 - **编号可配置且必须闭环**：只有用户选择编号排序时才给业务分类层加 `NN_`；业务层不按目录深度判断，课程内供用户选择的“正课/练习/答疑/其他”同样属于导航层，章节文件和技术依赖树则不编号。步长、格式、待确认区含义和适用层级由本次方案声明，不设公共固定值。执行后必须逐个扫描已声明层级，漏号数为 0，不能靠索引折叠掩盖实体目录漏号
 - **长系列分组可配置且必须闭环**：课程、播客、视频或卷册超过用户确认的单夹上限时，按原序号或内容阶段建立分组；阈值、分组命名和适用系列写进本次 `chunk_layers` 合同，公共 skill 不写死“20 集”或具体目录。拆分后根目录不留散文件、每组不超上限；同级技术目录必须在 `exclude` 中显式声明，其他未匹配目录视为漏整理；源资料缺号只记录不补造。终态还要用 `flat_series_discovery` 对本次范围做第二遍扫描，发现未写进 `chunk_layers` 的超限平铺目录；自然月份等稳定语义桶只能通过本次合同的 `exclude_path_patterns` 显式豁免
 - **学习导航必须闭环**：用户选择“先看这里”模式时，方案必须声明导览名称和覆盖层级；每个在架学习分类都要有导览目录及已验证的导航文件。分区根本身需要入口时，单独写入 `required_guides`，不能只审计根下子分类而漏过根级导览；两种导览规则都必须提供非空 `file_pattern`，文件默认至少 1 字节，也可用 `min_bytes` 提高门槛，不接受任意杂项文件、空壳或零字节占位。先上传导览，再做终态扫描和索引；缺任意一个都不算完成
+- **云端产物与资源地图必须可复核**：关键 Excel/说明上传后写入 `required_artifacts`，用终态扫描按完整路径、字节数、SHA1 和可选 file_id 精确对账；不能把上传回显当作成功。OB 资源地图写入 `resource_maps`，逐个声明必须出现的最终 file_id 和显式 `url_prefix`；只有真实 Markdown 云盘链接才算通过，正文声称“可直达”或粘贴裸 URL 都不算完成
 - **杂包必拆**：含糊命名的合集目录逐项盘点→可独立使用的高价值资源提升到合适业务类→剩余按同一主轴分类→删壳前对账总数吻合
 - **SHA1 级查重**：同名/疑似重复资源先做文件级哈希比对再决定删哪份，不凭文件名/大小相似猜
 - **广告清理特征清单**：几千T资源/扫码进群/十万度V信/XH1080 尾巴/超低价网盘会员/可疑 exe——文字类见即删，可疑 exe 先列清单等确认
@@ -132,7 +133,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 |---|---|---|
 | 全盘/多分区馆藏总索引 | `scripts/gen_catalog_xlsx.py` | 轻量总入口 + 每分区明细；按 Markdown SHA-256 增量刷新 |
 | 单个学习分区的家长说明与课程导航 | `scripts/gen_family_nav_xlsx.mjs` | `01_先看这里` + `02_资源导航`；课程名称可点击直达 |
-| 编号、导览、长系列分组与待确认项闭环审计 | `scripts/audit_structure.py` | 从终态 scan JSONL 检查根级导览、分类导览、已声明分组及未声明长系列发现；失败时返回非零退出码 |
+| 编号、导览、云端关键产物、资源地图直达链接、长系列分组与待确认项闭环审计 | `scripts/audit_structure.py` | 从终态 scan JSONL 和本次合同检查实体结构、精确 SHA1/字节及消费端直达链接；失败时返回非零退出码 |
 
 不要在 vault、临时目录或会话产物目录另写一次性 builder。全盘索引的参数、依赖、数据口径、云端覆盖与验收见 [references/catalog-excel.md](references/catalog-excel.md)；家庭导航的 JSON 字段、运行命令、上传顺序与验收见 [references/family-navigation-excel.md](references/family-navigation-excel.md)。核心约定：
 
@@ -143,7 +144,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 - Excel 作者层必须使用宿主提供的 `@oai/artifact-tool`；缺失时停止并说明，不临时换库。交付验收时加 `--verify`，有 `soffice` 时传入以预计算链接显示值。
 - 分区需要面向家长的简明说明、筛选表和课程直达链接时，家庭导航输入必须来自终态扫描；传 `--soffice` 预计算 `HYPERLINK` 显示值，避免在线预览只显示公式。
 - 家庭导航先上传并复核，再做终态扫描与总索引；否则索引会少算刚上传的文件。
-- 深度整理完成前运行 `audit_structure.py --scan <scan.jsonl> --contract <contract.json> [--scan-errors <scan.errors>] [--unclear <unclear.jsonl>] --final`。`contract.json` 只声明本次用户选择的编号层、根级/分类导览、已知长系列分组、未声明长系列发现范围和可选待确认根；所有阈值、路径过滤与语义桶例外由调用方传入，脚本不内置任何个人目录或固定集数。发现范围必须使用逐文件、无聚合、无 `no-descend` 的终态扫描；聚合行、非空或缺失的错误 sidecar 会使终态审计失败，分类导览或发现规则零匹配也默认失败。只有已通过其他证据确认确实为空时才设置规则级 `allow_empty=true`；只有独立验证扫描完整性后才可使用 CLI 的 `--allow-missing-scan-errors`。
+- 深度整理完成前运行 `audit_structure.py --scan <scan.jsonl> --contract <contract.json> [--scan-errors <scan.errors>] [--unclear <unclear.jsonl>] --final`。必须先确认终态扫描进程已退出且退出码为 0，不能审计仍在增长的 JSONL。`contract.json` 只声明本次用户选择的编号层、根级/分类导览、关键云端产物、资源地图链接、已知长系列分组、未声明长系列发现范围和可选待确认根；所有阈值、路径、file_id、URL 前缀、哈希与语义桶例外由调用方从本次终态证据传入，脚本不内置任何个人目录、真实云盘 ID 或固定集数。发现范围必须使用逐文件、无聚合、无 `no-descend` 的终态扫描；聚合行、非空或缺失的错误 sidecar、关键产物不匹配、资源地图缺少真实链接都会使审计失败，分类导览或发现规则零匹配也默认失败。只有已通过其他证据确认确实为空时才设置规则级 `allow_empty=true`；只有独立验证扫描完整性后才可使用 CLI 的 `--allow-missing-scan-errors`。
 - 同参数第二次运行全盘生成器必须返回 `status=unchanged`、`rebuilt=[]`；若已上传，远端 SHA1/bytes 必须与本地一致。
 
 **图书馆建法（浏览/检索/策展 + 分类方案）**（精选资源沉淀为可查询馆藏时用，模板与字段详见 `references/library-method.md`）：
@@ -164,7 +165,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 1. **方案先行**：分类方案文档先写完整（现状/N类结构/归类规则/待裁定区），frontmatter `status: 待拍板`，不擅自开始移动
 2. **用户裁定**：疑难项（受众模糊/去向二选一/查重后留哪份）列清单给用户，逐项拍板
 3. **分批执行**：按"风险从低到高、跨库/跨盘操作放后面"分批，每批做完立即复核（重新 ls 对照终态），操作记一份移动日志（jsonl：原路径/新路径/操作类型/时间戳）
-4. **结构闭环 + 地图/总览刷新 + 文档回填**：终态扫描后先跑编号/导览/长系列分组/待确认项审计，违规数为 0；再重建受影响地图（尤其跨盘导致 file_id 全换时），同步总览链接，分类方案 `status` 改 `✅ 已执行` 并补变更史
+4. **结构闭环 + 地图/总览刷新 + 文档回填**：终态扫描后先跑编号/导览/关键云端产物/长系列分组/待确认项审计，违规数为 0；再重建受影响地图（尤其跨盘导致 file_id 全换时），把最终 file_id 写入 `resource_maps` 合同并验证真实 Markdown 直达链接，随后同步总览、Excel 与方案文档变更史
 
 ## 执行编排经验
 

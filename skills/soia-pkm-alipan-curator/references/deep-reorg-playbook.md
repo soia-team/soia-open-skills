@@ -63,7 +63,7 @@
 
 ## 八、完成定义（DoD）
 
-区内：目标结构落地；若方案选择编号，则所声明层级的漏号数为 0；若设置长系列上限，则系列根散文件数为 0、空分组数为 0、超限分组数为 0、未声明超限平铺目录为 0；若选择学习导览，则根级与分类级导览缺失数为 0、正式说明文件缺失数为 0；若指定复核区，则 `unclear` 全部位于该根下、状态已验证且目标文件存在于终态扫描；账本齐全、删除项可回滚。使用 `scripts/audit_structure.py` 对终态 scan JSONL 复现这些结论。区外：索引三查通过、消费端链接全量校验、方案文档变更史回填、遗留项显式列在「待拍板」。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
+区内：目标结构落地；若方案选择编号，则所声明层级的漏号数为 0；若设置长系列上限，则系列根散文件数为 0、空分组数为 0、超限分组数为 0、未声明超限平铺目录为 0；若选择学习导览，则根级与分类级导览缺失数为 0、正式说明文件缺失数为 0；关键云端 Excel/说明在 `required_artifacts` 中按路径、字节、SHA1 和可选 file_id 精确对账；若指定复核区，则 `unclear` 全部位于该根下、状态已验证且目标文件存在于终态扫描；账本齐全、删除项可回滚。使用 `scripts/audit_structure.py` 对终态 scan JSONL 复现这些结论。区外：索引三查通过，`resource_maps` 中要求的最终 file_id 都以真实 Markdown 链接存在，方案文档变更史回填、遗留项显式列在「待拍板」。正文声称“可直达”不算证据。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
 
 结构合同使用通用 JSON，不写用户目录进公共 skill：
 
@@ -78,6 +78,12 @@
   "required_guides": [
     {"parent": "/<learning>", "guide_name": "01_<guide>", "file_pattern": "\\.xlsx$", "min_bytes": 1}
   ],
+  "required_artifacts": [
+    {"path": "/<learning>/01_<guide>/<guide>.xlsx", "size": EXPECTED_BYTES, "sha1": "<40-hex-sha1>", "id": "<optional-final-file-id>"}
+  ],
+  "resource_maps": [
+    {"path": "<resource-map.md>", "url_prefix": "https://<provider>/<path>/", "required_ids": ["<final-root-id>", "<final-course-id>"], "min_links": 2}
+  ],
   "chunk_layers": [
     {"parent": "/<learning>/<course>", "child_pattern": "^\\d{2}_", "max_items": USER_CONFIRMED_LIMIT, "exclude": ["<technical-dir-if-any>"]}
   ],
@@ -88,7 +94,7 @@
 }
 ```
 
-上例是带占位符的 JSONC 结构说明，执行前把 `USER_CONFIRMED_LIMIT` 替换为本次确认的正整数。换用户、换客户端或换资源类型时重新确认。没有需豁免的同级技术目录/语义桶时传空数组；`exclude` 与 `exclude_path_patterns` 必须显式声明，不能隐藏未知目录。
+上例是带占位符的 JSONC 结构说明，执行前把 `USER_CONFIRMED_LIMIT`、`EXPECTED_BYTES`、SHA1、file_id、地图路径和 URL 前缀替换为本次终态证据。换用户、换客户端或换资源类型时重新确认。没有需豁免的同级技术目录/语义桶时传空数组；`exclude` 与 `exclude_path_patterns` 必须显式声明，不能隐藏未知目录。公共 skill 不保存这些真实值。
 
 `unclear` JSONL 每行格式为：
 
@@ -107,4 +113,4 @@ python3 scripts/audit_structure.py \
   --final
 ```
 
-最终结构审计的扫描不得使用聚合剪枝或 `no-descend`。`flat_series_discovery` 会拒绝范围内的 `agg_files` 行；`--final` 默认要求并读取同名 `<scan>.errors`，缺失或非空都失败。显式 `--scan-errors` 可用于不同命名的 sidecar，路径写错同样失败；只有已用其他证据独立确认扫描完整性时才可传 `--allow-missing-scan-errors`。`guide_layers` 和 `flat_series_discovery` 的规则零匹配也默认失败，确知该范围为空时才在对应规则中显式写 `allow_empty=true`。
+最终结构审计的扫描不得使用聚合剪枝或 `no-descend`，并且要先确认扫描进程退出码为 0；还在增长的 JSONL 即使错误 sidecar 暂时为空也不是终态证据。`flat_series_discovery` 会拒绝范围内的 `agg_files` 行；`--final` 默认要求并读取同名 `<scan>.errors`，缺失或非空都失败。显式 `--scan-errors` 可用于不同命名的 sidecar，路径写错同样失败；只有已用其他证据独立确认扫描完整性时才可传 `--allow-missing-scan-errors`。`guide_layers` 和 `flat_series_discovery` 的规则零匹配也默认失败，确知该范围为空时才在对应规则中显式写 `allow_empty=true`。`required_artifacts` 必须来自上传后的终态扫描，`resource_maps` 必须使用最终 file_id；上传回显、旧索引值、裸 URL 或文字承诺都不能替代审计。
