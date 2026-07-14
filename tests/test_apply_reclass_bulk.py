@@ -239,6 +239,43 @@ class BulkApplyReclassTests(unittest.TestCase):
             run.assert_not_called()
             self.assertFalse(ledger.exists())
 
+    def test_third_concurrent_writer_is_blocked_before_cloud_call(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            plan = self.write_plan(
+                root,
+                [{"action_id": "A1", "op": "mkdir", "to": "/library/one", "reason": "locked"}],
+            )
+            ledger = root / "ledger.jsonl"
+            with mock.patch.dict("os.environ", {"XDG_STATE_HOME": temp}, clear=False):
+                with bulk.execution_slot("drive-1", 2), bulk.execution_slot("drive-1", 2):
+                    with mock.patch.object(bulk, "run_aliyunpan") as run:
+                        with self.assertRaises(SystemExit) as stopped:
+                            self.run_main(
+                                "--plan", str(plan), "--driveId", "drive-1", "--root", self.ROOT,
+                                "--ledger", str(ledger), "--execute", "--resume",
+                            )
+            self.assertEqual(stopped.exception.code, 2)
+            run.assert_not_called()
+            self.assertFalse(ledger.exists())
+
+    def test_parallel_limit_rejects_more_than_two(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            plan = self.write_plan(
+                root,
+                [{"action_id": "A1", "op": "mkdir", "to": "/library/one", "reason": "limit"}],
+            )
+            ledger = root / "ledger.jsonl"
+            with mock.patch.object(bulk, "run_aliyunpan") as run:
+                with self.assertRaises(SystemExit) as stopped:
+                    self.run_main(
+                        "--plan", str(plan), "--driveId", "drive-1", "--root", self.ROOT,
+                        "--ledger", str(ledger), "--execute", "--max-parallel", "3",
+                    )
+            self.assertEqual(stopped.exception.code, 2)
+            run.assert_not_called()
+
     def test_history_is_appended_not_overwritten(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -13,14 +13,18 @@ not used as write evidence.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
+import os
 import posixpath
 import subprocess
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
+
+import fcntl
 
 
 _SINGLE_EXECUTOR_PATH = Path(__file__).with_name("apply_reclass.py")
@@ -369,6 +373,56 @@ def positive_int(value: str) -> int:
     return number
 
 
+def parallel_limit(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("--max-parallel 必须是 1 或 2") from error
+    if number not in {1, 2}:
+        raise argparse.ArgumentTypeError("--max-parallel 必须是 1 或 2")
+    return number
+
+
+@contextmanager
+def execution_slot(drive_id: str, max_parallel: int) -> Iterator[None]:
+    """Limit concurrent bulk writers before any cloud write is attempted.
+
+    ``aliyunpan`` processes share one local login/profile.  Field evidence
+    shows that two disjoint writers are stable while a third can make an
+    otherwise successful ``mv`` disappear before terminal verification.  A
+    small per-user semaphore therefore protects every profile, regardless of
+    workspace or agent.  The drive id is hashed so local state does not leak
+    account identifiers.
+    """
+    state_home = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+    lock_dir = state_home / "soia-pkm-alipan-curator" / "locks"
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    drive_key = hashlib.sha256(drive_id.encode("utf-8")).hexdigest()[:16]
+    handles = []
+    acquired = None
+    try:
+        for slot in range(1, max_parallel + 1):
+            handle = (lock_dir / f"bulk-{drive_key}-{slot}.lock").open("a+", encoding="utf-8")
+            handles.append(handle)
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                continue
+            acquired = handle
+            break
+        if acquired is None:
+            raise RuntimeError(
+                f"同一云盘已有 {max_parallel} 个批量写入进程；请等待完成后使用 --resume，"
+                "不要提高并发规避保护"
+            )
+        yield
+    finally:
+        if acquired is not None:
+            fcntl.flock(acquired.fileno(), fcntl.LOCK_UN)
+        for handle in handles:
+            handle.close()
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--plan", required=True, help="迁移计划 JSONL")
@@ -383,6 +437,12 @@ def main() -> None:
         type=positive_int,
         default=20,
         help="每个兼容 mv 批次的最大动作数（1 到 20）",
+    )
+    ap.add_argument(
+        "--max-parallel",
+        type=parallel_limit,
+        default=2,
+        help="同一 drive 允许的批量写入进程数（1 或 2；默认 2）",
     )
     args = ap.parse_args()
 
@@ -404,8 +464,9 @@ def main() -> None:
 
     try:
         completed = load_completed(args.ledger) if args.resume else set()
-        returncode = execute(plan, args.driveId, args.ledger, completed, args.batch_size)
-    except (OSError, ValueError) as error:
+        with execution_slot(args.driveId, args.max_parallel):
+            returncode = execute(plan, args.driveId, args.ledger, completed, args.batch_size)
+    except (OSError, RuntimeError, ValueError) as error:
         ap.error(str(error))
     if returncode:
         raise SystemExit(returncode)
