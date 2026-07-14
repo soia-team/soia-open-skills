@@ -7,15 +7,16 @@
 
 JSONL 每行：{"path","name","id","dir","size"[,"agg_files","agg_size"]}
 约定：整理时的分类夹带 `NN_` 数字前缀（10_/20_…），真实资源用原名。
-渲染：只有带 `NN_` / `NN.` 前缀的业务目录成为标题，标题文本直接使用当前实体目录名 + 🔗直达；
+渲染：只有带 `NN_` / `NN.` 前缀的业务目录成为标题，标题文本直接使用当前实体目录名并可点击直达；
 无编号的内部素材目录不进入大纲，按相对路径保持为表格行。同一业务目录下 >12 个素材文件夹压缩为 前2+计数+末1。
 标题最多使用 H6；超过 H6 或 `--max-heading-depth` 时停留在最大标题级别，不输出 HTML 缩进实体。
-点 🔗 落到文件所在文件夹；搜单个文件用 --search-dir 出的全文检索索引。
+点击课程标题或表格名称，直达对应文件夹；搜单个文件用 --search-dir 出的全文检索索引。
 
 --url-prefix：阿里云盘网页版文件夹深链前缀。备份盘实测格式 = `https://www.alipan.com/drive/file/all/backup/<file_id>`
 （`folder/<id>` 不工作会弹回首页）。不同盘位（资源盘/backup）末段不同，按实盘地址栏校准。
 """
 import json, re, argparse, os
+from datetime import date
 from collections import defaultdict, Counter
 NN = re.compile(r'^\d{2}[_.]')
 VID={'mp4','mkv','avi','flv','rmvb','mov','ts','wmv','m4v','mpg','vob'}
@@ -31,22 +32,119 @@ def human(n):
 
 def esc(s): return s.replace('|','·').replace('[','〔').replace(']','〕')
 
-def load(scan_dir, moves_f, del_f, roots_f):
-    recs={}
+OLD_HEADING_LINK = re.compile(
+    r'^(?P<marks>#{1,6}\s+)(?P<emoji>\S+\s+)?(?P<title>\d{2}[_.].*?)\s+'
+    r'\[🔗(?:打开)?\]\((?P<url>https?://[^)]+)\)\s*$',
+    re.MULTILINE,
+)
+ROOT_HEADING = re.compile(
+    r'^#\s+\S+\s+\[(?P<name>\d{2}_[^\]]+)\]\([^)]+\)\s*$',
+    re.MULTILINE,
+)
+GLOBAL_TOTALS = re.compile(
+    r'全盘 \*\*(?P<dirs>[\d,]+) 目录 / (?P<files>[\d,]+) 文件 / (?P<size>[^*]+)\*\*'
+)
+
+
+def linkify_existing_headings(markdown):
+    """把旧的“课程名 + 小图标链接”迁移为课程名本身可点击。"""
+    def replace(match):
+        emoji=match.group('emoji') or ''
+        return f"{match.group('marks')}{emoji}[{match.group('title')}]({match.group('url')})"
+
+    return OLD_HEADING_LINK.subn(replace, markdown)
+
+
+def _partition_row(markdown, partition):
+    pattern=re.compile(
+        rf'^\|[^\n]*\*\*{re.escape(partition)}\*\*[^\n]*\|[ \t]*$',
+        re.MULTILINE,
+    )
+    match=pattern.search(markdown)
+    if not match:
+        raise ValueError(f'未找到分区统计行：{partition}')
+    cells=[cell.strip() for cell in match.group(0).split('|')[1:-1]]
+    if len(cells)<5:
+        raise ValueError(f'分区统计行列数不足：{partition}')
+    try:
+        dirs=int(cells[2].replace(',',''))
+        files=int(cells[3].replace(',',''))
+    except ValueError as error:
+        raise ValueError(f'分区统计数字无法解析：{partition}') from error
+    return match,dirs,files
+
+
+def merge_partition_catalog(existing, generated, merge_date=None):
+    """把单分区扫描结果合并进现有全盘总览，并同步总计与分区统计行。"""
+    generated_roots=list(ROOT_HEADING.finditer(generated))
+    if len(generated_roots)!=1:
+        raise ValueError(f'增量目录必须且只能包含一个根分区，实际 {len(generated_roots)} 个')
+    root_match=generated_roots[0]
+    partition=root_match.group('name')
+    new_row,new_dirs,new_files=_partition_row(generated,partition)
+    old_row,old_dirs,old_files=_partition_row(existing,partition)
+
+    old_root=re.search(
+        rf'^#\s+\S+\s+\[{re.escape(partition)}\]\([^)]+\)\s*$',
+        existing,
+        re.MULTILINE,
+    )
+    if not old_root:
+        raise ValueError(f'现有总览未找到根分区标题：{partition}')
+    next_root=re.search(r'^#\s+',existing[old_root.end():],re.MULTILINE)
+    old_end=old_root.end()+next_root.start() if next_root else len(existing)
+    new_section=generated[root_match.start():].rstrip()+"\n\n"
+    merged=existing[:old_root.start()]+new_section+existing[old_end:]
+
+    merged=merged[:old_row.start()]+new_row.group(0)+merged[old_row.end():]
+    # 历史版本可能让分区行后的空行进入表格；统一恢复连续的 Markdown 表格行。
+    merged=re.sub(r'(?m)(^\|[^\n]*\|\n)(?:[ \t]*\n)+(?=\|)',r'\1',merged)
+    totals=GLOBAL_TOTALS.search(merged)
+    if not totals:
+        raise ValueError('现有总览未找到全盘目录/文件总计')
+    total_dirs=int(totals.group('dirs').replace(',',''))+new_dirs-old_dirs
+    total_files=int(totals.group('files').replace(',',''))+new_files-old_files
+    replacement=(
+        f"全盘 **{total_dirs:,} 目录 / {total_files:,} 文件 / {totals.group('size')}**"
+    )
+    merged=merged[:totals.start()]+replacement+merged[totals.end():]
+
+    stamp=merge_date or date.today().isoformat()
+    note=(
+        f"> 增量状态：`{partition}` 已于 {stamp} 全区重扫；目录数、文件数与分区内容已更新，"
+        "其他分区沿用上次全盘扫描口径。"
+    )
+    if re.search(r'^> 增量状态：.*$',merged,re.MULTILINE):
+        merged=re.sub(r'^> 增量状态：.*$',note,merged,count=1,flags=re.MULTILINE)
+    else:
+        anchor='> 分类逻辑见'
+        line_end=merged.find('\n',merged.find(anchor))
+        if line_end!=-1:
+            merged=merged[:line_end+1]+note+'\n'+merged[line_end+1:]
+    return merged,partition,new_dirs,new_files
+
+def iter_scan_records(scan_dir):
     for fn in sorted(os.listdir(scan_dir)):
         if not fn.endswith('.jsonl'): continue
-        for line in open(os.path.join(scan_dir,fn)):
-            line=line.strip()
-            if not line: continue
-            try: r=json.loads(line)
-            except: continue
-            if not isinstance(r,dict) or 'path' not in r: continue
-            p=r['path'].rstrip('/')
-            if not r.get('name'): r['name']=p.rsplit('/',1)[-1]
-            if r.get('name') and p.rsplit('/',1)[-1]!=r['name']:
-                p=p+'/'+r['name']; r={**r,'path':p}
-            if p in recs and 'new' in fn.lower(): continue
-            recs[p]=r
+        with open(os.path.join(scan_dir,fn)) as source:
+            for line in source:
+                line=line.strip()
+                if not line: continue
+                try: r=json.loads(line)
+                except: continue
+                if not isinstance(r,dict) or 'path' not in r: continue
+                p=r['path'].rstrip('/')
+                if not r.get('name'): r['name']=p.rsplit('/',1)[-1]
+                if r.get('name') and p.rsplit('/',1)[-1]!=r['name']:
+                    p=p+'/'+r['name']; r={**r,'path':p}
+                yield fn,p,r
+
+
+def load(scan_dir, moves_f, del_f, roots_f):
+    recs={}
+    for fn,p,r in iter_scan_records(scan_dir):
+        if p in recs and 'new' in fn.lower(): continue
+        recs[p]=r
     if roots_f and os.path.exists(roots_f):
         for p,fid in json.load(open(roots_f)).items():
             if p not in recs or not recs[p].get('id'):
@@ -71,6 +169,41 @@ def load(scan_dir, moves_f, del_f, roots_f):
                 if p not in recs: recs[p]={'path':p,'name':p.rsplit('/',1)[-1],'id':None,'dir':True,'size':None}
     return recs
 
+
+def raw_stats_by_root(scan_dir, roots):
+    """原始扫描统计保留同路径重名实体；目录树仍可按路径去重展示。"""
+    result={root:[0,0,0] for root in roots}
+    root_seen=set()
+    for _,path,record in iter_scan_records(scan_dir):
+        for root in roots:
+            if path!=root and not path.startswith(root+'/'): continue
+            if path==root: root_seen.add(root)
+            if record.get('dir'):
+                result[root][0]+=1
+            else:
+                result[root][1]+=1
+                result[root][2]+=record.get('size') or 0
+            break
+    for root in roots:
+        if root not in root_seen:
+            result[root][0]+=1
+    return result
+
+
+def catalog_roots(recs, roots_f=None):
+    """优先使用扫描时显式记录的根，避免 LIST_FAIL 造成的孤儿路径被误判为分区根。"""
+    if roots_f and os.path.exists(roots_f):
+        with open(roots_f) as source:
+            declared=json.load(source)
+        roots=[p.rstrip('/') for p in declared if p.rstrip('/') in recs and recs[p.rstrip('/')].get('dir')]
+        if roots:
+            return sorted(roots,key=lambda p:recs[p]['name'])
+    return sorted(
+        [p for p,r in recs.items() if r.get('dir') and
+         (p.rsplit('/',1)[0] if '/' in p else '') not in recs],
+        key=lambda p:recs[p]['name'],
+    )
+
 def build(recs):
     ch=defaultdict(list)
     for p in recs:
@@ -83,8 +216,12 @@ def build(recs):
 
 def main():
     ap=argparse.ArgumentParser()
-    ap.add_argument('--scan-dir',required=True); ap.add_argument('--out',required=True)
+    ap.add_argument('--scan-dir'); ap.add_argument('--out',required=True)
+    ap.add_argument('--linkify-existing',
+                    help='只迁移现有总览的标题链接，不重扫数据；可与 --out 指向同一文件')
     ap.add_argument('--moves'); ap.add_argument('--deletes'); ap.add_argument('--roots')
+    ap.add_argument('--merge-existing',help='把本次唯一根分区增量合并进现有全盘总览')
+    ap.add_argument('--merge-date',default=date.today().isoformat(),help='增量状态日期 YYYY-MM-DD')
     ap.add_argument('--title',default='云盘馆藏总览'); ap.add_argument('--drive',default='备份盘')
     ap.add_argument('--search-dir',help='额外输出:按区分的全文检索索引目录(每文件一行,只搜不看)')
     ap.add_argument('--junk',default='',help='逗号分隔的路径前缀,其下文件不入检索索引(如模板碎片区)')
@@ -93,6 +230,14 @@ def main():
     ap.add_argument('--max-heading-depth',type=int,default=None,
                     help='标题最大深度;更深的编号目录停留在该标题级别')
     a=ap.parse_args()
+    if a.linkify_existing:
+        markdown=open(a.linkify_existing).read()
+        updated,count=linkify_existing_headings(markdown)
+        open(a.out,'w').write(updated)
+        print(f"OK {a.out} · {count} 个课程标题改为可点击")
+        return
+    if not a.scan_dir:
+        ap.error('--scan-dir 与 --linkify-existing 至少提供一个')
     U=a.url_prefix
     recs=load(a.scan_dir,a.moves,a.deletes,a.roots); ch=build(recs)
 
@@ -115,17 +260,20 @@ def main():
         v=sum(e[x] for x in VID);au=sum(e[x] for x in AUD);d=sum(e[x] for x in DOC);i=sum(e[x] for x in IMG)
         top=max([('🎬视频',v),('🎧音频',au),('📄文档',d),('🖼图片',i)],key=lambda x:x[1])
         return top[0] if top[1]/tot>=0.5 else '📦混合'
-    roots=sorted([p for p,r in recs.items() if r.get('dir') and
-                  (p.rsplit('/',1)[0] if '/' in p else '') not in recs],
-                 key=lambda p:recs[p]['name'])
+    roots=catalog_roots(recs,a.roots)
+    raw_by_root=raw_stats_by_root(a.scan_dir,roots) if not a.moves and not a.deletes else {}
     EMOJI={'孩子':'👶','个人':'📖','技术':'🔧','影视':'🎬','书籍':'📚','存档':'🗄️'}
     out=[]
     tot_d=tot_f=tot_s=0; rowsum=[]
     for r in roots:
-        d,f,s=stats(r); tot_d+=d+1; tot_f+=f; tot_s+=s; rowsum.append((recs[r]['name'],d+1,f,s,recs[r].get('id')))
+        if r in raw_by_root:
+            d,f,s=raw_by_root[r]
+        else:
+            child_dirs,f,s=stats(r); d=child_dirs+1
+        tot_d+=d; tot_f+=f; tot_s+=s; rowsum.append((recs[r]['name'],d,f,s,recs[r].get('id')))
     out.append(f"---\ntype: moc\ntitle: {a.title}\ntags: [MOC, 云盘, 全盘索引]\n---\n")
     out.append(f"# ☁️ {a.title}\n")
-    out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 编号目录标题浏览，**表格保留无编号素材文件夹**（真实文件所在层），点 🔗 直达该文件夹")
+    out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 编号目录标题浏览，**表格保留无编号素材文件夹**（真实文件所在层），点击课程标题或表格名称直达该文件夹")
     search_nav = " ▸ **搜单个文件** → `20_云盘地图/_全文检索/`（每区一份全文件清单，Ctrl+F/全局搜）" if a.search_dir else ""
     out.append(f"> 三样各司其职：**本文件**=浏览+直达文件夹；[[云盘馆藏.base|🃏 精选卡]]=15张策展卡；**_全文检索/**=搜任意单文件。{search_nav}")
     out.append("> 分类逻辑见 `20_云盘地图/` 各《深度分类方案》。同一编号目录下 >12 个素材文件夹已压缩为「前2+计数+末1」。\n")
@@ -149,12 +297,12 @@ def main():
     def title_line(path, root, level, emoji=None):
         prefix=f"{emoji} " if emoji else ''
         fid=recs[path].get('id')
-        lk=f" [🔗打开]({U}{fid})" if emoji and fid else (f" [🔗]({U}{fid})" if fid else '')
-        text=f"{prefix}{recs[path]['name']}"
+        name=recs[path]['name']
+        text=f"{prefix}[{name}]({U}{fid})" if fid else f"{prefix}{name}"
         requested_depth = a.max_heading_depth if a.max_heading_depth is not None else 6
         max_heading_level = max(1, min(6, requested_depth))
         heading_level = min(level, max_heading_level)
-        return f"{'#'*heading_level} {text}{lk}"
+        return f"{'#'*heading_level} {text}"
 
     def emit(path, level, root):
         direct_files=[c for c in ch.get(path,[]) if not recs[c].get('dir')]
@@ -202,8 +350,15 @@ def main():
         e=next((v for k,v in EMOJI.items() if k in nm),'📁')
         out.append("\n"+title_line(r,r,1,e))
         emit(r, 1, r)
-    open(a.out,'w').write("\n".join(x for x in out if x is not None)+"\n")
-    print(f"OK {a.out} · {sum(1 for x in out if x)} 行 · {tot_d} 目录")
+    markdown="\n".join(x for x in out if x is not None)+"\n"
+    merged_partition=None
+    if a.merge_existing:
+        existing=open(a.merge_existing).read()
+        markdown,merged_partition,_,_=merge_partition_catalog(existing,markdown,a.merge_date)
+    with open(a.out,'w') as target:
+        target.write(markdown)
+    suffix=f" · 增量合并 {merged_partition}" if merged_partition else ""
+    print(f"OK {a.out} · {sum(1 for x in out if x)} 行 · {tot_d} 目录{suffix}")
 
     if a.search_dir:
         os.makedirs(a.search_dir, exist_ok=True)
@@ -238,7 +393,8 @@ def main():
                 for p in sorted(by_res[res]):
                     rel=esc(p[len(res)+1:] if p.startswith(res+'/') else recs[p]['name'])
                     lines.append(f"| {rel} | {human(recs[p].get('size'))} |")
-            open(os.path.join(a.search_dir, zone.replace('/','_')+'.md'),'w').write("\n".join(lines)+"\n")
+            with open(os.path.join(a.search_dir, zone.replace('/','_')+'.md'),'w') as target:
+                target.write("\n".join(lines)+"\n")
         print(f"检索索引: {a.search_dir} · {len(zfiles)}个区文件 · {idx_total:,}行文件条目")
 
 if __name__=='__main__': main()

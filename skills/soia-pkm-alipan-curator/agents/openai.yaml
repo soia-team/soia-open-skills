@@ -1,4 +1,4 @@
 interface:
   display_name: "PKM Alipan Curator"
-  short_description: "阿里云盘资源顾问，在 soia-pkm-alipan 原子操作上提供 inventory/organize/catalog/plan 四类工作流：盘点云盘、整理资源、生成 Obsidian 馆藏索引、基于本次用户提供的学情生成学习计划"
-  default_prompt: "Use soia-pkm-alipan-curator: 阿里云盘资源顾问，在 soia-pkm-alipan 原子操作上提供 inventory/organize/catalog/plan 四类工作流：盘点云盘、整理资源、生成 Obsidian 馆藏索引、基于本次用户提供的学情生成学习计划"
+  short_description: "阿里云盘资源顾问：盘点、整理、生成 Obsidian 馆藏与增量 Excel 索引，并基于本次学情规划学习"
+  default_prompt: "Use soia-pkm-alipan-curator: 盘点或整理阿里云盘，生成 Obsidian 馆藏与分区缓存式增量 Excel 索引，或基于本次用户提供的学情生成学习计划"
