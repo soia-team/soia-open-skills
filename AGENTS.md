@@ -44,6 +44,20 @@ the actual target is an explicitly confirmed SOIA product workspace.
 - Do not add `metadata.json` in this public repo; it is a legacy private catalog
   format, not part of the public skills.sh/npx skill contract.
 
+### Configuration and structured resources
+
+- Use YAML as the canonical format for editable, human-readable, AI/script-readable
+  domain facts and user configuration. Add a small `schema_version` or `version`
+  field when the file is a maintained data contract.
+- Use Markdown for explanations, workflows, rationale, links, and customer-facing
+  reminders. If both Markdown and YAML exist, keep one machine-readable source of
+  truth and avoid maintaining duplicated lists by hand.
+- Keep JSON when it is an external interchange contract, a tool-specific asset, or
+  a deliberate zero-dependency runtime input. Do not convert it only for stylistic
+  consistency.
+- `agents/openai.yaml` is a platform-facing contract and must retain its required
+  YAML shape. It is not a general-purpose skill configuration file.
+
 ## Safety Rules
 
 - No real API keys, tokens, cookies, session strings, passwords, account ids,

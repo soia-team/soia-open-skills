@@ -225,6 +225,8 @@ Before commit, verify:
 - [ ] User-specific behavior is in config, not code.
 - [ ] Examples use placeholders or generic paths.
 - [ ] Scripts accept CLI args and/or env vars for paths.
+- [ ] Root `README.md` and `README.en.md` describe new skills/domains, installation, configuration, and trigger examples; generated `skills/README.md` is refreshed.
+- [ ] Machine-readable references have one source of truth and Markdown guides link to it instead of duplicating mutable lists.
 - [ ] Validation commands and limits are documented.
 - [ ] `git diff --check` passes.
 
