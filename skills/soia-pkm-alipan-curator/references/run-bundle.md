@@ -158,7 +158,11 @@ python3 '<skill-dir>/scripts/plan_series_chunks.py' \
   --out-report '<run-dir>/analysis/series-plan-report.json'
 ```
 
-规划器只写本地计划和报告，不调用云盘。主控必须先审核报告中的 `errors/unresolved/protected`、抽查首尾分组及同课配套文件，再把计划交给恢复型执行器；已有输出默认拒绝覆盖，重算时保留旧证据或显式使用新的批次文件名。
+规划器只写本地计划和报告，不调用云盘。主控必须先审核报告中的 `errors/unresolved/protected/planned_protected`、抽查首尾分组及同课配套文件，再把计划交给恢复型执行器；已有输出默认拒绝覆盖，重算时保留旧证据或显式使用新的批次文件名。
+
+`protect` 只表示“命中保护规则”。缺省不提供 `protected_dir` 时，命中文件继续原地保留，只出现在 `protected` 报告中，不生成移动动作。只有在语义明确、确实属于该系列的配套资料（例如该课的字幕、讲义或说明）时，才显式提供 `protected_dir`；它必须是单个安全相对目录名。此时规划器会生成 `<parent>/<protected_dir>` 的 `mkdir` 和逐文件 `mv`，并在 `planned_protected` 中列出对应动作。无法确认归属的文件不要用这个字段“顺手收纳”，应继续报告为 `unresolved`，或按用户明确指定的边界留在 `90_存档`（或等价存档区）。
+
+启用 `protected_dir` 后，若该目录或生成的 group 目标已在扫描中存在，或其名称与本次生成的 group 名相同，规划器必须报错并且不写计划；不要依赖执行器覆盖已有实体。
 
 若写命令后登录态/网络在终态回读时中断，账本会留下 `failed` 而不会假装成功。恢复登录后用 `--resume`：执行器先检查源与目标；源已消失且目标同名实体已存在时追加 `verified + idempotent-resume`，否则才重试或保留 `skipped`，避免制造 `(1)` 重复目录。
 

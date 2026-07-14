@@ -17,6 +17,7 @@ Rules use this shape::
         "episode_pattern": "(?P<episode>\\d+)",
         "sidecar_patterns": ["(?i)\\.(srt|vtt)$"],
         "protect": ["^README\\.txt$"],
+        "protected_dir": "配套资料",
         "direct_file_policy": "leave"
       }]
     }
@@ -118,6 +119,18 @@ def _as_pattern_list(value: Any, field: str) -> list[str]:
     return value
 
 
+def _validate_protected_dir(value: Any, series_index: int) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise InputError(
+            f"series[{series_index}].protected_dir must be a non-empty relative directory name"
+        )
+    if value != value.strip() or "\x00" in value or "/" in value or "\\" in value or value in {".", ".."}:
+        raise InputError(
+            f"series[{series_index}].protected_dir must be one trimmed safe name without path separators"
+        )
+    return value
+
+
 def load_rules(path: Path) -> list[dict[str, Any]]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -164,6 +177,9 @@ def load_rules(path: Path) -> list[dict[str, Any]]:
             raise InputError(f"series[{index}] contains an invalid regular expression: {error}") from error
         if episode_pattern is not None and "episode" not in episode_pattern.groupindex:
             raise InputError(f"series[{index}].episode_pattern must contain named group episode")
+        protected_dir = None
+        if "protected_dir" in item:
+            protected_dir = _validate_protected_dir(item["protected_dir"], index)
         compiled.append({
             "index": index,
             "parent": parent,
@@ -173,6 +189,7 @@ def load_rules(path: Path) -> list[dict[str, Any]]:
             "episode_pattern": episode_pattern,
             "sidecar_patterns": sidecar_patterns,
             "protect_patterns": protect_patterns,
+            "protected_dir": protected_dir,
             "direct_file_policy": "leave" if direct_policy == "leave" else "fail",
         })
     return compiled
@@ -235,6 +252,15 @@ def _parent_matches(rows: list[dict[str, Any]], parent: str) -> bool:
     )
 
 
+def _scan_entity_paths(rows: list[dict[str, Any]]) -> set[str]:
+    """Return paths represented by the file-level scan's parent/name rows."""
+
+    return {
+        child_path(normalize_cloud_path(str(row["path"])), str(row["name"]))
+        for row in rows
+    }
+
+
 def _base_report(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
@@ -247,6 +273,7 @@ def _base_report(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> dic
         "errors": [],
         "unresolved": [],
         "protected": [],
+        "planned_protected": [],
         "series": [],
     }
 
@@ -260,6 +287,8 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
     mkdir_actions: list[dict[str, Any]] = []
     move_actions: list[dict[str, Any]] = []
     any_leave = False
+    target_conflict = False
+    existing_paths = _scan_entity_paths(rows) if any(rule["protected_dir"] is not None for rule in rules) else set()
 
     for rule in rules:
         parent = rule["parent"]
@@ -269,6 +298,7 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
             "groups": [],
             "unresolved": [],
             "protected": [],
+            "planned_protected": [],
         }
         report["series"].append(series_report)
         if not _parent_matches(rows, parent):
@@ -283,6 +313,7 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
         direct.sort(key=lambda row: natural_sort_key(str(row["name"])))
         primary: list[dict[str, Any]] = []
         sidecars: list[dict[str, Any]] = []
+        protected_rows: list[dict[str, Any]] = []
         for row in direct:
             name = str(row["name"])
             path = child_path(parent, name)
@@ -290,6 +321,7 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
                 protected = {"path": path, "name": name, "reason": "matched protect rule"}
                 series_report["protected"].append(protected)
                 report["protected"].append({"parent": parent, **protected})
+                protected_rows.append(row)
             elif rule["primary_pattern"].search(name) or rule["primary_pattern"].search(path):
                 primary.append(row)
             elif _matches(rule["sidecar_patterns"], name, path):
@@ -361,6 +393,49 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
         elif series_report["unresolved"]:
             any_leave = True
 
+        protected_target = None
+        if protected_rows and rule["protected_dir"] is not None:
+            protected_target = child_path(parent, rule["protected_dir"])
+            if protected_target in existing_paths:
+                report["errors"].append({
+                    "kind": "existing_target_conflict",
+                    "parent": parent,
+                    "target": protected_target,
+                    "reason": "scan already contains an entity at the protected directory target",
+                })
+                target_conflict = True
+            else:
+                mkdir_action = {
+                    "action_id": f"S{rule['index']:02d}-PD-MK",
+                    "op": "mkdir",
+                    "to": protected_target,
+                    "reason": f"create protected companion directory {rule['protected_dir']} for {parent}",
+                    "series_parent": parent,
+                    "protected_dir": rule["protected_dir"],
+                }
+                mkdir_actions.append(mkdir_action)
+                for move_index, row in enumerate(protected_rows, 1):
+                    path = child_path(parent, str(row["name"]))
+                    planned = {
+                        "parent": parent,
+                        "path": path,
+                        "name": str(row["name"]),
+                        "to": protected_target,
+                        "reason": "matched protect rule and assigned to protected_dir",
+                        "action_id": f"S{rule['index']:02d}-PD-M{move_index:03d}",
+                    }
+                    series_report["planned_protected"].append(planned)
+                    report["planned_protected"].append(planned)
+                    move_actions.append({
+                        "action_id": planned["action_id"],
+                        "op": "mv",
+                        "from": path,
+                        "to": protected_target,
+                        "reason": f"move protected file {row['name']} into {rule['protected_dir']}",
+                        "series_parent": parent,
+                        "protected_dir": rule["protected_dir"],
+                    })
+
         if len(primary) <= rule["max_items"]:
             continue
         if missing_episode:
@@ -425,6 +500,24 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
             target = child_path(parent, group_name)
             group["name"] = group_name
             group["target"] = target
+            if rule["protected_dir"] is not None:
+                if group_name == rule["protected_dir"]:
+                    report["errors"].append({
+                        "kind": "protected_dir_conflicts_with_group",
+                        "parent": parent,
+                        "protected_dir": rule["protected_dir"],
+                        "group": group_name,
+                    })
+                    target_conflict = True
+                elif target in existing_paths:
+                    report["errors"].append({
+                        "kind": "existing_target_conflict",
+                        "parent": parent,
+                        "target": target,
+                        "group": group_name,
+                        "reason": "scan already contains an entity at the generated group target",
+                    })
+                    target_conflict = True
             for unit in group["units"]:
                 if unit["key"] is not None:
                     episode_to_group[unit["key"]] = group_index
@@ -474,14 +567,18 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
                     "group": group["name"],
                 })
 
-    actions = mkdir_actions + move_actions
+    actions = [] if target_conflict else mkdir_actions + move_actions
     hard_errors = bool(report["errors"])
     report["actions"] = len(actions)
     report["plan_generated"] = not hard_errors
-    report["complete"] = not hard_errors and not report["unresolved"] and not report["protected"]
+    planned_protected_paths = {item["path"] for item in report["planned_protected"]}
+    unplanned_protected = [
+        item for item in report["protected"] if item["path"] not in planned_protected_paths
+    ]
+    report["complete"] = not hard_errors and not report["unresolved"] and not unplanned_protected
     if hard_errors:
         report["status"] = "failed"
-    elif report["protected"]:
+    elif unplanned_protected:
         report["status"] = "planned_with_protected"
     elif any_leave:
         report["status"] = "planned_with_unresolved"

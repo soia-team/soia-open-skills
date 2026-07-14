@@ -242,7 +242,94 @@ class PlanSeriesChunksTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(report["status"], "planned_with_protected")
         self.assertEqual(report["protected"][0]["name"], "02.mp4")
+        self.assertEqual(report["planned_protected"], [])
         self.assertNotIn(f"{self.parent}/02.mp4", [item.get("from") for item in actions])
+
+    def test_protected_dir_plans_mkdir_and_protected_moves(self) -> None:
+        rows = [file_row(self.parent, name) for name in ("01.mp4", "02.mp4", "03.mp4")]
+        rules = [{
+            "parent": self.parent,
+            "max_items": 1,
+            "primary_pattern": r"\.mp4$",
+            "protect": [r"^02\.mp4$"],
+            "protected_dir": "配套资料",
+        }]
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rules.json"
+            path.write_text(json.dumps({"series": rules}), encoding="utf-8")
+            loaded = planner.load_rules(path)
+            first, report, ok = planner.build_plan(rows, loaded)
+            second, _, _ = planner.build_plan(rows, loaded)
+        self.assertTrue(ok)
+        self.assertEqual(first, second)
+        self.assertEqual(report["status"], "planned")
+        self.assertTrue(report["complete"])
+        self.assertEqual([item["name"] for item in report["protected"]], ["02.mp4"])
+        self.assertEqual([item["name"] for item in report["planned_protected"]], ["02.mp4"])
+        protected_mkdir = next(item for item in first if item["action_id"] == "S01-PD-MK")
+        self.assertEqual(protected_mkdir["op"], "mkdir")
+        self.assertEqual(protected_mkdir["to"], f"{self.parent}/配套资料")
+        protected_move = next(item for item in first if item["action_id"] == "S01-PD-M001")
+        self.assertEqual(protected_move["op"], "mv")
+        self.assertEqual(protected_move["from"], f"{self.parent}/02.mp4")
+        self.assertEqual(protected_move["to"], f"{self.parent}/配套资料")
+        self.assertEqual(len({item["action_id"] for item in first}), len(first))
+
+    def test_protected_dir_must_be_one_safe_name(self) -> None:
+        for protected_dir in ("", " ", " padded", "padded ", ".", "..", "a/b", r"a\b", "a/b/c", "bad\x00name"):
+            with self.subTest(protected_dir=protected_dir), tempfile.TemporaryDirectory() as temp:
+                path = Path(temp) / "rules.json"
+                path.write_text(json.dumps({"series": [{
+                    "parent": self.parent,
+                    "max_items": 1,
+                    "primary_pattern": r"\.mp4$",
+                    "protected_dir": protected_dir,
+                }]}), encoding="utf-8")
+                with self.assertRaises(planner.InputError):
+                    planner.load_rules(path)
+
+    def test_protected_dir_conflicting_with_generated_group_fails_without_plan(self) -> None:
+        rows = [file_row(self.parent, name) for name in ("01.mp4", "02.mp4")]
+        rules = [{
+            "parent": self.parent,
+            "max_items": 1,
+            "primary_pattern": r"\.mp4$",
+            "protected_dir": "10_001",
+        }]
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rules.json"
+            path.write_text(json.dumps({"series": rules}), encoding="utf-8")
+            actions, report, ok = planner.build_plan(rows, planner.load_rules(path))
+        self.assertFalse(ok)
+        self.assertEqual(actions, [])
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(report["errors"][0]["kind"], "protected_dir_conflicts_with_group")
+        self.assertFalse(report["plan_generated"])
+
+    def test_existing_protected_dir_target_is_refused(self) -> None:
+        rows = [
+            file_row(self.parent, "01.mp4"),
+            file_row(self.parent, "02.mp4"),
+            file_row(self.parent, "配套资料"),
+        ]
+        rules = [{
+            "parent": self.parent,
+            "max_items": 1,
+            "primary_pattern": r"\.mp4$",
+            "protect": [r"^02\.mp4$"],
+            "protected_dir": "配套资料",
+            "direct_file_policy": "leave",
+        }]
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rules.json"
+            path.write_text(json.dumps({"series": rules}), encoding="utf-8")
+            actions, report, ok = planner.build_plan(rows, planner.load_rules(path))
+        self.assertFalse(ok)
+        self.assertEqual(actions, [])
+        self.assertEqual(report["status"], "failed")
+        conflict = next(error for error in report["errors"] if error["kind"] == "existing_target_conflict")
+        self.assertEqual(conflict["target"], f"{self.parent}/配套资料")
+        self.assertFalse(report["plan_generated"])
 
     def test_existing_output_is_refused_without_force(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
