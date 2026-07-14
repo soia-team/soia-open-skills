@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit numbered business layers, navigation-guide closure, and review manifests."""
+"""Audit numbering, navigation guides, series chunking, and review manifests."""
 
 from __future__ import annotations
 
@@ -40,10 +40,19 @@ def child_dirs(rows: list[dict], parent: str) -> list[dict]:
     ]
 
 
+def direct_files(rows: list[dict], parent: str) -> list[dict]:
+    return [
+        row
+        for row in rows
+        if row.get("dir") is not True
+        and normalize_cloud_path(str(row.get("path", ""))) == parent
+    ]
+
+
 def validate_contract(contract: dict) -> None:
     if not isinstance(contract, dict):
         raise ValueError("contract must be a JSON object")
-    for key in ("numbered_layers", "guide_layers"):
+    for key in ("numbered_layers", "guide_layers", "chunk_layers"):
         value = contract.get(key, [])
         if not isinstance(value, list):
             raise ValueError(f"contract.{key} must be an array")
@@ -62,6 +71,12 @@ def validate_contract(contract: dict) -> None:
             raise ValueError(f"contract.guide_layers[{index}].child_pattern is required")
         if not str(rule.get("guide_name", "")).strip():
             raise ValueError(f"contract.guide_layers[{index}].guide_name is required")
+    for index, rule in enumerate(contract.get("chunk_layers", [])):
+        if not str(rule.get("child_pattern", "")).strip():
+            raise ValueError(f"contract.chunk_layers[{index}].child_pattern is required")
+        max_items = rule.get("max_items")
+        if isinstance(max_items, bool) or not isinstance(max_items, int) or max_items <= 0:
+            raise ValueError(f"contract.chunk_layers[{index}].max_items must be a positive integer")
     if "review_root" in contract and not isinstance(contract["review_root"], str):
         raise ValueError("contract.review_root must be a string")
 
@@ -118,6 +133,77 @@ def audit_guides(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
                     "parent": child_path,
                     "guide_name": guide_name,
                     "id": child.get("id"),
+                })
+    return checked, violations
+
+
+def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
+    """Check that large flat series are split into bounded, consistently named groups.
+
+    A contracted series may stay flat while its direct file count is within ``max_items``.
+    Once matching chunk directories exist, every file must live in one of those chunks and
+    each chunk must contain between 1 and ``max_items`` direct files.
+    """
+    checked = 0
+    violations: list[dict] = []
+    for index, rule in enumerate(rules):
+        parent = normalize_cloud_path(str(rule.get("parent", "")))
+        pattern_text = str(rule.get("child_pattern", ""))
+        pattern = re.compile(pattern_text)
+        max_items = int(rule.get("max_items", 0))
+        all_children = child_dirs(rows, parent)
+        chunks = [row for row in all_children if pattern.search(str(row.get("name", "")))]
+        loose_files = direct_files(rows, parent)
+
+        if not chunks:
+            checked += 1
+            if all_children and not loose_files:
+                violations.append({
+                    "kind": "missing_chunk_directory",
+                    "rule": index,
+                    "parent": parent,
+                    "child_pattern": pattern_text,
+                })
+            elif len(loose_files) > max_items:
+                violations.append({
+                    "kind": "series_exceeds_chunk_limit",
+                    "rule": index,
+                    "parent": parent,
+                    "item_count": len(loose_files),
+                    "max_items": max_items,
+                })
+            continue
+
+        checked += len(chunks)
+        if loose_files:
+            violations.append({
+                "kind": "direct_items_outside_chunks",
+                "rule": index,
+                "parent": parent,
+                "item_count": len(loose_files),
+                "sample": [str(row.get("name", "")) for row in loose_files[:5]],
+            })
+        for chunk in chunks:
+            chunk_name = str(chunk.get("name", ""))
+            chunk_path = normalize_cloud_path(f"{parent}/{chunk_name}")
+            item_count = len(direct_files(rows, chunk_path))
+            if item_count == 0:
+                violations.append({
+                    "kind": "empty_chunk_directory",
+                    "rule": index,
+                    "parent": parent,
+                    "name": chunk_name,
+                    "id": chunk.get("id"),
+                })
+            elif item_count > max_items:
+                violations.append({
+                    "kind": "chunk_exceeds_limit",
+                    "rule": index,
+                    "parent": parent,
+                    "name": chunk_name,
+                    "id": chunk.get("id"),
+                    "item_count": item_count,
+                    "max_items": max_items,
                 })
     return checked, violations
 
@@ -206,16 +292,18 @@ def main() -> int:
 
     numbered_checked, numbering = audit_numbering(rows, contract.get("numbered_layers", []))
     guides_checked, guides = audit_guides(rows, contract.get("guide_layers", []))
+    chunks_checked, chunks = audit_chunks(rows, contract.get("chunk_layers", []))
     unclear_checked, unclear = audit_unclear_manifest(
         unclear_rows, contract.get("review_root"), args.final, rows
     )
-    violations = numbering + guides + unclear
+    violations = numbering + guides + chunks + unclear
     result = {
         "status": "passed" if not violations else "failed",
         "scan_rows": len(rows),
         "checked": {
             "numbered_directories": numbered_checked,
             "guide_parents": guides_checked,
+            "chunk_groups": chunks_checked,
             "unclear_items": unclear_checked,
         },
         "violations": violations,

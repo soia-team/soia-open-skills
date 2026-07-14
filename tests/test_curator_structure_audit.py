@@ -92,6 +92,71 @@ class StructureAuditTests(unittest.TestCase):
                 ],
             })
 
+    def test_chunking_reports_flat_series_over_configured_limit(self) -> None:
+        rows = [
+            {"path": "/learning/course", "name": f"{number:03}.mp3", "dir": False}
+            for number in range(1, 22)
+        ]
+        checked, violations = audit.audit_chunks(
+            rows,
+            [{"parent": "/learning/course", "child_pattern": r"^\d{2}_", "max_items": 20}],
+        )
+        self.assertEqual(checked, 1)
+        self.assertEqual(violations[0]["kind"], "series_exceeds_chunk_limit")
+        self.assertEqual(violations[0]["item_count"], 21)
+
+    def test_chunking_reports_loose_files_and_oversized_chunk(self) -> None:
+        rows = [
+            {"path": "/learning/course", "name": "10_001-020", "id": "a", "dir": True},
+            {"path": "/learning/course", "name": "20_021-041", "id": "b", "dir": True},
+            {"path": "/learning/course", "name": "loose.mp3", "id": "c", "dir": False},
+        ]
+        rows.extend(
+            {"path": "/learning/course/10_001-020", "name": f"{number:03}.mp3", "dir": False}
+            for number in range(1, 21)
+        )
+        rows.extend(
+            {"path": "/learning/course/20_021-041", "name": f"{number:03}.mp3", "dir": False}
+            for number in range(21, 42)
+        )
+        checked, violations = audit.audit_chunks(
+            rows,
+            [{"parent": "/learning/course", "child_pattern": r"^\d{2}_", "max_items": 20}],
+        )
+        self.assertEqual(checked, 2)
+        self.assertEqual(
+            {item["kind"] for item in violations},
+            {"direct_items_outside_chunks", "chunk_exceeds_limit"},
+        )
+
+    def test_chunking_accepts_bounded_groups(self) -> None:
+        rows = [
+            {"path": "/learning/course", "name": "10_001-020", "id": "a", "dir": True},
+            {"path": "/learning/course", "name": "20_021-035", "id": "b", "dir": True},
+        ]
+        rows.extend(
+            {"path": "/learning/course/10_001-020", "name": f"{number:03}.mp3", "dir": False}
+            for number in range(1, 21)
+        )
+        rows.extend(
+            {"path": "/learning/course/20_021-035", "name": f"{number:03}.mp3", "dir": False}
+            for number in range(21, 36)
+        )
+        checked, violations = audit.audit_chunks(
+            rows,
+            [{"parent": "/learning/course", "child_pattern": r"^\d{2}_", "max_items": 20}],
+        )
+        self.assertEqual(checked, 2)
+        self.assertEqual(violations, [])
+
+    def test_contract_requires_positive_chunk_limit(self) -> None:
+        with self.assertRaisesRegex(ValueError, "max_items must be a positive integer"):
+            audit.validate_contract({
+                "chunk_layers": [
+                    {"parent": "/learning/course", "child_pattern": r"^\d{2}_", "max_items": 0},
+                ],
+            })
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -114,7 +114,8 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 深度分类（大规模重构时用）：先读 **[references/classification-methods.md](references/classification-methods.md)** 选择分类主轴并按领域示例校正，再读 `references/library-method.md` 设计图书馆产出。
 - **真实内容审计**：全量列资源根；文档读目录与代表章节，音视频读清单、字幕/讲义与元数据，必要时下载最小样本；逐项记录证据、置信度与建议去向
 - **一层一轴**：主题、用途、受众、阶段、状态、媒介只能选择一个作为本层主轴；其余维度放到下层或索引字段
-- **编号可配置且必须闭环**：只有用户选择编号排序时才给业务分类层加 `NN_`；步长、格式、待确认区含义和适用层级由本次方案声明，不设公共固定值。执行后必须逐个扫描已声明层级，漏号数为 0，不能靠索引折叠掩盖实体目录漏号
+- **编号可配置且必须闭环**：只有用户选择编号排序时才给业务分类层加 `NN_`；业务层不按目录深度判断，课程内供用户选择的“正课/练习/答疑/其他”同样属于导航层，章节文件和技术依赖树则不编号。步长、格式、待确认区含义和适用层级由本次方案声明，不设公共固定值。执行后必须逐个扫描已声明层级，漏号数为 0，不能靠索引折叠掩盖实体目录漏号
+- **长系列分组可配置且必须闭环**：课程、播客、视频或卷册超过用户确认的单夹上限时，按原序号或内容阶段建立分组；阈值、分组命名和适用系列写进本次 `chunk_layers` 合同，公共 skill 不写死“20 集”或具体目录。拆分后根目录不留散文件、每组不超上限，源资料缺号只记录不补造
 - **学习导航必须闭环**：用户选择“先看这里”模式时，方案必须声明导览名称和覆盖层级；每个在架学习分类都要有导览目录及已验证的导航文件。先上传导览，再做终态扫描和索引；缺任意一个都不算完成
 - **杂包必拆**：含糊命名的合集目录逐项盘点→可独立使用的高价值资源提升到合适业务类→剩余按同一主轴分类→删壳前对账总数吻合
 - **SHA1 级查重**：同名/疑似重复资源先做文件级哈希比对再决定删哪份，不凭文件名/大小相似猜
@@ -131,7 +132,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 |---|---|---|
 | 全盘/多分区馆藏总索引 | `scripts/gen_catalog_xlsx.py` | 轻量总入口 + 每分区明细；按 Markdown SHA-256 增量刷新 |
 | 单个学习分区的家长说明与课程导航 | `scripts/gen_family_nav_xlsx.mjs` | `01_先看这里` + `02_资源导航`；课程名称可点击直达 |
-| 编号、导览与待确认项闭环审计 | `scripts/audit_structure.py` | 从终态 scan JSONL 机械检查方案声明；失败时返回非零退出码 |
+| 编号、导览、长系列分组与待确认项闭环审计 | `scripts/audit_structure.py` | 从终态 scan JSONL 机械检查方案声明；失败时返回非零退出码 |
 
 不要在 vault、临时目录或会话产物目录另写一次性 builder。全盘索引的参数、依赖、数据口径、云端覆盖与验收见 [references/catalog-excel.md](references/catalog-excel.md)；家庭导航的 JSON 字段、运行命令、上传顺序与验收见 [references/family-navigation-excel.md](references/family-navigation-excel.md)。核心约定：
 
@@ -142,7 +143,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 - Excel 作者层必须使用宿主提供的 `@oai/artifact-tool`；缺失时停止并说明，不临时换库。交付验收时加 `--verify`，有 `soffice` 时传入以预计算链接显示值。
 - 分区需要面向家长的简明说明、筛选表和课程直达链接时，家庭导航输入必须来自终态扫描；传 `--soffice` 预计算 `HYPERLINK` 显示值，避免在线预览只显示公式。
 - 家庭导航先上传并复核，再做终态扫描与总索引；否则索引会少算刚上传的文件。
-- 深度整理完成前运行 `audit_structure.py --scan <scan.jsonl> --contract <contract.json> [--unclear <unclear.jsonl>] --final`。`contract.json` 只声明本次用户选择的编号层、导览层和可选待确认根；脚本不内置任何个人目录。
+- 深度整理完成前运行 `audit_structure.py --scan <scan.jsonl> --contract <contract.json> [--unclear <unclear.jsonl>] --final`。`contract.json` 只声明本次用户选择的编号层、导览层、长系列分组上限和可选待确认根；脚本不内置任何个人目录或固定集数。
 - 同参数第二次运行全盘生成器必须返回 `status=unchanged`、`rebuilt=[]`；若已上传，远端 SHA1/bytes 必须与本地一致。
 
 **图书馆建法（浏览/检索/策展 + 分类方案）**（精选资源沉淀为可查询馆藏时用，模板与字段详见 `references/library-method.md`）：
@@ -163,7 +164,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 1. **方案先行**：分类方案文档先写完整（现状/N类结构/归类规则/待裁定区），frontmatter `status: 待拍板`，不擅自开始移动
 2. **用户裁定**：疑难项（受众模糊/去向二选一/查重后留哪份）列清单给用户，逐项拍板
 3. **分批执行**：按"风险从低到高、跨库/跨盘操作放后面"分批，每批做完立即复核（重新 ls 对照终态），操作记一份移动日志（jsonl：原路径/新路径/操作类型/时间戳）
-4. **结构闭环 + 地图/总览刷新 + 文档回填**：终态扫描后先跑编号/导览/待确认项审计，违规数为 0；再重建受影响地图（尤其跨盘导致 file_id 全换时），同步总览链接，分类方案 `status` 改 `✅ 已执行` 并补变更史
+4. **结构闭环 + 地图/总览刷新 + 文档回填**：终态扫描后先跑编号/导览/长系列分组/待确认项审计，违规数为 0；再重建受影响地图（尤其跨盘导致 file_id 全换时），同步总览链接，分类方案 `status` 改 `✅ 已执行` 并补变更史
 
 ## 执行编排经验
 
