@@ -66,6 +66,8 @@ class CatalogRendererTests(unittest.TestCase):
                 str(out),
                 "--url-prefix",
                 "https://example.test/f/",
+                "--heading-pattern",
+                r"^\d{2}[_.]",
                 *extra_args,
             ]
             try:
@@ -74,7 +76,12 @@ class CatalogRendererTests(unittest.TestCase):
                 sys.argv = old_argv
             return out.read_text(encoding="utf-8")
 
-    def run_catalog_with_search(self, records: list[dict]) -> tuple[str, str]:
+    def run_catalog_with_search(
+        self,
+        records: list[dict],
+        *extra_args: str,
+        search_name: str = "10_孩子.md",
+    ) -> tuple[str, str]:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             scan_dir = root / "scan"
@@ -96,12 +103,15 @@ class CatalogRendererTests(unittest.TestCase):
                 str(search_dir),
                 "--url-prefix",
                 "https://example.test/f/",
+                "--heading-pattern",
+                r"^\d{2}[_.]",
+                *extra_args,
             ]
             try:
                 gen_catalog.main()
             finally:
                 sys.argv = old_argv
-            search = (search_dir / "10_孩子.md").read_text(encoding="utf-8")
+            search = (search_dir / search_name).read_text(encoding="utf-8")
             return out.read_text(encoding="utf-8"), search
 
     def test_only_numbered_directories_enter_outline(self) -> None:
@@ -121,7 +131,7 @@ class CatalogRendererTests(unittest.TestCase):
 
         output = self.run_catalog(records, "--url-prefix", "https://example.test/f/")
 
-        self.assertIn("# 👶 [10_孩子](https://example.test/f/root)", output)
+        self.assertIn("# 📁 [10_孩子](https://example.test/f/root)", output)
         self.assertIn("## [10_视频](https://example.test/f/video)", output)
         self.assertIn("### [10_儿歌动画正片](https://example.test/f/songs)", output)
         self.assertIn("### [01_第一集](https://example.test/f/beva-one)", output)
@@ -215,13 +225,13 @@ type: moc
 
 | 区 | 直达 | 目录 | 文件 | 体量 |
 |---|---|---:|---:|---:|
-| 👶 **10_孩子学习库** | [🔗](https://old/root) | 100 | 200 | 700GB |
-| 📖 **20_个人阅读** | [🔗](https://old/books) | 50 | 100 | 300GB |
+| 📁 **10_学习资料** | [🔗](https://old/root) | 100 | 200 | 700GB |
+| 📁 **20_参考资料** | [🔗](https://old/books) | 50 | 100 | 300GB |
 
-# 👶 [10_孩子学习库](https://old/root)
+# 📁 [10_学习资料](https://old/root)
 ## [10_旧结构](https://old/child)
 
-# 📖 [20_个人阅读](https://old/books)
+# 📁 [20_参考资料](https://old/books)
 ## [10_保留](https://old/keep)
 """
         generated = """---
@@ -232,9 +242,9 @@ type: moc
 
 | 区 | 直达 | 目录 | 文件 | 体量 |
 |---|---|---:|---:|---:|
-| 👶 **10_孩子学习库** | [🔗](https://new/root) | 91 | 181 | 690GB |
+| 📁 **10_学习资料** | [🔗](https://new/root) | 91 | 181 | 690GB |
 
-# 👶 [10_孩子学习库](https://new/root)
+# 📁 [10_学习资料](https://new/root)
 ## [10_新结构](https://new/child)
 """
 
@@ -242,15 +252,61 @@ type: moc
             existing, generated, "2026-07-14"
         )
 
-        self.assertEqual(partition, "10_孩子学习库")
+        self.assertEqual(partition, "10_学习资料")
         self.assertEqual((dirs, files), (91, 181))
         self.assertIn("全盘 **141 目录 / 281 文件 / 1.0TB**", merged)
-        self.assertIn("| 👶 **10_孩子学习库** | [🔗](https://new/root) | 91 | 181 | 690GB |", merged)
+        self.assertIn("| 📁 **10_学习资料** | [🔗](https://new/root) | 91 | 181 | 690GB |", merged)
         self.assertIn("## [10_新结构](https://new/child)", merged)
         self.assertNotIn("10_旧结构", merged)
         self.assertIn("## [10_保留](https://old/keep)", merged)
-        self.assertIn("`10_孩子学习库` 已于 2026-07-14 全区重扫", merged)
-        self.assertNotIn("690GB |\n\n| 📖", merged)
+        self.assertIn("`10_学习资料` 已于 2026-07-14 全区重扫", merged)
+        self.assertNotIn("690GB |\n\n| 📁 **20_参考资料**", merged)
+
+    def test_merge_partition_accepts_unnumbered_root(self) -> None:
+        existing = """# Catalog
+> Drive · 全盘 **3 目录 / 2 文件 / 1GB**
+
+| 区 | 直达 | 目录 | 文件 | 体量 |
+|---|---|---:|---:|---:|
+| 📁 **Library** | [🔗](https://old/root) | 3 | 2 | 1GB |
+
+# 📁 [Library](https://old/root)
+## [Old](https://old/item)
+"""
+        generated = """# Partial
+> Drive · 全盘 **4 目录 / 3 文件 / 1GB**
+
+| 区 | 直达 | 目录 | 文件 | 体量 |
+|---|---|---:|---:|---:|
+| 📁 **Library** | [🔗](https://new/root) | 4 | 3 | 1GB |
+
+# 📁 [Library](https://new/root)
+## [New](https://new/item)
+"""
+
+        merged, partition, dirs, files = gen_catalog.merge_partition_catalog(existing, generated)
+
+        self.assertEqual((partition, dirs, files), ("Library", 4, 3))
+        self.assertIn("## [New](https://new/item)", merged)
+        self.assertNotIn("## [Old]", merged)
+
+    def test_search_index_uses_catalog_root_without_leading_slash(self) -> None:
+        records = [
+            folder("Library", "root"),
+            folder("Library/Reading", "reading"),
+            folder("Library/Reading/Course", "course"),
+            file_record("Library/Reading/Course/a.pdf"),
+        ]
+
+        _, search = self.run_catalog_with_search(
+            records,
+            "--heading-pattern",
+            r".*",
+            search_name="Library.md",
+        )
+
+        self.assertIn("# 🔍 Library · 全文检索索引", search)
+        self.assertIn("## Reading/Course [🔗打开文件夹]", search)
 
     def test_summary_counts_duplicate_logical_paths_as_physical_directories(self) -> None:
         records = [
@@ -264,8 +320,28 @@ type: moc
         output = self.run_catalog(records)
 
         self.assertIn("全盘 **3 目录 / 2 文件 / 30B**", output)
-        self.assertIn("| 👶 **10_孩子** |", output)
+        self.assertIn("| 📁 **10_孩子** |", output)
         self.assertIn("| 3 | 2 | 30B |", output)
+
+    def test_custom_heading_pattern_and_section_icons_are_user_configurable(self) -> None:
+        records = [
+            folder("Library", "root"),
+            folder("Library/Reading", "reading"),
+            folder("Library/Reading/assets", "assets"),
+            file_record("Library/Reading/assets/cover.png"),
+        ]
+
+        output = self.run_catalog(
+            records,
+            "--heading-pattern",
+            r"^(Library|Reading)$",
+            "--section-icons",
+            '{"Library":"📚"}',
+        )
+
+        self.assertIn("# 📚 [Library](https://example.test/f/root)", output)
+        self.assertIn("## [Reading](https://example.test/f/reading)", output)
+        self.assertNotRegex(output, re.compile(r"^#{1,6} .*assets", re.MULTILINE))
 
     def test_explicit_roots_exclude_orphans_created_by_missing_parent_records(self) -> None:
         recs = {

@@ -10,18 +10,59 @@
                  --agg-prefix /A/碎片区 --agg-threshold 200 --agg-min-depth 3]
 
 输出 JSONL 每行（gen_catalog.py 直接吃）：
-  {"path": <父目录>, "name": <名>, "id": <file_id>, "dir": true/false, "size": <字节或null>
+  {"path": <父目录>, "name": <名>, "id": <file_id>, "dir": true/false,
+   "size": <字节或null>, "sha1": <文件SHA-1或null>}
    [, "agg_files": N, "agg_size": 字节]}   # 聚合行：碎片区某目录只记文件数/总大小不逐列
 扫描根自身不入 JSONL（其 file_id 另用 roots.json 提供给 gen_catalog）。
 错误/进度写 <out>.errors / <out>.progress。被 kill 后加 --resume 重跑接着扫。
 """
-import argparse, json, os, queue, re, subprocess, threading, time
+import argparse, json, os, queue, subprocess, threading, time
 
 from soia_env import load_private_env
 
 load_private_env(required=False)
 
-ROW = re.compile(r"\s{2,}")
+def parse_ll_output(out):
+    """Parse ``aliyunpan ll`` without normalizing whitespace in file names.
+
+    The table has nine fields before the name. ``split(None, 9)`` consumes only
+    those fields and leaves the tenth field untouched, so names containing
+    repeated spaces remain byte-for-byte usable as the next ``ll`` path.
+    """
+    rows = []
+    for raw in out.splitlines():
+        line = raw.strip()
+        if not line or line.startswith('当前目录') or line.startswith('----'):
+            continue
+        if '总:' in line and '文件总数' in line:
+            continue
+        parts = line.split(None, 9)
+        if not parts or parts[0] == '#':
+            continue
+        try:
+            int(parts[0])
+        except ValueError:
+            continue
+        if len(parts) < 10:
+            continue
+        name_field = parts[9]
+        isdir = name_field.endswith('/')
+        name = name_field[:-1] if isdir else name_field
+        size = None
+        if not isdir:
+            try:
+                size = int(parts[4])
+            except (ValueError, TypeError):
+                size = None
+        sha1 = None if parts[3] == '-' else parts[3]
+        rows.append({
+            'id': parts[1],
+            'name': name,
+            'dir': isdir,
+            'size': size,
+            'sha1': sha1,
+        })
+    return rows
 
 def main():
     ap = argparse.ArgumentParser()
@@ -70,26 +111,6 @@ def main():
             if att < a.attempts: time.sleep(1.5 * att)
         logerr(f"LIST_FAIL {path!r} {last}"); return None
 
-    def parse(out):
-        rows = []
-        for raw in out.splitlines():
-            ln = raw.strip()
-            if not ln or ln.startswith('当前目录') or ln.startswith('----'): continue
-            if '总:' in ln and '文件总数' in ln: continue
-            p = ROW.split(ln)
-            if not p or p[0] == '#': continue
-            try: int(p[0])
-            except ValueError: continue
-            if len(p) < 8: continue
-            nf = ' '.join(p[7:]) if len(p) > 8 else p[7]
-            isdir = nf.endswith('/'); name = nf[:-1] if isdir else nf
-            size = None
-            if not isdir:
-                try: size = int(p[4])
-                except (ValueError, TypeError): size = None
-            rows.append({'id': p[1], 'name': name, 'dir': isdir, 'size': size})
-        return rows
-
     def worker():
         while True:
             try: path, depth, inagg = tq.get(timeout=2)
@@ -101,7 +122,7 @@ def main():
                         f"agg={cnt['agg']} errors={cnt['errors']} q={tq.qsize()} cur={path}\n")
                 out = run_ll(path)
                 if out is None: continue
-                rows = parse(out)
+                rows = parse_ll_output(out)
                 dirs = [e for e in rows if e['dir']]; files = [e for e in rows if not e['dir']]
                 nowagg = inagg or bool(a.agg_prefix) and (path == a.agg_prefix or path.startswith(a.agg_prefix + '/'))
                 if a.agg_prefix and nowagg and depth >= a.agg_min_depth and len(files) > a.agg_threshold:
@@ -111,10 +132,12 @@ def main():
                     with lock: cnt['agg'] += 1
                 else:
                     for f in files:
-                        emit({'path': path, 'name': f['name'], 'id': f['id'], 'dir': False, 'size': f['size']})
+                        emit({'path': path, 'name': f['name'], 'id': f['id'], 'dir': False,
+                              'size': f['size'], 'sha1': f['sha1']})
                         with lock: cnt['files'] += 1
                 for d in dirs:
-                    emit({'path': path, 'name': d['name'], 'id': d['id'], 'dir': True, 'size': None})
+                    emit({'path': path, 'name': d['name'], 'id': d['id'], 'dir': True,
+                          'size': None, 'sha1': None})
                     with lock: cnt['dirs'] += 1
                     if d['name'] in a.no_descend: continue          # 隐私：记录但不下钻
                     dpath = path + '/' + d['name']

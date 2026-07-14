@@ -132,5 +132,5 @@ aliyunpan ls "$DIR" </dev/null 2>/dev/null | \
 - 安装/登录细节：两步授权+扫码流程、登录态约 3 天过期的症状与处理、非交互环境（无真 TTY）取二维码链接的技巧（伪终端 pty / 长驻进程读 stdout）
 - `--driveId` 显式传参铁律：为什么绝不能用 `aliyunpan drive <id>` 切全局盘（多代理并发会互相污染当前盘上下文）
 - 批量操作实战坑：批量 rename 的 cd 依赖坑与恢复方法、`ll` 输出里的 FILE ID 与直达链接拼法、移动改名不改 file_id 但跨盘移动会换 file_id、删除进回收站 30 天且回收站清空才真正释放配额
-- 全盘 JSONL 爬虫：**已脚本化为 `scripts/scan_drive.py`**（参数化 DFS + 线程池 + 重试 + 断点续扫 + 聚合剪枝 + 敏感目录不下钻）；用法见 ops-playbook §三。**完整图书馆流水线** = `scan_drive.py`（实盘→JSONL）→ alipan-curator 的 `gen_catalog.py`（JSONL→折叠树总览+全文检索）。登录瞬断成批报错、目录名含特殊空格报"指定目录不存在"两坑的处理见 ops-playbook。`scan_drive.py` 产出的 `.errors`/`.progress` sidecar 刻意与 `--out` 主产出同目录、同生命周期——断点续扫（`--resume`）靠 sidecar 定位进度、质量核对要和主产出对得上，这是设计而非遗漏，不要挪去临时目录
+- 全盘 JSONL 爬虫：**已脚本化为 `scripts/scan_drive.py`**（参数化 DFS + 线程池 + 重试 + 断点续扫 + 聚合剪枝 + 敏感目录不下钻）；输出保留目录名原始连续空格，并记录 file_id、大小与 SHA-1。用法见 ops-playbook §三。**完整图书馆流水线** = `scan_drive.py`（实盘→JSONL）→ alipan-curator 的 `gen_catalog.py`（JSONL→折叠树总览+全文检索）。登录瞬断、历史解析器折叠特殊空格两坑的处理见 ops-playbook。`scan_drive.py` 产出的 `.errors`/`.progress` sidecar 刻意与 `--out` 主产出同目录、同生命周期——断点续扫（`--resume`）靠 sidecar 定位进度、质量核对要和主产出对得上，这是设计而非遗漏，不要挪去临时目录
 - 防代理卡死纪律：长内容一律脚本落文件、对话回复限 15 行

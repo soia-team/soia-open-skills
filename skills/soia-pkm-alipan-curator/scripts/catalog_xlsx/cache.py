@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 
 TYPE_RULES = [
     ("视频", {"mp4", "mkv", "avi", "flv", "mov", "rmvb", "wmv", "m4v", "ts", "m2ts", "vob", "webm", "mpeg", "mpg"}),
@@ -107,11 +107,13 @@ def parse_search_markdown(path: Path) -> dict[str, Any]:
         size_text = row_match.group(2).strip()
         extension = extension_of(name)
         parts = [part for part in folder.split("/") if part]
+        categories = parts[1:] if parts and parts[0] == partition else parts
         files.append(
             {
                 "partition": partition,
-                "level1": parts[1] if len(parts) > 1 else "",
-                "level2": parts[2] if len(parts) > 2 else "",
+                "categories": categories,
+                "categoryPath": "/".join(categories),
+                "categoryDepth": len(categories),
                 "type": classify(extension),
                 "ext": extension,
                 "name": name,

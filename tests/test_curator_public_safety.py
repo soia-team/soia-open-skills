@@ -57,6 +57,40 @@ class CuratorPublicSafetyTests(unittest.TestCase):
         self.assertNotIn('timeZone: "Asia/Shanghai"', builder)
         self.assertNotIn("max-old-space-size=8192", skill_text())
 
+    def test_catalog_generator_has_no_user_specific_section_map(self) -> None:
+        generator = (
+            SKILL_ROOT / "scripts" / "gen_catalog.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("--heading-pattern", generator)
+        self.assertIn("--section-icons", generator)
+        self.assertNotIn("EMOJI={'孩子'", generator)
+        self.assertNotIn("'个人':'📖'", generator)
+
+    def test_classification_method_is_generic_and_evidence_first(self) -> None:
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        method = (
+            SKILL_ROOT / "references" / "classification-methods.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("references/classification-methods.md", skill)
+        for marker in [
+            "先真读再分类",
+            "选择主分类轴",
+            "教育资源",
+            "编程与技术学习",
+            "读书与个人学习",
+            "审计表模板",
+        ]:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, method)
+        for hardcoded_rule in [
+            "一二级目录统一",
+            "90 固定=存档/待拆",
+            "按人群分层",
+            "至少建 全部馆藏/按学科/按孩子",
+        ]:
+            with self.subTest(hardcoded_rule=hardcoded_rule):
+                self.assertNotIn(hardcoded_rule, skill_text())
+
     def test_no_literal_secret_assignments(self) -> None:
         text = skill_text()
         patterns = [

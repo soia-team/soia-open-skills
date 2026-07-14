@@ -7,8 +7,9 @@
                  --cards-link LINK --classification-link LINK --max-heading-depth N]
 
 JSONL 每行：{"path","name","id","dir","size"[,"agg_files","agg_size"]}
-约定：整理时的分类夹带 `NN_` 数字前缀（10_/20_…），真实资源用原名。
-渲染：只有带 `NN_` / `NN.` 前缀的业务目录成为标题，标题文本直接使用当前实体目录名并可点击直达；
+渲染：默认把全部目录作为标题，保证任意目录体系都不被隐藏；可用 `--heading-pattern` 提供用户自己的业务目录规则，
+例如编号体系可传 `^\\d{2}[_.]`，把不匹配的内部素材目录折叠进表格。
+标题文本直接使用当前实体目录名并可点击直达；
 无编号的内部素材目录不进入大纲，按相对路径保持为表格行。同一业务目录下 >12 个素材文件夹压缩为 前2+计数+末1。
 标题最多使用 H6；超过 H6 或 `--max-heading-depth` 时停留在最大标题级别，不输出 HTML 缩进实体。
 点击课程标题或表格名称，直达对应文件夹；搜单个文件用 --search-dir 出的全文检索索引。
@@ -19,7 +20,6 @@ JSONL 每行：{"path","name","id","dir","size"[,"agg_files","agg_size"]}
 import json, re, argparse, os
 from datetime import date
 from collections import defaultdict, Counter
-NN = re.compile(r'^\d{2}[_.]')
 VID={'mp4','mkv','avi','flv','rmvb','mov','ts','wmv','m4v','mpg','vob'}
 AUD={'mp3','wma','m4a','flac','wav','ape'}; DOC={'pdf','doc','docx','ppt','pptx','epub','txt','azw3','mobi','xls','xlsx'}; IMG={'jpg','jpeg','png','gif','bmp','webp'}
 SERIES_CAP = 12  # 同一资源下叶文件夹超过此数则压缩
@@ -39,7 +39,7 @@ OLD_HEADING_LINK = re.compile(
     re.MULTILINE,
 )
 ROOT_HEADING = re.compile(
-    r'^#\s+\S+\s+\[(?P<name>\d{2}_[^\]]+)\]\([^)]+\)\s*$',
+    r'^#\s+(?:\S+\s+)?\[(?P<name>[^\]]+)\]\([^)]+\)\s*$',
     re.MULTILINE,
 )
 GLOBAL_TOTALS = re.compile(
@@ -86,14 +86,14 @@ def merge_partition_catalog(existing, generated, merge_date=None):
     old_row,old_dirs,old_files=_partition_row(existing,partition)
 
     old_root=re.search(
-        rf'^#\s+\S+\s+\[{re.escape(partition)}\]\([^)]+\)\s*$',
+        rf'^#\s+(?:\S+\s+)?\[{re.escape(partition)}\]\([^)]+\)\s*$',
         existing,
         re.MULTILINE,
     )
     if not old_root:
         raise ValueError(f'现有总览未找到根分区标题：{partition}')
-    next_root=re.search(r'^#\s+',existing[old_root.end():],re.MULTILINE)
-    old_end=old_root.end()+next_root.start() if next_root else len(existing)
+    next_root=ROOT_HEADING.search(existing,old_root.end())
+    old_end=next_root.start() if next_root else len(existing)
     new_section=generated[root_match.start():].rstrip()+"\n\n"
     merged=existing[:old_root.start()]+new_section+existing[old_end:]
 
@@ -234,6 +234,12 @@ def main():
                     help='可选：写入总览说明的精选卡 wikilink 目标，不含 [[ ]]')
     ap.add_argument('--classification-link',default='',
                     help='可选：写入总览说明的分类方案 wikilink 目标，不含 [[ ]]')
+    ap.add_argument('--heading-pattern',default=os.environ.get('SOIA_ALIPAN_HEADING_PATTERN',r'.*'),
+                    help='业务标题目录名正则；默认匹配全部目录，编号体系可传 ^\\d{2}[_.] 以折叠内部素材目录')
+    ap.add_argument('--default-section-icon',default='📁',
+                    help='根分区默认图标；公共默认不猜分区语义')
+    ap.add_argument('--section-icons',default=os.environ.get('SOIA_ALIPAN_SECTION_ICONS',''),
+                    help='可选：关键词到图标的 JSON 对象，如 {"学习":"📚"}')
     ap.add_argument('--max-heading-depth',type=int,default=None,
                     help='标题最大深度;更深的编号目录停留在该标题级别')
     a=ap.parse_args()
@@ -247,6 +253,16 @@ def main():
         ap.error('--scan-dir 与 --linkify-existing 至少提供一个')
     if not a.url_prefix:
         ap.error('--url-prefix 或 SOIA_ALIPAN_URL_PREFIX 必须提供，公共 skill 不猜用户盘位')
+    try:
+        heading_pattern=re.compile(a.heading_pattern)
+    except re.error as error:
+        ap.error(f'--heading-pattern 不是有效正则: {error}')
+    try:
+        section_icons=json.loads(a.section_icons) if a.section_icons else {}
+    except json.JSONDecodeError as error:
+        ap.error(f'--section-icons 不是有效 JSON: {error}')
+    if not isinstance(section_icons,dict) or any(not isinstance(k,str) or not isinstance(v,str) for k,v in section_icons.items()):
+        ap.error('--section-icons 必须是字符串到字符串的 JSON 对象')
     U=a.url_prefix
     recs=load(a.scan_dir,a.moves,a.deletes,a.roots); ch=build(recs)
 
@@ -271,7 +287,6 @@ def main():
         return top[0] if top[1]/tot>=0.5 else '📦混合'
     roots=catalog_roots(recs,a.roots)
     raw_by_root=raw_stats_by_root(a.scan_dir,roots) if not a.moves and not a.deletes else {}
-    EMOJI={'孩子':'👶','个人':'📖','技术':'🔧','影视':'🎬','书籍':'📚','存档':'🗄️'}
     out=[]
     tot_d=tot_f=tot_s=0; rowsum=[]
     for r in roots:
@@ -282,17 +297,17 @@ def main():
         tot_d+=d; tot_f+=f; tot_s+=s; rowsum.append((recs[r]['name'],d,f,s,recs[r].get('id')))
     out.append(f"---\ntype: moc\ntitle: {a.title}\ntags: [MOC, 云盘, 全盘索引]\n---\n")
     out.append(f"# ☁️ {a.title}\n")
-    out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 编号目录标题浏览，**表格保留无编号素材文件夹**（真实文件所在层），点击课程标题或表格名称直达该文件夹")
+    out.append(f"> {a.drive} · 全盘 **{tot_d:,} 目录 / {tot_f:,} 文件 / {human(tot_s)}** · 业务目录标题浏览，**表格保留未匹配的素材文件夹**（真实文件所在层），点击资源标题或表格名称直达该文件夹")
     search_nav = "；已生成分区全文检索文件，可用 Ctrl+F/全局搜索" if a.search_dir else ""
     cards_nav = f"[[{a.cards_link}|精选卡]]" if a.cards_link else "精选卡（可选）"
     out.append(f"> 三样各司其职：**本文件**=浏览+直达文件夹；{cards_nav}=策展；全文检索=搜任意单文件{search_nav}。")
     classification = f"分类方案入口：[[{a.classification_link}]]。" if a.classification_link else "分类逻辑以用户确认的方案为准。"
-    out.append(f"> {classification}同一编号目录下 >12 个素材文件夹已压缩为「前2+计数+末1」。\n")
+    out.append(f"> {classification}同一业务目录下 >12 个素材文件夹已压缩为「前2+计数+末1」。\n")
     out.append("| 区 | 直达 | 目录 | 文件 | 体量 |")
     out.append("|---|---|---:|---:|---:|")
     for nm,d,f,s,fid in rowsum:
         lk=f"[🔗]({U}{fid})" if fid else ""
-        e=next((v for k,v in EMOJI.items() if k in nm),'📁')
+        e=next((v for k,v in section_icons.items() if k in nm),a.default_section_icon)
         out.append(f"| {e} **{nm}** | {lk} | {d:,} | {f:,} | {human(s)} |")
     out.append("")
 
@@ -322,7 +337,7 @@ def main():
 
         def walk_unnumbered(node):
             for child in dirs_for(node):
-                if NN.match(recs[child]['name']):
+                if heading_pattern.match(recs[child]['name']):
                     numbered_children.append(child)
                     continue
                 if direct_files_for(child):
@@ -358,7 +373,7 @@ def main():
 
     for r in roots:
         nm=recs[r]['name']
-        e=next((v for k,v in EMOJI.items() if k in nm),'📁')
+        e=next((v for k,v in section_icons.items() if k in nm),a.default_section_icon)
         out.append("\n"+title_line(r,r,1,e))
         emit(r, 1, r)
     markdown="\n".join(x for x in out if x is not None)+"\n"
@@ -374,30 +389,39 @@ def main():
     if a.search_dir:
         os.makedirs(a.search_dir, exist_ok=True)
         junk=[j for j in a.junk.split(',') if j]
-        def resource_of(p):
-            segs=p.split('/')
-            # The final segment is the file itself.  When every physical
-            # directory is NN_-prefixed, inspecting that segment would turn
-            # each file into a fake "resource folder" in the search index.
-            for i in range(2,len(segs)-1):
-                if not NN.match(segs[i]): return '/'.join(segs[:i+1])
-            return '/'.join(segs[:-1])
+        def root_of(p):
+            matches=[root for root in roots if p==root or p.startswith(root+'/')]
+            return max(matches,key=len) if matches else None
+
+        def resource_of(p, root):
+            relative=p[len(root):].lstrip('/')
+            parts=[part for part in relative.split('/') if part]
+            current=root
+            # 最后一段是文件名；只检查目录，避免把文件误判成资源根。
+            for part in parts[:-1]:
+                current=f"{current}/{part}"
+                if not heading_pattern.match(part): return current
+            return p.rsplit('/',1)[0]
         zfiles=defaultdict(list)
         for p,r in recs.items():
             if r.get('dir'): continue
             if any(p.startswith(j) for j in junk): continue
-            zfiles[p.split('/')[1]].append(p)
+            root=root_of(p)
+            if root is None:
+                continue
+            zfiles[root].append(p)
         idx_total=0
-        for zone in sorted(zfiles):
-            files=sorted(zfiles[zone]); idx_total+=len(files)
+        for zone_root in sorted(zfiles,key=lambda root:recs[root]['name']):
+            zone=recs[zone_root]['name']
+            files=sorted(zfiles[zone_root]); idx_total+=len(files)
             by_res=defaultdict(list)
-            for p in files: by_res[resource_of(p)].append(p)
+            for p in files: by_res[resource_of(p,zone_root)].append(p)
             catalog_ref=f"[[{a.catalog_link}]]" if a.catalog_link else "本次馆藏总览产物"
             lines=[f"---\ntags: [云盘检索]\n区: {zone}\n---\n",
                    f"# 🔍 {zone} · 全文检索索引\n",
                    f"> 仅供 Ctrl+F / 全局搜索定位**单个文件**（共 {len(files):,} 个）；浏览/直达文件夹用 {catalog_ref}。**别在编辑模式久留（文件大）**。\n"]
             for res in sorted(by_res):
-                rname=res.split('/',2)[-1] if res.count('/')>=2 else res
+                rname=res[len(zone_root):].lstrip('/') or zone
                 rfid=recs.get(res,{}).get('id'); rlk=f" [🔗打开文件夹]({U}{rfid})" if rfid else ""
                 lines.append(f"\n## {rname}{rlk}")
                 lines.append("\n| 文件 | 大小 |")

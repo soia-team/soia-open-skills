@@ -76,6 +76,24 @@ class IncrementalCatalogTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "与头部声明"):
                 parse_search_markdown(source)
 
+    def test_parser_preserves_all_classification_levels(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "Library.md"
+            source.write_text(
+                search_markdown(
+                    "Library",
+                    "Library/Domain/Topic/Stage/Series",
+                    [("a.pdf", "1MB")],
+                ),
+                encoding="utf-8",
+            )
+
+            row = parse_search_markdown(source)["files"][0]
+
+            self.assertEqual(row["categories"], ["Domain", "Topic", "Stage", "Series"])
+            self.assertEqual(row["categoryPath"], "Domain/Topic/Stage/Series")
+            self.assertEqual(row["categoryDepth"], 4)
+
     def test_catalog_heading_link_fills_course_parent_url(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

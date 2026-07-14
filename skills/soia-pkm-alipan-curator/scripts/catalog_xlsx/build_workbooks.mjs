@@ -97,6 +97,18 @@ function excelText(value) {
 }
 
 
+function excelColumn(index) {
+  let value = index + 1;
+  let result = "";
+  while (value > 0) {
+    value -= 1;
+    result = String.fromCharCode(65 + (value % 26)) + result;
+    value = Math.floor(value / 26);
+  }
+  return result;
+}
+
+
 async function inspectAndRender(workbook, outputPath, verify, cacheDir, previewSpecs) {
   const errors = await workbook.inspect({
     kind: "match",
@@ -330,13 +342,21 @@ function buildPartitionWorkbook(Workbook, partitionCache, generatedAt) {
   const typeStats = typeStatsFromFiles(files);
   const extensionStats = extensionStatsFromFiles(files);
   const fileEnd = files.length + 4;
+  const categoryDepth = Math.max(0, ...files.map((row) => (row.categories || []).length));
+  const categoryHeaders = Array.from({ length: categoryDepth }, (_, index) => `分类层级${index + 1}`);
+  const typeIndex = 2 + categoryDepth;
+  const extensionIndex = typeIndex + 1;
+  const sizeBytesIndex = typeIndex + 4;
+  const sizeMbIndex = typeIndex + 5;
+  const folderUrlIndex = typeIndex + 8;
+  const linkIndex = typeIndex + 9;
 
   titleBand(usage, "A1:H1", `${partition} · 文件明细索引`);
-  noteBand(usage, "A2:H2", "本工作簿只对应一个分区；可按文件类型、扩展名、一级/二级分类和大小组合筛选。源 Markdown 未变化时，增量生成器不会重建本文件。" );
+  noteBand(usage, "A2:H2", `本工作簿只对应一个分区；可按文件类型、扩展名、${categoryDepth || 0} 层分类和大小组合筛选。分类列根据真实目录深度动态生成；源 Markdown 未变化时，增量生成器不会重建本文件。` );
   usage.getRange("A4:H4").values = [["分区", "文件数", "估算体量(GB)", "文件类型数", "扩展名数", "生成时间", "来源Markdown", "缓存策略"]];
   styleHeader(usage.getRange("A4:H4"));
   usage.getRange("A5:H5").values = [[partition, files.length, null, typeStats.length, extensionStats.length, generatedAt, sourceName, "SHA-256 未变则复用"]];
-  usage.getRange("C5").formulas = [[`=SUM('01_文件明细'!$I$5:$I$${fileEnd})/$B$9`]];
+  usage.getRange("C5").formulas = [[`=SUM('01_文件明细'!$${excelColumn(sizeBytesIndex)}$5:$${excelColumn(sizeBytesIndex)}$${fileEnd})/$B$9`]];
   usage.getRange("B5").format.numberFormat = "#,##0";
   usage.getRange("C5").format.numberFormat = "#,##0.00";
   usage.getRange("D5:E5").format.numberFormat = "#,##0";
@@ -348,27 +368,51 @@ function buildPartitionWorkbook(Workbook, partitionCache, generatedAt) {
   usage.freezePanes.freezeRows(2);
   setColumnWidths(usage, { A: 20, B: 16, C: 18, D: 16, E: 16, F: 20, G: 24, H: 22 }, 16);
 
-  titleBand(filesSheet, "A1:O1", `${partition} · 文件明细（可筛选）`);
-  noteBand(filesSheet, "A2:O2", `共 ${files.length.toLocaleString()} 个 Markdown 已展开文件。估算大小由 Markdown 显示值换算；点击链接进入文件所在云盘文件夹。`);
-  const fileHeaders = ["序号", "分区", "一级分类", "二级分类", "文件类型", "扩展名", "文件名", "大小原文", "估算大小(Bytes)", "估算大小(MB)", "文件夹路径", "完整文件路径", "文件夹URL", "点击直达云盘", "来源Markdown"];
-  filesSheet.getRange("A4:O4").values = [fileHeaders];
-  const fileValues = files.map((row, index) => [index + 1, row.partition, row.level1, row.level2, row.type, row.ext, row.name, row.sizeText, row.sizeBytes, null, row.folder, row.fullPath, row.folderUrl, null, row.source]);
+  const fileHeaders = ["序号", "分区", ...categoryHeaders, "文件类型", "扩展名", "文件名", "大小原文", "估算大小(Bytes)", "估算大小(MB)", "文件夹路径", "完整文件路径", "文件夹URL", "点击直达云盘", "来源Markdown"];
+  const lastFileColumn = excelColumn(fileHeaders.length - 1);
+  titleBand(filesSheet, `A1:${lastFileColumn}1`, `${partition} · 文件明细（可筛选）`);
+  noteBand(filesSheet, `A2:${lastFileColumn}2`, `共 ${files.length.toLocaleString()} 个 Markdown 已展开文件。分类层级按实际目录深度动态展开；估算大小由 Markdown 显示值换算；点击链接进入文件所在云盘文件夹。`);
+  filesSheet.getRange(`A4:${lastFileColumn}4`).values = [fileHeaders];
+  const fileValues = files.map((row, index) => {
+    const categories = [...(row.categories || [])];
+    while (categories.length < categoryDepth) categories.push("");
+    return [index + 1, row.partition, ...categories, row.type, row.ext, row.name, row.sizeText, row.sizeBytes, null, row.folder, row.fullPath, row.folderUrl, null, row.source];
+  });
   writeRowsInChunks(filesSheet, 4, 0, fileValues, fileHeaders.length);
   if (files.length) {
-    filesSheet.getRange("J5").formulas = [["=I5/'00_使用说明'!$B$8"]];
-    filesSheet.getRange(`J5:J${fileEnd}`).fillDown();
-    filesSheet.getRange("N5").formulas = [['=IF(M5="","",HYPERLINK(M5,"🔗 打开文件夹"))']];
-    filesSheet.getRange(`N5:N${fileEnd}`).fillDown();
-    addTable(filesSheet, `A4:O${fileEnd}`, "FileDetailTable");
+    const sizeBytesColumn = excelColumn(sizeBytesIndex);
+    const sizeMbColumn = excelColumn(sizeMbIndex);
+    const folderUrlColumn = excelColumn(folderUrlIndex);
+    const linkColumn = excelColumn(linkIndex);
+    filesSheet.getRange(`${sizeMbColumn}5`).formulas = [[`=${sizeBytesColumn}5/'00_使用说明'!$B$8`]];
+    filesSheet.getRange(`${sizeMbColumn}5:${sizeMbColumn}${fileEnd}`).fillDown();
+    filesSheet.getRange(`${linkColumn}5`).formulas = [[`=IF(${folderUrlColumn}5="","",HYPERLINK(${folderUrlColumn}5,"🔗 打开文件夹"))`]];
+    filesSheet.getRange(`${linkColumn}5:${linkColumn}${fileEnd}`).fillDown();
+    addTable(filesSheet, `A4:${lastFileColumn}${fileEnd}`, "FileDetailTable");
     filesSheet.getRange(`A5:A${fileEnd}`).format.numberFormat = "#,##0";
-    filesSheet.getRange(`I5:I${fileEnd}`).format.numberFormat = "#,##0";
-    filesSheet.getRange(`J5:J${fileEnd}`).format.numberFormat = "#,##0.00";
-    filesSheet.getRange(`N5:N${fileEnd}`).format.font = { color: "#0563C1" };
+    filesSheet.getRange(`${sizeBytesColumn}5:${sizeBytesColumn}${fileEnd}`).format.numberFormat = "#,##0";
+    filesSheet.getRange(`${sizeMbColumn}5:${sizeMbColumn}${fileEnd}`).format.numberFormat = "#,##0.00";
+    filesSheet.getRange(`${linkColumn}5:${linkColumn}${fileEnd}`).format.font = { color: "#0563C1" };
   }
-  styleHeader(filesSheet.getRange("A4:O4"));
+  styleHeader(filesSheet.getRange(`A4:${lastFileColumn}4`));
   filesSheet.freezePanes.freezeRows(4);
   filesSheet.freezePanes.freezeColumns(2);
-  setColumnWidths(filesSheet, { A: 9, B: 20, C: 28, D: 28, E: 15, F: 13, G: 48, H: 13, I: 18, J: 16, K: 55, L: 62, M: 46, N: 18, O: 22 }, Math.max(fileEnd, 5));
+  const fileWidths = { A: 9, B: 20 };
+  for (let index = 0; index < categoryDepth; index += 1) fileWidths[excelColumn(2 + index)] = 28;
+  Object.assign(fileWidths, {
+    [excelColumn(typeIndex)]: 15,
+    [excelColumn(extensionIndex)]: 13,
+    [excelColumn(typeIndex + 2)]: 48,
+    [excelColumn(typeIndex + 3)]: 13,
+    [excelColumn(sizeBytesIndex)]: 18,
+    [excelColumn(sizeMbIndex)]: 16,
+    [excelColumn(typeIndex + 6)]: 55,
+    [excelColumn(typeIndex + 7)]: 62,
+    [excelColumn(folderUrlIndex)]: 46,
+    [excelColumn(linkIndex)]: 18,
+    [excelColumn(typeIndex + 10)]: 22,
+  });
+  setColumnWidths(filesSheet, fileWidths, Math.max(fileEnd, 5));
 
   titleBand(typeSheet, "A1:G1", `${partition} · 按文件类型统计`);
   noteBand(typeSheet, "A2:G2", "文件数、占比和体量均由本分区文件明细公式计算，可追溯到 01_文件明细。" );
@@ -377,9 +421,9 @@ function buildPartitionWorkbook(Workbook, partitionCache, generatedAt) {
   typeSheet.getRangeByIndexes(4, 0, typeStats.length, 7).values = typeStats.map((row) => [row.type, null, null, null, null, null, TYPE_NOTES[row.type] || ""]);
   for (let index = 0; index < typeStats.length; index += 1) {
     const row = index + 5;
-    typeSheet.getRange(`B${row}`).formulas = [[`=COUNTIF('01_文件明细'!$E$5:$E$${fileEnd},A${row})`]];
+    typeSheet.getRange(`B${row}`).formulas = [[`=COUNTIF('01_文件明细'!$${excelColumn(typeIndex)}$5:$${excelColumn(typeIndex)}$${fileEnd},A${row})`]];
     typeSheet.getRange(`C${row}`).formulas = [[`=B${row}/'00_使用说明'!$B$5`]];
-    typeSheet.getRange(`D${row}`).formulas = [[`=SUMIF('01_文件明细'!$E$5:$E$${fileEnd},A${row},'01_文件明细'!$I$5:$I$${fileEnd})`]];
+    typeSheet.getRange(`D${row}`).formulas = [[`=SUMIF('01_文件明细'!$${excelColumn(typeIndex)}$5:$${excelColumn(typeIndex)}$${fileEnd},A${row},'01_文件明细'!$${excelColumn(sizeBytesIndex)}$5:$${excelColumn(sizeBytesIndex)}$${fileEnd})`]];
     typeSheet.getRange(`E${row}`).formulas = [[`=D${row}/'00_使用说明'!$B$9`]];
     typeSheet.getRange(`F${row}`).formulas = [[`=IFERROR(D${row}/B${row}/'00_使用说明'!$B$8,0)`]];
   }
@@ -399,9 +443,9 @@ function buildPartitionWorkbook(Workbook, partitionCache, generatedAt) {
   extensionSheet.getRangeByIndexes(4, 0, extensionStats.length, 7).values = extensionStats.map((row) => [row.ext, row.type, null, null, null, null, row.ext === "(无扩展名)" ? "文件名没有后缀" : `在文件明细筛选：${row.ext}`]);
   for (let index = 0; index < extensionStats.length; index += 1) {
     const row = index + 5;
-    extensionSheet.getRange(`C${row}`).formulas = [[`=COUNTIF('01_文件明细'!$F$5:$F$${fileEnd},A${row})`]];
+    extensionSheet.getRange(`C${row}`).formulas = [[`=COUNTIF('01_文件明细'!$${excelColumn(extensionIndex)}$5:$${excelColumn(extensionIndex)}$${fileEnd},A${row})`]];
     extensionSheet.getRange(`D${row}`).formulas = [[`=C${row}/'00_使用说明'!$B$5`]];
-    extensionSheet.getRange(`E${row}`).formulas = [[`=SUMIF('01_文件明细'!$F$5:$F$${fileEnd},A${row},'01_文件明细'!$I$5:$I$${fileEnd})`]];
+    extensionSheet.getRange(`E${row}`).formulas = [[`=SUMIF('01_文件明细'!$${excelColumn(extensionIndex)}$5:$${excelColumn(extensionIndex)}$${fileEnd},A${row},'01_文件明细'!$${excelColumn(sizeBytesIndex)}$5:$${excelColumn(sizeBytesIndex)}$${fileEnd})`]];
     extensionSheet.getRange(`F${row}`).formulas = [[`=E${row}/'00_使用说明'!$B$9`]];
   }
   styleHeader(extensionSheet.getRange("A4:G4"));
@@ -417,7 +461,7 @@ function buildPartitionWorkbook(Workbook, partitionCache, generatedAt) {
     workbook,
     previews: [
       ["00_使用说明", "A1:H16", "00_usage.png"],
-      ["01_文件明细", "A1:O18", "01_files.png"],
+      ["01_文件明细", `A1:${lastFileColumn}18`, "01_files.png"],
       ["02_类型统计", `A1:G${typeStats.length + 4}`, "02_types.png"],
       ["03_扩展名统计", "A1:G22", "03_extensions.png"],
     ],

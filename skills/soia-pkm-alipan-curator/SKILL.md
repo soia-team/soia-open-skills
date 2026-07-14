@@ -92,7 +92,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 ## 子命令路由
 
 ### inventory — 盘点
-逐层 `ls` 扫描（顶层→四级），把核对清单写到用户显式指定的 `<vault>/<inventory-relative-path>`：每支记「内容 · 类型 · 建议动作」，用户拍板后交 organize。没有输出参数时先询问，不猜 vault 目录。
+递归扫描到资源根或叶级终态；只有用户显式给出深度、敏感目录或聚合阈值时才提前停止。把核对清单写到用户显式指定的 `<vault>/<inventory-relative-path>`：每支记「内容 · 类型 · 建议动作」，用户拍板后交 organize。没有输出参数时先询问，不猜 vault 目录。
 
 ### organize — 整理
 执行规范（每步终态验证，安全守则见 soia-pkm-alipan）：
@@ -102,17 +102,18 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 - **去营销尾巴**：目录名里的「公众号：XXX」「【xx.xGB】」「持续更新」等广告字样批量 rename 掉
 - **去套娃**：目录内只有一个子目录 → 内容上提一层、删壳
 - **删广告**：「↑↑订阅↑↑」目录、`800T资源.txt`、`福利码.txt` 等先进入候选删除清单；获得用户对规则与范围的明确授权后再删
-- **按人群分层**：学习资源按学段/受众分（启蒙/小学/共享等），不按可识别个人身份命名
-- **命名统一**：同级目录编号格式一致（如 `01-06` 前缀），利于排序
+- **按查找目的选主轴**：先从主题、用途、受众、阶段、状态、媒介等维度中选择本层主轴；不混用维度，不照抄历史目录，也不按可识别个人身份命名
+- **命名统一**：同级目录使用同一命名策略；用户选择编号排序时，再统一编号格式与步长
 
 **全区深度重组（盘点→方案→裁定→分批→索引→消费端联动 六步全流程）→ 必读 [references/deep-reorg-playbook.md](references/deep-reorg-playbook.md)**（多分区实战提炼：SHA1 删除证据、同名不同哈希隔离不删、消费端 file_id 红线、多 AI 协作边界、完成定义）。
 
 遇到 `LIST_FAIL`、空目录、覆盖上传、旧 file_id、重复目录、技术依赖树、局部索引拼接或多 agent 并发时，先读 **[references/operations-troubleshooting.md](references/operations-troubleshooting.md)**。核心红线：`LIST_FAIL` 不等于空目录；每条命令显式 `--driveId`；删除/覆盖必须有授权；同一索引文件只能有一个写入者。
 
-深度分类（大规模重构时用，方法论详见 `references/library-method.md`）：
-- **受众三分**：学习者直接用 / 成人学习 / 机构教研——关键词初标→人工校正→落审计表（逐项标注归属，非只列疑问项）→模糊项单独待裁定→裁定后才生成移动清单
-- **学段序号化**：一二级目录统一 `NN_` 前缀（10/20…90 步进，90 固定=存档/待拆），数字即浏览/认知发展顺序
-- **杂包必拆**：含糊命名的合集目录逐项盘点→体量大/质量高的"宝贝"提升为学科区一级条目→剩余按性质分类→删壳前对账总数吻合
+深度分类（大规模重构时用）：先读 **[references/classification-methods.md](references/classification-methods.md)** 选择分类主轴并按领域示例校正，再读 `references/library-method.md` 设计图书馆产出。
+- **真实内容审计**：全量列资源根；文档读目录与代表章节，音视频读清单、字幕/讲义与元数据，必要时下载最小样本；逐项记录证据、置信度与建议去向
+- **一层一轴**：主题、用途、受众、阶段、状态、媒介只能选择一个作为本层主轴；其余维度放到下层或索引字段
+- **编号可配置**：只有用户选择编号排序时才给业务分类层加 `NN_`；步长、格式、`90_` 含义和适用层级由本次方案声明，不设公共固定值
+- **杂包必拆**：含糊命名的合集目录逐项盘点→可独立使用的高价值资源提升到合适业务类→剩余按同一主轴分类→删壳前对账总数吻合
 - **SHA1 级查重**：同名/疑似重复资源先做文件级哈希比对再决定删哪份，不凭文件名/大小相似猜
 - **广告清理特征清单**：几千T资源/扫码进群/十万度V信/XH1080 尾巴/超低价网盘会员/可疑 exe——文字类见即删，可疑 exe 先列清单等确认
 
@@ -140,16 +141,16 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 - 同参数第二次运行全盘生成器必须返回 `status=unchanged`、`rebuilt=[]`；若已上传，远端 SHA1/bytes 必须与本地一致。
 
 **图书馆建法（浏览/检索/策展 + 分类方案）**（精选资源沉淀为可查询馆藏时用，模板与字段详见 `references/library-method.md`）：
-1. **馆藏总览**：全盘索引 MOC。用 `scripts/gen_catalog.py --scan-dir <scan-dir> --out <catalog-output> --url-prefix <drive-url-prefix> [--moves f --deletes f --roots f --max-heading-depth N]` 生成。`--url-prefix` 必须显式提供或由 `SOIA_ALIPAN_URL_PREFIX` 注入；可选 `--catalog-link/--cards-link/--classification-link` 由用户传入 vault-relative wikilink 目标。**只有 `NN_` / `NN.` 编号业务目录成为标题且名称本身可点击；无编号内部素材目录只在最近编号父目录聚合，不展开 `images/scripts/banner` 等技术路径**。总览不铺单个文件；需要单文件检索时加 `--search-dir <search-output-dir> --junk <ignored-prefixes>`。
-2. **馆藏卡**：一卡对应云盘一个资源目录，frontmatter 含 `type/tags(馆藏)/medium/audience/subject/level/episodes/drive_link/status`，`episodes` 必须实测（ls 数真实集数，不照抄宣传页）
-3. **Bases 数据库**（`.base`）：`filter: file.hasTag("馆藏")`，至少建 全部馆藏/按学科/按孩子/按媒介/卡片墙 五个视图
+1. **馆藏总览**：全盘索引 MOC。用 `scripts/gen_catalog.py --scan-dir <scan-dir> --out <catalog-output> --url-prefix <drive-url-prefix> [--moves f --deletes f --roots f --heading-pattern REGEX --section-icons JSON --max-heading-depth N]` 生成。`--url-prefix` 必须显式提供或由 `SOIA_ALIPAN_URL_PREFIX` 注入；可选 `--catalog-link/--cards-link/--classification-link` 由用户传入 vault-relative wikilink 目标。默认保守展示全部目录；需要折叠内部素材树时，用 `--heading-pattern` 声明业务目录规则，例如编号体系传 `^\d{2}[_.]`。公共默认只用中性文件夹图标，分区图标通过 `--section-icons` 可选注入。总览不铺单个文件；需要单文件检索时加 `--search-dir <search-output-dir> --junk <ignored-prefixes>`。
+2. **馆藏卡**：一卡对应云盘一个资源目录；最低字段为 `type/tags(馆藏)/drive_link`，其余字段和卡片分组路径由本次主分类轴与常用查询推导，不强制 `topic/medium/subject/stage/status`；实际体量字段若启用必须实测
+3. **Bases 数据库**（`.base`）：`filter: file.hasTag("馆藏")`；视图从用户确认的主分类轴和常用查找问题推导，例如全部馆藏/按主题/按受众/按媒介/卡片墙，不写死固定视图
 4. **分区深度分类方案文档**：每分区一份，含现状/N类结构/归类规则（供未来新增资源判断落位）/变更史/待办
 
 ### plan — 学习计划（高频主场景）
 输入：成绩截图/学情描述（如「这是某个学习者的期末情况，出个假期方案」）。流程：
 1. **诊断**：从成绩单提取 分数/排名/失分点/目标（截图里有就直接用，没有就问 1-2 个关键问题）
 2. **资源映射**：弱项 → 云盘索引里的对应资源，标注「为什么这个资源治这个失分点」
-3. **排期**：视频资源查实**集数与单集时长**（云盘 ls 数一下），按「每周 X 次 × 每次 Y 分钟」倒排出周计划表；一个暑假别超过 3 条主线（学科2 + 兴趣/体育1）
+3. **排期**：视频资源查实**集数与单集时长**，按用户给出的可用时间、目标优先级和负担上限倒排周计划；若这些约束缺失，先询问，不在公共 skill 中预设主线条数或年龄负担标准
 4. **落盘**：写到 OB 的学习计划目录，文件名用 `YYYY-MM-DD-<学习者代号>-<主题>.md` 这类匿名代号，状态「待确认」，用户拍板后转正
 
 ## 组织流程（大规模重构的四步闭环，详见 references/library-method.md）
@@ -168,7 +169,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 ## 检查点（必须过用户确认）
 
 - inventory 后：核对清单先给用户过目，**不擅自动结构**
-- organize 深度分类前：受众三分等审计表先给用户看，模糊项等裁定，不擅自定档
+- organize 深度分类前：主分类轴、全量内容审计表和模糊项先给用户看；用户裁定后才生成移动清单
 - plan 落盘前：资源映射表先展示，用户说「换掉 X」就重排
 - 涉及删除：永远列清单等确认
 
@@ -177,8 +178,10 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 - 「给你个截图，这是某个学习者的期末，给我出假期学习方案」→ plan（诊断→映射→排期→落 OB）
 - 「某学习者要做幼小衔接，语言还没启蒙」→ plan（按现有启蒙资源排学习序列）
 - 「云盘又乱了，整理下」→ inventory → 用户确认 → organize → catalog
+- 「这个目录既有书也有视频，原分类不合适」→ organize（真读抽样→选择主题/用途等主轴→评估是否改分区边界→全量审计表→用户裁定）
+- 「编程课程、源码和课件混在一起怎么分」→ organize（按能力领域识别课程根，课程内部媒介不拆；多方向合集逐套盘点）
 - 「云盘里有什么数学资源」→ 直接查 00_馆藏总览回答，不用扫盘
 - 「给云盘建个图书馆，方便找孩子的学习资源」→ catalog（图书馆建法（浏览/检索/策展 + 分类方案）：馆藏总览+馆藏卡+Bases+分类方案）
 - 「把云盘 Markdown 做成可筛选 Excel / 更新 Excel 总索引」→ catalog（`gen_catalog_xlsx.py` 增量生成总入口 + 分区明细；普通刷新不加 `--force`）
 - 「给这个课程区做一份家长能看懂、能点进课程的 Excel」→ catalog（`gen_family_nav_xlsx.mjs`；先按 `family-navigation-excel.md` 准备终态 JSON）
-- 「这堆资源哪些是给孩子看的哪些是给我学的」→ organize（受众三分：审计表逐项标注→模糊项待裁定→裁定后迁移）
+- 「这堆资源哪些是学习者用、哪些是照护者或教师用」→ organize（本次确有多受众混装时，选择受众为主轴：审计表逐项标注→模糊项待裁定→裁定后迁移）
