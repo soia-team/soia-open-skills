@@ -171,6 +171,12 @@ def validate_contract(contract: dict) -> None:
     for index, rule in enumerate(contract.get("chunk_layers", [])):
         if not str(rule.get("child_pattern", "")).strip():
             raise ValueError(f"contract.chunk_layers[{index}].child_pattern is required")
+        if "count_pattern" in rule and (
+            not isinstance(rule["count_pattern"], str) or not rule["count_pattern"].strip()
+        ):
+            raise ValueError(
+                f"contract.chunk_layers[{index}].count_pattern must be a non-empty string"
+            )
         max_items = rule.get("max_items")
         if isinstance(max_items, bool) or not isinstance(max_items, int) or max_items <= 0:
             raise ValueError(f"contract.chunk_layers[{index}].max_items must be a positive integer")
@@ -499,7 +505,9 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
 
     A contracted series may stay flat while its direct file count is within ``max_items``.
     Once matching chunk directories exist, every file must live in one of those chunks and
-    each chunk must contain between 1 and ``max_items`` direct files.
+    each chunk must contain between 1 and ``max_items`` counted items. When
+    ``count_pattern`` is present, sidecar files still have to move into chunks but do
+    not consume the primary-item limit.
     """
     checked = 0
     violations: list[dict] = []
@@ -507,6 +515,8 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
         parent = normalize_cloud_path(str(rule.get("parent", "")))
         pattern_text = str(rule.get("child_pattern", ""))
         pattern = re.compile(pattern_text)
+        count_pattern_text = str(rule.get("count_pattern", ""))
+        count_pattern = re.compile(count_pattern_text) if count_pattern_text else None
         max_items = int(rule.get("max_items", 0))
         excludes = {str(item) for item in rule.get("exclude", [])}
         all_children = child_dirs(rows, parent)
@@ -518,6 +528,11 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
             and str(row.get("name", "")) not in excludes
         ]
         loose_files = direct_files(rows, parent)
+        loose_counted = [
+            row
+            for row in loose_files
+            if count_pattern is None or count_pattern.search(str(row.get("name", "")))
+        ]
 
         for child in unexpected_children:
             violations.append({
@@ -538,12 +553,13 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
                     "parent": parent,
                     "child_pattern": pattern_text,
                 })
-            elif len(loose_files) > max_items:
+            elif len(loose_counted) > max_items:
                 violations.append({
                     "kind": "series_exceeds_chunk_limit",
                     "rule": index,
                     "parent": parent,
-                    "item_count": len(loose_files),
+                    "item_count": len(loose_counted),
+                    "total_files": len(loose_files),
                     "max_items": max_items,
                 })
             continue
@@ -560,7 +576,13 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
         for chunk in chunks:
             chunk_name = str(chunk.get("name", ""))
             chunk_path = normalize_cloud_path(f"{parent}/{chunk_name}")
-            item_count = len(direct_files(rows, chunk_path))
+            chunk_files = direct_files(rows, chunk_path)
+            counted_files = [
+                row
+                for row in chunk_files
+                if count_pattern is None or count_pattern.search(str(row.get("name", "")))
+            ]
+            item_count = len(counted_files)
             if item_count == 0:
                 violations.append({
                     "kind": "empty_chunk_directory",
@@ -577,6 +599,7 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
                     "name": chunk_name,
                     "id": chunk.get("id"),
                     "item_count": item_count,
+                    "total_files": len(chunk_files),
                     "max_items": max_items,
                 })
     return checked, violations

@@ -5,6 +5,8 @@
 ## 零、总流程（六步，一步不跳）
 
 ```
+
+若范围是完整一级分区、多个二级分区或用户一次指出多个漏项，先按 [run-bundle.md](run-bundle.md) 建立统一运行包。旧任务的 `${STATE}/moves/` 零散账本可继续读取；新大型任务不要再按 Claude/Codex workspace 或多个顶层 state 子目录分散证据。
 ① 只读盘点(到文件层+SHA1) → ② 方案文档(待拍板) → ③ 用户逐项裁定
 → ④ 分批执行(每批账本+复核) → ⑤ 索引刷新(重扫+拼接) → ⑥ 消费端联动(执行卡/计划链接)
 ```
@@ -65,6 +67,8 @@
 
 区内：目标结构落地；若方案选择编号，则所声明层级的漏号数为 0；若设置长系列上限，则系列根散文件数为 0、空分组数为 0、超限分组数为 0、未声明超限平铺目录为 0；若选择学习导览，则根级与分类级导览缺失数为 0、正式说明文件缺失数为 0；关键云端 Excel/说明在 `required_artifacts` 中按路径、字节、SHA1 和可选 file_id 精确对账；若指定复核区，则 `unclear` 全部位于该根下、状态已验证且目标文件或完整资源包目录存在于终态扫描；账本齐全、删除项可回滚。使用 `scripts/audit_structure.py` 对终态 scan JSONL 复现这些结论。区外：索引三查通过，`resource_maps` 中要求的最终 file_id 都以真实 Markdown 链接存在，方案文档变更史回填、遗留项显式列在「待拍板」。正文声称“可直达”不算证据。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
 
+特大模块还要满足：用户点名和 inventory 风险目录全部进入运行包 `focus_targets`；每项都有内容证据和建议；所有动作计划与结果一一闭合；机械结构审计和独立 AI 复核均通过；`audit_run_bundle.py --final` 返回 `passed`。顶层目录看起来整齐、索引已刷新或部分样本通过，都不能替代这道门禁。
+
 结构合同使用通用 JSON，不写用户目录进公共 skill：
 
 ```jsonc
@@ -85,7 +89,7 @@
     {"path": "<resource-map.md>", "url_prefix": "https://<provider>/<path>/", "required_ids": ["<final-root-id>", "<final-course-id>"], "min_links": 2}
   ],
   "chunk_layers": [
-    {"parent": "/<learning>/<course>", "child_pattern": "^\\d{2}_", "max_items": USER_CONFIRMED_LIMIT, "exclude": ["<technical-dir-if-any>"]}
+    {"parent": "/<learning>/<course>", "child_pattern": "^\\d{2}_", "count_pattern": "(?i)\\.mp4$", "max_items": USER_CONFIRMED_LIMIT, "exclude": ["<technical-dir-if-any>"]}
   ],
   "flat_series_discovery": [
     {"root": "/<learning>", "max_items": USER_CONFIRMED_LIMIT, "path_pattern": ".*", "file_pattern": ".*", "exclude_path_patterns": ["<explicit-semantic-bucket-regex>"]}
@@ -94,7 +98,7 @@
 }
 ```
 
-上例是带占位符的 JSONC 结构说明，执行前把 `USER_CONFIRMED_LIMIT`、`EXPECTED_BYTES`、SHA1、file_id、地图路径和 URL 前缀替换为本次终态证据。换用户、换客户端或换资源类型时重新确认。没有需豁免的同级技术目录/语义桶时传空数组；`exclude` 与 `exclude_path_patterns` 必须显式声明，不能隐藏未知目录。公共 skill 不保存这些真实值。
+上例是带占位符的 JSONC 结构说明，执行前把 `USER_CONFIRMED_LIMIT`、`EXPECTED_BYTES`、SHA1、file_id、地图路径和 URL 前缀替换为本次终态证据。换用户、换客户端或换资源类型时重新确认。只有主媒体带字幕/元数据等侧车时才填 `count_pattern`；没有侧车时删除该字段。没有需豁免的同级技术目录/语义桶时传空数组；`exclude` 与 `exclude_path_patterns` 必须显式声明，不能隐藏未知目录。公共 skill 不保存这些真实值。
 
 `unclear` JSONL 每行格式为：
 

@@ -364,12 +364,43 @@ class StructureAuditTests(unittest.TestCase):
         self.assertEqual(checked, 2)
         self.assertEqual(violations, [])
 
+    def test_chunking_counts_primary_media_but_keeps_sidecars_in_chunks(self) -> None:
+        rows = [{"path": "/learning/course", "name": "10_001-020", "id": "a", "dir": True}]
+        for number in range(1, 21):
+            rows.extend([
+                {"path": "/learning/course/10_001-020", "name": f"{number:03}.mp4", "dir": False},
+                {"path": "/learning/course/10_001-020", "name": f"{number:03}.ass", "dir": False},
+                {"path": "/learning/course/10_001-020", "name": f"{number:03}.xml", "dir": False},
+            ])
+        checked, violations = audit.audit_chunks(
+            rows,
+            [{
+                "parent": "/learning/course",
+                "child_pattern": r"^\d{2}_",
+                "count_pattern": r"(?i)\.mp4$",
+                "max_items": 20,
+            }],
+        )
+        self.assertEqual(checked, 1)
+        self.assertEqual(violations, [])
+
     def test_contract_requires_positive_chunk_limit(self) -> None:
         with self.assertRaisesRegex(ValueError, "max_items must be a positive integer"):
             audit.validate_contract({
                 "chunk_layers": [
                     {"parent": "/learning/course", "child_pattern": r"^\d{2}_", "max_items": 0},
                 ],
+            })
+
+    def test_contract_rejects_empty_chunk_count_pattern(self) -> None:
+        with self.assertRaisesRegex(ValueError, "count_pattern must be a non-empty string"):
+            audit.validate_contract({
+                "chunk_layers": [{
+                    "parent": "/learning/course",
+                    "child_pattern": r"^\d{2}_",
+                    "count_pattern": "",
+                    "max_items": 20,
+                }],
             })
 
     def test_flat_series_discovery_finds_an_undeclared_course(self) -> None:

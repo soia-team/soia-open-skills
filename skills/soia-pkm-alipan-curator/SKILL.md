@@ -109,13 +109,15 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 
 **全区深度重组（盘点→方案→裁定→分批→索引→消费端联动 六步全流程）→ 必读 [references/deep-reorg-playbook.md](references/deep-reorg-playbook.md)**（多分区实战提炼：SHA1 删除证据、同名不同哈希隔离不删、消费端 file_id 红线、多 AI 协作边界、完成定义）。
 
+覆盖完整一级分区、多个二级分区或用户一次指出多个漏整理目录时，还必须读 **[references/run-bundle.md](references/run-bundle.md)**。先在 `${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/runs/<run-id>/` 建立与 AI workspace 无关的运行包，再动云盘。用户点名链接、`未分类/合集/视频/其他` 等弱语义大桶和 inventory 发现的高风险根全部写入 `focus_targets`；每个焦点都要有 `content-audit.jsonl` 真读/抽样证据。收官时先跑 `audit_structure.py --final`，再跑 `audit_run_bundle.py --final`；机械合同与 AI 二次复核都通过才可称“特大模块完成”。
+
 遇到 `LIST_FAIL`、空目录、覆盖上传、旧 file_id、重复目录、技术依赖树、局部索引拼接或多 agent 并发时，先读 **[references/operations-troubleshooting.md](references/operations-troubleshooting.md)**。核心红线：`LIST_FAIL` 不等于空目录；每条命令显式 `--driveId`；删除/覆盖必须有授权；同一索引文件只能有一个写入者。
 
 深度分类（大规模重构时用）：先读 **[references/classification-methods.md](references/classification-methods.md)** 选择分类主轴并按领域示例校正，再读 `references/library-method.md` 设计图书馆产出。
 - **真实内容审计**：全量列资源根；文档读目录与代表章节，音视频读清单、字幕/讲义与元数据，必要时下载最小样本；逐项记录证据、置信度与建议去向
 - **一层一轴**：主题、用途、受众、阶段、状态、媒介只能选择一个作为本层主轴；其余维度放到下层或索引字段
 - **编号可配置且必须闭环**：只有用户选择编号排序时才给业务分类层加 `NN_`；业务层不按目录深度判断，课程内供用户选择的“正课/练习/答疑/其他”同样属于导航层，章节文件和技术依赖树则不编号。步长、格式、待确认区含义和适用层级由本次方案声明，不设公共固定值。执行后必须逐个扫描已声明层级，漏号数为 0，不能靠索引折叠掩盖实体目录漏号
-- **长系列分组可配置且必须闭环**：课程、播客、视频或卷册超过用户确认的单夹上限时，按原序号或内容阶段建立分组；阈值、分组命名和适用系列写进本次 `chunk_layers` 合同，公共 skill 不写死“20 集”或具体目录。拆分后根目录不留散文件、每组不超上限；同级技术目录必须在 `exclude` 中显式声明，其他未匹配目录视为漏整理；源资料缺号只记录不补造。终态还要用 `flat_series_discovery` 对本次范围做第二遍扫描，发现未写进 `chunk_layers` 的超限平铺目录；自然月份等稳定语义桶只能通过本次合同的 `exclude_path_patterns` 显式豁免
+- **长系列分组可配置且必须闭环**：课程、播客、视频或卷册超过用户确认的单夹上限时，按原序号或内容阶段建立分组；阈值、分组命名和适用系列写进本次 `chunk_layers` 合同，公共 skill 不写死“20 集”或具体目录。主媒体附带字幕、封面、XML 等侧车时，用 `count_pattern` 只计算主媒体，但所有侧车仍要跟随主媒体进入同组。拆分后根目录不留散文件、每组主媒体不超上限；同级技术目录必须在 `exclude` 中显式声明，其他未匹配目录视为漏整理；源资料缺号只记录不补造。终态还要用 `flat_series_discovery` 对本次范围做第二遍扫描，发现未写进 `chunk_layers` 的超限平铺目录；自然月份等稳定语义桶只能通过本次合同的 `exclude_path_patterns` 显式豁免
 - **学习导航必须闭环**：用户选择“先看这里”模式时，方案必须声明导览名称和覆盖层级；每个在架学习分类都要有导览目录及已验证的导航文件。分区根本身需要入口时，单独写入 `required_guides`，不能只审计根下子分类而漏过根级导览；两种导览规则都必须提供非空 `file_pattern`，文件默认至少 1 字节，也可用 `min_bytes` 提高门槛，不接受任意杂项文件、空壳或零字节占位。先上传导览，再做终态扫描和索引；缺任意一个都不算完成
 - **云端产物与资源地图必须可复核**：关键 Excel/说明上传后写入 `required_artifacts`，用终态扫描按完整路径、字节数、SHA1 和可选 file_id 精确对账；不能把上传回显当作成功。OB 资源地图写入 `resource_maps`，逐个声明必须出现的最终 file_id 和显式 `url_prefix`；只有真实 Markdown 云盘链接才算通过，正文声称“可直达”或粘贴裸 URL 都不算完成
 - **杂包必拆**：含糊命名的合集目录逐项盘点→可独立使用的高价值资源提升到合适业务类→剩余按同一主轴分类→删壳前对账总数吻合
@@ -133,7 +135,9 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 |---|---|---|
 | 全盘/多分区馆藏总索引 | `scripts/gen_catalog_xlsx.py` | 轻量总入口 + 每分区明细；按 Markdown SHA-256 增量刷新 |
 | 单个学习分区的家长说明与课程导航 | `scripts/gen_family_nav_xlsx.mjs` | `01_先看这里` + `02_资源导航`；课程名称可点击直达 |
+| 已批准重分类方案的可恢复执行 | `scripts/apply_reclass.py` | 读取带 `action_id` 的 JSONL 计划；限定 `--root` 与可选 `--archive-root`、默认 dry-run、逐项回读、失败即停并写 verified 账本 |
 | 编号、导览、云端关键产物、资源地图直达链接、长系列分组与待确认项闭环审计 | `scripts/audit_structure.py` | 从终态 scan JSONL 和本次合同检查实体结构、精确 SHA1/字节及消费端直达链接；失败时返回非零退出码 |
+| 特大模块运行包、焦点目录逐项覆盖、批次账本与 AI 复核闭环 | `scripts/audit_run_bundle.py` | 检查运行包路径安全、初末扫描、用户点名目标内容证据、动作计划/结果、结构审计和 AI 复核；失败时返回非零退出码 |
 
 不要在 vault、临时目录或会话产物目录另写一次性 builder。全盘索引的参数、依赖、数据口径、云端覆盖与验收见 [references/catalog-excel.md](references/catalog-excel.md)；家庭导航的 JSON 字段、运行命令、上传顺序与验收见 [references/family-navigation-excel.md](references/family-navigation-excel.md)。核心约定：
 
@@ -166,6 +170,8 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 2. **用户裁定**：疑难项（受众模糊/去向二选一/查重后留哪份）列清单给用户，逐项拍板
 3. **分批执行**：按"风险从低到高、跨库/跨盘操作放后面"分批，每批做完立即复核（重新 ls 对照终态），操作记一份移动日志（jsonl：原路径/新路径/操作类型/时间戳）
 4. **结构闭环 + 地图/总览刷新 + 文档回填**：终态扫描后先跑编号/导览/关键云端产物/长系列分组/待确认项审计，违规数为 0；再重建受影响地图（尤其跨盘导致 file_id 全换时），把最终 file_id 写入 `resource_maps` 合同并验证真实 Markdown 直达链接，随后同步总览、Excel 与方案文档变更史
+
+特大模块在上述四步外增加运行包门禁：`run.json` 中的所有 `focus_targets` 必须同时出现在初始扫描、内容审计和终态扫描；所有批次 action 均有 verified/带原因 skipped 结果；`structure-audit.json` 与 `ai-review.json` 均通过；最后执行 `scripts/audit_run_bundle.py --run-dir <run-dir> --final`。运行时证据留在 XDG state，OB 只保存资源地图、冻结审计与短回执。
 
 ## 执行编排经验
 
