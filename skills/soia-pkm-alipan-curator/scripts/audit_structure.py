@@ -49,16 +49,42 @@ def direct_files(rows: list[dict], parent: str) -> list[dict]:
     ]
 
 
+def index_scan(rows: list[dict]) -> tuple[dict[str, list[dict]], dict[str, list[dict]]]:
+    directories_by_parent: dict[str, list[dict]] = {}
+    files_by_parent: dict[str, list[dict]] = {}
+    for row in rows:
+        parent = normalize_cloud_path(str(row.get("path", "")))
+        target = directories_by_parent if row.get("dir") is True else files_by_parent
+        target.setdefault(parent, []).append(row)
+    return directories_by_parent, files_by_parent
+
+
+def path_is_within(path: str, root: str) -> bool:
+    normalized_path = normalize_cloud_path(path)
+    normalized_root = normalize_cloud_path(root)
+    return normalized_root == "/" or (
+        normalized_path == normalized_root or normalized_path.startswith(normalized_root + "/")
+    )
+
+
 def validate_contract(contract: dict) -> None:
     if not isinstance(contract, dict):
         raise ValueError("contract must be a JSON object")
-    for key in ("numbered_layers", "guide_layers", "chunk_layers"):
+    for key in (
+        "numbered_layers",
+        "guide_layers",
+        "required_guides",
+        "chunk_layers",
+        "flat_series_discovery",
+    ):
         value = contract.get(key, [])
         if not isinstance(value, list):
             raise ValueError(f"contract.{key} must be an array")
         for index, rule in enumerate(value):
             if not isinstance(rule, dict):
                 raise ValueError(f"contract.{key}[{index}] must be an object")
+    for key in ("numbered_layers", "guide_layers", "required_guides", "chunk_layers"):
+        for index, rule in enumerate(contract.get(key, [])):
             if not str(rule.get("parent", "")).strip():
                 raise ValueError(f"contract.{key}[{index}].parent is required")
     for index, rule in enumerate(contract.get("numbered_layers", [])):
@@ -71,6 +97,27 @@ def validate_contract(contract: dict) -> None:
             raise ValueError(f"contract.guide_layers[{index}].child_pattern is required")
         if not str(rule.get("guide_name", "")).strip():
             raise ValueError(f"contract.guide_layers[{index}].guide_name is required")
+        if not isinstance(rule.get("file_pattern"), str) or not rule["file_pattern"].strip():
+            raise ValueError(
+                f"contract.guide_layers[{index}].file_pattern is required and must be non-empty"
+            )
+        min_bytes = rule.get("min_bytes", 1)
+        if isinstance(min_bytes, bool) or not isinstance(min_bytes, int) or min_bytes <= 0:
+            raise ValueError(f"contract.guide_layers[{index}].min_bytes must be a positive integer")
+        if "allow_empty" in rule and not isinstance(rule["allow_empty"], bool):
+            raise ValueError(f"contract.guide_layers[{index}].allow_empty must be a boolean")
+    for index, rule in enumerate(contract.get("required_guides", [])):
+        if not str(rule.get("guide_name", "")).strip():
+            raise ValueError(f"contract.required_guides[{index}].guide_name is required")
+        if not isinstance(rule.get("file_pattern"), str) or not rule["file_pattern"].strip():
+            raise ValueError(
+                f"contract.required_guides[{index}].file_pattern is required and must be non-empty"
+            )
+        min_bytes = rule.get("min_bytes", 1)
+        if isinstance(min_bytes, bool) or not isinstance(min_bytes, int) or min_bytes <= 0:
+            raise ValueError(
+                f"contract.required_guides[{index}].min_bytes must be a positive integer"
+            )
     for index, rule in enumerate(contract.get("chunk_layers", [])):
         if not str(rule.get("child_pattern", "")).strip():
             raise ValueError(f"contract.chunk_layers[{index}].child_pattern is required")
@@ -79,6 +126,36 @@ def validate_contract(contract: dict) -> None:
             raise ValueError(f"contract.chunk_layers[{index}].max_items must be a positive integer")
         if not isinstance(rule.get("exclude", []), list):
             raise ValueError(f"contract.chunk_layers[{index}].exclude must be an array")
+    for index, rule in enumerate(contract.get("flat_series_discovery", [])):
+        if not str(rule.get("root", "")).strip():
+            raise ValueError(f"contract.flat_series_discovery[{index}].root is required")
+        max_items = rule.get("max_items")
+        if isinstance(max_items, bool) or not isinstance(max_items, int) or max_items <= 0:
+            raise ValueError(
+                f"contract.flat_series_discovery[{index}].max_items must be a positive integer"
+            )
+        for field in ("path_pattern", "file_pattern"):
+            if field in rule and (
+                not isinstance(rule[field], str) or not rule[field].strip()
+            ):
+                raise ValueError(
+                    f"contract.flat_series_discovery[{index}].{field} must be a non-empty string"
+                )
+        exclude_patterns = rule.get("exclude_path_patterns", [])
+        if not isinstance(exclude_patterns, list):
+            raise ValueError(
+                f"contract.flat_series_discovery[{index}].exclude_path_patterns must be an array"
+            )
+        for pattern_index, pattern in enumerate(exclude_patterns):
+            if not isinstance(pattern, str) or not pattern.strip():
+                raise ValueError(
+                    "contract.flat_series_discovery"
+                    f"[{index}].exclude_path_patterns[{pattern_index}] must be a non-empty string"
+                )
+        if "allow_empty" in rule and not isinstance(rule["allow_empty"], bool):
+            raise ValueError(
+                f"contract.flat_series_discovery[{index}].allow_empty must be a boolean"
+            )
     if "review_root" in contract and not isinstance(contract["review_root"], str):
         raise ValueError("contract.review_root must be a string")
 
@@ -111,24 +188,31 @@ def audit_numbering(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict
 def audit_guides(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
     checked = 0
     violations: list[dict] = []
+    directories_by_parent, files_by_parent = index_scan(rows)
     for index, rule in enumerate(rules):
         parent = normalize_cloud_path(str(rule.get("parent", "")))
         child_pattern_text = str(rule.get("child_pattern", ""))
         child_pattern = re.compile(child_pattern_text)
         guide_name = str(rule.get("guide_name", ""))
-        for child in child_dirs(rows, parent):
+        file_pattern_text = str(rule.get("file_pattern", ""))
+        file_pattern = re.compile(file_pattern_text) if file_pattern_text else None
+        min_bytes = int(rule.get("min_bytes", 1))
+        rule_checked = 0
+        for child in directories_by_parent.get(parent, []):
             child_name = str(child.get("name", ""))
+            if child_name == guide_name:
+                continue
             if not child_pattern.search(child_name):
                 continue
             checked += 1
+            rule_checked += 1
             child_path = normalize_cloud_path(f"{parent}/{child_name}")
-            present = any(
-                row.get("dir") is True
-                and normalize_cloud_path(str(row.get("path", ""))) == child_path
-                and str(row.get("name", "")) == guide_name
-                for row in rows
-            )
-            if not present:
+            guides = [
+                row
+                for row in directories_by_parent.get(child_path, [])
+                if str(row.get("name", "")) == guide_name
+            ]
+            if not guides:
                 violations.append({
                     "kind": "missing_guide",
                     "rule": index,
@@ -136,6 +220,113 @@ def audit_guides(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
                     "guide_name": guide_name,
                     "id": child.get("id"),
                 })
+                continue
+            if len(guides) > 1:
+                violations.append({
+                    "kind": "duplicate_guide_directory",
+                    "rule": index,
+                    "parent": child_path,
+                    "guide_name": guide_name,
+                    "count": len(guides),
+                })
+            if file_pattern is not None:
+                guide_path = normalize_cloud_path(f"{child_path}/{guide_name}")
+                named_files = [
+                    row
+                    for row in files_by_parent.get(guide_path, [])
+                    if file_pattern.search(str(row.get("name", "")))
+                ]
+                if not named_files:
+                    violations.append({
+                        "kind": "missing_guide_file",
+                        "rule": index,
+                        "parent": child_path,
+                        "guide_name": guide_name,
+                        "file_pattern": file_pattern_text,
+                    })
+                elif not any(int(row.get("size") or 0) >= min_bytes for row in named_files):
+                    violations.append({
+                        "kind": "guide_file_too_small",
+                        "rule": index,
+                        "parent": child_path,
+                        "guide_name": guide_name,
+                        "file_pattern": file_pattern_text,
+                        "min_bytes": min_bytes,
+                    })
+        if rule_checked == 0 and not rule.get("allow_empty", False):
+            violations.append({
+                "kind": "guide_scope_has_no_matching_children",
+                "rule": index,
+                "parent": parent,
+                "child_pattern": child_pattern_text,
+                "hint": "fix the scope or set allow_empty=true only after confirming it is empty",
+            })
+    return checked, violations
+
+
+def audit_required_guides(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
+    """Audit explicit guide locations, including the scan root itself.
+
+    ``guide_layers`` expands over matching child categories. ``required_guides`` is for
+    parents that must be checked directly and would otherwise be skipped, such as a
+    learning-library root. A required guide must contain at least one matching file.
+    """
+    checked = 0
+    violations: list[dict] = []
+    directories_by_parent, files_by_parent = index_scan(rows)
+    for index, rule in enumerate(rules):
+        checked += 1
+        parent = normalize_cloud_path(str(rule.get("parent", "")))
+        guide_name = str(rule.get("guide_name", ""))
+        file_pattern_text = str(rule.get("file_pattern", ".+"))
+        file_pattern = re.compile(file_pattern_text)
+        min_bytes = int(rule.get("min_bytes", 1))
+        guides = [
+            row
+            for row in directories_by_parent.get(parent, [])
+            if str(row.get("name", "")) == guide_name
+        ]
+        if not guides:
+            violations.append({
+                "kind": "missing_required_guide",
+                "rule": index,
+                "parent": parent,
+                "guide_name": guide_name,
+            })
+            continue
+        if len(guides) > 1:
+            violations.append({
+                "kind": "duplicate_required_guide_directory",
+                "rule": index,
+                "parent": parent,
+                "guide_name": guide_name,
+                "count": len(guides),
+            })
+        guide_path = normalize_cloud_path(f"{parent}/{guide_name}")
+        named_files = [
+            row
+            for row in files_by_parent.get(guide_path, [])
+            if file_pattern.search(str(row.get("name", "")))
+        ]
+        if not named_files:
+            violations.append({
+                "kind": "missing_required_guide_file",
+                "rule": index,
+                "parent": parent,
+                "guide_name": guide_name,
+                "file_pattern": file_pattern_text,
+                "id": guides[0].get("id"),
+            })
+        elif not any(int(row.get("size") or 0) >= min_bytes for row in named_files):
+            violations.append({
+                "kind": "required_guide_file_too_small",
+                "rule": index,
+                "parent": parent,
+                "guide_name": guide_name,
+                "file_pattern": file_pattern_text,
+                "min_bytes": min_bytes,
+                "id": guides[0].get("id"),
+            })
     return checked, violations
 
 
@@ -227,6 +418,148 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
     return checked, violations
 
 
+def audit_flat_series_discovery(
+    rows: list[dict],
+    rules: list[dict],
+    chunk_rules: list[dict] | None = None,
+) -> tuple[dict[str, int], list[dict]]:
+    """Find oversized direct-file series that were never declared in ``chunk_layers``.
+
+    Discovery is deliberately contract-driven: the caller chooses the scan root, limit,
+    optional path/file filters, and explicit semantic-bucket exceptions. It does not
+    infer a universal series size or silently exempt a directory by name.
+    """
+    stats = {
+        "matching_parents": 0,
+        "skipped_by_chunk": 0,
+        "skipped_by_exception": 0,
+        "aggregate_rows": 0,
+        "violating_parents": 0,
+    }
+    violations: list[dict] = []
+    contracted_limits: dict[str, int] = {}
+    for chunk_rule in chunk_rules or []:
+        parent = normalize_cloud_path(str(chunk_rule.get("parent", "")))
+        limit = int(chunk_rule.get("max_items", 0))
+        contracted_limits[parent] = min(limit, contracted_limits.get(parent, limit))
+    file_rows = [row for row in rows if row.get("dir") is not True]
+    files_by_parent: dict[str, list[dict]] = {}
+    for row in file_rows:
+        parent = normalize_cloud_path(str(row.get("path", "")))
+        files_by_parent.setdefault(parent, []).append(row)
+    for index, rule in enumerate(rules):
+        root = normalize_cloud_path(str(rule.get("root", "")))
+        max_items = int(rule.get("max_items", 0))
+        path_pattern_text = str(rule.get("path_pattern", ".*"))
+        file_pattern_text = str(rule.get("file_pattern", ".*"))
+        path_pattern = re.compile(path_pattern_text)
+        file_pattern = re.compile(file_pattern_text)
+        exclude_patterns = [
+            re.compile(str(value)) for value in rule.get("exclude_path_patterns", [])
+        ]
+        aggregate_rows = []
+        for row in rows:
+            if not int(row.get("agg_files") or 0):
+                continue
+            aggregate_path = normalize_cloud_path(
+                f"{normalize_cloud_path(str(row.get('path', '')))}/{row.get('name', '')}"
+            )
+            if path_is_within(aggregate_path, root) and path_pattern.search(aggregate_path):
+                aggregate_rows.append((aggregate_path, int(row.get("agg_files") or 0)))
+        if aggregate_rows:
+            stats["aggregate_rows"] += len(aggregate_rows)
+            violations.append({
+                "kind": "aggregate_scan_rows_in_discovery_scope",
+                "rule": index,
+                "root": root,
+                "count": len(aggregate_rows),
+                "sample": [
+                    {"path": path, "agg_files": count}
+                    for path, count in aggregate_rows[:5]
+                ],
+            })
+        parents = sorted(
+            parent
+            for parent in files_by_parent
+            if path_is_within(parent, root)
+        )
+        scoped_parents = [parent for parent in parents if path_pattern.search(parent)]
+        matching_parents_for_rule = 0
+        for parent in scoped_parents:
+            matches = [
+                row
+                for row in files_by_parent[parent]
+                if file_pattern.search(str(row.get("name", "")))
+            ]
+            if not matches:
+                continue
+            matching_parents_for_rule += 1
+            stats["matching_parents"] += 1
+            if any(pattern.search(parent) for pattern in exclude_patterns):
+                stats["skipped_by_exception"] += 1
+                continue
+            if parent in contracted_limits and contracted_limits[parent] <= max_items:
+                stats["skipped_by_chunk"] += 1
+                continue
+            if len(matches) <= max_items:
+                continue
+            stats["violating_parents"] += 1
+            violations.append({
+                "kind": "undeclared_flat_series",
+                "rule": index,
+                "parent": parent,
+                "item_count": len(matches),
+                "max_items": max_items,
+                "path_pattern": path_pattern_text,
+                "file_pattern": file_pattern_text,
+                "sample": [str(row.get("name", "")) for row in matches[:5]],
+            })
+        if not scoped_parents and not rule.get("allow_empty", False):
+            violations.append({
+                "kind": "discovery_scope_has_no_file_rows",
+                "rule": index,
+                "root": root,
+                "path_pattern": path_pattern_text,
+                "hint": "use a complete file-level scan or set allow_empty=true explicitly",
+            })
+        elif matching_parents_for_rule == 0 and not rule.get("allow_empty", False):
+            violations.append({
+                "kind": "discovery_scope_has_no_matching_files",
+                "rule": index,
+                "root": root,
+                "path_pattern": path_pattern_text,
+                "file_pattern": file_pattern_text,
+                "hint": "fix file_pattern or set allow_empty=true only after confirming it is empty",
+            })
+    return stats, violations
+
+
+def audit_scan_errors(path: Path | None, *, required: bool = False) -> tuple[int, list[dict]]:
+    if path is None:
+        if required:
+            return 0, [{
+                "kind": "scan_error_sidecar_missing",
+                "path": None,
+            }]
+        return 0, []
+    if not path.exists():
+        if required:
+            return 0, [{
+                "kind": "scan_error_sidecar_missing",
+                "path": str(path),
+            }]
+        return 0, []
+    lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not lines:
+        return 0, []
+    return len(lines), [{
+        "kind": "scan_errors_present",
+        "path": str(path),
+        "count": len(lines),
+        "sample": lines[:5],
+    }]
+
+
 def scan_contains_file(rows: list[dict], target: str) -> bool:
     normalized_target = normalize_cloud_path(target)
     target_path = PurePosixPath(normalized_target)
@@ -299,6 +632,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="require every unclear manifest row to have status=verified",
     )
+    parser.add_argument(
+        "--scan-errors",
+        type=Path,
+        help="scan error sidecar; explicit paths must exist; --final defaults to <scan>.errors",
+    )
+    parser.add_argument(
+        "--allow-missing-scan-errors",
+        action="store_true",
+        help="allow --final without a scan error sidecar after independently verifying scan completeness",
+    )
     return parser.parse_args()
 
 
@@ -308,22 +651,55 @@ def main() -> int:
     validate_contract(contract)
     rows = read_jsonl(args.scan)
     unclear_rows = read_jsonl(args.unclear) if args.unclear else []
+    scan_errors_path = args.scan_errors
+    if scan_errors_path is None and args.final:
+        automatic_errors = Path(str(args.scan) + ".errors")
+        if automatic_errors.exists() or not args.allow_missing_scan_errors:
+            scan_errors_path = automatic_errors
+    scan_errors_required = args.scan_errors is not None or (
+        args.final and not args.allow_missing_scan_errors
+    )
 
     numbered_checked, numbering = audit_numbering(rows, contract.get("numbered_layers", []))
     guides_checked, guides = audit_guides(rows, contract.get("guide_layers", []))
-    chunks_checked, chunks = audit_chunks(rows, contract.get("chunk_layers", []))
+    required_guides_checked, required_guides = audit_required_guides(
+        rows, contract.get("required_guides", [])
+    )
+    chunk_rules = contract.get("chunk_layers", [])
+    chunks_checked, chunks = audit_chunks(rows, chunk_rules)
+    discovery_stats, discovery = audit_flat_series_discovery(
+        rows, contract.get("flat_series_discovery", []), chunk_rules
+    )
     unclear_checked, unclear = audit_unclear_manifest(
         unclear_rows, contract.get("review_root"), args.final, rows
     )
-    violations = numbering + guides + chunks + unclear
+    scan_errors_checked, scan_errors = audit_scan_errors(
+        scan_errors_path, required=scan_errors_required
+    )
+    violations = (
+        numbering
+        + guides
+        + required_guides
+        + chunks
+        + discovery
+        + unclear
+        + scan_errors
+    )
     result = {
         "status": "passed" if not violations else "failed",
         "scan_rows": len(rows),
         "checked": {
             "numbered_directories": numbered_checked,
             "guide_parents": guides_checked,
+            "required_guides": required_guides_checked,
             "chunk_groups": chunks_checked,
+            "flat_series_matching_parents": discovery_stats["matching_parents"],
+            "flat_series_skipped_by_chunk": discovery_stats["skipped_by_chunk"],
+            "flat_series_skipped_by_exception": discovery_stats["skipped_by_exception"],
+            "flat_series_aggregate_rows": discovery_stats["aggregate_rows"],
+            "flat_series_violating_parents": discovery_stats["violating_parents"],
             "unclear_items": unclear_checked,
+            "scan_errors": scan_errors_checked,
         },
         "violations": violations,
     }

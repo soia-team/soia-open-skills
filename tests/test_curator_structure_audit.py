@@ -54,6 +54,99 @@ class StructureAuditTests(unittest.TestCase):
         self.assertEqual(checked, 2)
         self.assertEqual(violations[0]["parent"], "/learning/20_communication")
 
+    def test_guide_closure_can_require_a_real_navigation_file(self) -> None:
+        checked, violations = audit.audit_guides(
+            ROWS,
+            [{
+                "parent": "/learning",
+                "child_pattern": r"^10_",
+                "guide_name": "01_guide",
+                "file_pattern": r"\.xlsx$",
+            }],
+        )
+        self.assertEqual(checked, 1)
+        self.assertEqual(violations[0]["kind"], "missing_guide_file")
+
+    def test_guide_layer_does_not_require_a_guide_inside_the_guide_directory(self) -> None:
+        rows = [
+            {"path": "/learning", "name": "01_guide", "id": "root-guide", "dir": True},
+            {"path": "/learning", "name": "10_course", "id": "course", "dir": True},
+            {"path": "/learning/10_course", "name": "01_guide", "id": "course-guide", "dir": True},
+        ]
+        checked, violations = audit.audit_guides(
+            rows,
+            [{"parent": "/learning", "child_pattern": r"^\d{2}_", "guide_name": "01_guide"}],
+        )
+        self.assertEqual(checked, 1)
+        self.assertEqual(violations, [])
+
+    def test_guide_layer_rejects_no_matching_children_by_default(self) -> None:
+        checked, violations = audit.audit_guides(
+            ROWS,
+            [{
+                "parent": "/learning",
+                "child_pattern": r"^90_",
+                "guide_name": "01_guide",
+                "file_pattern": r"\.xlsx$",
+            }],
+        )
+        self.assertEqual(checked, 0)
+        self.assertEqual(violations[0]["kind"], "guide_scope_has_no_matching_children")
+
+        _, allowed = audit.audit_guides(
+            ROWS,
+            [{
+                "parent": "/learning",
+                "child_pattern": r"^90_",
+                "guide_name": "01_guide",
+                "file_pattern": r"\.xlsx$",
+                "allow_empty": True,
+            }],
+        )
+        self.assertEqual(allowed, [])
+
+    def test_required_guide_checks_the_learning_root_and_file(self) -> None:
+        rows = [
+            {"path": "/learning", "name": "01_guide", "id": "guide", "dir": True},
+            {
+                "path": "/learning/01_guide",
+                "name": "start-here.xlsx",
+                "id": "file",
+                "dir": False,
+                "size": 128,
+            },
+        ]
+        checked, violations = audit.audit_required_guides(
+            rows,
+            [{"parent": "/learning", "guide_name": "01_guide", "file_pattern": r"\.xlsx$"}],
+        )
+        self.assertEqual(checked, 1)
+        self.assertEqual(violations, [])
+
+        checked, violations = audit.audit_required_guides(
+            rows[:1],
+            [{"parent": "/learning", "guide_name": "01_guide", "file_pattern": r"\.xlsx$"}],
+        )
+        self.assertEqual(checked, 1)
+        self.assertEqual(violations[0]["kind"], "missing_required_guide_file")
+
+    def test_required_guide_rejects_a_zero_byte_placeholder(self) -> None:
+        rows = [
+            {"path": "/learning", "name": "01_guide", "id": "guide", "dir": True},
+            {
+                "path": "/learning/01_guide",
+                "name": "start-here.xlsx",
+                "id": "file",
+                "dir": False,
+                "size": 0,
+            },
+        ]
+        _, violations = audit.audit_required_guides(
+            rows,
+            [{"parent": "/learning", "guide_name": "01_guide", "file_pattern": r"\.xlsx$"}],
+        )
+        self.assertEqual(violations[0]["kind"], "required_guide_file_too_small")
+
     def test_unclear_items_must_be_inside_review_root_and_verified(self) -> None:
         checked, violations = audit.audit_unclear_manifest(
             [
@@ -93,6 +186,12 @@ class StructureAuditTests(unittest.TestCase):
                 "guide_layers": [
                     {"parent": "/learning", "child_pattern": r"^\d{2}_"},
                 ],
+            })
+
+    def test_contract_requires_explicit_guide_file_pattern(self) -> None:
+        with self.assertRaisesRegex(ValueError, "file_pattern is required"):
+            audit.validate_contract({
+                "required_guides": [{"parent": "/learning", "guide_name": "01_guide"}],
             })
 
     def test_chunking_reports_flat_series_over_configured_limit(self) -> None:
@@ -160,6 +259,147 @@ class StructureAuditTests(unittest.TestCase):
                 ],
             })
 
+    def test_flat_series_discovery_finds_an_undeclared_course(self) -> None:
+        rows = [
+            {"path": "/learning/course-a", "name": f"{number:03}.mp4", "dir": False}
+            for number in range(1, 9)
+        ]
+        stats, violations = audit.audit_flat_series_discovery(
+            rows,
+            [{"root": "/learning", "max_items": 7, "file_pattern": r"\.mp4$"}],
+            chunk_rules=[],
+        )
+        self.assertEqual(stats["matching_parents"], 1)
+        self.assertEqual(stats["violating_parents"], 1)
+        self.assertEqual(violations[0]["kind"], "undeclared_flat_series")
+        self.assertEqual(violations[0]["parent"], "/learning/course-a")
+
+    def test_flat_series_discovery_supports_the_drive_root(self) -> None:
+        rows = [
+            {"path": "/nested/course", "name": f"{number:03}.mp4", "dir": False}
+            for number in range(1, 9)
+        ]
+        stats, violations = audit.audit_flat_series_discovery(
+            rows,
+            [{"root": "/", "max_items": 7, "file_pattern": r"\.mp4$"}],
+            chunk_rules=[],
+        )
+        self.assertEqual(stats["matching_parents"], 1)
+        self.assertEqual(violations[0]["parent"], "/nested/course")
+
+    def test_flat_series_discovery_rejects_aggregate_scan_rows(self) -> None:
+        rows = [{
+            "path": "/learning",
+            "name": "course-a",
+            "dir": True,
+            "agg_files": 200,
+            "agg_size": 1000,
+        }]
+        stats, violations = audit.audit_flat_series_discovery(
+            rows,
+            [{"root": "/learning", "max_items": 7, "allow_empty": True}],
+            chunk_rules=[],
+        )
+        self.assertEqual(stats["aggregate_rows"], 1)
+        self.assertEqual(violations[0]["kind"], "aggregate_scan_rows_in_discovery_scope")
+
+    def test_flat_series_discovery_rejects_a_missing_scope_by_default(self) -> None:
+        _, violations = audit.audit_flat_series_discovery(
+            [],
+            [{"root": "/learning", "max_items": 7}],
+            chunk_rules=[],
+        )
+        self.assertEqual(violations[0]["kind"], "discovery_scope_has_no_file_rows")
+
+    def test_flat_series_discovery_rejects_a_path_filter_matching_no_parent(self) -> None:
+        rows = [{"path": "/learning/course-a", "name": "001.mp4", "dir": False}]
+        _, violations = audit.audit_flat_series_discovery(
+            rows,
+            [{"root": "/learning", "max_items": 7, "path_pattern": r"/missing$"}],
+            chunk_rules=[],
+        )
+        self.assertEqual(violations[0]["kind"], "discovery_scope_has_no_file_rows")
+
+    def test_flat_series_discovery_rejects_file_pattern_matching_no_file(self) -> None:
+        rows = [{"path": "/learning/course-a", "name": "001.mp3", "dir": False}]
+        stats, violations = audit.audit_flat_series_discovery(
+            rows,
+            [{"root": "/learning", "max_items": 7, "file_pattern": r"\.mp4$"}],
+            chunk_rules=[],
+        )
+        self.assertEqual(stats["matching_parents"], 0)
+        self.assertEqual(violations[0]["kind"], "discovery_scope_has_no_matching_files")
+
+    def test_flat_series_discovery_honors_explicit_semantic_bucket_exception(self) -> None:
+        rows = [
+            {"path": "/learning/podcast/2026-07", "name": f"day-{number:02}.mp3", "dir": False}
+            for number in range(1, 10)
+        ]
+        stats, violations = audit.audit_flat_series_discovery(
+            rows,
+            [{
+                "root": "/learning",
+                "max_items": 7,
+                "file_pattern": r"\.mp3$",
+                "exclude_path_patterns": [r"/\d{4}-\d{2}$"],
+            }],
+            chunk_rules=[],
+        )
+        self.assertEqual(stats["matching_parents"], 1)
+        self.assertEqual(stats["skipped_by_exception"], 1)
+        self.assertEqual(violations, [])
+
+    def test_flat_series_discovery_skips_explicit_chunk_contracts(self) -> None:
+        rows = [
+            {"path": "/learning/course-a", "name": f"{number:03}.mp4", "dir": False}
+            for number in range(1, 9)
+        ]
+        stats, violations = audit.audit_flat_series_discovery(
+            rows,
+            [{"root": "/learning", "max_items": 7}],
+            chunk_rules=[{
+                "parent": "/learning/course-a",
+                "child_pattern": r"^\d{2}_",
+                "max_items": 7,
+            }],
+        )
+        self.assertEqual(stats["matching_parents"], 1)
+        self.assertEqual(stats["skipped_by_chunk"], 1)
+        self.assertEqual(violations, [])
+
+    def test_flat_series_discovery_does_not_skip_a_looser_chunk_contract(self) -> None:
+        rows = [
+            {"path": "/learning/course-a", "name": f"{number:03}.mp4", "dir": False}
+            for number in range(1, 9)
+        ]
+        stats, violations = audit.audit_flat_series_discovery(
+            rows,
+            [{"root": "/learning", "max_items": 7, "file_pattern": r"\.mp4$"}],
+            chunk_rules=[{
+                "parent": "/learning/course-a",
+                "child_pattern": r"^\d{2}_",
+                "max_items": 100,
+            }],
+        )
+        self.assertEqual(stats["skipped_by_chunk"], 0)
+        self.assertEqual(violations[0]["kind"], "undeclared_flat_series")
+
+    def test_contract_requires_positive_discovery_limit(self) -> None:
+        with self.assertRaisesRegex(ValueError, "max_items must be a positive integer"):
+            audit.validate_contract({
+                "flat_series_discovery": [{"root": "/learning", "max_items": 0}],
+            })
+
+    def test_contract_rejects_an_empty_discovery_exception(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must be a non-empty string"):
+            audit.validate_contract({
+                "flat_series_discovery": [{
+                    "root": "/learning",
+                    "max_items": 7,
+                    "exclude_path_patterns": [""],
+                }],
+            })
+
     def test_chunking_rejects_undeclared_sibling_directory(self) -> None:
         rows = [
             {"path": "/learning/course", "name": "10_001-020", "id": "a", "dir": True},
@@ -220,6 +460,119 @@ class StructureAuditTests(unittest.TestCase):
             )
         self.assertEqual(process.returncode, 1)
         self.assertIn("unexpected_non_chunk_directory", process.stdout)
+        self.assertIn("flat_series_matching_parents", process.stdout)
+        self.assertIn("flat_series_skipped_by_exception", process.stdout)
+        self.assertNotIn("flat_series_candidates", process.stdout)
+
+    def test_cli_final_fails_when_scan_error_sidecar_is_nonempty(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scan = root / "scan.jsonl"
+            contract = root / "contract.json"
+            scan.write_text(
+                json.dumps({"path": "/learning", "name": "file.mp4", "dir": False}) + "\n",
+                encoding="utf-8",
+            )
+            Path(str(scan) + ".errors").write_text("LIST_FAIL /learning/course\n", encoding="utf-8")
+            contract.write_text(json.dumps({}), encoding="utf-8")
+            process = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--scan",
+                    str(scan),
+                    "--contract",
+                    str(contract),
+                    "--final",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("scan_errors_present", process.stdout)
+
+    def test_cli_final_fails_when_scan_error_sidecar_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scan = root / "scan.jsonl"
+            contract = root / "contract.json"
+            scan.write_text(
+                json.dumps({"path": "/learning", "name": "file.mp4", "dir": False}) + "\n",
+                encoding="utf-8",
+            )
+            contract.write_text(json.dumps({}), encoding="utf-8")
+            process = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--scan",
+                    str(scan),
+                    "--contract",
+                    str(contract),
+                    "--final",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("scan_error_sidecar_missing", process.stdout)
+
+    def test_cli_explicit_missing_scan_error_sidecar_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scan = root / "scan.jsonl"
+            contract = root / "contract.json"
+            scan.write_text(
+                json.dumps({"path": "/learning", "name": "file.mp4", "dir": False}) + "\n",
+                encoding="utf-8",
+            )
+            contract.write_text(json.dumps({}), encoding="utf-8")
+            process = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--scan",
+                    str(scan),
+                    "--contract",
+                    str(contract),
+                    "--scan-errors",
+                    str(root / "missing.errors"),
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("scan_error_sidecar_missing", process.stdout)
+
+    def test_cli_final_can_explicitly_allow_missing_scan_error_sidecar(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scan = root / "scan.jsonl"
+            contract = root / "contract.json"
+            scan.write_text(
+                json.dumps({"path": "/learning", "name": "file.mp4", "dir": False}) + "\n",
+                encoding="utf-8",
+            )
+            contract.write_text(json.dumps({}), encoding="utf-8")
+            process = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--scan",
+                    str(scan),
+                    "--contract",
+                    str(contract),
+                    "--final",
+                    "--allow-missing-scan-errors",
+                ],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
 
 
 if __name__ == "__main__":

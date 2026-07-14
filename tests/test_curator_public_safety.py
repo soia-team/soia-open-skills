@@ -101,6 +101,8 @@ class CuratorPublicSafetyTests(unittest.TestCase):
         for marker in [
             "编号可配置且必须闭环",
             "学习导航必须闭环",
+            "required_guides",
+            "flat_series_discovery",
             "audit_structure.py",
             "不确定项可隔离复核",
         ]:

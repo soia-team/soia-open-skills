@@ -22,8 +22,8 @@
 - 方案文档落用户指定的 `<vault>/<map-relative-dir>/<partition>-深度分类方案.md`，frontmatter `status: 待拍板`；含：名不符实实测表、分类主轴、目标结构树、归类规则、待裁定清单和执行序。业务层是否编号由用户确认，技术依赖树不编号。没有目标目录时先询问，不猜 vault 结构。
 - 裁定问题给用户**可一句话回答的选项**（「1删 2删 3先读」），拍板前云盘一个文件不动。
 - 若用户选择编号，方案必须声明步长、格式和适用层级；**编号只写本层序号，不做跨层连缀**。`images/banner/scripts/assets` 等离线技术依赖保持原名。
-- 若用户为长系列设定单夹上限，方案必须声明适用系列、上限和分组命名。按原序号范围或内容阶段分组；多个重启编号的子系列先分系列，缺号只记录不补造。
-- 若用户选择学习导览，方案同时声明导览名称和覆盖层级；每个在架分类都必须生成、上传、复核，不能只做一部分。
+- 若用户为长系列设定单夹上限，方案必须声明适用系列、上限和分组命名。按原序号范围或内容阶段分组；多个重启编号的子系列先分系列，缺号只记录不补造。方案还要声明本次全区发现规则，避免只整理已知课程、遗漏其他平铺长系列。
+- 若用户选择学习导览，方案同时声明导览名称和覆盖层级；分区根入口与根下分类入口分开声明，每个在架分类都必须生成、上传、复核，不能只做一部分或留下空导览目录。
 - 相邻分区先写一句互斥边界。若有课程区与书库，明确独立出版物和课程组成材料如何判断，避免同类书散落两区或把课程讲义拆走。
 
 ## 三、分批执行（④ 的纪律）
@@ -63,26 +63,32 @@
 
 ## 八、完成定义（DoD）
 
-区内：目标结构落地；若方案选择编号，则所声明层级的漏号数为 0；若设置长系列上限，则系列根散文件数为 0、空分组数为 0、超限分组数为 0；若选择学习导览，则应覆盖分类的导览缺失数为 0；若指定复核区，则 `unclear` 全部位于该根下、状态已验证且目标文件存在于终态扫描；账本齐全、删除项可回滚。使用 `scripts/audit_structure.py` 对终态 scan JSONL 复现这些结论。区外：索引三查通过、消费端链接全量校验、方案文档变更史回填、遗留项显式列在「待拍板」。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
+区内：目标结构落地；若方案选择编号，则所声明层级的漏号数为 0；若设置长系列上限，则系列根散文件数为 0、空分组数为 0、超限分组数为 0、未声明超限平铺目录为 0；若选择学习导览，则根级与分类级导览缺失数为 0、正式说明文件缺失数为 0；若指定复核区，则 `unclear` 全部位于该根下、状态已验证且目标文件存在于终态扫描；账本齐全、删除项可回滚。使用 `scripts/audit_structure.py` 对终态 scan JSONL 复现这些结论。区外：索引三查通过、消费端链接全量校验、方案文档变更史回填、遗留项显式列在「待拍板」。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
 
 结构合同使用通用 JSON，不写用户目录进公共 skill：
 
-```json
+```jsonc
 {
   "numbered_layers": [
     {"parent": "/<learning>/<category>", "pattern": "^\\d{2}_", "exclude": []}
   ],
   "guide_layers": [
-    {"parent": "/<learning>", "child_pattern": "^\\d{2}_", "guide_name": "01_<guide>"}
+    {"parent": "/<learning>", "child_pattern": "^\\d{2}_", "guide_name": "01_<guide>", "file_pattern": "\\.xlsx$", "min_bytes": 1}
+  ],
+  "required_guides": [
+    {"parent": "/<learning>", "guide_name": "01_<guide>", "file_pattern": "\\.xlsx$", "min_bytes": 1}
   ],
   "chunk_layers": [
-    {"parent": "/<learning>/<course>", "child_pattern": "^\\d{2}_", "max_items": 20, "exclude": ["<technical-dir-if-any>"]}
+    {"parent": "/<learning>/<course>", "child_pattern": "^\\d{2}_", "max_items": USER_CONFIRMED_LIMIT, "exclude": ["<technical-dir-if-any>"]}
+  ],
+  "flat_series_discovery": [
+    {"root": "/<learning>", "max_items": USER_CONFIRMED_LIMIT, "path_pattern": ".*", "file_pattern": ".*", "exclude_path_patterns": ["<explicit-semantic-bucket-regex>"]}
   ],
   "review_root": "/<archive>/<review>"
 }
 ```
 
-示例中的 `20` 只是本次合同输入，不是公共默认值；换用户、换客户端或换资源类型时重新确认。没有需豁免的同级技术目录时传空数组；`exclude` 必须逐名声明，不能隐藏未知目录。
+上例是带占位符的 JSONC 结构说明，执行前把 `USER_CONFIRMED_LIMIT` 替换为本次确认的正整数。换用户、换客户端或换资源类型时重新确认。没有需豁免的同级技术目录/语义桶时传空数组；`exclude` 与 `exclude_path_patterns` 必须显式声明，不能隐藏未知目录。
 
 `unclear` JSONL 每行格式为：
 
@@ -95,7 +101,10 @@
 ```bash
 python3 scripts/audit_structure.py \
   --scan <terminal-scan.jsonl> \
+  --scan-errors <terminal-scan.jsonl.errors> \
   --contract <structure-contract.json> \
   --unclear <unclear.jsonl> \
   --final
 ```
+
+最终结构审计的扫描不得使用聚合剪枝或 `no-descend`。`flat_series_discovery` 会拒绝范围内的 `agg_files` 行；`--final` 默认要求并读取同名 `<scan>.errors`，缺失或非空都失败。显式 `--scan-errors` 可用于不同命名的 sidecar，路径写错同样失败；只有已用其他证据独立确认扫描完整性时才可传 `--allow-missing-scan-errors`。`guide_layers` 和 `flat_series_discovery` 的规则零匹配也默认失败，确知该范围为空时才在对应规则中显式写 `allow_empty=true`。
