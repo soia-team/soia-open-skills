@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -156,6 +159,67 @@ class StructureAuditTests(unittest.TestCase):
                     {"parent": "/learning/course", "child_pattern": r"^\d{2}_", "max_items": 0},
                 ],
             })
+
+    def test_chunking_rejects_undeclared_sibling_directory(self) -> None:
+        rows = [
+            {"path": "/learning/course", "name": "10_001-020", "id": "a", "dir": True},
+            {"path": "/learning/course", "name": "attachments", "id": "b", "dir": True},
+            {"path": "/learning/course/10_001-020", "name": "001.mp3", "dir": False},
+            {"path": "/learning/course/attachments", "name": "021.mp3", "dir": False},
+        ]
+        checked, violations = audit.audit_chunks(
+            rows,
+            [{"parent": "/learning/course", "child_pattern": r"^\d{2}_", "max_items": 20}],
+        )
+        self.assertEqual(checked, 1)
+        self.assertEqual(violations[0]["kind"], "unexpected_non_chunk_directory")
+
+    def test_chunking_allows_explicitly_excluded_technical_directory(self) -> None:
+        rows = [
+            {"path": "/learning/course", "name": "10_001-020", "id": "a", "dir": True},
+            {"path": "/learning/course", "name": "assets", "id": "b", "dir": True},
+            {"path": "/learning/course/10_001-020", "name": "001.mp3", "dir": False},
+            {"path": "/learning/course/assets", "name": "cover.jpg", "dir": False},
+        ]
+        _, violations = audit.audit_chunks(
+            rows,
+            [{
+                "parent": "/learning/course",
+                "child_pattern": r"^\d{2}_",
+                "max_items": 20,
+                "exclude": ["assets"],
+            }],
+        )
+        self.assertEqual(violations, [])
+
+    def test_cli_fails_for_undeclared_sibling_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scan = root / "scan.jsonl"
+            contract = root / "contract.json"
+            scan.write_text(
+                "\n".join([
+                    json.dumps({"path": "/course", "name": "10_001-020", "dir": True}),
+                    json.dumps({"path": "/course", "name": "attachments", "dir": True}),
+                    json.dumps({"path": "/course/10_001-020", "name": "001.mp3", "dir": False}),
+                ]) + "\n",
+                encoding="utf-8",
+            )
+            contract.write_text(json.dumps({
+                "chunk_layers": [{
+                    "parent": "/course",
+                    "child_pattern": r"^\d{2}_",
+                    "max_items": 20,
+                }],
+            }), encoding="utf-8")
+            process = subprocess.run(
+                [sys.executable, str(SCRIPT), "--scan", str(scan), "--contract", str(contract)],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("unexpected_non_chunk_directory", process.stdout)
 
 
 if __name__ == "__main__":

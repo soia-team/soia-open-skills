@@ -76,13 +76,13 @@
     {"parent": "/<learning>", "child_pattern": "^\\d{2}_", "guide_name": "01_<guide>"}
   ],
   "chunk_layers": [
-    {"parent": "/<learning>/<course>", "child_pattern": "^\\d{2}_", "max_items": 20}
+    {"parent": "/<learning>/<course>", "child_pattern": "^\\d{2}_", "max_items": 20, "exclude": ["<technical-dir-if-any>"]}
   ],
   "review_root": "/<archive>/<review>"
 }
 ```
 
-示例中的 `20` 只是本次合同输入，不是公共默认值；换用户、换客户端或换资源类型时重新确认。
+示例中的 `20` 只是本次合同输入，不是公共默认值；换用户、换客户端或换资源类型时重新确认。没有需豁免的同级技术目录时传空数组；`exclude` 必须逐名声明，不能隐藏未知目录。
 
 `unclear` JSONL 每行格式为：
 

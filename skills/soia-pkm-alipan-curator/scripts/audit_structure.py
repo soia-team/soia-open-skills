@@ -77,6 +77,8 @@ def validate_contract(contract: dict) -> None:
         max_items = rule.get("max_items")
         if isinstance(max_items, bool) or not isinstance(max_items, int) or max_items <= 0:
             raise ValueError(f"contract.chunk_layers[{index}].max_items must be a positive integer")
+        if not isinstance(rule.get("exclude", []), list):
+            raise ValueError(f"contract.chunk_layers[{index}].exclude must be an array")
     if "review_root" in contract and not isinstance(contract["review_root"], str):
         raise ValueError("contract.review_root must be a string")
 
@@ -151,9 +153,26 @@ def audit_chunks(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict]]:
         pattern_text = str(rule.get("child_pattern", ""))
         pattern = re.compile(pattern_text)
         max_items = int(rule.get("max_items", 0))
+        excludes = {str(item) for item in rule.get("exclude", [])}
         all_children = child_dirs(rows, parent)
         chunks = [row for row in all_children if pattern.search(str(row.get("name", "")))]
+        unexpected_children = [
+            row
+            for row in all_children
+            if not pattern.search(str(row.get("name", "")))
+            and str(row.get("name", "")) not in excludes
+        ]
         loose_files = direct_files(rows, parent)
+
+        for child in unexpected_children:
+            violations.append({
+                "kind": "unexpected_non_chunk_directory",
+                "rule": index,
+                "parent": parent,
+                "name": str(child.get("name", "")),
+                "id": child.get("id"),
+                "expected_pattern": pattern_text,
+            })
 
         if not chunks:
             checked += 1
