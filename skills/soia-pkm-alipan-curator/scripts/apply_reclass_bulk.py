@@ -388,37 +388,40 @@ def execution_slot(drive_id: str, max_parallel: int) -> Iterator[None]:
     """Limit concurrent bulk writers before any cloud write is attempted.
 
     ``aliyunpan`` processes share one local login/profile.  Field evidence
-    shows that two disjoint writers are stable while a third can make an
-    otherwise successful ``mv`` disappear before terminal verification.  A
-    small per-user semaphore therefore protects every profile, regardless of
-    workspace or agent.  The drive id is hashed so local state does not leak
-    account identifiers.
+    shows that a third writer can make an otherwise successful ``mv``
+    disappear before terminal verification, while two writers can make a
+    20-item batch exceed the executor timeout and land only partially.  The
+    safe default is therefore one writer; two must be explicitly requested
+    together with smaller batches and acceptance of resumable partial work.
+    The drive id is hashed so local state does not leak account identifiers.
     """
     state_home = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
     lock_dir = state_home / "soia-pkm-alipan-curator" / "locks"
     lock_dir.mkdir(parents=True, exist_ok=True)
     drive_key = hashlib.sha256(drive_id.encode("utf-8")).hexdigest()[:16]
     handles = []
-    acquired = None
+    acquired = []
     try:
-        for slot in range(1, max_parallel + 1):
+        for slot in range(1, 3):
             handle = (lock_dir / f"bulk-{drive_key}-{slot}.lock").open("a+", encoding="utf-8")
             handles.append(handle)
             try:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
                 continue
-            acquired = handle
-            break
-        if acquired is None:
+            acquired.append(handle)
+            if max_parallel == 2:
+                break
+        required_slots = 2 if max_parallel == 1 else 1
+        if len(acquired) != required_slots:
             raise RuntimeError(
-                f"同一云盘已有 {max_parallel} 个批量写入进程；请等待完成后使用 --resume，"
+                "同一云盘已有批量写入进程，当前并发模式不兼容；请等待完成后使用 --resume，"
                 "不要提高并发规避保护"
             )
         yield
     finally:
-        if acquired is not None:
-            fcntl.flock(acquired.fileno(), fcntl.LOCK_UN)
+        for handle in acquired:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
         for handle in handles:
             handle.close()
 
@@ -441,8 +444,8 @@ def main() -> None:
     ap.add_argument(
         "--max-parallel",
         type=parallel_limit,
-        default=2,
-        help="同一 drive 允许的批量写入进程数（1 或 2；默认 2）",
+        default=1,
+        help="同一 drive 允许的批量写入进程数（1 或 2；默认 1；双路须显式开启）",
     )
     args = ap.parse_args()
 

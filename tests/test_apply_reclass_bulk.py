@@ -239,7 +239,7 @@ class BulkApplyReclassTests(unittest.TestCase):
             run.assert_not_called()
             self.assertFalse(ledger.exists())
 
-    def test_third_concurrent_writer_is_blocked_before_cloud_call(self) -> None:
+    def test_default_single_writer_blocks_other_modes_before_cloud_call(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             plan = self.write_plan(
@@ -248,16 +248,24 @@ class BulkApplyReclassTests(unittest.TestCase):
             )
             ledger = root / "ledger.jsonl"
             with mock.patch.dict("os.environ", {"XDG_STATE_HOME": temp}, clear=False):
-                with bulk.execution_slot("drive-1", 2), bulk.execution_slot("drive-1", 2):
+                with bulk.execution_slot("drive-1", 1):
                     with mock.patch.object(bulk, "run_aliyunpan") as run:
                         with self.assertRaises(SystemExit) as stopped:
                             self.run_main(
                                 "--plan", str(plan), "--driveId", "drive-1", "--root", self.ROOT,
-                                "--ledger", str(ledger), "--execute", "--resume",
+                                "--ledger", str(ledger), "--execute", "--resume", "--max-parallel", "2",
                             )
             self.assertEqual(stopped.exception.code, 2)
             run.assert_not_called()
             self.assertFalse(ledger.exists())
+
+    def test_third_explicit_two_way_writer_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.dict("os.environ", {"XDG_STATE_HOME": temp}, clear=False):
+                with bulk.execution_slot("drive-1", 2), bulk.execution_slot("drive-1", 2):
+                    with self.assertRaises(RuntimeError):
+                        with bulk.execution_slot("drive-1", 2):
+                            self.fail("third writer must not acquire a slot")
 
     def test_parallel_limit_rejects_more_than_two(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
