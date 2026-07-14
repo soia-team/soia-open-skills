@@ -43,7 +43,13 @@ def read_json(path: Path) -> dict:
 
 
 def read_jsonl(path: Path) -> list[dict]:
-    rows: list[dict] = []
+    return [value for _, value in read_jsonl_with_lines(path)]
+
+
+def read_jsonl_with_lines(path: Path) -> list[tuple[int, dict]]:
+    """Read JSONL rows while retaining their physical line numbers."""
+
+    rows: list[tuple[int, dict]] = []
     with path.open("r", encoding="utf-8") as handle:
         for line_number, raw in enumerate(handle, 1):
             if not raw.strip():
@@ -54,8 +60,56 @@ def read_jsonl(path: Path) -> list[dict]:
                 raise ValueError(f"{path}:{line_number}: invalid JSON: {error}") from error
             if not isinstance(value, dict):
                 raise ValueError(f"{path}:{line_number}: expected an object")
-            rows.append(value)
+            rows.append((line_number, value))
     return rows
+
+
+def _plan_location(batch_index: int, batch: dict, plan_path: object, line_number: int) -> dict:
+    """Return stable manifest/plan coordinates for an action row."""
+
+    location = {
+        "batch": batch_index,
+        "plan": str(plan_path),
+        "line": line_number,
+    }
+    if str(batch.get("name", "")).strip():
+        location["batch_name"] = str(batch["name"])
+    return location
+
+
+def _append_plan_action_id_violations(
+    violations: list[dict],
+    seen_action_ids: dict[str, dict],
+    batch_index: int,
+    batch: dict,
+    plan_value: object,
+    plan_entries: list[tuple[int, dict]],
+) -> list[str]:
+    """Validate one registered plan and return its normalized action IDs."""
+
+    plan_ids: list[str] = []
+    for line_number, item in plan_entries:
+        action_id = str(item.get("action_id", "")).strip()
+        plan_ids.append(action_id)
+        location = _plan_location(batch_index, batch, plan_value, line_number)
+        if not action_id:
+            # Keep the historical violation kind for missing/empty IDs.
+            violations.append({
+                "kind": "invalid_or_duplicate_plan_action_id",
+                **location,
+            })
+            continue
+        first_seen = seen_action_ids.get(action_id)
+        if first_seen is not None:
+            violations.append({
+                "kind": "duplicate_plan_action_id",
+                "action_id": action_id,
+                **location,
+                "first_seen": first_seen,
+            })
+            continue
+        seen_action_ids[action_id] = location
+    return plan_ids
 
 
 def resolve_member(run_dir: Path, value: object, label: str) -> Path:
@@ -192,6 +246,7 @@ def audit_bundle(run_dir: Path, *, final: bool) -> dict:
     batches = manifest.get("batches", [])
     if not isinstance(batches, list):
         raise ValueError("run.batches must be an array")
+    seen_action_ids: dict[str, dict] = {}
     for index, batch in enumerate(batches):
         if not isinstance(batch, dict):
             violations.append({"kind": "invalid_batch", "index": index})
@@ -205,11 +260,17 @@ def audit_bundle(run_dir: Path, *, final: bool) -> dict:
         if not plan_path.is_file() or (final and not result_path.is_file()):
             violations.append({"kind": "batch_file_missing", "index": index})
             continue
-        plans = read_jsonl(plan_path)
+        plan_entries = read_jsonl_with_lines(plan_path)
+        plans = [value for _, value in plan_entries]
         results = read_jsonl(result_path) if result_path.is_file() else []
-        plan_ids = [str(item.get("action_id", "")).strip() for item in plans]
-        if any(not action_id for action_id in plan_ids) or len(plan_ids) != len(set(plan_ids)):
-            violations.append({"kind": "invalid_or_duplicate_plan_action_id", "index": index})
+        plan_ids = _append_plan_action_id_violations(
+            violations,
+            seen_action_ids,
+            index,
+            batch,
+            batch.get("plan"),
+            plan_entries,
+        )
         result_by_id = {str(item.get("action_id", "")): item for item in results}
         planned_actions += len(plans)
         if not final:

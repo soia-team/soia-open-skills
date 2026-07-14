@@ -113,6 +113,107 @@ class RunBundleTests(unittest.TestCase):
             self.assertEqual(result["checked"]["planned_actions"], 1)
             self.assertEqual(result["checked"]["focus_targets"], 1)
 
+    def test_same_batch_duplicate_action_id_reports_plan_line(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            write_jsonl(root / "actions/10.plan.jsonl", [
+                {"action_id": "B10-001", "op": "rename"},
+                {"action_id": "B10-001", "op": "move"},
+            ])
+            result = audit.audit_bundle(root, final=False)
+
+        duplicates = [item for item in result["violations"] if item["kind"] == "duplicate_plan_action_id"]
+        self.assertEqual(len(duplicates), 1)
+        self.assertEqual(
+            duplicates[0],
+            {
+                "kind": "duplicate_plan_action_id",
+                "action_id": "B10-001",
+                "batch": 0,
+                "plan": "actions/10.plan.jsonl",
+                "line": 2,
+                "first_seen": {
+                    "batch": 0,
+                    "plan": "actions/10.plan.jsonl",
+                    "line": 1,
+                },
+            },
+        )
+
+    def test_cross_batch_duplicate_action_id_reports_both_locations(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            manifest = audit.read_json(root / "run.json")
+            manifest["batches"].append({
+                "name": "second",
+                "plan": "actions/20.plan.jsonl",
+                "result": "actions/20.result.jsonl",
+            })
+            write_json(root / "run.json", manifest)
+            write_jsonl(root / "actions/20.plan.jsonl", [{"action_id": "B10-001", "op": "move"}])
+            write_jsonl(root / "actions/20.result.jsonl", [{"action_id": "B10-001", "status": "verified"}])
+            result = audit.audit_bundle(root, final=True)
+
+        duplicates = [item for item in result["violations"] if item["kind"] == "duplicate_plan_action_id"]
+        self.assertEqual(len(duplicates), 1)
+        self.assertEqual(duplicates[0]["action_id"], "B10-001")
+        self.assertEqual(duplicates[0]["batch"], 1)
+        self.assertEqual(duplicates[0]["plan"], "actions/20.plan.jsonl")
+        self.assertEqual(duplicates[0]["line"], 1)
+        self.assertEqual(duplicates[0]["first_seen"], {
+            "batch": 0,
+            "plan": "actions/10.plan.jsonl",
+            "line": 1,
+        })
+
+    def test_different_action_ids_across_batches_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            manifest = audit.read_json(root / "run.json")
+            manifest["batches"].append({
+                "name": "second",
+                "plan": "actions/20.plan.jsonl",
+                "result": "actions/20.result.jsonl",
+            })
+            write_json(root / "run.json", manifest)
+            write_jsonl(root / "actions/20.plan.jsonl", [{"action_id": "B20-001", "op": "move"}])
+            write_jsonl(root / "actions/20.result.jsonl", [{"action_id": "B20-001", "status": "verified"}])
+            result = audit.audit_bundle(root, final=True)
+
+        self.assertEqual(result["status"], "passed")
+
+    def test_unregistered_obsolete_plan_is_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            write_jsonl(root / "actions/obsolete.plan.jsonl", [{"action_id": "B10-001", "op": "move"}])
+            result = audit.audit_bundle(root, final=True)
+
+        self.assertEqual(result["status"], "passed")
+
+    def test_missing_action_id_keeps_historical_violation_kind(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            write_jsonl(root / "actions/10.plan.jsonl", [
+                {"op": "rename"},
+                {"action_id": "  ", "op": "move"},
+            ])
+            result = audit.audit_bundle(root, final=False)
+
+        invalid = [
+            item for item in result["violations"]
+            if item["kind"] == "invalid_or_duplicate_plan_action_id"
+        ]
+        self.assertEqual(len(invalid), 2)
+        self.assertEqual([(item["batch"], item["plan"], item["line"]) for item in invalid], [
+            (0, "actions/10.plan.jsonl", 1),
+            (0, "actions/10.plan.jsonl", 2),
+        ])
+
     def test_missing_focus_content_audit_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

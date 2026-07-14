@@ -137,6 +137,20 @@
 5. 合同声明 `parent / child_pattern / max_items`；规划器生成分组后，还要从规划报告的 `groups[].name` 写入非空、唯一的 `required_children`，逐项固定本轮实际预期组。`child_pattern` 只验证命名格式，不能用一个宽 regex 代替精确组清单：缺组报告 `missing_required_chunk`，多出任何匹配格式但不在清单中的组报告 `unexpected_chunk`。确需保留的同级技术目录或配套资料目录放入显式 `exclude`，不允许用通配豁免；`exclude` 不是必需组，也不能据此推导 `required_children`。未超过上限、允许保持平铺且规划报告未生成组时，省略 `required_children`，不能填写空数组。终态要求系列根无散文件、未声明同级目录为 0、分组非空、每组直接文件数不超过上限。
 6. 已声明的 `chunk_layers` 只能证明“知道的系列”整理正确，不能证明全区没有漏项。终态再用 `flat_series_discovery` 扫描本次范围内所有直接文件目录；`root / max_items / path_pattern / file_pattern / exclude_path_patterns` 全部由本次方案给出。自然月份、原出版卷册等稳定语义桶可显式例外，但不能靠技能内置名称静默跳过。发现审计只接受逐文件终态扫描；`agg_files` 聚合行、非空或缺失的扫描错误证明、路径零匹配、文件规则零匹配都必须失败，确知空范围时才显式传 `allow_empty=true`。
 
+#### 多批次 action ID 命名空间
+
+同一个 run 如果要为多个长系列或多个规则文件分别生成 planner 输出，必须为每个批次显式使用不同的 `--action-prefix`，避免每份输出都从 `S01-*` 开始而在运行包中相撞。例如：
+
+```bash
+python3 '<skill-dir>/scripts/plan_series_chunks.py' \
+  --scan <scan.jsonl> --rules <batch-b49-rules.json> \
+  --out-plan <run-dir>/actions/b49.plan.jsonl \
+  --out-report <run-dir>/reports/b49.json \
+  --action-prefix B49
+```
+
+前缀是可选的；提供时只能使用 1–32 个 ASCII 字母、数字、下划线或连字符。上例中的 `mkdir`/`mv` action ID 会形如 `B49-S01-G10-MK`，不提供时继续使用原来的 `S01-*`。同一 run 内每个 planner 输出批次都要使用唯一前缀，并把计划与结果放进各自的运行包批次文件。收官时仍必须运行 `scripts/audit_run_bundle.py --final`，以运行包审计作为跨批次 action ID 唯一性和结果闭环的兜底检查。
+
 ### 5.2 导览合同
 
 当用户选择在学习分区设置“先看这里”时，导览也必须进入方案合同：导览目录名、适用层级、每个导览内的正式文件名和直达链接验收方式。分区根本身需要统一入口时，用 `required_guides` 单独声明根级导览；同级分类批量覆盖用 `guide_layers`。两者都可用 `file_pattern` 要求正式说明文件实际存在，并用 `min_bytes` 设置最低字节数（默认 1）；不能把空导览目录或零字节占位算作完成。`guide_layers` 匹配不到任何分类也默认失败，只有确认该层确实为空时才显式设置 `allow_empty=true`。关键导览文件还应进入 `required_artifacts`，用上传后的终态路径、字节和 SHA1 精确对账；资源地图则用 `resource_maps` 验证最终 file_id 对应的真实 Markdown 云盘链接。只给一部分同级分类生成导览、只写“可直达”却没有链接，都会形成新的结构漂移；终态要求应覆盖的分类全部存在、云端文件可打开，并被最后一次扫描与索引收录。

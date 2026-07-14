@@ -124,7 +124,18 @@ ${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/runs/<run-id>/
 {"action_id":"B10-001","status":"verified","evidence":"independent terminal listing","final_path":"/<new>"}
 ```
 
-计划文件中的 `action_id` 必须唯一。结果账本是追加式证据：断点恢复时允许同一 `action_id` 先出现 `failed/skipped`、后追加 `verified`，审计以该 action 的最后一条结果为终态；不得覆盖或删除早期失败证据。最终每个计划 action 只接受最新状态为 `verified`，或最新状态为带明确原因的 `skipped`；最新状态仍为 `failed` 或缺结果会阻断收官。旧的 `${STATE}/moves/` 单文件账本继续可读，但新大型任务应使用运行包，避免不同 AI 把同一轮证据散在多个目录。
+计划文件中的 `action_id` 必须在本次运行包的**所有 `run.json.batches` 登记计划之间全局唯一**，同批重复和跨批重复都阻断执行；空值或缺失值也阻断。每个批次应在 `run.json` 登记后再审计，`actions/` 下历史遗留但未登记的 obsolete plan 不属于本轮范围，不纳入这道检查。结果账本是追加式证据：断点恢复时允许同一 `action_id` 先出现 `failed/skipped`、后追加 `verified`，审计以该 action 的最后一条结果为终态；不得覆盖或删除早期失败证据。最终每个计划 action 只接受最新状态为 `verified`，或最新状态为带明确原因的 `skipped`；最新状态仍为 `failed` 或缺结果会阻断收官。旧的 `${STATE}/moves/` 单文件账本继续可读，但新大型任务应使用运行包，避免不同 AI 把同一轮证据散在多个目录。
+
+### 执行前门禁
+
+所有批次计划写入并登记到 `run.json` 后、第一次云盘写操作前，先运行非 `--final` 的运行包审计：
+
+```bash
+python3 '<skill-dir>/scripts/audit_run_bundle.py' \
+  --run-dir '<run-dir>'
+```
+
+审计失败时不得执行任何云盘写操作。重复报告会给出 `batch`、登记的 `plan` 相对路径和 JSONL 物理 `line`，并指出该 `action_id` 的首次出现位置；审计只读取 `run.json.batches` 指向的计划，不会因为 `actions/` 目录中存在未登记的历史计划而阻断本轮。
 
 执行已批准方案时优先使用 skill 内的恢复型执行器；默认 dry-run，先审预览再加 `--execute`。跨到归档区时必须同时显式给出业务边界和归档边界，不能把允许范围放宽到云盘根目录：
 

@@ -41,10 +41,32 @@ from typing import Any
 
 
 SCHEMA_VERSION = 1
+MAX_ACTION_PREFIX_LENGTH = 32
 
 
 class InputError(ValueError):
     """A scan or rules input cannot be safely planned."""
+
+
+def validate_action_prefix(value: str | None) -> str | None:
+    """Validate an optional action ID namespace prefix."""
+
+    if value is None:
+        return None
+    if (
+        not isinstance(value, str)
+        or not value
+        or len(value) > MAX_ACTION_PREFIX_LENGTH
+        or re.fullmatch(r"[A-Za-z0-9_-]+", value) is None
+    ):
+        raise InputError(
+            "action prefix must be 1-32 ASCII letters, digits, underscores, or hyphens"
+        )
+    return value
+
+
+def _action_id(action_prefix: str | None, suffix: str) -> str:
+    return f"{action_prefix}-{suffix}" if action_prefix else suffix
 
 
 def normalize_cloud_path(value: str) -> str:
@@ -278,9 +300,14 @@ def _base_report(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> dic
     }
 
 
-def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any], bool]:
+def build_plan(
+    rows: list[dict[str, Any]],
+    rules: list[dict[str, Any]],
+    action_prefix: str | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any], bool]:
     """Return ``(actions, report, can_write_plan)`` without filesystem writes."""
 
+    action_prefix = validate_action_prefix(action_prefix)
     validate_scan(rows)
     report = _base_report(rows, rules)
     actions: list[dict[str, Any]] = []
@@ -406,7 +433,7 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
                 target_conflict = True
             else:
                 mkdir_action = {
-                    "action_id": f"S{rule['index']:02d}-PD-MK",
+                    "action_id": _action_id(action_prefix, f"S{rule['index']:02d}-PD-MK"),
                     "op": "mkdir",
                     "to": protected_target,
                     "reason": f"create protected companion directory {rule['protected_dir']} for {parent}",
@@ -422,7 +449,7 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
                         "name": str(row["name"]),
                         "to": protected_target,
                         "reason": "matched protect rule and assigned to protected_dir",
-                        "action_id": f"S{rule['index']:02d}-PD-M{move_index:03d}",
+                        "action_id": _action_id(action_prefix, f"S{rule['index']:02d}-PD-M{move_index:03d}"),
                     }
                     series_report["planned_protected"].append(planned)
                     report["planned_protected"].append(planned)
@@ -534,7 +561,7 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
         for group in groups:
             group_index = groups.index(group)
             prefix = (group_index + 1) * rule["group_prefix_step"]
-            action_id = f"S{rule['index']:02d}-G{prefix:02d}-MK"
+            action_id = _action_id(action_prefix, f"S{rule['index']:02d}-G{prefix:02d}-MK")
             mkdir_actions.append({
                 "action_id": action_id,
                 "op": "mkdir",
@@ -558,7 +585,7 @@ def build_plan(rows: list[dict[str, Any]], rules: list[dict[str, Any]]) -> tuple
                 if any(item.get("path") == path for item in series_report["protected"]):
                     continue
                 move_actions.append({
-                    "action_id": f"S{rule['index']:02d}-G{prefix:02d}-M{move_index:03d}",
+                    "action_id": _action_id(action_prefix, f"S{rule['index']:02d}-G{prefix:02d}-M{move_index:03d}"),
                     "op": "mv",
                     "from": path,
                     "to": group["target"],
@@ -605,6 +632,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--rules", required=True, type=Path, help="portable series rules JSON")
     parser.add_argument("--out-plan", required=True, type=Path, help="JSONL action plan")
     parser.add_argument("--out-report", required=True, type=Path, help="JSON report")
+    parser.add_argument(
+        "--action-prefix",
+        help="optional 1-32 character action ID namespace prefix",
+    )
     parser.add_argument("--force", action="store_true", help="overwrite existing output files")
     return parser.parse_args(argv)
 
@@ -622,7 +653,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         rows = read_jsonl(args.scan)
         rules = load_rules(args.rules)
-        actions, report, can_write = build_plan(rows, rules)
+        actions, report, can_write = build_plan(rows, rules, args.action_prefix)
     except InputError as error:
         failure = {
             "schema_version": SCHEMA_VERSION,
