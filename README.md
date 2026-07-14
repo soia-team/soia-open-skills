@@ -21,7 +21,7 @@ npx skills add soia-team/soia-open-skills
 
 跨 agent 通用——Claude Code、Cursor、Codex、Antigravity、Gemini、Kimi 都能装。
 
-[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单) · [高频技能速览](#高频技能速览) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
+[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单) · [CWork · 企业协作](#-cwork--企业协作) · [高频技能速览](#高频技能速览) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
 
 </div>
 
@@ -138,11 +138,26 @@ npx skills add soia-team/soia-open-skills
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | 通过官方 `lark-cli` 以应用凭证（bot）只读盘点飞书云盘、云文档、知识库、评论、权限和元数据 | ✅ 可用（需配置飞书应用凭据并授予目标资源权限） | 飞书官方 `lark-cli`；应用凭证；目标文档/知识库需对应用可见 |
 
+#### 飞书技能最小上手
+
+```bash
+npx @larksuite/cli@latest install
+npx skills add larksuite/cli -g -y
+```
+
+然后复制 [`assets/config.example.yml`](./skills/soia-cwork-feishu-cli/assets/config.example.yml) 到私有配置目录，填写 `LARK_APP_ID` / `LARK_APP_SECRET`。应用必须在飞书开放平台开启机器人能力、申请最小 tenant 只读权限、配置应用数据权限，并发布应用版本后才能稳定读取远端资源。
+
+- 权限事实源：[`references/permissions.yml`](./skills/soia-cwork-feishu-cli/references/permissions.yml)
+- 权限申请流程：[`references/permissions.md`](./skills/soia-cwork-feishu-cli/references/permissions.md)
+- 权限入口：`https://open.feishu.cn/app/<APP_ID>/auth`
+- 默认身份：应用凭证 `tenant_access_token` / bot；不自动切换到 user OAuth
+- 默认边界：只读，不创建、编辑、删除、移动、上传或公开分享飞书内容
+
 ---
 
 ## 高频技能速览
 
-闭环里最常被直接调用的 7 个 skill，逐个给最小可用示例。命令里的路径占位符统一用 `<vault路径>`；实际路径按你本机 vault 位置替换。
+闭环里最常被直接调用的 8 个 skill，逐个给最小可用示例。命令里的路径占位符统一用 `<vault路径>`；实际路径按你本机 vault 位置替换。
 
 ### soia-pkm-clip-x
 
@@ -229,6 +244,18 @@ python3 gen_records_md.py
 
 **典型输出**：终端汇报新增书卡数、新增阅读记录数、失败数，并给出下一步建议（如重新生成总览、同步划线）。
 
+### soia-cwork-feishu-cli
+
+以应用凭证和 bot 身份只读调研飞书 Wiki、云盘和工作文档。首次使用时，技能会先按目标提醒需要申请的最小权限，并检查应用是否已经发布、bot 是否能看到目标资源。
+
+```text
+调研飞书云盘和知识库，先提醒我需要开通哪些权限
+读取这个飞书 Wiki：<wiki-url>
+盘点我可见的飞书知识空间和节点层级，不要修改远端内容
+```
+
+**重要边界**：应用权限通过不等于 bot 自动获得所有资源；文档所有者或知识库管理员可能还要把应用加入协作者或授权可见范围。权限错误应优先按 CLI 返回的 `missing_scopes` 和 `console_url` 补申请，不要扩大到写权限。
+
 ---
 
 ## 安装
@@ -267,6 +294,16 @@ env:
   OBSIDIAN_VAULT: "<vault-path>"
   OBSIDIAN_ARTICLES: "<vault-relative-articles-dir>"
 ```
+
+### 配置飞书应用凭证
+
+飞书凭证只放在技能专属私有配置中，不提交仓库、不写入 vault，也不要放进命令行参数或聊天：
+
+```text
+~/.config/soia-skills/soia-open-skills/cwork/soia-cwork-feishu-cli/config.yml
+```
+
+配置模板和权限申请步骤见 [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/)。
 
 或每次调脚本时用 `--vault` 覆盖。每个 skill 只读自己的 skill-specific 配置目录，避免多个技能共享一个大配置文件。
 

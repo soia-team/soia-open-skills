@@ -37,7 +37,12 @@
    - 不在代码里写真实 API key / token / 密码
    - 文档里举例用 `<YOUR_KEY>` 占位符
 
-7. **测试**：
+7. **同步公共说明**：
+   - 新增 skill 或新增 domain 时，更新根目录 `README.md` 和 `README.en.md` 的简介、目录、安装/配置入口和触发示例。
+   - `skills/README.md` 是生成文件，不要手工编辑；运行 `python3 scripts/generate_skill_catalog.py` 更新它。
+   - 如果 skill 有机器可读配置和人类说明，保持 YAML/JSON 事实源与 Markdown 说明的链接一致，避免维护两份权限或字段清单。
+
+8. **测试**：
    - 至少给出 1 个端到端用例
    - 文档里说明如何手动验证
    - 区分「静态检查通过」「已安装」「端到端测试通过」「已提交」，不要混用
@@ -48,7 +53,7 @@
      git diff --check
      ```
 
-8. **提 PR**，说明：
+9. **提 PR**，说明：
    - 这个 skill 解决什么问题
    - 触发词是什么
    - 与其他 skill 的关系

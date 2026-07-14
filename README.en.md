@@ -21,7 +21,7 @@ npx skills add soia-team/soia-open-skills
 
 Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, Kimi, and any [skills.sh](https://skills.sh)-compatible agent.
 
-[The loop](#pkm-loop-the-life-of-a-piece-of-content) · [Skills catalog](#skills-catalog) · [Frequently used skills](#frequently-used-skills) · [Installation](#installation) · [Telegram sync](#telegram-saved-messages-sync-clip-x) · [Design philosophy](#design-philosophy)
+[The loop](#pkm-loop-the-life-of-a-piece-of-content) · [Skills catalog](#skills-catalog) · [CWork · enterprise collaboration](#-cwork--enterprise-collaboration) · [Frequently used skills](#frequently-used-skills) · [Installation](#installation) · [Telegram sync](#telegram-saved-messages-sync-clip-x) · [Design philosophy](#design-philosophy)
 
 </div>
 
@@ -138,11 +138,26 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | Uses the official `lark-cli` with app credentials (bot identity) to inventory Feishu drives, cloud documents, wikis, comments, permissions, and metadata in read-only mode | ✅ Usable (configure Feishu app credentials and grant access to target resources) | Official Feishu `lark-cli`; app credentials; target docs/wikis must be visible to the app |
 
+#### Minimal Feishu setup
+
+```bash
+npx @larksuite/cli@latest install
+npx skills add larksuite/cli -g -y
+```
+
+Then copy [`assets/config.example.yml`](./skills/soia-cwork-feishu-cli/assets/config.example.yml) to a private config path and fill in `LARK_APP_ID` / `LARK_APP_SECRET`. The app must enable bot capability, request the minimum tenant read-only scopes, configure app data permissions, and publish an app version before remote reads are considered ready.
+
+- Permission source of truth: [`references/permissions.yml`](./skills/soia-cwork-feishu-cli/references/permissions.yml)
+- Human-facing permission guide: [`references/permissions.md`](./skills/soia-cwork-feishu-cli/references/permissions.md)
+- Permission page: `https://open.feishu.cn/app/<APP_ID>/auth`
+- Default identity: app credentials with `tenant_access_token` / bot; no silent fallback to user OAuth
+- Default boundary: read-only; no create, edit, delete, move, upload, or public sharing actions
+
 ---
 
 ## Frequently used skills
 
-A closer look at the 7 skills most often invoked directly in the loop, each with a minimal working example. Path placeholders in the commands are written as `<vault-path>`; substitute your own vault location.
+A closer look at the 8 skills most often invoked directly in the loop, each with a minimal working example. Path placeholders in the commands are written as `<vault-path>`; substitute your own vault location.
 
 ### soia-pkm-clip-x
 
@@ -229,6 +244,18 @@ python3 gen_records_md.py
 
 **Typical output**: the terminal reports the number of new book cards, new reading records, and failures, plus a suggested next step (e.g., regenerate the overviews).
 
+### soia-cwork-feishu-cli
+
+Uses app credentials and bot identity to read Feishu wikis, drives, and work documents. On first use, it maps the request to the minimum permission set and checks whether the published app and bot can see the target resources.
+
+```text
+Research my Feishu drive and wiki, and tell me which permissions I need first
+Read this Feishu Wiki: <wiki-url>
+Inventory my visible Feishu spaces and node hierarchy without changing remote content
+```
+
+**Important boundary**: an approved app scope does not automatically expose every resource to the bot. Document owners or wiki administrators may still need to authorize the app. When a command returns `missing_scopes` and `console_url`, apply only the reported minimum scopes; do not expand into write permissions.
+
 ---
 
 ## Installation
@@ -268,6 +295,16 @@ env:
   OBSIDIAN_VAULT: "<vault-path>"
   OBSIDIAN_ARTICLES: "<vault-relative-articles-dir>"
 ```
+
+### Configuring Feishu app credentials
+
+Keep Feishu credentials in the skill-specific private config. Do not commit them, put them in the vault, pass them as command-line arguments, or send them in chat:
+
+```text
+~/.config/soia-skills/soia-open-skills/cwork/soia-cwork-feishu-cli/config.yml
+```
+
+See [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) for the template and permission workflow.
 
 Or override it per invocation with `--vault`. Each skill only reads its own skill-specific config directory, so no two skills share one large config file.
 
