@@ -269,7 +269,12 @@ def audit_text_file(root: Path, path: Path, findings: list[Finding]) -> None:
         secret_is_env_read = "os.environ" in line or "getenv(" in line
         secret_is_placeholder_expr = "{" in line and "}" in line
         secret_is_function_call = re.search(r"[:=]\s*[A-Za-z_][A-Za-z0-9_.]*\(", line) is not None
-        if ABSOLUTE_PATH_RE.search(line) and not placeholder_path:
+        # Public documentation URLs can legitimately contain `/home/` (for
+        # example, Feishu's `/document/home/...` routes). Remove URLs only for
+        # the local absolute-path check; keep the original line for all other
+        # safety checks.
+        path_scan_line = re.sub(r"https?://[^ \n`]+", "", line)
+        if ABSOLUTE_PATH_RE.search(path_scan_line) and not placeholder_path:
             add_line_finding(findings, "ERROR", root, path, i, "hardcoded absolute user path")
         if KNOWN_SECRET_RE.search(line) or (
             SECRET_VALUE_RE.search(line)

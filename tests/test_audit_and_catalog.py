@@ -62,6 +62,23 @@ class RepositoryDocumentAuditTests(unittest.TestCase):
                 )
             )
 
+    def test_documentation_url_with_home_segment_is_not_a_local_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_skill(root, "soia-test-root-doc-url", "No resources.")
+            (root / "README.md").write_text(
+                "Official docs: https://open.feishu.cn/document/home/introduction-to-custom-app-development\n",
+                encoding="utf-8",
+            )
+            findings = audit_skills.collect_findings(root)
+            self.assertFalse(
+                any(
+                    finding.path == "README.md"
+                    and finding.message == "hardcoded absolute user path"
+                    for finding in findings
+                )
+            )
+
 
 class FrontmatterYamlTests(unittest.TestCase):
     def test_folded_frontmatter_description_is_supported(self) -> None:

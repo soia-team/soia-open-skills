@@ -9,6 +9,7 @@ user login; it configures application credentials for bot identity calls.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -68,10 +69,39 @@ def resolve_env(data: dict, key: str, default: str | None = None) -> str | None:
     return str(value).strip()
 
 
+def existing_profile(base_argv: list[str], profile: str) -> dict | None:
+    result = subprocess.run(
+        [*base_argv, "profile", "list"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    try:
+        profiles = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(profiles, list):
+        return None
+    return next((item for item in profiles if isinstance(item, dict) and item.get("name") == profile), None)
+
+
+def print_permission_hint(app_id: str) -> None:
+    print(f"Open Feishu permissions: https://open.feishu.cn/app/{app_id}/auth")
+    print("Before remote reads, enable the minimum read-only scopes in references/permissions.md and publish the app version.")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Configure lark-cli with Feishu App ID and App Secret.")
     parser.add_argument("--config", type=Path, help=f"Override {CONFIG_ENV} config path.")
     parser.add_argument("--use", action="store_true", help="Switch to the configured profile after adding it.")
+    parser.add_argument(
+        "--replace",
+        action="store_true",
+        help="Remove an existing profile with the same name before adding it; use only for explicit credential rotation.",
+    )
     args = parser.parse_args()
 
     if args.config:
@@ -102,6 +132,34 @@ def main() -> int:
         argv = ["lark-cli"]
     else:
         argv = ["npx", "--yes", "@larksuite/cli@latest"]
+
+    current = existing_profile(argv, profile)
+    if current and not args.replace:
+        current_app_id = str(current.get("appId") or "")
+        current_brand = str(current.get("brand") or "")
+        if current_app_id and current_app_id != app_id:
+            raise SystemExit(
+                f"Profile {profile!r} already belongs to a different App ID; choose another LARK_PROFILE or use --replace explicitly"
+            )
+        if current_brand and current_brand != brand:
+            raise SystemExit(
+                f"Profile {profile!r} already belongs to brand {current_brand!r}; choose another LARK_PROFILE or use --replace explicitly"
+            )
+        if args.use:
+            selected = subprocess.run([*argv, "profile", "use", profile], check=False)
+            if selected.returncode != 0:
+                print(f"lark-cli profile use failed with exit code {selected.returncode}", file=sys.stderr)
+                return selected.returncode
+        print(f"lark-cli profile already exists: {profile} (not overwritten; use --replace for explicit credential rotation)")
+        print_permission_hint(app_id)
+        return 0
+
+    if current and args.replace:
+        removed = subprocess.run([*argv, "profile", "remove", profile], check=False)
+        if removed.returncode != 0:
+            print(f"lark-cli profile removal failed with exit code {removed.returncode}", file=sys.stderr)
+            return removed.returncode
+
     argv += ["profile", "add", "--name", profile, "--app-id", app_id, "--app-secret-stdin", "--brand", brand]
     if args.use:
         argv.append("--use")
@@ -121,6 +179,7 @@ def main() -> int:
         print(f"lark-cli profile setup failed with exit code {result.returncode}", file=sys.stderr)
         return result.returncode
     print(f"Configured lark-cli profile: {profile} (brand={brand}, use={args.use})")
+    print_permission_hint(app_id)
     return 0
 
 
