@@ -48,7 +48,7 @@ lark-cli whoami
 
 ### 权限开通与应用发布
 
-在首次调研前，或 CLI 返回 `missing_scopes` 时，先按[权限开通清单](references/permissions.md)按客户目标选择最小权限。应用凭证模式只申请 tenant scope；不要把 user OAuth scope 当成 bot 权限，也不要为了读取而申请写入、删除、上传或成员管理权限。
+在首次调研前，或 CLI 返回 `missing_scopes` 时，先读取[机器可读权限目录](references/permissions.yml)，再按[权限开通指南](references/permissions.md)向客户解释申请流程。应用凭证模式只申请 tenant scope；不要把 user OAuth scope 当成 bot 权限，也不要为了读取而申请写入、删除、上传或成员管理权限。
 
 开放平台入口按私有配置中的 `LARK_APP_ID` 拼接：
 
@@ -108,7 +108,7 @@ printf '%s' '<YOUR_APP_SECRET>' | lark-cli profile add \
 
 ### 只读调研工作流
 
-1. **检查身份和范围**：先读取[权限开通清单](references/permissions.md)；运行 `lark-cli auth status --json --verify`、`lark-cli whoami`；记录 identity、profile、token 状态和非敏感 scope，不输出密钥。
+1. **检查身份和范围**：先读取[机器可读权限目录](references/permissions.yml)，必要时读取[权限开通指南](references/permissions.md)；运行 `lark-cli auth status --json --verify`、`lark-cli whoami`；记录 identity、profile、token 状态和非敏感 scope，不输出密钥。
 2. **读取匹配的官方嵌入技能**：运行 `lark-cli skills read lark-shared`；涉及云盘、Wiki 或正文时，再分别读取 `lark-drive`、`lark-wiki`、`lark-doc` 的对应说明。不要凭 `--help` 猜参数。
 3. **盘点知识库**：确认应用已开启机器人能力，并且知识库管理员已授权应用；优先运行 `lark-cli wiki +space-list --as bot --page-all --format json`；对返回的每个 `space_id` 运行 `lark-cli wiki +node-list --as bot --space-id <SPACE_ID> --page-all --format json`。个人库 `my_library` 只能用 user 身份，bot 看到它不可见是预期行为。
 4. **盘点云盘和文档**：用 `lark-cli drive +search --as bot --query '' --doc-types doc,docx,sheet,bitable,file,folder,wiki,slides --format json`，必要时按空间、文件夹、时间或类型缩小范围。
@@ -162,7 +162,8 @@ printf '%s' '<YOUR_APP_SECRET>' | lark-cli profile add \
 - 配置示例：[assets/config.example.yml](assets/config.example.yml)
 - CLI 工作流：[references/cli-workflows.md](references/cli-workflows.md)
 - Provider 选择和凭证边界：[references/providers.md](references/providers.md)
-- 权限分类和发布清单：[references/permissions.md](references/permissions.md)
+- 权限事实源：[references/permissions.yml](references/permissions.yml)
+- 权限申请流程：[references/permissions.md](references/permissions.md)
 - 应用凭证初始化脚本：`scripts/setup_app_credentials.py`
 
 ## 验证
