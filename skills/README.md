@@ -2,7 +2,7 @@
 
 > Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.
 > Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.
-> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 26 skills.
+> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 27 skills.
 
 ## Source Fields
 
@@ -35,6 +35,12 @@
 | [`soia-pkm-reading-plan`](./soia-pkm-reading-plan/) | 场景化阅读计划生成器。把一批书（来自文章书单、观点映射或主题）组织成带表格、按真实字数排期的可执行阅读计划。可选用 weread-skills 增强字数/评分/书架核实，缺少时降级估算；可选参考 huashu-weread-advisor 方法论但不依赖它。 | Use soia-pkm-reading-plan: 场景化阅读计划生成器。把一批书组织成带表格、按真实字数排期的可执行阅读计划。可选用 weread-skills 增强字数/评分/书架核实，缺少时降级估算；可选参考 huashu-weread-advisor 方法论但不依赖它。 |
 | [`soia-pkm-transform`](./soia-pkm-transform/) | 把 X/公众号/网页/Markdown 文章转换为 PDF、PPT、图片/长图、试卷、脑图、播客、闪卡、报告等产物的公共路由 skill。配置外置，可调用 Obsidian、NotebookLM、Open Design、Codex 文件能力与 publish | Use soia-pkm-transform: 把 X/公众号/网页/Markdown 文章转换为 PDF、PPT、图片/长图、试卷、脑图、播客、闪卡、报告等产物的公共路由 skill。配置外置，可调用 Obsidian、NotebookLM、Open Design、Codex 文件能力与 publish |
 | [`soia-pkm-translate`](./soia-pkm-translate/) | 三模式翻译技能（quick 直译 / normal 先分析术语受众再译 / refined 审校润色出版级），把长文机械分块保证术语一致，产出独立译文文件，不覆盖原文。 |  |
+
+## CWork
+
+| Skill | Description | Default Prompt |
+|---|---|---|
+| [`soia-cwork-feishu-cli`](./soia-cwork-feishu-cli/) | 用官方 lark-cli 只读盘点飞书云盘、文档和知识库。 | 用 soia-cwork-feishu-cli 以应用凭证只读调研我的飞书工作云盘和知识库，不要修改远端内容。 |
 
 ## Development
 

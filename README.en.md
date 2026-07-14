@@ -13,7 +13,7 @@
 
 <br>
 
-**A `soia-pkm-*` skill set for Obsidian + publicly reusable `soia-dev-*` dev helpers**
+**A `soia-pkm-*` personal knowledge-management skill set for Obsidian + `soia-cwork-*` enterprise collaboration connectors + publicly reusable `soia-dev-*` dev helpers**
 
 ```bash
 npx skills add soia-team/soia-open-skills
@@ -53,6 +53,7 @@ Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, K
            soia-pkm-alipan-curator (cloud drive line · advisor layer: inventory/organize/catalog/study plans)
            soia-dev-archify-diagrams (doc diagram line: Archify JSON IR → README/docs PNG diagrams)
            soia-dev-github-ops / soia-dev-ai-cli-upgrade (shared dev-tooling line)
+           soia-cwork-feishu-cli (enterprise collaboration line: read-only Feishu CLI research across drives, docs, and wikis)
 ```
 
 **Core idea**: saving ≠ absorbing. Most people's knowledge bases are "information graveyards" — piled high, never revisited. `soia-pkm` breaks the chain from "save → opinion → draft → publish" — the path **from consumption to creation** — into single-purpose, composable skills, so AI helps you turn hoarded information into work that is genuinely **yours**.
@@ -128,6 +129,14 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 | [`soia-dev-prompt-clarity`](./skills/soia-dev-prompt-clarity/) | General-purpose prompt-writing skill: draft from scratch with seven elements / diagnose & optimize on six dimensions / rewrite to avoid false-positive safety refusals / compile vague requirements into verifiable specs — four modes; asks clarifying questions first when information is insufficient | ✅ Usable (pure methodology output, no scripts, no hard third-party dependency) | None |
 | [`soia-dev-agent-md-advisor`](./skills/soia-dev-agent-md-advisor/) | Design advisor for AGENTS.md / CLAUDE.md / `.claude` configuration: review & diagnose / draft for a new project / best-practice Q&A — three modes, with a six-dimension health check (length budget / actionability / section routing / duplication & contradiction / entry-point consistency / staleness) | ✅ Usable (pure methodology diagnosis, no scripts, no hard dependency) | None |
 | [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | Controlled dispatch of tasks to external coding CLIs (codex/agy/gemini/kimi/opencode/qwen, etc.): task-boundary splitting, injection-resistant prompt patterns, a model-tiering matrix, and three-step Anti-Fake-Fix verification | ✅ Usable (command templates + tiering matrix complete) | The target coding CLI (codex/agy/gemini/kimi/opencode/qwen, etc., as needed), installed and logged in |
+
+### 🏢 CWork · enterprise collaboration
+
+`soia-cwork-*` targets enterprise work systems rather than an Obsidian vault. These skills connect to Feishu and other collaboration platforms to read and analyze work documents, cloud drives, knowledge bases, permissions, and metadata. They default to read-only behavior; credentials, tenant scope, and resource authorization stay with the user.
+
+| Skill | What it does | Ready now? | Dependencies |
+|-------|------|----------|------|
+| [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | Uses the official `lark-cli` with app credentials (bot identity) to inventory Feishu drives, cloud documents, wikis, comments, permissions, and metadata in read-only mode | ✅ Usable (configure Feishu app credentials and grant access to target resources) | Official Feishu `lark-cli`; app credentials; target docs/wikis must be visible to the app |
 
 ---
 
@@ -243,6 +252,7 @@ This installs every skill under `skills/` into your agent's skill directory — 
 | `Draw an architecture diagram for the README` / `Redraw this flow with Archify` | soia-dev-archify-diagrams |
 | `Check this PR's checks` / `Find out why the recent GitHub Actions run failed` | soia-dev-github-ops |
 | `Upgrade my local AI CLIs` / `Dry-run to check codex/claude versions` | soia-dev-ai-cli-upgrade |
+| `Research my Feishu drive/wiki` / `Read a Feishu work document` | soia-cwork-feishu-cli |
 
 Antigravity CLI uses the `agy` command. Its global skill directory is
 `~/.gemini/antigravity-cli/skills/`, and workspace skills live under
@@ -297,7 +307,12 @@ The more advanced MTProto API path (not recommended if you're in mainland China 
 
 ## Naming convention
 
-`soia-pkm-<stage>-<object>`, all lowercase kebab-case. `soia-pkm-*` is the fourth domain in the SOIA skill system (alongside `soia-design-*` / `soia-dev-*` / `soia-gov-*`), dedicated to personal knowledge management.
+Use lowercase kebab-case with a domain prefix:
+
+- `soia-pkm-*`: personal knowledge management around an Obsidian vault — collect, organize, distill, compose, and publish.
+- `soia-cwork-*`: enterprise collaboration — connect to Feishu and other work systems for documents, drives, wikis, and collaboration metadata.
+- `soia-dev-*`: publicly reusable development and engineering tools.
+- `soia-design-*` / `soia-gov-*` / `soia-meta-*`: design, governance, and meta-skill domains.
 
 ## Repository structure
 
@@ -328,7 +343,8 @@ soia-open-skills/
     ├── soia-dev-ai-cli-upgrade/
     ├── soia-dev-prompt-clarity/
     ├── soia-dev-agent-md-advisor/
-    └── soia-dev-agent-cli-dispatch/
+    ├── soia-dev-agent-cli-dispatch/
+    └── soia-cwork-feishu-cli/
 ```
 
 Every skill lives in its own folder with an independent `SKILL.md` (frontmatter holding just `name` + `description`) and its own `scripts/`.

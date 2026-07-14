@@ -13,7 +13,7 @@
 
 <br>
 
-**面向 Obsidian 的 `soia-pkm-*` 技能集 + 可公开复用的 `soia-dev-*` 开发 helper**
+**面向 Obsidian 的 `soia-pkm-*` 个人知识管理技能集 + `soia-cwork-*` 企业协作连接能力 + 可公开复用的 `soia-dev-*` 开发 helper**
 
 ```bash
 npx skills add soia-team/soia-open-skills
@@ -53,6 +53,7 @@ npx skills add soia-team/soia-open-skills
         soia-pkm-alipan-curator（云盘线·顾问层：盘点/整理/索引/学习计划）
         soia-dev-archify-diagrams（文档图表线：Archify JSON IR → README/docs PNG 图）
         soia-dev-github-ops / soia-dev-ai-cli-upgrade（公共开发工具线）
+        soia-cwork-feishu-cli（企业协作线：飞书 CLI 只读调研云盘、文档、知识库）
 ```
 
 **核心理念**：收藏 ≠ 吸收。大多数人的知识库是"信息坟场"——囤了一大堆，从不回看。`soia-pkm` 把「收藏 → 观点 → 成文 → 发布」这条**从消费到创造**的链路，拆成职责单一、可组合的 skill，让 AI 帮你把囤积的信息真正变成**你自己的**作品。
@@ -128,6 +129,14 @@ npx skills add soia-team/soia-open-skills
 | [`soia-dev-prompt-clarity`](./skills/soia-dev-prompt-clarity/) | 通用提示词技能：从零七要素起草 / 六维诊断优化 / 防误伤改写 / 模糊需求扩展成可验证规格 四模式，信息不足先澄清再产出 | ✅ 可用（纯方法论输出，无脚本无第三方强依赖）| 无 |
 | [`soia-dev-agent-md-advisor`](./skills/soia-dev-agent-md-advisor/) | AGENTS.md / CLAUDE.md / `.claude` 配置设计顾问：审查诊断 / 新项目起草 / 最佳实践问答三模式，六维度体检（长度预算/可执行性/分区路由/重复矛盾/入口一致性/时效）| ✅ 可用（纯方法论诊断，无脚本无强依赖）| 无 |
 | [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | 受控派发任务给外部编码 CLI（codex/agy/gemini/kimi/opencode/qwen 等）：任务边界拆分、防注入 prompt 写法、模型分级矩阵、Anti-Fake-Fix 三步验证 | ✅ 可用（命令模板 + 分级矩阵齐全）| 目标编码 CLI（按需 codex/agy/gemini/kimi/opencode/qwen 等）已安装登录 |
+
+### 🏢 CWork · 企业协作
+
+`soia-cwork-*` 面向企业日常工作系统，不绑定 Obsidian。它负责连接飞书等协作平台，读取和分析工作文档、云盘、知识库、权限与元数据；默认采用只读策略，应用凭据、租户范围和具体授权由使用者配置。
+
+| skill | 说明 | 现在能用? | 依赖 |
+|-------|------|----------|------|
+| [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | 通过官方 `lark-cli` 以应用凭证（bot）只读盘点飞书云盘、云文档、知识库、评论、权限和元数据 | ✅ 可用（需配置飞书应用凭据并授予目标资源权限） | 飞书官方 `lark-cli`；应用凭证；目标文档/知识库需对应用可见 |
 
 ---
 
@@ -243,6 +252,7 @@ npx skills add soia-team/soia-open-skills
 | `给 README 画一张架构图` / `用 Archify 重画流程图` | soia-dev-archify-diagrams |
 | `查这个 PR checks` / `看最近 GitHub Actions 失败原因` | soia-dev-github-ops |
 | `升级本机 AI CLI` / `dry-run 看 codex/claude 版本` | soia-dev-ai-cli-upgrade |
+| `调研飞书云盘/知识库` / `读取飞书工作文档` | soia-cwork-feishu-cli |
 
 Antigravity CLI 的命令是 `agy`：全局技能目录为
 `~/.gemini/antigravity-cli/skills/`，workspace 技能目录为 `.agents/skills/`。
@@ -296,7 +306,12 @@ python3 ~/.claude/skills/soia-pkm-clip-x/scripts/sync_telegram_export.py \
 
 ## 命名规范
 
-`soia-pkm-<环节>-<对象>`，全小写 kebab-case。`soia-pkm-*` 是 SOIA 技能体系的第四个域（与 `soia-design-*` / `soia-dev-*` / `soia-gov-*` 平级），专管个人知识管理。
+命名使用 `<domain>-<对象>` 的全小写 kebab-case：
+
+- `soia-pkm-*`：个人知识管理，围绕 Obsidian vault 的收集、整理、提炼、成文与发布。
+- `soia-cwork-*`：企业协作，连接飞书等工作系统，处理工作文档、云盘、知识库和协作元数据。
+- `soia-dev-*`：可公开复用的开发与工程工具。
+- `soia-design-*` / `soia-gov-*` / `soia-meta-*`：设计、治理和元技能域。
 
 ## 仓库结构
 
@@ -327,7 +342,8 @@ soia-open-skills/
     ├── soia-dev-ai-cli-upgrade/
     ├── soia-dev-prompt-clarity/
     ├── soia-dev-agent-md-advisor/
-    └── soia-dev-agent-cli-dispatch/
+    ├── soia-dev-agent-cli-dispatch/
+    └── soia-cwork-feishu-cli/
 ```
 
 每个 skill 一个文件夹，独立 `SKILL.md`（frontmatter 含 `name` + `description`）+ 自己的 `scripts/`。

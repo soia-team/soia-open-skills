@@ -1,0 +1,4 @@
+interface:
+  display_name: "飞书 CLI 调研"
+  short_description: "用官方 lark-cli 只读盘点飞书云盘、文档和知识库。"
+  default_prompt: "用 soia-cwork-feishu-cli 以应用凭证只读调研我的飞书工作云盘和知识库，不要修改远端内容。"
