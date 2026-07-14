@@ -17,13 +17,11 @@ from __future__ import annotations
 import argparse
 import json
 import posixpath
-import re
 import subprocess
 from datetime import datetime, timezone
 
 
 OPS = {"mkdir", "mv", "rename"}
-ROW = re.compile(r"\s{2,}")
 
 
 def run_aliyunpan(command, drive_id, *paths):
@@ -44,16 +42,18 @@ def parse_ll(output):
             continue
         if "总:" in line and "文件总数" in line:
             continue
-        parts = ROW.split(line)
+        # aliyunpan ll 的名称是最后一列，名称本身可能包含连续空格。
+        # 只切前九个固定字段，不能用 ``\s{2,}`` 拆整行，否则会改写名称。
+        parts = line.split(None, 9)
         if not parts or parts[0] == "#":
             continue
         try:
             int(parts[0])
         except ValueError:
             continue
-        if len(parts) < 8:
+        if len(parts) < 10:
             continue
-        name = " ".join(parts[7:]) if len(parts) > 8 else parts[7]
+        name = parts[9]
         names.append(name[:-1] if name.endswith("/") else name)
     return names
 

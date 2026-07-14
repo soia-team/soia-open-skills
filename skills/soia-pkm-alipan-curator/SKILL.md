@@ -136,6 +136,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 | 全盘/多分区馆藏总索引 | `scripts/gen_catalog_xlsx.py` | 轻量总入口 + 每分区明细；按 Markdown SHA-256 增量刷新 |
 | 单个学习分区的家长说明与课程导航 | `scripts/gen_family_nav_xlsx.mjs` | `01_先看这里` + `02_资源导航`；课程名称可点击直达 |
 | 已批准重分类方案的可恢复执行 | `scripts/apply_reclass.py` | 读取带 `action_id` 的 JSONL 计划；限定 `--root` 与可选 `--archive-root`、默认 dry-run、逐项回读、失败即停并写 verified 账本 |
+| 大批同源同目标移动的可恢复执行 | `scripts/apply_reclass_bulk.py` | 沿用相同计划/边界/账本合同；最多 20 项合并一次 `mv`，批前批后各读源与目标并逐 action 记终态；默认 dry-run |
 | 编号、导览、云端关键产物、资源地图直达链接、长系列分组与待确认项闭环审计 | `scripts/audit_structure.py` | 从终态 scan JSONL 和本次合同检查实体结构、精确 SHA1/字节及消费端直达链接；失败时返回非零退出码 |
 | 特大模块运行包、焦点目录逐项覆盖、批次账本与 AI 复核闭环 | `scripts/audit_run_bundle.py` | 检查运行包路径安全、初末扫描、用户点名目标内容证据、动作计划/结果、结构审计和 AI 复核；失败时返回非零退出码 |
 

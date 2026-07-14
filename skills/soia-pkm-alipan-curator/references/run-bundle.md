@@ -124,7 +124,7 @@ ${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/runs/<run-id>/
 {"action_id":"B10-001","status":"verified","evidence":"independent terminal listing","final_path":"/<new>"}
 ```
 
-终态只接受 `verified`，或带明确原因的 `skipped`；`failed`、缺结果和重复 action ID 都会阻断收官。旧的 `${STATE}/moves/` 单文件账本继续可读，但新大型任务应使用运行包，避免不同 AI 把同一轮证据散在多个目录。
+计划文件中的 `action_id` 必须唯一。结果账本是追加式证据：断点恢复时允许同一 `action_id` 先出现 `failed/skipped`、后追加 `verified`，审计以该 action 的最后一条结果为终态；不得覆盖或删除早期失败证据。最终每个计划 action 只接受最新状态为 `verified`，或最新状态为带明确原因的 `skipped`；最新状态仍为 `failed` 或缺结果会阻断收官。旧的 `${STATE}/moves/` 单文件账本继续可读，但新大型任务应使用运行包，避免不同 AI 把同一轮证据散在多个目录。
 
 执行已批准方案时优先使用 skill 内的恢复型执行器；默认 dry-run，先审预览再加 `--execute`。跨到归档区时必须同时显式给出业务边界和归档边界，不能把允许范围放宽到云盘根目录：
 
@@ -134,6 +134,16 @@ python3 '<skill-dir>/scripts/apply_reclass.py' \
   --ledger '<run-dir>/actions/10-reclass.result.jsonl' \
   --driveId '<drive-id>' --root '/<business-partition>' \
   --archive-root '/<archive-partition>' --execute --resume
+```
+
+同一源目录中的大量实体要按多个目标组迁移时，可把计划按“同一源父目录 + 同一目标目录”连续排列，再使用批量入口。它最多把 20 个兼容动作合并为一次 CLI `mv`，但仍为每个 `action_id` 追加独立结果；任一前置缺失、目标冲突或终态不一致都会整批停止，不会用命令返回码冒充成功：
+
+```bash
+python3 '<skill-dir>/scripts/apply_reclass_bulk.py' \
+  --plan '<run-dir>/actions/40-long-series.plan.jsonl' \
+  --ledger '<run-dir>/actions/40-long-series.result.jsonl' \
+  --driveId '<drive-id>' --root '/<business-partition>' \
+  --batch-size 20 --execute --resume
 ```
 
 若写命令后登录态/网络在终态回读时中断，账本会留下 `failed` 而不会假装成功。恢复登录后用 `--resume`：执行器先检查源与目标；源已消失且目标同名实体已存在时追加 `verified + idempotent-resume`，否则才重试或保留 `skipped`，避免制造 `(1)` 重复目录。

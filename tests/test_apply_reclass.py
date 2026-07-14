@@ -40,7 +40,10 @@ def result(returncode=0, stdout="", stderr=""):
 
 def listing(*names):
     rows = ["当前目录 /mock", "--------------------------------"]
-    rows.extend(f"{index}  id-{index}  -  -  0  -  -  {name}" for index, name in enumerate(names))
+    rows.extend(
+        f"{index}  id-{index}  -  -  0  2025-01-01 00:00:00  2025-01-02 13:00:00  {name}"
+        for index, name in enumerate(names)
+    )
     return result(stdout="\n".join(rows) + "\n")
 
 
@@ -65,6 +68,14 @@ class ApplyReclassTests(unittest.TestCase):
         finally:
             sys.argv = old_argv
         return output.getvalue()
+
+    def test_parse_ll_preserves_repeated_spaces_in_name(self) -> None:
+        output = listing("央视纪录片  国语中字  1080P高清纪录片/").stdout
+
+        self.assertEqual(
+            apply_reclass.parse_ll(output),
+            ["央视纪录片  国语中字  1080P高清纪录片"],
+        )
 
     def test_dry_run_prints_preview_without_cli_or_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
