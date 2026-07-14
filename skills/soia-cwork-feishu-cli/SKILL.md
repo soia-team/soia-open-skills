@@ -56,7 +56,7 @@ lark-cli whoami
 https://open.feishu.cn/app/<APP_ID>/auth
 ```
 
-必须完成完整闭环：在权限管理中开通并保存权限 → 按需等待管理员审批 → 在版本管理中发布应用版本 → 重新运行 `setup_app_credentials.py --use`、`auth status --json --verify` 和代表性只读命令。只保存权限草稿、不发布应用，不视为权限已生效。
+必须完成完整闭环：在“开发配置 → 权限管理”按目标 API 的权限要求开通并保存 → 检查 tenant 应用数据权限和资源可见范围 → 对需审核权限创建版本并提交线上发布 → 等企业管理员审核通过 → 重新运行 `setup_app_credentials.py --use`、`auth status --json --verify` 和代表性只读命令。免审权限可直接测试；“审核中”不视为权限已正式生效。
 
 每次向客户回执权限时，分成“必需”“可选”“不要默认开通”三类，并列出缺失 scope、官方控制台入口和发布步骤；不要把客户的真实 App ID 写进公共技能文件。
 
@@ -110,11 +110,11 @@ printf '%s' '<YOUR_APP_SECRET>' | lark-cli profile add \
 
 1. **检查身份和范围**：先读取[权限开通清单](references/permissions.md)；运行 `lark-cli auth status --json --verify`、`lark-cli whoami`；记录 identity、profile、token 状态和非敏感 scope，不输出密钥。
 2. **读取匹配的官方嵌入技能**：运行 `lark-cli skills read lark-shared`；涉及云盘、Wiki 或正文时，再分别读取 `lark-drive`、`lark-wiki`、`lark-doc` 的对应说明。不要凭 `--help` 猜参数。
-3. **盘点知识库**：优先运行 `lark-cli wiki +space-list --as bot --page-all --format json`；对返回的每个 `space_id` 运行 `lark-cli wiki +node-list --as bot --space-id <SPACE_ID> --page-all --format json`。个人库 `my_library` 只能用 user 身份，bot 看到它不可见是预期行为。
+3. **盘点知识库**：确认应用已开启机器人能力，并且知识库管理员已授权应用；优先运行 `lark-cli wiki +space-list --as bot --page-all --format json`；对返回的每个 `space_id` 运行 `lark-cli wiki +node-list --as bot --space-id <SPACE_ID> --page-all --format json`。个人库 `my_library` 只能用 user 身份，bot 看到它不可见是预期行为。
 4. **盘点云盘和文档**：用 `lark-cli drive +search --as bot --query '' --doc-types doc,docx,sheet,bitable,file,folder,wiki,slides --format json`，必要时按空间、文件夹、时间或类型缩小范围。
 5. **读取文档**：先用 `lark-cli drive +inspect --as bot --url '<URL>' --format json` 解析真实类型和 token；再按 `lark-doc` 说明使用 `lark-cli docs +fetch --as bot --doc '<URL-or-token>' --scope outline|full --doc-format markdown --format json`。
 6. **分析迁移需求**：只基于已读到的结构、类型、附件、权限和协作痕迹判断目标产品；把“看到的”“推断的”“未验证的”分开写。
-7. **验证**：对关键数量重新分页核对；抽取代表性文档；检查 bot 不可见的个人资源并单列为缺口。不要把一次搜索结果当成全量清单。
+7. **验证**：对关键数量重新分页核对；抽取代表性文档；检查 bot 不可见的个人资源并单列为缺口；若 API 要求应用数据权限，单独核对其数据范围。不要把一次搜索结果当成全量清单。
 
 详细命令和产品边界见 [references/cli-workflows.md](references/cli-workflows.md)。
 
