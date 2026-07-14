@@ -78,6 +78,9 @@ class CuratorPublicSafetyTests(unittest.TestCase):
             "教育资源",
             "编程与技术学习",
             "读书与个人学习",
+            "分区边界必须写成互斥判断句",
+            "导览合同",
+            "不确定项的复核区",
             "审计表模板",
         ]:
             with self.subTest(marker=marker):
@@ -90,6 +93,19 @@ class CuratorPublicSafetyTests(unittest.TestCase):
         ]:
             with self.subTest(hardcoded_rule=hardcoded_rule):
                 self.assertNotIn(hardcoded_rule, skill_text())
+
+    def test_structure_closure_is_mechanically_auditable(self) -> None:
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        script = SKILL_ROOT / "scripts" / "audit_structure.py"
+        self.assertTrue(script.is_file())
+        for marker in [
+            "编号可配置且必须闭环",
+            "学习导航必须闭环",
+            "audit_structure.py",
+            "不确定项可隔离复核",
+        ]:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, skill)
 
     def test_no_literal_secret_assignments(self) -> None:
         text = skill_text()

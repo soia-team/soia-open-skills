@@ -14,7 +14,7 @@
 - **逐层 `ll` 到文件层**，绝不只读文件夹名——目录宣传名称可能与实存媒介、集数不符。
 - 每个叶夹抽样 3-5 个文件名写 `content_inference`，专门核「名实是否相符」。
 - 疑似重复必须 `ll` 拿 SHA1 做**字节级比对**，不凭文件名/大小猜。
-- 输出四类清单：广告 / 套娃壳 / 空目录 / 名不符实；凭文件名判不了的进 `unclear`，不编。
+- 输出四类清单：广告 / 套娃壳 / 空目录 / 名不符实；凭文件名判不了的进 `unclear`，不编。用户若已指定复核区，另为每项记录 `source/reason/target/status`；独立文件逐文件列，课程包整包列。
 - 大区按子档拆多 agent 并行盘点，同构兄弟目录可按用户批准的抽样规则核验并计数。
 
 ## 二、方案与裁定（②③）
@@ -22,6 +22,8 @@
 - 方案文档落用户指定的 `<vault>/<map-relative-dir>/<partition>-深度分类方案.md`，frontmatter `status: 待拍板`；含：名不符实实测表、分类主轴、目标结构树、归类规则、待裁定清单和执行序。业务层是否编号由用户确认，技术依赖树不编号。没有目标目录时先询问，不猜 vault 结构。
 - 裁定问题给用户**可一句话回答的选项**（「1删 2删 3先读」），拍板前云盘一个文件不动。
 - 若用户选择编号，方案必须声明步长、格式和适用层级；**编号只写本层序号，不做跨层连缀**。`images/banner/scripts/assets` 等离线技术依赖保持原名。
+- 若用户选择学习导览，方案同时声明导览名称和覆盖层级；每个在架分类都必须生成、上传、复核，不能只做一部分。
+- 相邻分区先写一句互斥边界。若有课程区与书库，明确独立出版物和课程组成材料如何判断，避免同类书散落两区或把课程讲义拆走。
 
 ## 三、分批执行（④ 的纪律）
 
@@ -60,4 +62,34 @@
 
 ## 八、完成定义（DoD）
 
-区内：目标结构落地；若方案选择编号，则所声明层级的编号完整一致；账本齐全、删除项可回滚。区外：索引三查通过、消费端链接全量校验、方案文档变更史回填、遗留项显式列在「待拍板」。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
+区内：目标结构落地；若方案选择编号，则所声明层级的漏号数为 0；若选择学习导览，则应覆盖分类的导览缺失数为 0；若指定复核区，则 `unclear` 全部位于该根下、状态已验证且目标文件存在于终态扫描；账本齐全、删除项可回滚。使用 `scripts/audit_structure.py` 对终态 scan JSONL 复现这些结论。区外：索引三查通过、消费端链接全量校验、方案文档变更史回填、遗留项显式列在「待拍板」。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
+
+结构合同使用通用 JSON，不写用户目录进公共 skill：
+
+```json
+{
+  "numbered_layers": [
+    {"parent": "/<learning>/<category>", "pattern": "^\\d{2}_", "exclude": []}
+  ],
+  "guide_layers": [
+    {"parent": "/<learning>", "child_pattern": "^\\d{2}_", "guide_name": "01_<guide>"}
+  ],
+  "review_root": "/<archive>/<review>"
+}
+```
+
+`unclear` JSONL 每行格式为：
+
+```json
+{"source":"/<old-path>","reason":"<why-unclear>","target":"/<review-path>","status":"verified"}
+```
+
+运行：
+
+```bash
+python3 scripts/audit_structure.py \
+  --scan <terminal-scan.jsonl> \
+  --contract <structure-contract.json> \
+  --unclear <unclear.jsonl> \
+  --final
+```

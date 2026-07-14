@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Regression tests for curator structure closure checks."""
+
+from __future__ import annotations
+
+import importlib.util
+import sys
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SCRIPT = REPO_ROOT / "skills" / "soia-pkm-alipan-curator" / "scripts" / "audit_structure.py"
+SPEC = importlib.util.spec_from_file_location("curator_structure_audit", SCRIPT)
+if SPEC is None or SPEC.loader is None:
+    raise RuntimeError(f"cannot load {SCRIPT}")
+audit = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = audit
+SPEC.loader.exec_module(audit)
+
+
+ROWS = [
+    {"path": "/learning", "name": "10_business", "id": "a", "dir": True},
+    {"path": "/learning", "name": "20_communication", "id": "b", "dir": True},
+    {"path": "/learning/10_business", "name": "01_guide", "id": "c", "dir": True},
+    {"path": "/learning/10_business", "name": "economics", "id": "d", "dir": True},
+    {"path": "/learning/20_communication", "name": "01_guide", "id": "e", "dir": True},
+    {"path": "/learning/20_communication", "name": "10_speaking", "id": "f", "dir": True},
+]
+
+
+class StructureAuditTests(unittest.TestCase):
+    def test_numbering_reports_unprefixed_business_directory(self) -> None:
+        checked, violations = audit.audit_numbering(
+            ROWS,
+            [{"parent": "/learning/10_business", "pattern": r"^\d{2}_"}],
+        )
+        self.assertEqual(checked, 2)
+        self.assertEqual([item["name"] for item in violations], ["economics"])
+
+    def test_guide_closure_reports_missing_guide(self) -> None:
+        rows = [row for row in ROWS if row.get("id") != "e"]
+        checked, violations = audit.audit_guides(
+            rows,
+            [{
+                "parent": "/learning",
+                "child_pattern": r"^\d{2}_",
+                "guide_name": "01_guide",
+            }],
+        )
+        self.assertEqual(checked, 2)
+        self.assertEqual(violations[0]["parent"], "/learning/20_communication")
+
+    def test_unclear_items_must_be_inside_review_root_and_verified(self) -> None:
+        checked, violations = audit.audit_unclear_manifest(
+            [
+                {
+                    "source": "/learning/unknown.pdf",
+                    "reason": "topic unclear",
+                    "target": "/review/topic/unknown.pdf",
+                    "status": "verified",
+                },
+                {
+                    "source": "/learning/pending.pdf",
+                    "reason": "content unreadable",
+                    "target": "/elsewhere/pending.pdf",
+                    "status": "planned",
+                },
+            ],
+            "/review",
+            final=True,
+            scan_rows=[
+                {"path": "/review/topic", "name": "unknown.pdf", "id": "g", "dir": False},
+            ],
+        )
+        self.assertEqual(checked, 2)
+        self.assertEqual(
+            {item["kind"] for item in violations},
+            {
+                "unclear_outside_review_root",
+                "unclear_not_verified",
+                "unclear_target_missing",
+            },
+        )
+
+    def test_contract_requires_explicit_guide_name(self) -> None:
+        with self.assertRaisesRegex(ValueError, "guide_name is required"):
+            audit.validate_contract({
+                "numbered_layers": [],
+                "guide_layers": [
+                    {"parent": "/learning", "child_pattern": r"^\d{2}_"},
+                ],
+            })
+
+
+if __name__ == "__main__":
+    unittest.main()
