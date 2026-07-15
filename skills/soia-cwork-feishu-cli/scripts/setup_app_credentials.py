@@ -14,6 +14,7 @@ import os
 import shutil
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 
@@ -88,9 +89,37 @@ def existing_profile(base_argv: list[str], profile: str) -> dict | None:
     return next((item for item in profiles if isinstance(item, dict) and item.get("name") == profile), None)
 
 
+def list_profiles(base_argv: list[str]) -> list[dict]:
+    result = subprocess.run(
+        [*base_argv, "profile", "list"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        text=True,
+    )
+    if result.returncode != 0:
+        return []
+    try:
+        profiles = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return []
+    return [item for item in profiles if isinstance(item, dict)] if isinstance(profiles, list) else []
+
+
 def print_permission_hint(app_id: str) -> None:
     print(f"Open Feishu permissions: https://open.feishu.cn/app/{app_id}/auth")
     print("Before remote reads, enable the minimum read-only scopes in references/permissions.md and publish the app version.")
+
+
+def profile_operation(base_argv: list[str], *args: str) -> subprocess.CompletedProcess[bytes]:
+    """Run a profile mutation without echoing provider output or credentials."""
+
+    return subprocess.run(
+        [*base_argv, "profile", *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
 
 
 def main() -> int:
@@ -132,6 +161,7 @@ def main() -> int:
         argv = ["lark-cli"]
     else:
         argv = ["npx", "--yes", "@larksuite/cli@latest"]
+    base_argv = argv.copy()
 
     current = existing_profile(argv, profile)
     if current and not args.replace:
@@ -154,14 +184,48 @@ def main() -> int:
         print_permission_hint(app_id)
         return 0
 
+    activate_new_profile = bool(args.use or (current and current.get("active")))
+    helper_profile = None
     if current and args.replace:
-        removed = subprocess.run([*argv, "profile", "remove", profile], check=False)
+        # lark-cli enforces one profile per App ID, so a temporary renamed
+        # profile cannot coexist with the replacement. This destructive local
+        # operation is only reachable through the explicit --replace flag.
+        # It also refuses to remove the last profile, so create a short-lived
+        # local placeholder with a synthetic credential when necessary.
+        if len(list_profiles(base_argv)) == 1:
+            helper_profile = f"{profile}.helper-{uuid.uuid4().hex[:8]}"
+            helper_secret = uuid.uuid4().hex
+            helper_app_id = f"cli_local_helper_{uuid.uuid4().hex[:8]}"
+            helper_added = subprocess.run(
+                [
+                    *base_argv,
+                    "profile",
+                    "add",
+                    "--name",
+                    helper_profile,
+                    "--app-id",
+                    helper_app_id,
+                    "--app-secret-stdin",
+                    "--brand",
+                    brand,
+                ],
+                input=(helper_secret + "\n").encode("utf-8"),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+            if helper_added.returncode != 0:
+                print("cannot create temporary local helper profile", file=sys.stderr)
+                return helper_added.returncode
+        removed = profile_operation(base_argv, "remove", profile)
         if removed.returncode != 0:
+            if helper_profile:
+                profile_operation(base_argv, "remove", helper_profile)
             print(f"lark-cli profile removal failed with exit code {removed.returncode}", file=sys.stderr)
             return removed.returncode
 
     argv += ["profile", "add", "--name", profile, "--app-id", app_id, "--app-secret-stdin", "--brand", brand]
-    if args.use:
+    if activate_new_profile:
         argv.append("--use")
 
     result = subprocess.run(
@@ -174,11 +238,25 @@ def main() -> int:
     if result.stdout:
         sys.stdout.buffer.write(result.stdout)
     if result.returncode != 0:
-        # Do not echo stderr because provider errors may accidentally include
-        # sensitive request context. Surface a bounded, redacted status only.
-        print(f"lark-cli profile setup failed with exit code {result.returncode}", file=sys.stderr)
+        if helper_profile:
+            profile_operation(base_argv, "remove", helper_profile)
+        # Do not echo provider stderr because it may contain sensitive request context.
+        print(
+            "lark-cli profile setup failed after the previous profile was removed; "
+            "check the private config and rerun the initialization command",
+            file=sys.stderr,
+        )
         return result.returncode
-    print(f"Configured lark-cli profile: {profile} (brand={brand}, use={args.use})")
+    if helper_profile:
+        helper_removed = profile_operation(base_argv, "remove", helper_profile)
+        if helper_removed.returncode != 0:
+            print(
+                "configured the new profile, but the temporary local helper profile could not be removed; "
+                "inspect `lark-cli profile list` before cleanup",
+                file=sys.stderr,
+            )
+            return 2
+    print(f"Configured lark-cli profile: {profile} (brand={brand}, use={activate_new_profile})")
     print_permission_hint(app_id)
     return 0
 

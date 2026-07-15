@@ -41,7 +41,7 @@
 
 | Skill | Description | Default Prompt |
 |---|---|---|
-| [`soia-cwork-feishu-cli`](./soia-cwork-feishu-cli/) | 先提醒最小权限和应用发布，再用官方 lark-cli 只读盘点飞书云盘、文档和知识库。 | 用 soia-cwork-feishu-cli 先核对并提醒飞书应用所需的最小只读权限，再以应用凭证只读调研我的飞书工作云盘和知识库，不要修改远端内容。 |
+| [`soia-cwork-feishu-cli`](./soia-cwork-feishu-cli/) | 分开核对知识库/Wiki与云盘/Drive权限，再用官方 lark-cli 只读调研。 | 用 soia-cwork-feishu-cli 先区分飞书知识库和云盘，再分别核对应用身份 Bot 与用户 OAuth 的最小只读权限，最后只读调研，不要修改远端内容。 |
 | [`soia-cwork-feishu-doc-git-sync`](./soia-cwork-feishu-doc-git-sync/) | 同步飞书知识库到 Markdown、Git、Obsidian 和 VitePress | 使用 soia-cwork-feishu-doc-git-sync，以只读镜像模式检查并同步指定飞书知识库到本地 Git 知识库。 |
 
 ## Development
