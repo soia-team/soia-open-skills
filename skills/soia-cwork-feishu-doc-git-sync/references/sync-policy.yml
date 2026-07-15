@@ -46,6 +46,11 @@ validation:
     - stale
   exit_code_on_failure: 2
 
+concurrency:
+  one_sync_per_output: true
+  lock_scope: output_dir
+  second_process_policy: stop_and_report
+
 incremental:
   first_run: full_content_baseline
   subsequent_runs:

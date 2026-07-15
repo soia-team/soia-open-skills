@@ -51,6 +51,9 @@ python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental 
   --event-file <events.ndjson>
 # 仅在确认历史生成目录曾经扁平化时执行一次结构迁移
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --retry-failed --rebuild-tree
+# 大型知识库遇到限流时分批补偿；重复执行直到 --validate-only 通过
+python3 scripts/sync_feishu_wiki.py --config <private-config.yml> \
+  --retry-failed --retry-batch-size 100 --skip-assets
 # 如果只需要修复本地目录层级、暂时不请求飞书
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --rebuild-tree --rebuild-tree-only
 # 从飞书刷新最新目录层级和兄弟节点顺序，但复用现有本地正文
@@ -127,6 +130,7 @@ sync:
 - 只使用 `--as bot` 的应用身份读取，默认不需要用户身份 token。
 - 通过 node token 遍历知识空间，使用文档 token 读取 `docx` 内容。
 - `paths.generated_dir` 必须使用目标知识库的真实名称或稳定英文名称；例如 `10_后端技术支持库`，不要再嵌套一个泛化的 `feishu-knowledge` 目录。
+- 如果已有输出目录中只有一个 `10_*` 生成目录而配置未填写 `paths.generated_dir`，技能会复用它；如果发现多个候选目录，会停止并要求先明确配置，避免自动制造重复目录。
 - 每个生成 Markdown 写入来源 URL、space ID、node token、object token、父节点和内容 hash。
 - 使用 `sync-state.json` 保留 node token 到本地路径的映射；标题变化时尽量保持稳定路径，树位置由最新 `parent_node_token` 重新计算。
 - `manifest.json` 和 `sync-state.json` 记录 `obj_edit_time`、`remote_updated_at`、`revision_id`，用于增量选择和审计。
@@ -136,17 +140,19 @@ sync:
 - 有子节点的飞书节点必须生成一个同名目录，并把正文放在目录内的同名 index Markdown：`父目录/节点名/节点名.md`；叶子节点才直接生成 `节点名.md`。不要生成同级的“同名文件 + 同名文件夹”。
 - 如果飞书本身存在同名叶子与可展开节点、父子同名或同级重复可展开节点，目录/文件会追加稳定的 node ID 短后缀；这是为了避免本地文件系统发生同级冲突，manifest 仍以 `node_token` 区分真实节点。
 - `--retry-failed` 会复用上次 `sync_status: ok` 的本地正文，只读取上次失败的文档；适合遇到飞书接口限流后继续补齐。
+- `--retry-batch-size N` 仅与 `--retry-failed` 配合使用，每次最多补偿 N 个失败节点；大型空间应重复执行，并以 `--validate-only` 的 `failed_records=0` 作为结束条件。
 - `--retry-failed` 使用上一次 manifest 作为节点清单，不再先对全量文档做元数据探测；这样补偿运行只消耗失败正文请求，并继续受全局节流保护。
+- 同一输出目录同时只允许一个同步进程；如果上一轮仍在退出或用户重复启动，后续进程会停止并报告，不会并发覆盖 manifest。
 - 全局请求节流和指数退避会跨同步 worker 生效；`sync.min_request_interval_seconds` 默认 0.5 秒，避免大知识库并发触发 `99991400` 限流。
 - 正文读取失败但本地已有旧正文时，节点会标记为 `stale` 并保留旧正文；下一次增量同步会继续重试，校验不会将其视为成功。
 - 每次非 dry-run 同步结束都会运行本地验收；`--validate-only` 可单独复核最近一次结果。验收失败时退出码为 2，并在 manifest 的 `validation` 节点保留机器可读摘要。
 - `prune: false` 时不删除已消失节点对应的本地文件；节点会在 manifest 中标记为 deleted，避免一次权限或网络异常造成数据丢失。
 - `20_本地补录/` 与 `90_同步元数据/` 不会被知识库同步覆盖。
-- `--rebuild-tree` 只迁移 `10_knowledge-base/` 内由同步器生成的旧扁平文件，不触碰 `20_本地补录/`。
+- `--rebuild-tree` 只迁移 `paths.generated_dir` 内由同步器生成的旧扁平文件，不触碰 `20_本地补录/`。
 - `--rebuild-tree-only` 仅复用已有 manifest 和生成文件做目录迁移，不发起飞书正文请求；如果同时启用资源本地化，仍可能只为刷新过期媒体 URL 读取含资源的文档。
 - `--refresh-tree-only` 会重新读取飞书节点树和兄弟顺序，按最新 `parent_node_token` 重建本地目录和侧边栏，但复用已有本地正文；启用资源本地化时，会额外刷新仍含未本地化资源的文档；必须与 `--rebuild-tree` 一起使用。
 - `manifest.json`/`sync-state.json` 的 `tree_order: feishu_node_list` 表示目录顺序来源于飞书节点列表，不是标题排序。
-- 图片默认保留远程 URL；设置 `sync.download_assets: true` 或传入 `--download-assets` 后，技能会把正文中的远程图片及 `<source token="...">` 媒体块下载到 `10_knowledge-base/_assets/`，并把 Markdown/HTML/附件引用改写为相对路径，VitePress 和 Obsidian 可直接读取本地文件。
+- 图片默认保留远程 URL；设置 `sync.download_assets: true` 或传入 `--download-assets` 后，技能会把正文中的远程图片及 `<source token="...">` 媒体块下载到 `paths.generated_dir/_assets/`，并把 Markdown/HTML/附件引用改写为相对路径，VitePress 和 Obsidian 可直接读取本地文件。
 - 图片/附件本地化是显式 opt-in 的本地数据下载；不能因为用户只要求“检查图片”就下载全部素材。持久化配置中的 `sync.download_assets: true` 只能视为用户此前对该资源范围的明确授权，不得扩展为表格或多维表格导出授权。
 - `sheet` 与 `bitable` 默认只生成元数据 stub，不读取表内数据。导出为 `xlsx`、`csv` 或 `base` 属于敏感数据导出，必须遵循 [references/export-policy.yml](references/export-policy.yml)：先解析和 dry-run，再展示范围并等待明确确认；不得自动写入生成镜像目录、提交 Git 或上传回飞书。
 - 飞书 Markdown 导出的图片 URL 可能是短期鉴权地址；启用本地化时，默认只重新读取仍含远程图片的文档来刷新 URL，不会无条件重拉所有正文。可用 `--refresh-asset-urls` 显式打开该行为。

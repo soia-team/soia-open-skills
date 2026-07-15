@@ -46,6 +46,7 @@ class FeishuDocSyncTests(unittest.TestCase):
             refresh_asset_urls=False,
             skip_assets=False,
             retry_failed=False,
+            retry_batch_size=None,
             rebuild_tree=False,
             rebuild_tree_only=False,
             refresh_tree_only=False,
@@ -70,6 +71,42 @@ class FeishuDocSyncTests(unittest.TestCase):
             sync.unique_path("叶子", Path("10_knowledge-base/规范"), used, "node-2", False).as_posix(),
             "10_knowledge-base/规范/叶子.md",
         )
+
+    def test_missing_generated_dir_reuses_the_single_existing_generated_root(self) -> None:
+        previous_mirror_dir = sync.MIRROR_DIR
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "docs"
+            (output / "10_existing-root").mkdir(parents=True)
+            metadata = output / "90_同步元数据"
+            metadata.mkdir(parents=True)
+            config = root / "config.yml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "version: 1",
+                        "provider:",
+                        "  cli: lark-cli",
+                        "space:",
+                        '  id: "space-1"',
+                        '  source_url_template: "https://example.test/wiki/{node_token}"',
+                        "paths:",
+                        f'  output_dir: "{output}"',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            try:
+                with mock.patch.object(sync, "walk_nodes", return_value=[]):
+                    result = sync.sync(self.sync_args(config))
+            finally:
+                sync.MIRROR_DIR = previous_mirror_dir
+
+            sidebar = json.loads((metadata / "sidebar.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(result, 0)
+        self.assertEqual(sidebar[0]["text"], "existing-root")
 
     def test_event_file_maps_obj_token_and_tree_event(self) -> None:
         nodes = [
@@ -396,6 +433,7 @@ class FeishuDocSyncTests(unittest.TestCase):
             self.assertEqual(by_token["node-changed"]["revision_id"], "9")
 
     def test_sidebar_keeps_feishu_node_order(self) -> None:
+        sync.MIRROR_DIR = "10_knowledge-base"
         nodes = [
             {
                 "node_token": "node-z",
@@ -461,6 +499,16 @@ class FeishuDocSyncTests(unittest.TestCase):
             sync.extract_asset_references(normalized),
             ["feishu-media://file-token-1", "feishu-media://img-token-2"],
         )
+
+    def test_normalization_escapes_html_in_image_alt_and_repairs_tables(self) -> None:
+        content = (
+            '![说明 <a href="bad">链接](https://example.test/image.png)\n\n'
+            '&lt;table&gt;<tbody><tr><td><p>单元格</p></td></tr></tbody>&lt;/table&gt;'
+        )
+        normalized = sync.normalize_content(content, "HTML 清理")
+        self.assertIn("&lt;a href=", normalized)
+        self.assertIn("<table>", normalized)
+        self.assertNotIn("<p>单元格</p>", normalized)
 
     def test_cite_normalization_uses_node_tokens_and_preserves_user_mentions(self) -> None:
         content = (
