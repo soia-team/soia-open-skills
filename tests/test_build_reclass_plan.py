@@ -40,6 +40,7 @@ class BuildReclassPlanTests(unittest.TestCase):
             id_column="file_id",
             skip_target_regex=r"^<",
             action_prefix="T10",
+            no_mkdir=False,
         )
 
     def test_builds_mkdir_move_and_rename_with_inventory_validation(self) -> None:
@@ -61,6 +62,32 @@ class BuildReclassPlanTests(unittest.TestCase):
         self.assertEqual(actions[1]["from"], "/old/Group/Course A")
         self.assertEqual(actions[2]["to"], "/new/Category/010_Course A")
         self.assertEqual(summary["selected_items"], 1)
+
+    def test_no_mkdir_keeps_move_and_rename_actions_unchanged(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "map.tsv").write_text(
+                "file_id\tsource_name\tsource_group\ttarget\tfinal_name\n"
+                "id-1\tCourse A\tGroup\tCategory\t010_Course A\n",
+                encoding="utf-8",
+            )
+            (root / "scan.jsonl").write_text(
+                json.dumps({"path": "/old/Group", "name": "Course A", "id": "id-1"}) + "\n",
+                encoding="utf-8",
+            )
+            args = self.args(root)
+            default_actions, _ = planner.build_plan(args)
+            args.no_mkdir = True
+            actions, summary = planner.build_plan(args)
+
+        self.assertEqual([item["op"] for item in actions], ["mv", "rename"])
+        self.assertEqual(
+            actions,
+            [item for item in default_actions if item["op"] in {"mv", "rename"}],
+        )
+        self.assertEqual(summary["mkdir_actions"], 0)
+        self.assertEqual(summary["move_actions"], 1)
+        self.assertEqual(summary["rename_actions"], 1)
 
     def test_skips_split_marker(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

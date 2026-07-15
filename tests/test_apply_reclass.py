@@ -32,17 +32,23 @@ apply_reclass = load_module(
     "apply_reclass_under_test",
     "skills/soia-pkm-alipan-curator/scripts/apply_reclass.py",
 )
+GATE_PASSED = {"status": "passed", "checked": {}, "violations": []}
 
 
 def result(returncode=0, stdout="", stderr=""):
     return subprocess.CompletedProcess([], returncode, stdout, stderr)
 
 
+def file_id_for_name(name: str) -> str:
+    return f"file:{name.rstrip('/').replace(' ', '_')}"
+
+
 def listing(*names):
     rows = ["当前目录 /mock", "--------------------------------"]
     rows.extend(
-        f"{index}  id-{index}  -  -  0  2025-01-01 00:00:00  2025-01-02 13:00:00  {name}"
-        for index, name in enumerate(names)
+        f"{index}  {file_id}  -  -  0  2025-01-01 00:00:00  2025-01-02 13:00:00  {name}"
+        for index, value in enumerate(names)
+        for name, file_id in [value if isinstance(value, tuple) else (value, file_id_for_name(value))]
     )
     return result(stdout="\n".join(rows) + "\n")
 
@@ -51,6 +57,17 @@ class ApplyReclassTests(unittest.TestCase):
     ROOT = "/library"
 
     def write_plan(self, root: Path, records: list[dict]) -> Path:
+        records = [
+            {
+                **record,
+                **(
+                    {"file_id": file_id_for_name(apply_reclass.parent_and_name(record['from'])[1])}
+                    if record["op"] != "mkdir" and "file_id" not in record
+                    else {}
+                ),
+            }
+            for record in records
+        ]
         path = root / "plan.jsonl"
         path.write_text(
             "\n".join(json.dumps(record, ensure_ascii=False) for record in records) + "\n",
@@ -58,13 +75,26 @@ class ApplyReclassTests(unittest.TestCase):
         )
         return path
 
-    def run_main(self, *args: str) -> str:
+    def run_main(
+        self,
+        *args: str,
+        auto_run_dir: bool = True,
+        gate_result: dict | None = None,
+    ) -> str:
         old_argv = sys.argv
         output = io.StringIO()
-        sys.argv = ["apply_reclass.py", *args]
+        effective_args = list(args)
+        if auto_run_dir and "--execute" in effective_args and "--run-dir" not in effective_args:
+            effective_args.extend(["--run-dir", "/mock/run"])
+        sys.argv = ["apply_reclass.py", *effective_args]
         try:
-            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
-                apply_reclass.main()
+            with mock.patch.object(
+                apply_reclass.preflight_gate,
+                "verify_preflight_gate",
+                return_value=GATE_PASSED if gate_result is None else gate_result,
+            ):
+                with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+                    apply_reclass.main()
         finally:
             sys.argv = old_argv
         return output.getvalue()
@@ -74,7 +104,60 @@ class ApplyReclassTests(unittest.TestCase):
 
         self.assertEqual(
             apply_reclass.parse_ll(output),
-            ["央视纪录片  国语中字  1080P高清纪录片"],
+            {"央视纪录片  国语中字  1080P高清纪录片": "file:央视纪录片__国语中字__1080P高清纪录片"},
+        )
+
+    def test_runner_is_located_from_portable_skill_tree(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "portable-package" / "skills"
+            runner = root / "soia-pkm-alipan" / "scripts" / "run_with_env.py"
+            runner.parent.mkdir(parents=True)
+            runner.write_text("# test runner\n", encoding="utf-8")
+            synthetic_executor = root / "soia-pkm-alipan-curator" / "scripts" / "apply_reclass.py"
+            with mock.patch.dict("os.environ", {apply_reclass.RUNNER_ENV: ""}, clear=False):
+                with mock.patch.object(apply_reclass, "__file__", str(synthetic_executor)):
+                    self.assertEqual(apply_reclass.alipan_runner_path(), runner.resolve())
+
+    def test_runner_override_preserves_aliyunpan_argv(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runner = Path(temp) / "runner.py"
+            runner.write_text("# test runner\n", encoding="utf-8")
+            with mock.patch.dict("os.environ", {apply_reclass.RUNNER_ENV: str(runner)}, clear=False):
+                with mock.patch.object(apply_reclass.subprocess, "run", return_value=result()) as run:
+                    apply_reclass.run_aliyunpan("ll", "drive-1", "/library/course  double")
+
+            self.assertEqual(
+                run.call_args.args[0],
+                [sys.executable, str(runner), "--", "aliyunpan", "ll", "--driveId", "drive-1", "/library/course  double"],
+            )
+
+    def test_runner_errors_are_sanitized_without_bare_aliyunpan_fallback(self) -> None:
+        secret_runner = "/private/session-token/run_with_env.py"
+        with mock.patch.dict("os.environ", {apply_reclass.RUNNER_ENV: secret_runner}, clear=False):
+            with mock.patch.object(apply_reclass.subprocess, "run") as run:
+                unavailable = apply_reclass.run_aliyunpan("ll", "drive-1", "/library")
+        self.assertEqual(unavailable.returncode, 127)
+        self.assertEqual(unavailable.stderr, "RUNNER_UNAVAILABLE")
+        self.assertNotIn("session-token", unavailable.stderr)
+        run.assert_not_called()
+
+        with mock.patch.object(apply_reclass, "alipan_runner_path", return_value=Path("/runner.py")):
+            with mock.patch.object(apply_reclass.subprocess, "run", side_effect=OSError("/private/session-token")):
+                failed = apply_reclass.run_aliyunpan("ll", "drive-1", "/library")
+        self.assertEqual(failed.returncode, 255)
+        self.assertEqual(failed.stderr, "RUNNER_EXECUTION_FAILED")
+        self.assertNotIn("session-token", failed.stderr)
+
+    def test_preflight_adapter_receives_run_and_plan_paths(self) -> None:
+        with mock.patch.object(
+            apply_reclass.preflight_gate,
+            "verify_preflight_gate",
+            return_value=GATE_PASSED,
+        ) as verify:
+            apply_reclass.require_preflight("/run-dir", "/run-dir/actions/plan.jsonl")
+        verify.assert_called_once_with(
+            Path("/run-dir"),
+            plan_path=Path("/run-dir/actions/plan.jsonl"),
         )
 
     def test_dry_run_prints_preview_without_cli_or_ledger(self) -> None:
@@ -112,6 +195,76 @@ class ApplyReclassTests(unittest.TestCase):
             self.assertIn("[1] mkdir - → /library/10_new · classify", output)
             self.assertIn("[2] mv /library/old/course → /library/10_new · classify", output)
             self.assertIn("统计: mkdir=1 mv=1 rename=1 total=3", output)
+
+    def test_execute_requires_run_dir_before_runner_call(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            plan = self.write_plan(
+                root,
+                [{"action_id": "A1", "op": "mkdir", "to": "/library/new", "reason": "gate"}],
+            )
+            ledger = root / "ledger.jsonl"
+            with mock.patch.object(apply_reclass, "run_aliyunpan") as run:
+                with self.assertRaises(SystemExit) as stopped:
+                    self.run_main(
+                        "--plan", str(plan), "--driveId", "drive-1", "--root", self.ROOT,
+                        "--ledger", str(ledger), "--execute", auto_run_dir=False,
+                    )
+            self.assertEqual(stopped.exception.code, 2)
+            run.assert_not_called()
+            self.assertFalse(ledger.exists())
+
+    def test_preflight_failures_reject_execute_before_runner(self) -> None:
+        failures = (
+            "preflight_report_missing",
+            "preflight_report_stale",
+            "executor_plan_not_registered",
+        )
+        for kind in failures:
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                plan = self.write_plan(
+                    root,
+                    [{"action_id": "A1", "op": "mkdir", "to": "/library/new", "reason": "gate"}],
+                )
+                ledger = root / "ledger.jsonl"
+                gate_result = {
+                    "status": "failed",
+                    "checked": {},
+                    "violations": [{"kind": kind, "detail": "/private/must-not-leak"}],
+                }
+                with mock.patch.object(apply_reclass, "run_aliyunpan") as run:
+                    with self.assertRaises(SystemExit) as stopped:
+                        self.run_main(
+                            "--plan", str(plan), "--driveId", "drive-1", "--root", self.ROOT,
+                            "--ledger", str(ledger), "--execute", gate_result=gate_result,
+                        )
+                self.assertEqual(stopped.exception.code, 2)
+                run.assert_not_called()
+                self.assertFalse(ledger.exists())
+
+    def test_dry_run_with_run_dir_also_enforces_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            plan = self.write_plan(
+                root,
+                [{"action_id": "A1", "op": "mkdir", "to": "/library/new", "reason": "gate"}],
+            )
+            ledger = root / "ledger.jsonl"
+            gate_result = {
+                "status": "failed",
+                "checked": {},
+                "violations": [{"kind": "preflight_report_stale"}],
+            }
+            with mock.patch.object(apply_reclass, "run_aliyunpan") as run:
+                with self.assertRaises(SystemExit) as stopped:
+                    self.run_main(
+                        "--plan", str(plan), "--driveId", "drive-1", "--root", self.ROOT,
+                        "--ledger", str(ledger), "--run-dir", str(root), gate_result=gate_result,
+                    )
+            self.assertEqual(stopped.exception.code, 2)
+            run.assert_not_called()
+            self.assertFalse(ledger.exists())
 
     def test_fail_fast_stops_before_third_operation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -166,6 +319,130 @@ class ApplyReclassTests(unittest.TestCase):
             entries = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
             self.assertEqual(len(entries), 2)
             self.assertEqual(entries[-1]["to"], second["to"])
+            self.assertEqual(entries[-1]["status"], "verified")
+
+    def test_load_completed_uses_latest_ledger_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = Path(temp) / "ledger.jsonl"
+            item = {"action_id": "A1", "op": "mkdir", "to": "/library/one"}
+            ledger.write_text(
+                json.dumps({**item, "status": "verified"}) + "\n"
+                + json.dumps({**item, "status": "failed"}) + "\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(apply_reclass.load_completed(ledger), set())
+
+    def test_load_plan_requires_and_preserves_file_id_for_move(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            plan = self.write_plan(root, [{
+                "action_id": "A1",
+                "op": "mv",
+                "from": "/library/old",
+                "to": "/library/new",
+                "reason": "move",
+                "file_id": "stable-id",
+            }])
+            loaded = apply_reclass.load_plan(plan, [self.ROOT])
+            self.assertEqual(loaded[0]["file_id"], "stable-id")
+
+            missing_id = root / "missing-id.jsonl"
+            missing_id.write_text(
+                json.dumps({
+                    "action_id": "A2", "op": "mv", "from": "/library/old",
+                    "to": "/library/new", "reason": "move",
+                }) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "缺少非空 file_id"):
+                apply_reclass.load_plan(missing_id, [self.ROOT])
+
+    def test_same_name_with_wrong_source_id_is_blocked_before_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            item = {
+                "action_id": "A1",
+                "op": "mv",
+                "from": "/library/source/course",
+                "to": "/library/target",
+                "reason": "identity gate",
+                "file_id": "expected-id",
+            }
+            plan = self.write_plan(root, [item])
+            ledger = root / "ledger.jsonl"
+            with mock.patch.object(apply_reclass, "run_aliyunpan", side_effect=[listing(("course/", "wrong-id"))]) as run:
+                with self.assertRaises(SystemExit) as stopped:
+                    self.run_main(
+                        "--plan", str(plan), "--driveId", "drive-1", "--root", self.ROOT,
+                        "--ledger", str(ledger), "--execute",
+                    )
+
+            self.assertEqual(stopped.exception.code, 1)
+            self.assertFalse(any(call.args[0] == "mv" for call in run.call_args_list))
+            entry = json.loads(ledger.read_text(encoding="utf-8"))
+            self.assertEqual(entry["verify"]["error"], "SOURCE_FILE_ID_MISMATCH")
+
+    def test_wrong_target_id_after_move_is_failed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            item = {
+                "action_id": "A1",
+                "op": "mv",
+                "from": "/library/source/course",
+                "to": "/library/target",
+                "reason": "identity gate",
+                "file_id": "expected-id",
+            }
+            plan = self.write_plan(root, [item])
+            ledger = root / "ledger.jsonl"
+            replies = [
+                listing(("course/", "expected-id")), listing(), result(),
+                listing(("course/", "wrong-id")), listing(),
+            ]
+            with mock.patch.object(apply_reclass, "run_aliyunpan", side_effect=replies) as run:
+                with self.assertRaises(SystemExit) as stopped:
+                    self.run_main(
+                        "--plan", str(plan), "--driveId", "drive-1", "--root", self.ROOT,
+                        "--ledger", str(ledger), "--execute",
+                    )
+
+            self.assertEqual(stopped.exception.code, 1)
+            self.assertEqual([call.args[0] for call in run.call_args_list], ["ll", "ll", "mv", "ll", "ll"])
+            entry = json.loads(ledger.read_text(encoding="utf-8"))
+            self.assertEqual(entry["status"], "failed")
+            self.assertEqual(entry["verify"]["target_file_id"], "wrong-id")
+
+    def test_resume_does_not_skip_a_different_file_id(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            item = {
+                "action_id": "A1",
+                "op": "mv",
+                "from": "/library/source/course",
+                "to": "/library/target",
+                "reason": "identity gate",
+                "file_id": "new-id",
+            }
+            plan = self.write_plan(root, [item])
+            ledger = root / "ledger.jsonl"
+            ledger.write_text(
+                json.dumps({**item, "file_id": "old-id", "status": "verified", "verify": {}, "ts": "old"}) + "\n",
+                encoding="utf-8",
+            )
+            replies = [
+                listing(("course/", "new-id")), listing(), result(),
+                listing(("course/", "new-id")), listing(),
+            ]
+            with mock.patch.object(apply_reclass, "run_aliyunpan", side_effect=replies) as run:
+                self.run_main(
+                    "--plan", str(plan), "--driveId", "drive-1", "--root", self.ROOT,
+                    "--ledger", str(ledger), "--execute", "--resume",
+                )
+
+            self.assertTrue(any(call.args[0] == "mv" for call in run.call_args_list))
+            entries = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(len(entries), 2)
+            self.assertEqual(entries[-1]["file_id"], "new-id")
             self.assertEqual(entries[-1]["status"], "verified")
 
     def test_out_of_bounds_plan_is_rejected_before_any_call(self) -> None:
@@ -337,9 +614,9 @@ class ApplyReclassTests(unittest.TestCase):
             plan = self.write_plan(root, [moved, renamed])
             ledger = root / "ledger.jsonl"
             replies = [
-                listing("course/"), result(17, stderr="write return code is not evidence"),
-                listing("course/"), listing(), listing("course/"),
-                result(23, stderr="still not evidence"), listing("new-course/"),
+                listing("course/"), listing(), result(17, stderr="write return code is not evidence"),
+                listing("course/"), listing(),
+                listing("course/"), result(23, stderr="still not evidence"), listing(("new-course/", "file:course")),
             ]
             with mock.patch.object(apply_reclass, "run_aliyunpan", side_effect=replies) as run:
                 self.run_main(

@@ -7,6 +7,7 @@
 - [适用边界](#适用边界)
 - [工作簿结构](#工作簿结构)
 - [输入 JSON](#输入-json)
+- [从扫描构建输入 JSON](#从扫描构建输入-json)
 - [运行命令](#运行命令)
 - [生成前后的正确顺序](#生成前后的正确顺序)
 - [链接与云端上传](#链接与云端上传)
@@ -89,6 +90,34 @@ https://www.alipan.com/drive/file/all/backup/<40位file_id>
 https://www.aliyundrive.com/drive/file/all/backup/<40位file_id>
 ```
 
+## 从扫描构建输入 JSON
+
+`build_family_nav_inputs.py` 从新鲜的文件级 `scan_drive.py` JSONL 选择目录资源并生成上述输入 JSON。每个 guide 可选配置两个排除字段：
+
+```json
+{
+  "exclude_paths": ["/Learning/Language/01_先看这里"],
+  "exclude_name_patterns": ["^说明(?:-|_).+$", "^临时"]
+}
+```
+
+- `exclude_paths` 是 scope 内的绝对目录路径；该目录及其所有子目录均不作为资源行。
+- `exclude_name_patterns` 是 Python 正则，使用 `search` 匹配目录名；命中的目录及其子目录均不作为资源行。需要精确名称时使用 `^...$`。
+- 每个 guide 默认追加 `^01_先看这里$`，以排除导航 guide 自身；这是通用目录名规则，不包含任何用户私有路径，也不能通过传入空数组关闭。
+- `resource_roots` 与排除规则命中同一目录会报错，避免同时“选择”和“排除”的静默冲突。
+
+排除是可审计的：每个 `<guide-id>.json` 都带有 `excluded_directories`，其中逐项记录 `path`、`name` 与 `matched_by`（字段、规则值、默认/用户来源和实际命中的祖先目录）；命令打印的 JSON 状态在对应 `outputs[]` 中重复这份列表。未命中的配置规则不会虚报为匹配。
+
+例如，以下命令只读取本地扫描和 guide spec，不访问云盘：
+
+```bash
+python3 '<skill-dir>/scripts/build_family_nav_inputs.py' \
+  --scan '<run-dir>/fresh-scan.jsonl' \
+  --guide-spec '<run-dir>/family-guides.json' \
+  --out-dir '<run-dir>/family-navigation-inputs' \
+  --url-prefix 'https://www.alipan.com/drive/file/all/backup/'
+```
+
 ## 运行命令
 
 查看自说明：
@@ -118,6 +147,7 @@ node '<skill-dir>/scripts/gen_family_nav_xlsx.mjs' \
   "output": "<absolute-output-path>",
   "rows": 12,
   "recalculated": true,
+  "verified": true,
   "previews": ["<qa-preview-1>", "<qa-preview-2>"]
 }
 ```
@@ -128,7 +158,7 @@ node '<skill-dir>/scripts/gen_family_nav_xlsx.mjs' \
 
 1. 完成云盘结构整理并独立复核终态。
 2. 从终态扫描生成 `navigation.json`。
-3. 生成并验证家庭导航 Excel。
+3. 生成并验证家庭导航 Excel。脚本会在写入两列 `HYPERLINK` 公式、导出（以及可选 `soffice` 重算）后，重新打开最终 `.xlsx`：只接受恰有 `01_先看这里` / `02_资源导航` 两张表、数据行数与输入一致、名称列和“打开云盘”列公式均引用该行输入 URL，且无公式错误的工作簿。
 4. 获得上传/覆盖授权后，把 Excel 上传到目标 `01_先看这里`。
 5. 独立复核云端 bytes、SHA1、`file_id` 和无重名副本。
 6. 再做分区终态扫描、OB 资源地图、全文检索与总索引 Excel。
@@ -150,7 +180,7 @@ node '<skill-dir>/scripts/gen_family_nav_xlsx.mjs' \
 - JSON 每个资源均来自终态盘点，名称、路径和 URL 对应同一实体。
 - `01_先看这里` 能在一分钟内回答“是什么、适合谁、怎么用、什么节奏”。
 - `02_资源导航` 可筛选，资源名称与打开列都可直达具体课程。
-- 公式错误扫描为 0；两张表均已渲染目检，长文本没有严重截断。
+- 导出后的最终 `.xlsx` 已重新打开验证：工作表恰为 `01_先看这里` / `02_资源导航`，数据行数匹配输入，名称列和“打开云盘”列均保留引用输入 URL 的 `HYPERLINK` 公式，公式错误扫描为 0；两张表均已渲染目检，长文本没有严重截断。
 - XLSX ZIP 完整性通过，`.inspect.ndjson` 未进入交付目录。
 - 使用 `soffice` 时，在线预览显示友好链接文字而不是公式源码。
 - 若已上传，远端 bytes/SHA1 与本地一致，目标目录无重名副本。
