@@ -92,7 +92,8 @@ python3 <本skill>/scripts/scan_drive.py --driveId <你的driveId> \
     --root /<分区A> --root /<分区B> --out <状态目录>/scan.jsonl \
     --workers 6 --resume [--no-descend 敏感目录名] \
     [--agg-prefix /<超大资源包路径> --agg-threshold 200]
-# 输出 <out> + <out>.errors + <out>.progress；被 kill 后加 --resume 接着扫。
+# 输出 <out> + <out>.errors + <out>.progress + <out>.done；被 kill 后加 --resume 接着扫。
+# <out>.done 逐行记录已完整列出的目录（续扫权威断点）；旧扫描无此文件时 --resume 自动从 JSONL 迁移。
 ```
 扫描器自身不读取外层 `eval` 注入的登录态，也绝不直接执行裸 `aliyunpan`：每一次 `ll` 都经同技能相邻的 `scripts/run_with_env.py` 启动。默认按扫描器所在目录动态定位；仅在调用方明确设置 `SOIA_ALIPAN_RUNNER` 时替换。runner 缺失会在创建扫描产出前明确失败，绝不降级为裸命令。
 **完整图书馆流水线**：`scan_drive.py`（实盘→JSONL，本 skill）→ `gen_catalog.py`（JSONL→折叠树总览+全文检索，alipan-curator skill）。扫描根自身不入 JSONL，其 file_id 用一份 `roots.json`（`{"/区":"file_id"}`，`aliyunpan ll <区>` 取根 id）传给 gen_catalog 的 `--roots`；整理挪动后另存移动日志 jsonl 传 `--moves`，无需重扫全盘即可刷新总览。
