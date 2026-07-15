@@ -1,6 +1,10 @@
 import importlib.util
+import json
+import os
+import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -126,6 +130,109 @@ class ScanDriveTests(unittest.TestCase):
                 },
             ],
         )
+
+
+    def test_resume_reenqueues_unscanned_frontier(self):
+        """Resume must rescan dirs discovered in the JSONL but never listed.
+
+        Interrupted state: "/root" and "/root/a" were both listed (their child
+        rows are in the JSONL, so both are in the derived done set), but the
+        grandchild dir "/root/a/b" was queued and never scanned. A naive resume
+        skips "/root/a" (in done) and so never rediscovers "/root/a/b" — the
+        whole subtree is silently lost with exit code 0.
+
+        Also covers the exclusions: no_descend dirs ("private") and aggregated
+        dirs (rows carrying "agg_files") must not be re-enqueued.
+        """
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            call_log = root / "calls.log"
+            call_log.write_text("", encoding="utf-8")
+            runner = root / "fake_runner.py"
+            runner.write_text(
+                textwrap.dedent(
+                    """
+                    import sys
+                    path = sys.argv[-1]
+                    with open(%r, "a") as f:
+                        f.write(path + "\\n")
+                    def row(idx, id_, sha, size, name):
+                        return (f"  {idx}  {id_}  -  {sha}  {size}  "
+                                f"2022-05-08 11:57:35  2022-05-08 11:57:35  {name}")
+                    lines = [f"当前目录: {path}", "----"]
+                    if path == "/root/a/b":
+                        lines.append(row(1, "f3", "ABC123", 7, "c.txt"))
+                    elif path == "/root":
+                        lines.append(row(1, "d1", "-", "-", "a/"))
+                        lines.append(row(2, "f1", "AA", 5, "x.txt"))
+                        lines.append(row(3, "d9", "-", "-", "private/"))
+                    elif path == "/root/a":
+                        lines.append(row(1, "d2", "-", "-", "b/"))
+                        lines.append(row(2, "f2", "BB", 6, "y.txt"))
+                        lines.append(row(3, "d3", "-", "-", "agg/"))
+                    lines.append("----")
+                    print("\\n".join(lines))
+                    """
+                ).strip()
+                % str(call_log)
+                + "\n",
+                encoding="utf-8",
+            )
+            output = root / "scan.jsonl"
+            interrupted = [
+                {"path": "/root", "name": "a", "id": "d1", "dir": True, "size": None, "sha1": None},
+                {"path": "/root", "name": "x.txt", "id": "f1", "dir": False, "size": 5, "sha1": "AA"},
+                {"path": "/root", "name": "private", "id": "d9", "dir": True, "size": None, "sha1": None},
+                {"path": "/root/a", "name": "b", "id": "d2", "dir": True, "size": None, "sha1": None},
+                {"path": "/root/a", "name": "y.txt", "id": "f2", "dir": False, "size": 6, "sha1": "BB"},
+                {"path": "/root/a", "name": "agg", "id": "d3", "dir": True, "size": None, "sha1": None},
+                {"path": "/root/a", "name": "agg", "id": None, "dir": True, "size": None,
+                 "agg_files": 5, "agg_size": 100},
+            ]
+            output.write_text(
+                "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in interrupted),
+                encoding="utf-8",
+            )
+
+            env = dict(os.environ, SOIA_ALIPAN_RUNNER=str(runner))
+            completed = subprocess.run(
+                [
+                    sys.executable, str(SCRIPT),
+                    "--driveId", "drive-1",
+                    "--root", "/root",
+                    "--out", str(output),
+                    "--workers", "1", "--attempts", "1",
+                    "--resume",
+                    "--no-descend", "private",
+                ],
+                check=False, capture_output=True, text=True, env=env,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+
+            # (a) exactly one ll call, for the lost frontier dir — done dirs,
+            # no_descend dirs and aggregated dirs must not be re-listed
+            calls = [
+                l for l in call_log.read_text(encoding="utf-8").splitlines() if l.strip()
+            ]
+            self.assertEqual(
+                calls, ["/root/a/b"],
+                f"Expected exactly one call for '/root/a/b', got: {calls}",
+            )
+
+            # (b) the rescued subtree's content is now in the output
+            lines = output.read_text(encoding="utf-8").splitlines()
+            rows = [json.loads(l) for l in lines]
+            self.assertIn(
+                ("/root/a/b", "c.txt"),
+                [(r.get("path"), r.get("name")) for r in rows],
+                f"c.txt missing from resumed output: {rows}",
+            )
+
+            # (c) nothing was re-emitted: exactly one new line
+            self.assertEqual(
+                len(lines), len(interrupted) + 1,
+                f"resume duplicated rows: before={len(interrupted)} after={len(lines)}",
+            )
 
 
 if __name__ == "__main__":

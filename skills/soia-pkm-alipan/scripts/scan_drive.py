@@ -127,11 +127,19 @@ def main():
     runner = require_alipan_runner()
     err_p, prog_p = a.out + '.errors', a.out + '.progress'
 
-    done = set()
+    # resume 重建：done=已列出过的目录(有子行为证)；dirseen=所有已发现的子目录；aggdone=聚合目录(故意不下钻)。
+    # 前沿 = dirseen - done - aggdone：已发现但从未列出的目录，必须重新入队，否则整棵子树静默丢失。
+    done, dirseen, aggdone = set(), set(), set()
     if a.resume and os.path.exists(a.out):
         for line in open(a.out):
-            try: done.add(json.loads(line).get('path'))
-            except: pass
+            try: o = json.loads(line)
+            except: continue                                 # 撕裂行：其父目录必不在 done，会被重扫补回
+            if not isinstance(o, dict): continue
+            done.add(o.get('path'))
+            if not o.get('dir') or not o.get('name'): continue
+            dp = str(o.get('path')) + '/' + str(o.get('name'))   # 与 worker 里 dpath 拼法一致
+            if 'agg_files' in o: aggdone.add(dp)             # 聚合行：该目录已按聚合语义记账，不重列
+            elif o.get('name') not in a.no_descend: dirseen.add(dp)
 
     lock = threading.Lock()
     jf = open(a.out, 'a'); ef = open(err_p, 'a')
@@ -161,6 +169,7 @@ def main():
         while True:
             try: path, depth, inagg = tq.get(timeout=2)
             except queue.Empty: return
+            if path in done: tq.task_done(); continue        # 已列出过的目录不重列、不重发子行
             try:
                 with lock:
                     open(prog_p, 'w').write(
@@ -192,7 +201,17 @@ def main():
             finally:
                 tq.task_done()
 
-    for r in a.roots: tq.put((r.rstrip('/'), 0, False))
+    for r in a.roots:
+        rp = r.rstrip('/')
+        if a.resume and rp in done: continue                 # 该根上次已列出，其子树由下面的前沿重建接管
+        tq.put((rp, 0, False))
+    if a.resume:
+        rootps = sorted({r.rstrip('/') for r in a.roots}, key=len, reverse=True)
+        for p in sorted(dirseen - done - aggdone):
+            rp = next((r for r in rootps if p.startswith(r + '/')), None)
+            if rp is None: continue                          # 不在当前 roots 之下的历史行不入队
+            inagg = bool(a.agg_prefix) and (p == a.agg_prefix or p.startswith(a.agg_prefix + '/'))
+            tq.put((p, p[len(rp):].count('/'), inagg))       # 深度=相对所属根的路径段数(根=0)
     ts = [threading.Thread(target=worker, daemon=True) for _ in range(a.workers)]
     for t in ts: t.start()
     tq.join()

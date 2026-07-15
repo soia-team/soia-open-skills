@@ -136,6 +136,33 @@ def main() -> int:
         with open(done_path, encoding="utf-8") as stream:
             done.update(line.strip() for line in stream if line.strip())
 
+    # Rebuild the scan frontier from the existing JSONL: directories that were
+    # discovered (emitted by a parent listing) but never themselves listed
+    # (absent from the done file). Without this, resume silently drops whole
+    # subtrees whose parent finished but which were still queued when the
+    # previous run was interrupted.
+    frontier: set[str] = set()
+    if args.resume and os.path.exists(args.out):
+        with open(args.out, encoding="utf-8") as stream:
+            for line in stream:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    # A torn write implies its parent dir never reached the
+                    # done file, so that parent will be rescanned anyway.
+                    continue
+                if not isinstance(row, dict) or not row.get("dir"):
+                    continue
+                name = str(row.get("name") or "")
+                if not name or name in args.no_descend:
+                    continue
+                remote_path = join_remote(str(row.get("path") or "/"), name)
+                if remote_path not in done:
+                    frontier.add(remote_path)
+
     lock = threading.Lock()
     output = open(args.out, "a", encoding="utf-8")
     errors = open(error_path, "a", encoding="utf-8")
@@ -199,6 +226,9 @@ def main() -> int:
                 path = tasks.get(timeout=2)
             except queue.Empty:
                 return
+            if path in done:
+                tasks.task_done()
+                continue
             try:
                 with lock:
                     with open(progress_path, "w", encoding="utf-8") as progress:
@@ -231,9 +261,9 @@ def main() -> int:
             finally:
                 tasks.task_done()
 
-    for root in roots:
-        if root not in done:
-            tasks.put(root)
+    seeds = {root for root in roots if root not in done} | frontier
+    for seed in sorted(seeds):
+        tasks.put(seed)
     threads = [threading.Thread(target=worker, daemon=True) for _ in range(args.workers)]
     for thread in threads:
         thread.start()
