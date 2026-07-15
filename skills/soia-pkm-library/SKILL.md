@@ -1,6 +1,11 @@
 ---
 name: soia-pkm-library
 description: 维护 Obsidian 书库（图书馆书目 + 阅读记录）——同步微信读书已读书目与划线、补单本书详情、补建待读记录、重新生成图书馆总览/阅读记录总览/按类型总览三份 markdown 视图。底层是 7 个机械脚本（幂等、可重复跑），参数化支持任意 vault 路径与分类表。Triggers：「同步微信读书」「同步划线」「重新生成图书馆总览」「更新阅读记录总览」「补建待读记录」「补一下这本书的详情」「书库整理」
+dependencies:
+  external:
+    - name: weread-skills
+      required: true
+      install: "npx skills add Tencent/WeChatReading -g -y"
 ---
 
 # soia-pkm-library
