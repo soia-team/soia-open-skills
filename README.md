@@ -50,6 +50,7 @@ npx skills add soia-team/soia-open-skills
         soia-pkm-reading-plan（读书线：把书单排成可执行阅读计划）
         soia-pkm-library（书库线：微信读书同步 + 记录补齐 + 总览生成）
         soia-pkm-alipan（云盘线·原子层：aliyunpan CLI 可靠原子操作）
+        soia-pkm-baidupan（云盘线·原子层：百度官方 baidu-drive / bdpan）
         soia-pkm-alipan-curator（云盘线·顾问层：盘点/整理/索引/学习计划）
         soia-dev-archify-diagrams（文档图表线：Archify JSON IR → README/docs PNG 图）
         soia-dev-github-ops / soia-dev-ai-cli-upgrade（公共开发工具线）
@@ -122,6 +123,7 @@ npx skills add soia-team/soia-open-skills
 | [`soia-pkm-library`](./skills/soia-pkm-library/) | 维护书库：微信读书同步（书目/划线）+ 补书详情 + 补待读记录 + 生成图书馆/阅读记录/分类三份总览 | ✅ 可用（7 个机械脚本，幂等可重复跑）| 同步类脚本强依赖官方 `weread-skills` + `WEREAD_API_KEY`；本地总览脚本只依赖 vault |
 | [`soia-pkm-maintain`](./skills/soia-pkm-maintain/) | vault 周维护、全库地图重生成、AI 会话日志接入 | ✅ 可用（Python stdlib / bash 脚本）| Obsidian vault，`--vault <path>` 或 `OBSIDIAN_VAULT` |
 | [`soia-pkm-alipan`](./skills/soia-pkm-alipan/) | 阿里云盘原子操作层：登录/双盘切换/浏览/移动/重命名/上传下载/容量查询，含输出解析与安全守则 | ✅ 可用（无需脚本，直接驱动 `aliyunpan` CLI）| `aliyunpan` CLI（brew 安装 + 扫码登录）|
+| [`soia-pkm-baidupan`](./skills/soia-pkm-baidupan/) | 百度网盘原子操作层：基于官方 `baidu-drive` Skill / `bdpan` CLI 的登录、浏览、搜索、传输、文件管理与只读 JSONL 扫描 | ✅ 可用（官方 Skill 为默认依赖；附扫描器和安全守则）| 百度官方 `baidu-drive` Skill；`bdpan` CLI |
 | [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | 云盘资源顾问：盘点核对（inventory）/规范整理（organize）/OB 索引与两类 Excel（catalog）/学习计划（plan）| ✅ 可用（分区缓存式总索引 + 家庭课程导航）| `soia-pkm-alipan`（原子层）；Excel 需宿主 `@oai/artifact-tool` |
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify 图表工作流：架构图 / 数据流 / 工作流 / 时序 / 生命周期图，维护 JSON IR 并导出 README/docs PNG | ✅ 可用（脚本齐全；需本机可用 Archify）| `ARCHIFY_BIN` 或 `ARCHIFY_ROOT`，可选 Playwright/Chrome 导出 PNG |
 | [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release，默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY` |
@@ -392,7 +394,7 @@ soia-open-skills/
     ├── soia-pkm-transform/    ├── soia-pkm-bootstrap/
     ├── soia-pkm-reading-plan/ ├── soia-pkm-library/
     ├── soia-pkm-maintain/     ├── soia-pkm-alipan/
-    ├── soia-pkm-alipan-curator/
+    ├── soia-pkm-baidupan/      ├── soia-pkm-alipan-curator/
     ├── soia-pkm-translate/    ├── soia-pkm-interpret/
     ├── soia-pkm-cover-image/
     ├── soia-dev-archify-diagrams/
