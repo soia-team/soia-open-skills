@@ -1,0 +1,8 @@
+# Repository maintainer. Add a team or additional owner after confirming its
+# GitHub handle.
+* @mianba
+
+/.github/ @mianba
+/scripts/ @mianba
+/SKILL_SPEC.md @mianba
+/templates/ @mianba
