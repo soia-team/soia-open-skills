@@ -235,5 +235,171 @@ class ScanDriveTests(unittest.TestCase):
             )
 
 
+    def test_resume_rescans_torn_directory_with_sidecar(self):
+        """With a done sidecar, a torn directory listing must be rescanned.
+
+        New-format interrupted state: the sidecar records only "/root" as fully
+        listed. The JSONL contains root's complete listing plus a PARTIAL
+        listing of "/root/d" (d has two children but only one row was written
+        before the kill). The JSONL heuristic would wrongly treat "/root/d" as
+        done; the sidecar is authoritative and says it is not — so resume must
+        re-list it and recover the missing child row.
+        """
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            call_log = root / "calls.log"
+            call_log.write_text("", encoding="utf-8")
+            runner = root / "fake_runner.py"
+            runner.write_text(
+                textwrap.dedent(
+                    """
+                    import sys
+                    path = sys.argv[-1]
+                    with open(%r, "a") as f:
+                        f.write(path + "\\n")
+                    def row(idx, id_, sha, size, name):
+                        return (f"  {idx}  {id_}  -  {sha}  {size}  "
+                                f"2022-05-08 11:57:35  2022-05-08 11:57:35  {name}")
+                    lines = [f"当前目录: {path}", "----"]
+                    if path == "/root/d":
+                        lines.append(row(1, "f2", "PP", 3, "p.txt"))
+                        lines.append(row(2, "f3", "QQ", 4, "q.txt"))
+                    elif path == "/root":
+                        lines.append(row(1, "d1", "-", "-", "d/"))
+                        lines.append(row(2, "f1", "AA", 5, "x.txt"))
+                    lines.append("----")
+                    print("\\n".join(lines))
+                    """
+                ).strip()
+                % str(call_log)
+                + "\n",
+                encoding="utf-8",
+            )
+            output = root / "scan.jsonl"
+            torn_state = [
+                {"path": "/root", "name": "d", "id": "d1", "dir": True, "size": None, "sha1": None},
+                {"path": "/root", "name": "x.txt", "id": "f1", "dir": False, "size": 5, "sha1": "AA"},
+                # torn: /root/d has two children, only one row made it to disk
+                {"path": "/root/d", "name": "p.txt", "id": "f2", "dir": False, "size": 3, "sha1": "PP"},
+            ]
+            output.write_text(
+                "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in torn_state),
+                encoding="utf-8",
+            )
+            sidecar = root / "scan.jsonl.done"
+            sidecar.write_text("/root\n", encoding="utf-8")
+
+            env = dict(os.environ, SOIA_ALIPAN_RUNNER=str(runner))
+            completed = subprocess.run(
+                [
+                    sys.executable, str(SCRIPT),
+                    "--driveId", "drive-1",
+                    "--root", "/root",
+                    "--out", str(output),
+                    "--workers", "1", "--attempts", "1",
+                    "--resume",
+                ],
+                check=False, capture_output=True, text=True, env=env,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+
+            # (a) the torn dir is re-listed, and only it
+            calls = [
+                l for l in call_log.read_text(encoding="utf-8").splitlines() if l.strip()
+            ]
+            self.assertEqual(
+                calls, ["/root/d"],
+                f"Expected exactly one call for the torn dir '/root/d', got: {calls}",
+            )
+
+            # (b) the child row lost in the tear is recovered
+            rows = [json.loads(l) for l in output.read_text(encoding="utf-8").splitlines()]
+            self.assertIn(
+                ("/root/d", "q.txt"),
+                [(r.get("path"), r.get("name")) for r in rows],
+                f"q.txt not recovered after resume: {rows}",
+            )
+
+            # (c) the sidecar now records the torn dir as fully listed
+            done_after = sidecar.read_text(encoding="utf-8").splitlines()
+            self.assertIn("/root/d", done_after, f"'/root/d' missing from sidecar: {done_after}")
+
+
+    def test_resume_seeds_sidecar_for_legacy_scans(self):
+        """Resuming a legacy scan (no sidecar) migrates the heuristic done set.
+
+        The heuristic done set derived from the JSONL must be written to a
+        newly created sidecar, and the resume behavior itself must match the
+        legacy frontier semantics (discovered-but-unlisted dirs are rescanned).
+        """
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            call_log = root / "calls.log"
+            call_log.write_text("", encoding="utf-8")
+            runner = root / "fake_runner.py"
+            runner.write_text(
+                textwrap.dedent(
+                    """
+                    import sys
+                    path = sys.argv[-1]
+                    with open(%r, "a") as f:
+                        f.write(path + "\\n")
+                    def row(idx, id_, sha, size, name):
+                        return (f"  {idx}  {id_}  -  {sha}  {size}  "
+                                f"2022-05-08 11:57:35  2022-05-08 11:57:35  {name}")
+                    lines = [f"当前目录: {path}", "----"]
+                    if path == "/root/a":
+                        lines.append(row(1, "f2", "YY", 6, "y.txt"))
+                    lines.append("----")
+                    print("\\n".join(lines))
+                    """
+                ).strip()
+                % str(call_log)
+                + "\n",
+                encoding="utf-8",
+            )
+            output = root / "scan.jsonl"
+            legacy_state = [
+                {"path": "/root", "name": "a", "id": "d1", "dir": True, "size": None, "sha1": None},
+                {"path": "/root", "name": "x.txt", "id": "f1", "dir": False, "size": 5, "sha1": "AA"},
+            ]
+            output.write_text(
+                "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in legacy_state),
+                encoding="utf-8",
+            )
+            sidecar = root / "scan.jsonl.done"
+            self.assertFalse(sidecar.exists())
+
+            env = dict(os.environ, SOIA_ALIPAN_RUNNER=str(runner))
+            completed = subprocess.run(
+                [
+                    sys.executable, str(SCRIPT),
+                    "--driveId", "drive-1",
+                    "--root", "/root",
+                    "--out", str(output),
+                    "--workers", "1", "--attempts", "1",
+                    "--resume",
+                ],
+                check=False, capture_output=True, text=True, env=env,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+
+            # behavior matches legacy frontier semantics: only "/root/a" rescanned
+            calls = [
+                l for l in call_log.read_text(encoding="utf-8").splitlines() if l.strip()
+            ]
+            self.assertEqual(calls, ["/root/a"], f"Expected exactly ['/root/a'], got: {calls}")
+
+            # sidecar created: heuristic done ("/root") seeded + new completion ("/root/a")
+            self.assertTrue(sidecar.exists(), "sidecar was not created on legacy resume")
+            done_after = {
+                l for l in sidecar.read_text(encoding="utf-8").splitlines() if l.strip()
+            }
+            self.assertEqual(
+                done_after, {"/root", "/root/a"},
+                f"sidecar should hold seeded + new completions, got: {done_after}",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

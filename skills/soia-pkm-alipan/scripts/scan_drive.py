@@ -14,7 +14,8 @@
    "size": <字节或null>, "sha1": <文件SHA-1或null>}
    [, "agg_files": N, "agg_size": 字节]}   # 聚合行：碎片区某目录只记文件数/总大小不逐列
 扫描根自身不入 JSONL（其 file_id 另用 roots.json 提供给 gen_catalog）。
-错误/进度写 <out>.errors / <out>.progress。被 kill 后加 --resume 重跑接着扫。
+错误/进度写 <out>.errors / <out>.progress；已完整列出的目录逐行记入 <out>.done(断点续扫的权威依据，
+旧格式扫描无此文件时退回 JSONL 启发式并自动迁移)。被 kill 后加 --resume 重跑接着扫。
 """
 import argparse, json, os, queue, subprocess, sys, threading, time
 from pathlib import Path
@@ -125,24 +126,34 @@ def main():
     ap.add_argument('--agg-min-depth', type=int, default=3, help='相对扫描根的深度(根=0)')
     a = ap.parse_args()
     runner = require_alipan_runner()
-    err_p, prog_p = a.out + '.errors', a.out + '.progress'
+    err_p, prog_p, done_p = a.out + '.errors', a.out + '.progress', a.out + '.done'
 
-    # resume 重建：done=已列出过的目录(有子行为证)；dirseen=所有已发现的子目录；aggdone=聚合目录(故意不下钻)。
-    # 前沿 = dirseen - done - aggdone：已发现但从未列出的目录，必须重新入队，否则整棵子树静默丢失。
+    # resume 重建：done=已完整列出的目录；dirseen=所有已发现的子目录；aggdone=聚合目录(故意不下钻)。
+    # done 权威来源是 <out>.done sidecar(一行一目录，目录全部 emit+入队后才落盘)；无 sidecar 的旧格式
+    # 扫描退回 JSONL 启发式(path 出现过≈列出过，撕裂列表不可辨)，并把启发式结果一次性写入新建
+    # sidecar 完成迁移。前沿 = dirseen - done - aggdone：已发现但从未列出的目录必须重新入队。
     done, dirseen, aggdone = set(), set(), set()
+    has_sidecar = os.path.exists(done_p)
+    if a.resume and has_sidecar:
+        for line in open(done_p):
+            p = line.rstrip('\n')                            # 只去换行：目录名可含首尾空格
+            if p: done.add(p)
     if a.resume and os.path.exists(a.out):
         for line in open(a.out):
             try: o = json.loads(line)
             except: continue                                 # 撕裂行：其父目录必不在 done，会被重扫补回
             if not isinstance(o, dict): continue
-            done.add(o.get('path'))
+            if not has_sidecar: done.add(o.get('path'))      # 旧格式启发式：发过子行≈列出过
             if not o.get('dir') or not o.get('name'): continue
             dp = str(o.get('path')) + '/' + str(o.get('name'))   # 与 worker 里 dpath 拼法一致
             if 'agg_files' in o: aggdone.add(dp)             # 聚合行：该目录已按聚合语义记账，不重列
             elif o.get('name') not in a.no_descend: dirseen.add(dp)
+    if a.resume and not has_sidecar and done:
+        with open(done_p, 'w') as seed:                      # 迁移种子：启发式 done 落盘，此后以 sidecar 为准
+            seed.writelines(p + '\n' for p in sorted(x for x in done if isinstance(x, str)))
 
     lock = threading.Lock()
-    jf = open(a.out, 'a'); ef = open(err_p, 'a')
+    jf = open(a.out, 'a'); ef = open(err_p, 'a'); df = open(done_p, 'a')
     cnt = {'dirs': 0, 'files': 0, 'agg': 0, 'errors': 0, 'calls': 0}
     tq = queue.Queue()
 
@@ -198,6 +209,7 @@ def main():
                     dpath = path + '/' + d['name']
                     if a.resume and dpath in done: continue          # 断点续扫：已扫过的跳过
                     tq.put((dpath, depth + 1, nowagg))
+                with lock: df.write(path + '\n'); df.flush() # 该目录全部 emit+入队完毕，落盘断点(空目录也记)
             finally:
                 tq.task_done()
 
@@ -215,7 +227,7 @@ def main():
     ts = [threading.Thread(target=worker, daemon=True) for _ in range(a.workers)]
     for t in ts: t.start()
     tq.join()
-    jf.close(); ef.close()
+    jf.close(); ef.close(); df.close()
     print(f"DONE dirs={cnt['dirs']} files={cnt['files']} agg={cnt['agg']} errors={cnt['errors']} calls={cnt['calls']}")
 
 if __name__ == '__main__': main()
