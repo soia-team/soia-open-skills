@@ -1,6 +1,14 @@
 ---
 name: soia-pkm-bootstrap
 description: 初始化 AI-native Obsidian PKM：创建 PARA 目录、AGENTS 规则、模板、Bases、CSS、多 AI 入口，并接入 soia-pkm-* 闭环技能。Triggers：「初始化知识库」「从零建 vault」「bootstrap AI 知识库」「搭 Obsidian 知识库」「新建 PKM 库」
+dependencies:
+  external:
+    - name: weread-skills
+      required: false
+      install: TBD # GitHub 仓库，可用 npx skills add 安装；确切 repo 待补
+    - name: huashu-weread-advisor
+      required: false
+      install: TBD # GitHub 仓库，可用 npx skills add 安装；确切 repo 待补
 ---
 
 # soia-pkm-bootstrap

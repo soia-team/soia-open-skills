@@ -1,6 +1,14 @@
 ---
 name: soia-pkm-reading-plan
 description: 场景化阅读计划生成器。把一批书（来自文章书单、观点映射或主题）组织成带表格、按真实字数排期的可执行阅读计划，落地成 Obsidian 笔记。可选用 weread-skills 增强字数/评分/书架核实，缺少时降级估算；可选参考 huashu-weread-advisor 方法论但不依赖它。当用户说「做个读书计划」「按 XX 场景排个计划」「把这篇文章的书单排成计划」「这篇文章的观点对应哪些书」「帮我规划下半年读什么」时触发。
+dependencies:
+  external:
+    - name: weread-skills
+      required: false
+      install: TBD # GitHub 仓库，可用 npx skills add 安装；确切 repo 待补
+    - name: huashu-weread-advisor
+      required: false
+      install: TBD # GitHub 仓库，可用 npx skills add 安装；确切 repo 待补
 ---
 
 # soia-pkm-reading-plan

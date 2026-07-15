@@ -13,7 +13,8 @@ from pathlib import Path
 import yaml
 
 
-ALLOWED_FRONTMATTER = {"name", "description"}
+ALLOWED_FRONTMATTER = {"name", "description", "dependencies"}
+DEPENDENCY_KEYS = {"hard", "optional", "external"}
 MAX_SKILL_LINES = 500
 DISALLOWED_SKILL_DOCS = {
     "README.md",
@@ -178,6 +179,31 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
     extras = sorted(set(fm) - ALLOWED_FRONTMATTER)
     if extras:
         findings.append(Finding("WARN", rel(skill_md, root), f"extra frontmatter fields: {', '.join(extras)}"))
+
+    deps = fm.get("dependencies")
+    if deps is not None:
+        if not isinstance(deps, dict) or not set(deps) <= DEPENDENCY_KEYS:
+            findings.append(
+                Finding("ERROR", rel(skill_md, root), "dependencies must be a mapping with only hard/optional/external keys")
+            )
+        else:
+            for key in ("hard", "optional"):
+                names = deps.get(key)
+                if names is not None and not (
+                    isinstance(names, list) and names and all(isinstance(n, str) and n for n in names)
+                ):
+                    findings.append(
+                        Finding("ERROR", rel(skill_md, root), f"dependencies.{key} must be a non-empty list of skill names")
+                    )
+            externals = deps.get("external")
+            if externals is not None and not (
+                isinstance(externals, list)
+                and externals
+                and all(isinstance(e, dict) and isinstance(e.get("name"), str) and e["name"] for e in externals)
+            ):
+                findings.append(
+                    Finding("ERROR", rel(skill_md, root), "dependencies.external must be a non-empty list of mappings with a string name")
+                )
 
     for label, markers in CUSTOMER_READABLE_RULES:
         if not any(marker in text for marker in markers):

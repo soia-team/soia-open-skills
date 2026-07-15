@@ -95,6 +95,33 @@ Required customer-facing markers:
 Required workflow instructions must still live in `SKILL.md`; do not hide them in
 `agents/openai.yaml`, README files, or private notes.
 
+### Machine-readable dependencies (frontmatter)
+
+Skills with install-level relationships must declare them machine-readably in
+`SKILL.md` frontmatter, in addition to the prose `依赖与安装` section:
+
+```yaml
+dependencies:
+  hard: [soia-pkm-alipan]          # cannot run without; sync tools auto-include
+  optional: [soia-pkm-organize]    # enhances, degrades gracefully; never auto-installed
+  external:                        # skills outside the SOIA repos; declare install only
+    - name: weread-skills
+      required: true               # true = core workflows stop without it
+      install: TBD                 # customer-copyable install command
+```
+
+Rules:
+
+- `hard` / `optional` list SOIA-managed skill names only (published from
+  soia-open-skills or soia-private-skills).
+- `hard` means the core workflow cannot complete without the dependency;
+  `soia-dev-sync-skills` expands the transitive hard closure on single-skill
+  sync and warns when a hard dependency is missing from the shared source.
+- `optional` and `external` are never auto-installed: at runtime the agent
+  detects the gap, degrades, and reminds the customer with the install command.
+- Declare only real install-level dependencies. Pipeline neighbors,
+  routing-table references, and prose mentions stay out of `dependencies`.
+
 ### 1. No hardcoded personal paths
 
 Do not hardcode maintainer-specific or vault-specific paths in scripts, `SKILL.md`, examples, or config templates.
