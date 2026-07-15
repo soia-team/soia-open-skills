@@ -195,6 +195,131 @@ cleanup_agy_install_tmp() {
 }
 trap cleanup_agy_install_tmp EXIT
 
+# Detect how claude was installed so the right upgrade command is used.
+# Returns one of: native | npm | brew | desktop | unknown
+detect_claude_method() {
+  local bin="$1"
+  local link_target
+  link_target="$(readlink "$bin" 2>/dev/null || true)"
+
+  # Desktop app — Application Support/Claude/claude-code/
+  case "$bin" in
+    *"/Application Support/Claude/"*) printf 'desktop'; return ;;
+  esac
+  case "$link_target" in
+    *"/Application Support/Claude/"*) printf 'desktop'; return ;;
+  esac
+
+  # Native install — symlink points into ~/.local/share/claude/versions/
+  case "$link_target" in
+    *"/.local/share/claude/"*) printf 'native'; return ;;
+  esac
+  case "$bin" in
+    "$HOME"/.local/share/claude/*) printf 'native'; return ;;
+  esac
+
+  # npm install — binary under npm prefix or symlink through node_modules
+  case "$bin" in
+    "$npm_prefix"/*) printf 'npm'; return ;;
+  esac
+  case "$link_target" in
+    *"/node_modules/"*) printf 'npm'; return ;;
+  esac
+
+  # Homebrew cask — check brew list before falling through
+  if command -v brew >/dev/null 2>&1; then
+    if brew list --cask claude-code@latest >/dev/null 2>&1 || \
+       brew list --cask claude-code >/dev/null 2>&1; then
+      printf 'brew'; return
+    fi
+  fi
+
+  # Unknown — fall back to native update command (current official default)
+  printf 'unknown'
+}
+
+# Return the installed brew cask name for claude-code, or exit 1 if not found.
+detect_brew_claude_cask() {
+  command -v brew >/dev/null 2>&1 || return 1
+  if brew list --cask claude-code@latest >/dev/null 2>&1; then
+    printf 'claude-code@latest'
+  elif brew list --cask claude-code >/dev/null 2>&1; then
+    printf 'claude-code'
+  else
+    return 1
+  fi
+}
+
+# Returns 0 if the binary was installed via npm (under npm prefix or symlink
+# through node_modules), 1 otherwise.
+is_npm_install() {
+  local bin="$1"
+  local link_target
+  link_target="$(readlink "$bin" 2>/dev/null || true)"
+  case "$bin" in
+    "$npm_prefix"/*) return 0 ;;
+  esac
+  case "$link_target" in
+    *"/node_modules/"*) return 0 ;;
+  esac
+  return 1
+}
+
+# Returns a non-empty recommendation string when the binary's install method
+# differs from the tool's officially recommended one; empty otherwise.
+recommend_install_note() {
+  local tool="$1" bin="$2"
+  case "$tool" in
+    codex)
+      is_npm_install "$bin" && \
+        printf 'npm detected (legacy); recommend: native curl installer (curl -fsSL https://chatgpt.com/codex/install.sh | sh)'
+      ;;
+    qwen)
+      is_npm_install "$bin" && \
+        printf 'npm detected; recommend: native curl installer'
+      ;;
+    opencode)
+      is_npm_install "$bin" && \
+        printf 'npm detected; recommend: native curl installer (curl -fsSL https://opencode.ai/install | bash)'
+      ;;
+    kimi)
+      is_npm_install "$bin" && \
+        printf 'npm detected; recommend: brew install kimi-code'
+      ;;
+    claude)
+      [[ "$(detect_claude_method "$bin")" == "npm" ]] && \
+        printf 'npm detected (legacy); recommend: native installer (claude.ai/download)'
+      ;;
+  esac
+  return 0
+}
+
+# Detect if a binary was installed via a Homebrew formula by checking whether
+# its resolved path runs through the Homebrew Cellar.
+# Prints the formula name and returns 0 on success, returns 1 otherwise.
+# Does NOT handle casks (no Cellar path); use brew list --cask for those.
+detect_brew_formula_from_bin() {
+  local bin="$1"
+  command -v brew >/dev/null 2>&1 || return 1
+
+  local link_target homebrew_prefix
+  link_target="$(readlink "$bin" 2>/dev/null || true)"
+  homebrew_prefix="$(brew --prefix 2>/dev/null)" || return 1
+
+  local check formula
+  for check in "$link_target" "$bin"; do
+    [[ -z "$check" ]] && continue
+    case "$check" in
+      "$homebrew_prefix"/Cellar/*)
+        formula="${check#"$homebrew_prefix/Cellar/"}"
+        formula="${formula%%/*}"
+        [[ -n "$formula" ]] && printf '%s' "$formula" && return 0
+        ;;
+    esac
+  done
+  return 1
+}
+
 install_agy() {
   local installer_url="https://antigravity.google/cli/install.sh"
   local installer_file staging_home
@@ -254,7 +379,7 @@ upgrade_tool() {
     agy)      cmd="agy" ;;
     qwen)     cmd="qwen";     package="@qwen-code/qwen-code" ;;
     mmx)      cmd="mmx";      package="mmx-cli" ;;
-    kimi)     cmd="kimi" ;;
+    kimi)     cmd="kimi";     package="@moonshot-ai/kimi-code" ;;
     opencode) cmd="opencode"; package="opencode-ai" ;;
     qodercli) cmd="qodercli" ;;
     cursor)   cmd="cursor" ;;
@@ -295,41 +420,110 @@ upgrade_tool() {
 
   local old_version new_version status note
   old_version="$(get_version "$bin")"
+  local _rec_note
+  _rec_note="$(recommend_install_note "$tool" "$bin")"
 
   if [[ "$dry_run" == "1" ]]; then
-    print_result "$tool" "$cmd" "$old_version" "N/A" "SKIP_DRY_RUN" "$(binary_note "$tool" "$cmd" "$bin"); no upgrade"
+    local _dry_note
+    _dry_note="$(binary_note "$tool" "$cmd" "$bin"); no upgrade"
+    [[ -n "$_rec_note" ]] && _dry_note="$_dry_note; $_rec_note"
+    print_result "$tool" "$cmd" "$old_version" "N/A" "SKIP_DRY_RUN" "$_dry_note"
     return
   fi
 
   case "$tool" in
-    codex|claude|gemini|qwen|mmx|opencode)
-      if ! ensure_npm; then
-        print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" "npm not found for $package"
+    codex|mmx)
+      # Self-update handles native, brew cask, and npm automatically (per official docs)
+      if ! "$bin" update >>"$log_file" 2>&1; then
+        print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+          "$cmd update failed; path=$bin"
         return
       fi
-      if ! "${NPM_ENV[@]}" "$NPM_BIN" install -g --prefix "$npm_prefix" "$package" >>"$log_file" 2>&1; then
-        print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" "npm install -g $package failed"
-        return
+      ;;
+    gemini|qwen|opencode|kimi)
+      local brew_formula=""
+      brew_formula="$(detect_brew_formula_from_bin "$bin")" || true
+      if [[ -n "$brew_formula" ]]; then
+        brew upgrade "$brew_formula" >>"$log_file" 2>&1 || true
+      elif is_npm_install "$bin"; then
+        if ! ensure_npm; then
+          print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" "npm not found for $package"
+          return
+        fi
+        if ! "${NPM_ENV[@]}" "$NPM_BIN" install -g --prefix "$npm_prefix" \
+          "$package" >>"$log_file" 2>&1; then
+          print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+            "npm install -g $package failed"
+          return
+        fi
+      else
+        # Standalone/native install
+        case "$tool" in
+          gemini|qwen)
+            if ! "$bin" update >>"$log_file" 2>&1; then
+              print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+                "$cmd update failed; path=$bin"
+              return
+            fi
+            ;;
+          kimi)
+            if ! "$bin" upgrade >>"$log_file" 2>&1; then
+              print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+                "kimi upgrade failed; path=$bin"
+              return
+            fi
+            ;;
+          opencode)
+            print_result "$tool" "$cmd" "$old_version" "$old_version" "MANUAL" \
+              "native install; re-run: curl -fsSL https://opencode.ai/install | bash; path=$bin"
+            return
+            ;;
+        esac
       fi
+      ;;
+    claude)
+      local install_method cask
+      install_method="$(detect_claude_method "$bin")"
+      case "$install_method" in
+        native|unknown)
+          if ! "$bin" update >>"$log_file" 2>&1; then
+            print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+              "claude update failed; path=$bin"
+            return
+          fi
+          ;;
+        brew)
+          if ! cask="$(detect_brew_claude_cask)"; then
+            print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+              "brew cask detection failed; path=$bin"
+            return
+          fi
+          brew upgrade --cask "$cask" >>"$log_file" 2>&1 || true
+          ;;
+        npm)
+          if ! ensure_npm; then
+            print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+              "npm not found for $package"
+            return
+          fi
+          if ! "${NPM_ENV[@]}" "$NPM_BIN" install -g --prefix "$npm_prefix" \
+            "$package" >>"$log_file" 2>&1; then
+            print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+              "npm install -g $package failed"
+            return
+          fi
+          ;;
+        desktop)
+          print_result "$tool" "$cmd" "$old_version" "$old_version" "MANUAL" \
+            "Desktop-managed; update via Claude Desktop app; path=$bin"
+          return
+          ;;
+      esac
       ;;
     agy)
       if ! "$bin" update >>"$log_file" 2>&1; then
         print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" "agy update failed; path=$bin"
         return
-      fi
-      ;;
-    kimi)
-      # kimi 已从 Python(uv kimi-cli) 迁移到 brew 的 kimi-code（TS 单二进制，命令仍叫 kimi）2026-06-16
-      if ! command -v brew >/dev/null 2>&1; then
-        print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" "brew not installed"
-        return
-      fi
-      brew upgrade kimi-code >>"$log_file" 2>&1 || true   # 已最新时 brew 返回非0，不算失败
-      if ! brew list kimi-code >/dev/null 2>&1; then
-        if ! brew install kimi-code >>"$log_file" 2>&1; then
-          print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" "brew install/upgrade kimi-code failed"
-          return
-        fi
       fi
       ;;
     qodercli)
@@ -374,6 +568,7 @@ upgrade_tool() {
       note="update complete; $(binary_note "$tool" "$cmd" "$bin")"
     fi
   fi
+  [[ -n "$_rec_note" ]] && note="$note; $_rec_note"
 
   print_result "$tool" "$cmd" "$old_version" "$new_version" "$status" "$note"
 }

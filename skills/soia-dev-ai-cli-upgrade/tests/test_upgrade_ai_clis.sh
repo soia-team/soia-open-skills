@@ -74,6 +74,30 @@ SH
   chmod +x "$bin_dir/agy"
 }
 
+make_fake_claude() {
+  local bin_path="$1"
+  mkdir -p "$(dirname "$bin_path")"
+  cat >"$bin_path" <<'SH'
+#!/usr/bin/env bash
+case "${1:-}" in
+  --version|version)
+    cat "$FAKE_CLAUDE_STATE"
+    ;;
+  update)
+    printf 'update\n' >>"$FAKE_CLAUDE_MARKER"
+    if [[ "${FAKE_CLAUDE_UPDATE_RC:-0}" != "0" ]]; then
+      exit "$FAKE_CLAUDE_UPDATE_RC"
+    fi
+    printf '%s\n' "${FAKE_CLAUDE_AFTER_VERSION:-2.1.210}" >"$FAKE_CLAUDE_STATE"
+    ;;
+  *)
+    exit 2
+    ;;
+esac
+SH
+  chmod +x "$bin_path"
+}
+
 run_case() {
   local case_dir="$1"
   shift
@@ -264,6 +288,216 @@ if [[ -e "$case8/npm-args" ]]; then
   gemini_npm_count="$(grep -c '@google/gemini-cli' "$case8/npm-args" || true)"
 fi
 check "default run never asks npm for Gemini CLI" test "$gemini_npm_count" -eq 0
+
+# 9. Native install (symlink → ~/.local/share/claude/versions/) → must use
+# `claude update`, never npm.
+case9="$test_root/claude-native"
+mkdir -p "$case9/home/.local/share/claude/versions" "$case9/home/.local/bin"
+make_fake_claude "$case9/home/.local/share/claude/versions/fake-claude"
+ln -sf "$case9/home/.local/share/claude/versions/fake-claude" \
+  "$case9/home/.local/bin/claude"
+printf '2.1.209\n' >"$case9/claude-state"
+run_case "$case9" \
+  "PATH=$case9/home/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=claude" "DRY_RUN=0" "NPM_BIN=$case9/missing-npm" \
+  "FAKE_CLAUDE_STATE=$case9/claude-state" \
+  "FAKE_CLAUDE_MARKER=$case9/claude-update.marker" \
+  "FAKE_CLAUDE_AFTER_VERSION=2.1.210"
+check "native claude: run exits zero" test "$run_rc" -eq 0
+check "native claude: reports UPDATED" contains "$run_output" "UPDATED"
+check "native claude: update command was called" test -s "$case9/claude-update.marker"
+
+# 10. npm install (binary under $npm_prefix/bin/) → must use npm install -g.
+case10="$test_root/claude-npm"
+mkdir -p "$case10/prefix/bin"
+cat >"$case10/prefix/bin/claude" <<SH
+#!/usr/bin/env bash
+case "\${1:-}" in
+  --version|version) printf '2.1.208\n' ;;
+  *) exit 2 ;;
+esac
+SH
+chmod +x "$case10/prefix/bin/claude"
+cat >"$case10/fake-npm" <<SH
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"$case10/npm-args"
+SH
+chmod +x "$case10/fake-npm"
+run_case "$case10" \
+  "PATH=/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=claude" "DRY_RUN=0" \
+  "NPM_PREFIX=$case10/prefix" "NPM_BIN=$case10/fake-npm"
+check "npm claude: run exits zero" test "$run_rc" -eq 0
+check "npm claude: npm called with claude-code package" \
+  contains "$(cat "$case10/npm-args" || true)" "@anthropic-ai/claude-code"
+check "npm claude: update not called" test ! -e "$case10/claude-update.marker"
+
+# 11. Desktop-managed binary (symlink → path containing "Application Support/Claude")
+# → must report MANUAL and never call update or npm.
+case11="$test_root/claude-desktop"
+mkdir -p "$case11/Application Support/Claude/claude-code" "$case11/bin"
+cat >"$case11/Application Support/Claude/claude-code/claude" <<'SH'
+#!/usr/bin/env bash
+case "${1:-}" in
+  --version|version) printf '2.1.209\n' ;;
+  update) printf 'should-not-reach\n'; exit 0 ;;
+  *) exit 2 ;;
+esac
+SH
+chmod +x "$case11/Application Support/Claude/claude-code/claude"
+ln -sf "$case11/Application Support/Claude/claude-code/claude" "$case11/bin/claude"
+cat >"$case11/fake-npm" <<SH
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"$case11/npm-args"
+SH
+chmod +x "$case11/fake-npm"
+run_case "$case11" \
+  "PATH=$case11/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=claude" "DRY_RUN=0" \
+  "NPM_BIN=$case11/fake-npm"
+check "desktop claude: run exits zero" test "$run_rc" -eq 0
+check "desktop claude: reports MANUAL" contains "$run_output" "MANUAL"
+check "desktop claude: npm was not called" test ! -e "$case11/npm-args"
+
+# 12. Brew formula gemini (symlink → Homebrew Cellar) → must call
+# `brew upgrade gemini-cli`, not npm or self-update.
+case12="$test_root/gemini-brew-formula"
+mkdir -p "$case12/homebrew/Cellar/gemini-cli/0.50.0/bin" "$case12/homebrew/bin" "$case12/bin"
+cat >"$case12/homebrew/Cellar/gemini-cli/0.50.0/bin/gemini" <<'SH'
+#!/usr/bin/env bash
+case "${1:-}" in
+  --version|version) printf '0.50.0\n' ;;
+  *) exit 2 ;;
+esac
+SH
+chmod +x "$case12/homebrew/Cellar/gemini-cli/0.50.0/bin/gemini"
+ln -sf "$case12/homebrew/Cellar/gemini-cli/0.50.0/bin/gemini" "$case12/homebrew/bin/gemini"
+cat >"$case12/bin/brew" <<SH
+#!/usr/bin/env bash
+case "\${1:-}" in
+  --prefix) printf '%s\n' "$case12/homebrew" ;;
+  upgrade)  printf '%s\n' "\$*" >>"$case12/brew-args" ;;
+  list)     exit 0 ;;
+  *)        exit 1 ;;
+esac
+SH
+chmod +x "$case12/bin/brew"
+run_case "$case12" \
+  "PATH=$case12/homebrew/bin:$case12/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=gemini" "DRY_RUN=0" \
+  "NPM_BIN=$case12/missing-npm"
+check "brew formula gemini: run exits zero" test "$run_rc" -eq 0
+check "brew formula gemini: brew upgrade called with formula name" \
+  contains "$(cat "$case12/brew-args" || true)" "gemini-cli"
+check "brew formula gemini: npm was not invoked" test ! -e "$case12/npm-args"
+
+# 13. codex always uses its self-update command (handles native/brew/npm internally).
+case13="$test_root/codex-self-update"
+mkdir -p "$case13/bin"
+printf '1.9.0\n' >"$case13/codex-state"
+cat >"$case13/bin/codex" <<SH
+#!/usr/bin/env bash
+case "\${1:-}" in
+  --version|version) cat "$case13/codex-state" ;;
+  update)
+    printf 'update\n' >>"$case13/codex-update.marker"
+    printf '2.0.0\n' >"$case13/codex-state"
+    ;;
+  *) exit 2 ;;
+esac
+SH
+chmod +x "$case13/bin/codex"
+cat >"$case13/fake-npm" <<SH
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"$case13/npm-args"
+SH
+chmod +x "$case13/fake-npm"
+run_case "$case13" \
+  "PATH=$case13/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=codex" "DRY_RUN=0" \
+  "NPM_BIN=$case13/fake-npm"
+check "codex self-update: run exits zero" test "$run_rc" -eq 0
+check "codex self-update: update command called" test -s "$case13/codex-update.marker"
+check "codex self-update: npm not directly invoked" test ! -e "$case13/npm-args"
+
+# 14. codex binary under npm prefix (npm-detected) → dry-run note must include
+# official curl recommendation.
+case14="$test_root/codex-npm-note"
+mkdir -p "$case14/prefix/bin"
+cat >"$case14/prefix/bin/codex" <<SH
+#!/usr/bin/env bash
+case "\${1:-}" in
+  --version|version) printf '1.8.0\n' ;;
+  *) exit 2 ;;
+esac
+SH
+chmod +x "$case14/prefix/bin/codex"
+run_case "$case14" \
+  "PATH=$case14/prefix/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=codex" "DRY_RUN=1" \
+  "NPM_PREFIX=$case14/prefix"
+check "codex npm note: dry-run contains recommendation" \
+  contains "$run_output" "recommend"
+
+# 15. claude binary under npm prefix → dry-run note must mention native installer.
+case15="$test_root/claude-npm-note"
+mkdir -p "$case15/prefix/bin"
+cat >"$case15/prefix/bin/claude" <<SH
+#!/usr/bin/env bash
+case "\${1:-}" in
+  --version|version) printf '2.1.208\n' ;;
+  *) exit 2 ;;
+esac
+SH
+chmod +x "$case15/prefix/bin/claude"
+run_case "$case15" \
+  "PATH=$case15/prefix/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=claude" "DRY_RUN=1" \
+  "NPM_PREFIX=$case15/prefix"
+check "claude npm note: dry-run mentions native installer" \
+  contains "$run_output" "native installer"
+
+# 16. kimi binary under npm prefix → dry-run note must recommend brew formula.
+case16="$test_root/kimi-npm-note"
+mkdir -p "$case16/prefix/bin"
+cat >"$case16/prefix/bin/kimi" <<SH
+#!/usr/bin/env bash
+case "\${1:-}" in
+  --version|version) printf '0.3.0\n' ;;
+  *) exit 2 ;;
+esac
+SH
+chmod +x "$case16/prefix/bin/kimi"
+run_case "$case16" \
+  "PATH=$case16/prefix/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=kimi" "DRY_RUN=1" \
+  "NPM_PREFIX=$case16/prefix"
+check "kimi npm note: dry-run recommends brew formula" \
+  contains "$run_output" "brew install kimi-code"
+
+# 17. opencode binary under npm prefix → live upgrade note must contain
+# recommendation even after successful npm run.
+case17="$test_root/opencode-npm-note"
+mkdir -p "$case17/prefix/bin"
+cat >"$case17/prefix/bin/opencode" <<SH
+#!/usr/bin/env bash
+case "\${1:-}" in
+  --version|version) printf '0.1.0\n' ;;
+  *) exit 2 ;;
+esac
+SH
+chmod +x "$case17/prefix/bin/opencode"
+cat >"$case17/fake-npm" <<SH
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >>"$case17/npm-args"
+SH
+chmod +x "$case17/fake-npm"
+run_case "$case17" \
+  "PATH=$case17/prefix/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=opencode" "DRY_RUN=0" \
+  "NPM_PREFIX=$case17/prefix" "NPM_BIN=$case17/fake-npm"
+check "opencode npm note: live upgrade contains recommendation" \
+  contains "$run_output" "recommend"
 
 printf '%s\n' "=== test_upgrade_ai_clis.sh: $passed passed, $failed failed ==="
 [[ "$failed" -eq 0 ]]
