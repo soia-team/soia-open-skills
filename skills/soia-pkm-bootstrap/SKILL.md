@@ -5,10 +5,10 @@ dependencies:
   external:
     - name: weread-skills
       required: false
-      install: TBD # GitHub 仓库，可用 npx skills add 安装；确切 repo 待补
+      install: "npx skills add Tencent/WeChatReading -g -y"
     - name: huashu-weread-advisor
       required: false
-      install: TBD # GitHub 仓库，可用 npx skills add 安装；确切 repo 待补
+      install: "npx skills add alchaincyf/huashu-weread -g -y"
 ---
 
 # soia-pkm-bootstrap

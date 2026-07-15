@@ -107,7 +107,7 @@ dependencies:
   external:                        # skills outside the SOIA repos; declare install only
     - name: weread-skills
       required: true               # true = core workflows stop without it
-      install: TBD                 # customer-copyable install command
+      install: "npx skills add Tencent/WeChatReading -g -y"
 ```
 
 Rules:

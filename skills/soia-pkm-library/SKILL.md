@@ -5,7 +5,7 @@ dependencies:
   external:
     - name: weread-skills
       required: true
-      install: TBD # GitHub 仓库，可用 npx skills add 安装；确切 repo 待补
+      install: "npx skills add Tencent/WeChatReading -g -y"
 ---
 
 # soia-pkm-library
