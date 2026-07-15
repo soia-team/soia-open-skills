@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.env
+*.session
+session_string.txt
+.vscode/
+.idea/
+skills-lock.json
