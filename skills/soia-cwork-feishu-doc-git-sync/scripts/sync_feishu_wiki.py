@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -19,6 +20,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows fallback
+    fcntl = None
 
 try:
     import yaml
@@ -111,6 +117,22 @@ class RequestLimiter:
 REQUEST_LIMITER = RequestLimiter()
 
 
+def acquire_sync_lock(output_dir: Path):
+    """Prevent a cancelled/slow run from racing a later run over one manifest."""
+    lock_root = Path(tempfile.gettempdir()) / "soia-cwork-feishu-doc-git-sync-locks"
+    lock_root.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.sha256(str(output_dir).encode("utf-8")).hexdigest()[:24]
+    handle = (lock_root / f"{digest}.lock").open("a+", encoding="utf-8")
+    if fcntl is None:
+        return handle
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as exc:
+        handle.close()
+        raise SystemExit("another sync is already running for this output") from exc
+    return handle
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -144,6 +166,11 @@ def parse_args() -> argparse.Namespace:
         "--retry-failed",
         action="store_true",
         help="reuse successful content from sync-state.json and retry only failed document reads",
+    )
+    parser.add_argument(
+        "--retry-batch-size",
+        type=int,
+        help="limit one --retry-failed run to this many candidates; repeat until validation passes",
     )
     parser.add_argument(
         "--rebuild-tree",
@@ -583,6 +610,30 @@ def normalize_content(content: str, title: str, cite_links: dict[str, str] | Non
     value = re.sub(r"<cite\s+([^>]*)></cite>", replace_cite, value, flags=re.IGNORECASE)
     value = re.sub(r"<cite\s+([^>]*)/>", replace_cite, value, flags=re.IGNORECASE)
 
+    # Some Feishu image descriptions contain copied HTML such as
+    # ``<a href=...``. If it remains in the Markdown image label, the Vue
+    # compiler can mistake it for a real tag and report a missing end tag.
+    def escape_image_alt(match: re.Match[str]) -> str:
+        alt = match.group(1).replace("<", "&lt;").replace(">", "&gt;")
+        return f"![{alt}]({match.group(2)})"
+
+    value = re.sub(r"!\[([^\]\n]*)\]\(([^)\n]+)\)", escape_image_alt, value)
+
+    # A few exports escape only the opening/closing table tags while keeping
+    # the inner HTML. Restore the block boundary and remove paragraph wrappers
+    # inside tables so Markdown-it does not emit the invalid `<p>...</table>`.
+    value = re.sub(r"&lt;(/?)table&gt;", r"<\1table>", value, flags=re.IGNORECASE)
+
+    def normalize_table_markup(match: re.Match[str]) -> str:
+        return re.sub(r"</?p\b[^>]*>", "", match.group(0), flags=re.IGNORECASE)
+
+    value = re.sub(
+        r"<table\b[^>]*>.*?</table>",
+        normalize_table_markup,
+        value,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+
     known_html_tags = {
         "a", "abbr", "b", "blockquote", "br", "caption", "code", "col", "colgroup",
         "del", "details", "em", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i",
@@ -738,6 +789,7 @@ def download_one_media(
         "--format",
         "json",
     )
+    REQUEST_LIMITER.acquire()
     result = subprocess.run(
         command,
         check=False,
@@ -747,7 +799,14 @@ def download_one_media(
         env=command_env(config),
     )
     if result.returncode != 0:
-        raise RuntimeError(f"docs +media-download failed (exit={result.returncode})")
+        detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+        info = cli_error_info(detail)
+        raise CliCommandError(
+            f"lark-cli media request failed category={info['category']}",
+            category=str(info["category"]),
+            code=str(info["code"]),
+            retryable=bool(info["retryable"]),
+        )
     candidates = sorted(asset_root.glob(f"{digest}.*"))
     if not candidates:
         raise RuntimeError("docs +media-download returned no local file")
@@ -1194,13 +1253,27 @@ def sync(args: argparse.Namespace) -> int:
     output_dir = Path(args.output_dir or str(nested(config, "paths", "output_dir", default=""))).expanduser().resolve()
     if not str(output_dir) or str(output_dir) == ".":
         raise SystemExit("paths.output_dir is required")
+    lock_handle = acquire_sync_lock(output_dir)
     cli = args.cli_path or str(nested(config, "provider", "cli", default="lark-cli"))
     config = json.loads(json.dumps(config))
     config.setdefault("provider", {})["cli"] = cli
     global MIRROR_DIR
-    configured_mirror_dir = str(
-        nested(config, "paths", "generated_dir", default=DEFAULT_MIRROR_DIR)
-    ).strip()
+    configured_value = nested(config, "paths", "generated_dir", default="")
+    configured_mirror_dir = str(configured_value or "").strip()
+    if not configured_mirror_dir:
+        existing_generated_dirs = sorted(
+            path.name
+            for path in output_dir.glob("10_*")
+            if path.is_dir()
+        )
+        if len(existing_generated_dirs) == 1:
+            configured_mirror_dir = existing_generated_dirs[0]
+        elif len(existing_generated_dirs) > 1:
+            raise SystemExit(
+                "paths.generated_dir is required when multiple generated directories exist"
+            )
+        else:
+            configured_mirror_dir = DEFAULT_MIRROR_DIR
     if (
         not configured_mirror_dir
         or configured_mirror_dir.startswith("<")
@@ -1234,7 +1307,9 @@ def sync(args: argparse.Namespace) -> int:
             ),
         )
         print_validation(validation)
-        return 0 if validation["ok"] else 2
+        result = 0 if validation["ok"] else 2
+        lock_handle.close()
+        return result
     sync_started = utc_now()
     print("started space_id=<configured-space> identity=bot config=<private-config> output=<private-location>")
     previous_manifest = load_json(output_dir / METADATA_DIR / MANIFEST_FILE, {})
@@ -1251,6 +1326,7 @@ def sync(args: argparse.Namespace) -> int:
         if len(nodes) > 10:
             print(f"node ... and {len(nodes) - 10} more")
         print("completed dry_run=true files_written=0")
+        lock_handle.close()
         return 0
 
     mirror_dir = output_dir / MIRROR_DIR
@@ -1492,7 +1568,7 @@ def sync(args: argparse.Namespace) -> int:
                 )
             doc_nodes = [node for node in all_doc_nodes if str(node["node_token"]) in only_node_tokens]
         elif args.retry_failed:
-            doc_nodes = [
+            retry_candidates = [
                 node
                 for node in all_doc_nodes
                 if (
@@ -1503,6 +1579,16 @@ def sync(args: argparse.Namespace) -> int:
                     )
                 )
             ]
+            if args.retry_batch_size is not None:
+                if args.retry_batch_size <= 0:
+                    raise SystemExit("--retry-batch-size must be greater than zero")
+                doc_nodes = retry_candidates[: args.retry_batch_size]
+                print(
+                    f"retry_batch selected={len(doc_nodes)} candidates={len(retry_candidates)}",
+                    flush=True,
+                )
+            else:
+                doc_nodes = retry_candidates
         elif args.full_content or not incremental:
             doc_nodes = all_doc_nodes
         else:
@@ -1797,6 +1883,7 @@ def sync(args: argparse.Namespace) -> int:
         current_remote = remote_metadata.get(token, {})
         if not isinstance(old_record, dict):
             old_record = {}
+        current_relative_path = f"{MIRROR_DIR}/{relative.as_posix()}"
         obj_edit_time = str(
             current_remote.get("obj_edit_time")
             or node.get("obj_edit_time")
@@ -1843,6 +1930,7 @@ def sync(args: argparse.Namespace) -> int:
         unchanged = (
             before_exists
             and isinstance(old_record, dict)
+            and old_record.get("relative_path") == current_relative_path
             and old_record.get("content_hash") == content_hash
             and old_record.get("sync_status") == status
         )
@@ -1931,7 +2019,7 @@ def sync(args: argparse.Namespace) -> int:
             readme,
             "# feishu-knowledge 同步说明\n\n"
             "本目录由 `soia-cwork-feishu-doc-git-sync` 维护。\n\n"
-            "- `10_knowledge-base/`：知识库生成内容，下一次同步可能覆盖。\n"
+            f"- `{MIRROR_DIR}/`：知识库生成内容，下一次同步可能覆盖。\n"
             "- `20_本地补录/`：本地手工补录，不会被同步任务覆盖。\n"
             "- `90_同步元数据/`：节点清单、路径映射和 VitePress 侧边栏。\n\n"
             "图片和附件是否能在本地直接展示，取决于飞书应用是否具备对应资源下载权限。\n",
@@ -1956,7 +2044,9 @@ def sync(args: argparse.Namespace) -> int:
         f"deleted_marked={len(deleted)} remote_images={counts['remote_images']}"
     )
     print_validation(validation)
-    return 0 if counts["failed"] == 0 and validation["ok"] else 2
+    result = 0 if counts["failed"] == 0 and validation["ok"] else 2
+    lock_handle.close()
+    return result
 
 
 def main() -> int:
