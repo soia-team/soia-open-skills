@@ -15,5 +15,5 @@ vitepress:
 obsidian:
   vault_dir: docs/feishu-knowledge
   open_in_obsidian: user_action
-  generated_dir: 10_飞书镜像
+  generated_dir: 10_knowledge-base
   manual_dir: 20_本地补录

@@ -14,7 +14,7 @@ normalization:
   preserve_tables: true
   preserve_remote_images: true
   download_images: opt_in
-  local_asset_dir: "10_飞书镜像/_assets"
+  local_asset_dir: "10_knowledge-base/_assets"
   media_token_strategy: "docs +media-download --as bot --token <file_token>"
   unresolved_image_behavior: keep_original_url_and_report
   unresolved_image_logging: counts_only_no_auth_urls

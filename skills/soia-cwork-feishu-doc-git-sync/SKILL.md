@@ -26,9 +26,10 @@ description: 将飞书知识库或云文档以应用身份只读同步为本地 
 2. 在本机私有配置中填写知识空间 ID、输出目录和来源 URL 模板；不要把 App Secret、token 或企业私有路径提交到公开技能仓库。
 3. 首次使用先执行 dry-run，核对空间、节点数量和目标目录。
 4. 执行镜像同步。默认只写本地文件和同步元数据，不修改飞书内容，也不删除本地历史文件。
-5. 如需检查表格导出，先做 `drive +inspect`/帮助/schema 探查；能力探查不等于授权导出。
-6. 只有客户明确确认导出范围、格式、文件数和本地目录后，才调用 `drive +export` 或 `drive +export-download`。
-7. 同步完成后再运行 Git diff、站点构建和必要的人工抽查。
+5. 同步写入后会自动校验 manifest、文件存在性、frontmatter、失败占位、侧边栏覆盖范围和资源引用；发现 `failed`/`stale` 时返回非零结果，不能把旧正文当作最新成功。
+6. 如需检查表格导出，先做 `drive +inspect`/帮助/schema 探查；能力探查不等于授权导出。
+7. 只有客户明确确认导出范围、格式、文件数和本地目录后，才调用 `drive +export` 或 `drive +export-download`。
+8. 同步完成后再运行 Git diff、站点构建和必要的人工抽查。
 
 推荐命令：
 
@@ -58,11 +59,13 @@ python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental 
 # 下载图片到本地镜像并把正文中的远程 URL 改成相对路径
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental \
   --download-assets
+# 只校验最近一次同步生成的本地镜像，不访问飞书
+python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --validate-only
 ```
 
 ### 三种工作模式
 
-- `mirror`：默认模式。飞书是来源，本地生成的 `10_飞书镜像/` 不应手工编辑。
+- `mirror`：默认模式。知识库是来源，本地生成的 `10_knowledge-base/` 不应手工编辑。
 - `local`：只维护本地 `20_本地补录/`，不会被镜像同步覆盖，也不会自动上传飞书。
 - `managed`：未来用于明确指定的双向托管文档。必须逐文档确认写入权限、冲突规则和发布动作；当前脚本只提供只读镜像基础，不把它伪装成已经完成的双向同步。
 
@@ -111,6 +114,7 @@ space:
   source_url_template: https://<tenant>.feishu.cn/wiki/{node_token}
 paths:
   output_dir: <git-repository>/docs/feishu-knowledge
+  generated_dir: 10_<knowledge-base-name>
 sync:
   mode: mirror
   prune: false
@@ -122,6 +126,7 @@ sync:
 
 - 只使用 `--as bot` 的应用身份读取，默认不需要用户身份 token。
 - 通过 node token 遍历知识空间，使用文档 token 读取 `docx` 内容。
+- `paths.generated_dir` 必须使用目标知识库的真实名称或稳定英文名称；例如 `10_后端技术支持库`，不要再嵌套一个泛化的 `feishu-knowledge` 目录。
 - 每个生成 Markdown 写入来源 URL、space ID、node token、object token、父节点和内容 hash。
 - 使用 `sync-state.json` 保留 node token 到本地路径的映射；标题变化时尽量保持稳定路径，树位置由最新 `parent_node_token` 重新计算。
 - `manifest.json` 和 `sync-state.json` 记录 `obj_edit_time`、`remote_updated_at`、`revision_id`，用于增量选择和审计。
@@ -131,13 +136,17 @@ sync:
 - 有子节点的飞书节点必须生成一个同名目录，并把正文放在目录内的同名 index Markdown：`父目录/节点名/节点名.md`；叶子节点才直接生成 `节点名.md`。不要生成同级的“同名文件 + 同名文件夹”。
 - 如果飞书本身存在同名叶子与可展开节点、父子同名或同级重复可展开节点，目录/文件会追加稳定的 node ID 短后缀；这是为了避免本地文件系统发生同级冲突，manifest 仍以 `node_token` 区分真实节点。
 - `--retry-failed` 会复用上次 `sync_status: ok` 的本地正文，只读取上次失败的文档；适合遇到飞书接口限流后继续补齐。
+- `--retry-failed` 使用上一次 manifest 作为节点清单，不再先对全量文档做元数据探测；这样补偿运行只消耗失败正文请求，并继续受全局节流保护。
+- 全局请求节流和指数退避会跨同步 worker 生效；`sync.min_request_interval_seconds` 默认 0.5 秒，避免大知识库并发触发 `99991400` 限流。
+- 正文读取失败但本地已有旧正文时，节点会标记为 `stale` 并保留旧正文；下一次增量同步会继续重试，校验不会将其视为成功。
+- 每次非 dry-run 同步结束都会运行本地验收；`--validate-only` 可单独复核最近一次结果。验收失败时退出码为 2，并在 manifest 的 `validation` 节点保留机器可读摘要。
 - `prune: false` 时不删除已消失节点对应的本地文件；节点会在 manifest 中标记为 deleted，避免一次权限或网络异常造成数据丢失。
-- `20_本地补录/` 与 `90_同步元数据/` 不会被飞书镜像覆盖。
-- `--rebuild-tree` 只迁移 `10_飞书镜像/` 内由同步器生成的旧扁平文件，不触碰 `20_本地补录/`。
+- `20_本地补录/` 与 `90_同步元数据/` 不会被知识库同步覆盖。
+- `--rebuild-tree` 只迁移 `10_knowledge-base/` 内由同步器生成的旧扁平文件，不触碰 `20_本地补录/`。
 - `--rebuild-tree-only` 仅复用已有 manifest 和生成文件做目录迁移，不发起飞书正文请求；如果同时启用资源本地化，仍可能只为刷新过期媒体 URL 读取含资源的文档。
 - `--refresh-tree-only` 会重新读取飞书节点树和兄弟顺序，按最新 `parent_node_token` 重建本地目录和侧边栏，但复用已有本地正文；启用资源本地化时，会额外刷新仍含未本地化资源的文档；必须与 `--rebuild-tree` 一起使用。
 - `manifest.json`/`sync-state.json` 的 `tree_order: feishu_node_list` 表示目录顺序来源于飞书节点列表，不是标题排序。
-- 图片默认保留远程 URL；设置 `sync.download_assets: true` 或传入 `--download-assets` 后，技能会把正文中的远程图片及 `<source token="...">` 媒体块下载到 `10_飞书镜像/_assets/`，并把 Markdown/HTML/附件引用改写为相对路径，VitePress 和 Obsidian 可直接读取本地文件。
+- 图片默认保留远程 URL；设置 `sync.download_assets: true` 或传入 `--download-assets` 后，技能会把正文中的远程图片及 `<source token="...">` 媒体块下载到 `10_knowledge-base/_assets/`，并把 Markdown/HTML/附件引用改写为相对路径，VitePress 和 Obsidian 可直接读取本地文件。
 - 图片/附件本地化是显式 opt-in 的本地数据下载；不能因为用户只要求“检查图片”就下载全部素材。持久化配置中的 `sync.download_assets: true` 只能视为用户此前对该资源范围的明确授权，不得扩展为表格或多维表格导出授权。
 - `sheet` 与 `bitable` 默认只生成元数据 stub，不读取表内数据。导出为 `xlsx`、`csv` 或 `base` 属于敏感数据导出，必须遵循 [references/export-policy.yml](references/export-policy.yml)：先解析和 dry-run，再展示范围并等待明确确认；不得自动写入生成镜像目录、提交 Git 或上传回飞书。
 - 飞书 Markdown 导出的图片 URL 可能是短期鉴权地址；启用本地化时，默认只重新读取仍含远程图片的文档来刷新 URL，不会无条件重拉所有正文。可用 `--refresh-asset-urls` 显式打开该行为。
@@ -151,7 +160,7 @@ sync:
 - 不默认调用飞书创建、更新、删除接口。
 - `drive +export`、`drive +export-download`、`docs +media-download` 和附件下载均属于数据导出/下载动作；用户说“看下能否导出”时只做 inspect、help、schema 或 dry-run，不得直接创建本地文件。
 - 真实导出前必须明确回执来源、类型、格式、预计文件数、输出目录和 Git 追踪策略；“检查能力”不等于“授权导出”。
-- 导出文件默认放在临时目录或用户明确指定的目录；不得自动落入 `10_飞书镜像/`、自动提交 Git、自动推送远程或写回飞书。
+- 导出文件默认放在临时目录或用户明确指定的目录；不得自动落入 `10_knowledge-base/`、自动提交 Git、自动推送远程或写回飞书。
 - bot 无权访问的个人云盘或私有资源必须报告为不可见，不得切换 user OAuth 代为读取。
 - 不默认覆盖本地补录、删除历史文件或推送远程 Git；这些属于需要明确确认的写入/发布动作。
 - 执行前检查目标仓库、当前分支和远程地址；发现与预期不符时停止并报告。
@@ -185,9 +194,10 @@ sync:
 ```bash
 python3 scripts/sync_feishu_wiki.py --help
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --dry-run
+python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --validate-only
 git diff --check
 ```
 
 ### Forward test
 
-Before a real sync, run a dry-run or a small authorized representative scope and verify the tree, stable node-ID mapping, ordering, incremental selection, asset references, and failure receipt. A zero exit code alone is not evidence that the mirror is complete.
+Before a real sync, run a dry-run or a small authorized representative scope and verify the tree, stable node-ID mapping, ordering, incremental selection, asset references, and failure receipt. After every write, require the built-in validation gate to pass; a zero exit code alone is not evidence that the mirror is complete.

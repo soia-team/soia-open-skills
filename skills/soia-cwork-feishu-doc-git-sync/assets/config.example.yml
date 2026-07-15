@@ -16,6 +16,8 @@ space:
 
 paths:
   output_dir: "<git-repository>/docs/feishu-knowledge"
+  # Use the exact knowledge-base name, not a generic duplicate directory.
+  generated_dir: "10_knowledge-base"
 
 sync:
   mode: mirror
@@ -32,7 +34,7 @@ sync:
   # pipeline always supplies --event-file/--changed-*-token.
   probe_remote_metadata: true
   # Optional: download remote Feishu image URLs into the local mirror and
-  # rewrite Markdown links to 10_飞书镜像/_assets/. Keep false in the public
+  # rewrite Markdown links to 10_knowledge-base/_assets/. Keep false in the public
   # example; enable it in the private config after granting media/download
   # permissions or when the signed image URL is directly readable.
   download_assets: false
@@ -44,6 +46,9 @@ sync:
   asset_timeout_seconds: 30
   max_asset_bytes: 20971520
   request_delay_seconds: 0.2
+  # Global minimum interval between lark-cli request starts. This is shared
+  # across all workers and prevents a large space from triggering 99991400.
+  min_request_interval_seconds: 0.5
   metadata_request_delay_seconds: 0.2
   event_file: "<optional-event-ndjson-path>"
 
