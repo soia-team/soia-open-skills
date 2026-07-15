@@ -19,6 +19,7 @@ import json
 import os
 import posixpath
 import subprocess
+import sys
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -35,6 +36,37 @@ if _SINGLE_SPEC is None or _SINGLE_SPEC.loader is None:  # pragma: no cover
     raise ImportError(f"cannot import {_SINGLE_EXECUTOR_PATH}")
 _SINGLE = importlib.util.module_from_spec(_SINGLE_SPEC)
 _SINGLE_SPEC.loader.exec_module(_SINGLE)
+preflight_gate = _SINGLE.preflight_gate
+RUNNER_ENV = "SOIA_ALIPAN_RUNNER"
+
+
+def alipan_runner_path() -> Path | None:
+    """Locate the atomic skill's environment-loading runner without user paths."""
+    override = os.environ.get(RUNNER_ENV)
+    candidate = Path(override).expanduser() if override else (
+        Path(__file__).resolve().parents[2] / "soia-pkm-alipan" / "scripts" / "run_with_env.py"
+    )
+    return candidate if candidate.is_file() else None
+
+
+def require_preflight(
+    run_dir: str | Path,
+    plan_path: str | Path,
+    drive_id: str | None = None,
+) -> dict:
+    """Fail closed unless the current run evidence covers this exact plan."""
+    options = {"plan_path": Path(plan_path)}
+    if drive_id is not None:
+        options["drive_id"] = drive_id
+    result = preflight_gate.verify_preflight_gate(Path(run_dir), **options)
+    if result.get("status") == "passed":
+        return result
+    violations = result.get("violations")
+    kinds = sorted({
+        str(item.get("kind", "unknown"))
+        for item in violations if isinstance(item, dict)
+    }) if isinstance(violations, list) else ["unknown"]
+    raise ValueError("preflight 执行门禁失败：" + ", ".join(kinds or ["unknown"]))
 
 
 def run_aliyunpan(command: str, drive_id: str, *paths: str) -> subprocess.CompletedProcess:
@@ -44,35 +76,38 @@ def run_aliyunpan(command: str, drive_id: str, *paths: str) -> subprocess.Comple
     mock in tests and preserves each path argument byte-for-byte, including
     repeated spaces in a filename.
     """
-    args = ["aliyunpan", command, "--driveId", drive_id, *paths]
+    runner = alipan_runner_path()
+    if runner is None:
+        return subprocess.CompletedProcess([], 127, "", "RUNNER_UNAVAILABLE")
+    args = [sys.executable, str(runner), "--", "aliyunpan", command, "--driveId", drive_id, *paths]
     try:
         return subprocess.run(args, capture_output=True, text=True, timeout=90)
-    except Exception as error:  # the single executor uses the same contract
-        return subprocess.CompletedProcess(args, 255, "", repr(error))
+    except Exception:  # do not expose runner/private-env failure details
+        return subprocess.CompletedProcess(args, 255, "", "RUNNER_EXECUTION_FAILED")
 
 
-def parse_ll(output: str) -> list[str]:
-    """Parse the existing ``ll`` table without collapsing name whitespace."""
+def parse_ll(output: str) -> dict[str, str]:
+    """Parse the existing ``ll`` table into ``name -> file_id`` mappings."""
     return _SINGLE.parse_ll(output)
 
 
-def ll(drive_id: str, path: str) -> tuple[bool, set[str], dict]:
-    """Read one directory and return its names plus machine-readable evidence."""
+def ll(drive_id: str, path: str) -> tuple[bool, dict[str, str], dict]:
+    """Read one directory and return its ``name -> file_id`` evidence."""
     result = run_aliyunpan("ll", drive_id, path)
     stdout = result.stdout or ""
     stderr = result.stderr or ""
     ok = result.returncode == 0 and "当前目录" in stdout
-    names = set(parse_ll(stdout)) if ok else set()
+    entries = parse_ll(stdout) if ok else {}
     evidence = {
         "path": path,
         "returncode": result.returncode,
         "marker": "当前目录" in stdout,
-        "entries": len(names),
+        "entries": len(entries),
     }
     if not ok:
         evidence["stdout"] = stdout[:200]
         evidence["stderr"] = stderr[:200]
-    return ok, names, evidence
+    return ok, entries, evidence
 
 
 def parent_and_name(path: str) -> tuple[str, str]:
@@ -158,7 +193,10 @@ def apply_move_batch(
     records: dict[str, tuple[str, dict]] = {}
     for item in items:
         source_name = parent_and_name(item["from"])[1]
-        if source_name not in before_sources and source_name in before_targets:
+        expected_file_id = item["file_id"]
+        source_file_id = before_sources.get(source_name)
+        target_file_id = before_targets.get(source_name)
+        if source_file_id is None and target_file_id == expected_file_id:
             records[item["action_id"]] = (
                 "verified",
                 {
@@ -168,9 +206,24 @@ def apply_move_batch(
                     "source_absent": True,
                     "target_present": True,
                     "target_name": source_name,
+                    "expected_file_id": expected_file_id,
+                    "target_file_id": target_file_id,
                 },
             )
-        elif source_name not in before_sources:
+        elif source_file_id is None and target_file_id is not None:
+            records[item["action_id"]] = (
+                "failed",
+                _failure(
+                    "TARGET_FILE_ID_MISMATCH",
+                    stage="precheck",
+                    source_parent=source_before_ev,
+                    target_dir=target_before_ev,
+                    target_name=source_name,
+                    expected_file_id=expected_file_id,
+                    target_file_id=target_file_id,
+                ),
+            )
+        elif source_file_id is None:
             records[item["action_id"]] = (
                 "failed",
                 _failure(
@@ -181,15 +234,30 @@ def apply_move_batch(
                     missing_name=source_name,
                 ),
             )
-        elif source_name in before_targets:
+        elif source_file_id != expected_file_id:
             records[item["action_id"]] = (
                 "failed",
                 _failure(
-                    "目标已存在且源仍存在",
+                    "SOURCE_FILE_ID_MISMATCH",
                     stage="precheck",
                     source_parent=source_before_ev,
                     target_dir=target_before_ev,
                     source_name=source_name,
+                    expected_file_id=expected_file_id,
+                    source_file_id=source_file_id,
+                ),
+            )
+        elif target_file_id is not None:
+            records[item["action_id"]] = (
+                "failed",
+                _failure(
+                    "TARGET_ALREADY_PRESENT",
+                    stage="precheck",
+                    source_parent=source_before_ev,
+                    target_dir=target_before_ev,
+                    target_name=source_name,
+                    expected_file_id=expected_file_id,
+                    target_file_id=target_file_id,
                 ),
             )
         else:
@@ -243,8 +311,11 @@ def apply_move_batch(
             return results, True
         for item in to_move:
             source_name = parent_and_name(item["from"])[1]
-            source_absent = after_source_ok and source_name not in after_sources
-            target_present = after_target_ok and source_name in after_targets
+            expected_file_id = item["file_id"]
+            source_file_id = after_sources.get(source_name)
+            target_file_id = after_targets.get(source_name)
+            source_absent = after_source_ok and source_file_id is None
+            target_present = after_target_ok and target_file_id == expected_file_id
             if source_absent and target_present:
                 records[item["action_id"]] = (
                     "verified",
@@ -254,6 +325,8 @@ def apply_move_batch(
                         "source_absent": True,
                         "target_present": True,
                         "target_name": source_name,
+                        "expected_file_id": expected_file_id,
+                        "target_file_id": target_file_id,
                     },
                 )
             else:
@@ -266,6 +339,9 @@ def apply_move_batch(
                         "source_absent": source_absent,
                         "target_present": target_present,
                         "target_name": source_name,
+                        "expected_file_id": expected_file_id,
+                        "source_file_id": source_file_id,
+                        "target_file_id": target_file_id,
                     },
                 )
 
@@ -377,52 +453,34 @@ def parallel_limit(value: str) -> int:
     try:
         number = int(value)
     except ValueError as error:
-        raise argparse.ArgumentTypeError("--max-parallel 必须是 1 或 2") from error
-    if number not in {1, 2}:
-        raise argparse.ArgumentTypeError("--max-parallel 必须是 1 或 2")
+        raise argparse.ArgumentTypeError("--max-parallel 只能是 1（云盘写入单写者硬门禁）") from error
+    if number != 1:
+        raise argparse.ArgumentTypeError("--max-parallel 只能是 1（云盘写入单写者硬门禁）")
     return number
 
 
 @contextmanager
 def execution_slot(drive_id: str, max_parallel: int) -> Iterator[None]:
-    """Limit concurrent bulk writers before any cloud write is attempted.
-
-    ``aliyunpan`` processes share one local login/profile.  Field evidence
-    shows that a third writer can make an otherwise successful ``mv``
-    disappear before terminal verification, while two writers can make a
-    20-item batch exceed the executor timeout and land only partially.  The
-    safe default is therefore one writer; two must be explicitly requested
-    together with smaller batches and acceptance of resumable partial work.
-    The drive id is hashed so local state does not leak account identifiers.
-    """
+    """Acquire the one and only bulk-writer slot before any cloud write."""
+    if max_parallel != 1:
+        raise ValueError("--max-parallel 只能是 1（云盘写入单写者硬门禁）")
     state_home = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
     lock_dir = state_home / "soia-pkm-alipan-curator" / "locks"
     lock_dir.mkdir(parents=True, exist_ok=True)
     drive_key = hashlib.sha256(drive_id.encode("utf-8")).hexdigest()[:16]
-    handles = []
-    acquired = []
+    handle = None
     try:
-        for slot in range(1, 3):
-            handle = (lock_dir / f"bulk-{drive_key}-{slot}.lock").open("a+", encoding="utf-8")
-            handles.append(handle)
-            try:
-                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                continue
-            acquired.append(handle)
-            if max_parallel == 2:
-                break
-        required_slots = 2 if max_parallel == 1 else 1
-        if len(acquired) != required_slots:
+        handle = (lock_dir / f"bulk-{drive_key}.lock").open("a+", encoding="utf-8")
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
             raise RuntimeError(
-                "同一云盘已有批量写入进程，当前并发模式不兼容；请等待完成后使用 --resume，"
-                "不要提高并发规避保护"
-            )
+                "同一云盘已有批量写入进程；请等待完成后使用 --resume，不要并行写入"
+            ) from error
         yield
     finally:
-        for handle in acquired:
+        if handle is not None:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
-        for handle in handles:
             handle.close()
 
 
@@ -433,6 +491,7 @@ def main() -> None:
     ap.add_argument("--root", required=True, help="允许写入的云盘根边界")
     ap.add_argument("--archive-root", help="可选归档根边界")
     ap.add_argument("--ledger", required=True, help="执行账本 JSONL")
+    ap.add_argument("--run-dir", help="运行包目录；--execute 时必需，dry-run 提供时同样校验")
     ap.add_argument("--execute", action="store_true", help="真正执行；默认仅 dry-run")
     ap.add_argument("--resume", action="store_true", help="跳过历史已 verified/completed 动作")
     ap.add_argument(
@@ -445,12 +504,9 @@ def main() -> None:
         "--max-parallel",
         type=parallel_limit,
         default=1,
-        help="同一 drive 允许的批量写入进程数（1 或 2；默认 1；双路须显式开启）",
+        help="固定为 1；云盘写入单写者硬门禁",
     )
     args = ap.parse_args()
-
-    if args.max_parallel == 2 and args.batch_size > 10:
-        ap.error("--max-parallel 2 时 --batch-size 不能超过 10；大批次可能在超时前只完成一部分")
 
     try:
         roots = [posixpath.normpath(args.root)]
@@ -461,6 +517,10 @@ def main() -> None:
         if len(set(roots)) != len(roots):
             raise ValueError("--root 与 --archive-root 不能相同")
         plan = load_plan(args.plan, roots)
+        if args.execute and not args.run_dir:
+            raise ValueError("--execute 必须提供 --run-dir")
+        if args.run_dir and not args.execute:
+            require_preflight(args.run_dir, args.plan, args.driveId)
     except ValueError as error:
         ap.error(str(error))
 
@@ -471,6 +531,7 @@ def main() -> None:
     try:
         completed = load_completed(args.ledger) if args.resume else set()
         with execution_slot(args.driveId, args.max_parallel):
+            require_preflight(args.run_dir, args.plan, args.driveId)
             returncode = execute(plan, args.driveId, args.ledger, completed, args.batch_size)
     except (OSError, RuntimeError, ValueError) as error:
         ap.error(str(error))

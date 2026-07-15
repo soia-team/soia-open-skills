@@ -94,6 +94,24 @@ def validate_contract(contract: dict) -> None:
             raise ValueError(f"contract.numbered_layers[{index}].pattern is required")
         if not isinstance(rule.get("exclude", []), list):
             raise ValueError(f"contract.numbered_layers[{index}].exclude must be an array")
+        if "contiguous" in rule and not isinstance(rule["contiguous"], bool):
+            raise ValueError(f"contract.numbered_layers[{index}].contiguous must be a boolean")
+        if "start" in rule and (
+            isinstance(rule["start"], bool)
+            or not isinstance(rule["start"], int)
+            or rule["start"] < 1
+        ):
+            raise ValueError(
+                f"contract.numbered_layers[{index}].start must be a positive integer"
+            )
+        if "step" in rule and (
+            isinstance(rule["step"], bool)
+            or not isinstance(rule["step"], int)
+            or rule["step"] < 1
+        ):
+            raise ValueError(
+                f"contract.numbered_layers[{index}].step must be a positive integer"
+            )
     for index, rule in enumerate(contract.get("guide_layers", [])):
         if not str(rule.get("child_pattern", "")).strip():
             raise ValueError(f"contract.guide_layers[{index}].child_pattern is required")
@@ -250,19 +268,69 @@ def audit_numbering(rows: list[dict], rules: list[dict]) -> tuple[int, list[dict
         pattern = re.compile(pattern_text)
         excludes = {str(item) for item in rule.get("exclude", [])}
         children = child_dirs(rows, parent)
-        checked += len(children)
+        checked += sum(str(row.get("name", "")) not in excludes for row in children)
+        numbers: dict[int, list[dict]] = {}
         for row in children:
             name = str(row.get("name", ""))
-            if name in excludes or pattern.search(name):
+            if name in excludes:
+                continue
+            prefix = re.match(r"^(\d+)", name)
+            if prefix is not None:
+                numbers.setdefault(int(prefix.group(1)), []).append(row)
+            if not pattern.search(name):
+                violations.append({
+                    "kind": "unnumbered_directory",
+                    "rule": index,
+                    "parent": parent,
+                    "name": name,
+                    "id": row.get("id"),
+                    "expected_pattern": pattern_text,
+                })
+        for number, numbered_children in sorted(numbers.items()):
+            if len(numbered_children) < 2:
                 continue
             violations.append({
-                "kind": "unnumbered_directory",
+                "kind": "duplicate_directory_number",
                 "rule": index,
                 "parent": parent,
-                "name": name,
-                "id": row.get("id"),
-                "expected_pattern": pattern_text,
+                "number": number,
+                "names": [str(row.get("name", "")) for row in numbered_children],
+                "ids": [row.get("id") for row in numbered_children],
             })
+        if rule.get("contiguous", False):
+            start = int(rule.get("start", 1))
+            step = int(rule.get("step", 1))
+            actual_numbers = sorted(numbers)
+            off_sequence_numbers = [
+                number
+                for number in actual_numbers
+                if number < start or (number - start) % step != 0
+            ]
+            if off_sequence_numbers:
+                violations.append({
+                    "kind": "directory_number_off_sequence",
+                    "rule": index,
+                    "parent": parent,
+                    "start": start,
+                    "step": step,
+                    "numbers": off_sequence_numbers,
+                })
+            aligned_numbers = [
+                number for number in actual_numbers if number not in off_sequence_numbers
+            ]
+            last_expected_number = aligned_numbers[-1] if aligned_numbers else start
+            expected_numbers = list(range(start, last_expected_number + 1, step))
+            missing_numbers = [number for number in expected_numbers if number not in numbers]
+            if missing_numbers:
+                violations.append({
+                    "kind": "non_contiguous_directory_numbers",
+                    "rule": index,
+                    "parent": parent,
+                    "start": start,
+                    "step": step,
+                    "missing_numbers": missing_numbers,
+                    "actual_numbers": actual_numbers,
+                })
     return checked, violations
 
 

@@ -14,6 +14,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "skills" / "soia-pkm-alipan-curator" / "scripts" / "audit_run_bundle.py"
+sys.path.insert(0, str(SCRIPT.parent))
 SPEC = importlib.util.spec_from_file_location("curator_run_bundle", SCRIPT)
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError(f"cannot load {SCRIPT}")
@@ -30,6 +31,29 @@ def write_json(path: Path, value: object) -> None:
 def write_jsonl(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+
+
+def refresh_preflight_report(root: Path) -> None:
+    manifest = audit.read_json(root / "run.json")
+    manifest.setdefault("files", {})["preflight_report"] = "verification/preflight-reclass-01.json"
+    write_json(root / "run.json", manifest)
+    hashes = {"run.json": audit.preflight_gate.sha256_file(root / "run.json")}
+    for plan in audit.preflight_gate.registered_plan_paths(manifest):
+        hashes[plan] = audit.preflight_gate.sha256_file(root / plan)
+    write_json(root / manifest["files"]["preflight_report"], {
+        "schema_version": 1,
+        "status": "passed",
+        "hashes": hashes,
+    })
+
+
+def refresh_migration_conservation_report(root: Path) -> None:
+    manifest = audit.read_json(root / "run.json")
+    report_member = manifest["files"]["migration_conservation"]
+    write_json(
+        root / report_member,
+        audit.audit_migration_conservation.audit_run(root),
+    )
 
 
 def make_valid_bundle(root: Path) -> None:
@@ -61,8 +85,9 @@ def make_valid_bundle(root: Path) -> None:
     })
     (root / "handoff").mkdir(parents=True, exist_ok=True)
     (root / "handoff/receipt.md").write_text("completed\n", encoding="utf-8")
-    write_jsonl(root / "actions/10.plan.jsonl", [{"action_id": "B10-001", "op": "rename"}])
-    write_jsonl(root / "actions/10.result.jsonl", [{"action_id": "B10-001", "status": "verified"}])
+    plan = [{"action_id": "B10-001", "op": "mkdir", "to": "/learning/staging", "reason": "prepare"}]
+    write_jsonl(root / "actions/10.plan.jsonl", plan)
+    write_jsonl(root / "actions/10.result.jsonl", [{**plan[0], "status": "verified"}])
     write_json(root / "run.json", {
         "schema_version": 1,
         "run_id": "2026-01-01-learning-reorg",
@@ -78,10 +103,12 @@ def make_valid_bundle(root: Path) -> None:
             "final_errors": "verification/final.scan.jsonl.errors",
             "structure_audit": "verification/structure-audit.json",
             "ai_review": "verification/ai-review.json",
+            "migration_conservation": "verification/migration-conservation.json",
             "receipt": "handoff/receipt.md",
         },
         "batches": [{"plan": "actions/10.plan.jsonl", "result": "actions/10.result.jsonl"}],
     })
+    refresh_migration_conservation_report(root)
 
 
 class RunBundleTests(unittest.TestCase):
@@ -108,10 +135,19 @@ class RunBundleTests(unittest.TestCase):
                 run_dir / "actions/10.plan.jsonl",
                 [{"action_id": "A1", "op": "mkdir", "to": "/partition/new", "reason": "plan"}],
             )
+            refresh_preflight_report(run_dir)
             result = audit.audit_bundle(run_dir, final=False)
             self.assertEqual(result["status"], "passed")
             self.assertEqual(result["checked"]["planned_actions"], 1)
             self.assertEqual(result["checked"]["focus_targets"], 1)
+            self.assertEqual(result["checked"]["preflight_gate"], "passed")
+
+    def test_in_progress_audit_requires_registered_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            result = audit.audit_bundle(root, final=False)
+        self.assertIn("preflight_report_not_registered", {item["kind"] for item in result["violations"]})
 
     def test_same_batch_duplicate_action_id_reports_plan_line(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -179,8 +215,10 @@ class RunBundleTests(unittest.TestCase):
                 "result": "actions/20.result.jsonl",
             })
             write_json(root / "run.json", manifest)
-            write_jsonl(root / "actions/20.plan.jsonl", [{"action_id": "B20-001", "op": "move"}])
-            write_jsonl(root / "actions/20.result.jsonl", [{"action_id": "B20-001", "status": "verified"}])
+            second_plan = [{"action_id": "B20-001", "op": "move"}]
+            write_jsonl(root / "actions/20.plan.jsonl", second_plan)
+            write_jsonl(root / "actions/20.result.jsonl", [{**second_plan[0], "status": "verified"}])
+            refresh_migration_conservation_report(root)
             result = audit.audit_bundle(root, final=True)
 
         self.assertEqual(result["status"], "passed")
@@ -253,6 +291,68 @@ class RunBundleTests(unittest.TestCase):
             write_jsonl(root / "actions/10.result.jsonl", [{"action_id": "B10-001", "status": "failed"}])
             result = audit.audit_bundle(root, final=True)
         self.assertIn("action_not_closed", {item["kind"] for item in result["violations"]})
+
+    def test_verified_ledger_identity_mismatch_cannot_close_final_action(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            plan = [{"action_id": "B10-001", "op": "mkdir", "to": "/learning/staging", "reason": "prepare"}]
+            write_jsonl(root / "actions/10.plan.jsonl", plan)
+            write_jsonl(root / "actions/10.result.jsonl", [{
+                **plan[0],
+                "op": "rename",
+                "status": "verified",
+            }])
+            refresh_migration_conservation_report(root)
+            result = audit.audit_bundle(root, final=True)
+
+        mismatches = [
+            item for item in result["violations"]
+            if item["kind"] == "verified_ledger_operation_identity_mismatch"
+        ]
+        self.assertEqual(len(mismatches), 1)
+        self.assertEqual(mismatches[0]["mismatches"], {
+            "op": {"expected": "mkdir", "actual": "rename"},
+        })
+
+    def test_final_bundle_requires_registered_migration_conservation_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            manifest = audit.read_json(root / "run.json")
+            manifest["files"].pop("migration_conservation")
+            write_json(root / "run.json", manifest)
+            result = audit.audit_bundle(root, final=True)
+
+        self.assertIn(
+            "migration_conservation_report_not_registered",
+            {item["kind"] for item in result["violations"]},
+        )
+
+    def test_final_bundle_rejects_failed_or_stale_migration_conservation_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            report_path = root / "verification/migration-conservation.json"
+            report = audit.read_json(report_path)
+            report["status"] = "failed"
+            write_json(report_path, report)
+            failed = audit.audit_bundle(root, final=True)
+
+            report = audit.read_json(report_path)
+            report["status"] = "passed"
+            report["hashes"]["run.json"] = "0" * 64
+            write_json(report_path, report)
+            stale = audit.audit_bundle(root, final=True)
+
+        self.assertIn(
+            "migration_conservation_report_not_passed",
+            {item["kind"] for item in failed["violations"]},
+        )
+        self.assertIn(
+            "migration_conservation_report_hash_mismatch",
+            {item["kind"] for item in stale["violations"]},
+        )
 
     def test_ai_review_requires_evidence_and_no_unresolved_items(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

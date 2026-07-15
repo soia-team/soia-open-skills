@@ -101,8 +101,26 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 
 **硬约定（先记录后动手）**：AI 生成并将执行的移动/删除清单——即本 skill `scripts/gen_catalog.py` 的 `--moves` / `--deletes` / `--roots` 输入文件——标准落盘位置为 `${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/moves/<date>-<batch>.jsonl`。执行云盘 `mv`/`rmdir` 前必须先把该清单落盘到此路径，不允许先动手再补记录；事后可凭这份清单追溯操作。
 
+**大型整理固定执行链**：统一按 `merge map → assign numbers (optional) → build reclass → build structure → preflight → audit → dry-run → execute → fresh terminal scan` 顺序推进；任何一步失败都停在该步，不得跳过门禁直接写云盘。多 agent 只可并行做只读盘点、内容审核、计划生成和独立验证；`mkdir` / `mv` / `rename` / 回收站删除 / 上传等云盘写入始终由一个写入者执行，批量入口显式使用 `--max-parallel 1`。计划和结构合同合并后，写入者还必须按 file_id 做迁移后终态扫描，确认空壳确实存在且子项为 0，再按已批准清单送回收站。
+
+阶段入口按本 skill 的脚本职责对应：`merge_classification_map.py` → `assign_resource_numbers.py`（仅编号已确认时）→ `build_reclass_plan.py` → `build_structure_plan.py` → `preflight_reclass.py` → 非 `--final` 的 `audit_run_bundle.py` → `apply_reclass.py`/`apply_reclass_bulk.py` 的 dry-run → 同一写入者加 `--execute`。`audit_structure.py --final` 和 `audit_run_bundle.py --final` 属于 fresh terminal scan 后的收官审计，不得用前置 audit 代替。
+
+**大型整理正式脚本表**：以下是可复用的正式入口；不要在运行包、临时目录或会话里另写同职能 builder。
+
+| 阶段 | 正式脚本 | 职责与边界 |
+|---|---|---|
+| 合并分类结论 | `scripts/merge_classification_map.py` | 将审核过的分类、分类目标、可选覆写与 inventory 合并成待审 TSV map；按资源 ID 对齐并拒绝缺失或未知覆写。 |
+| 编号（可选） | `scripts/assign_resource_numbers.py` | 仅在编号规则已获确认时，为 map 中的资源目录分配稳定前缀；保留既有编号并更新 map，不改云盘。 |
+| 生成重分类计划 | `scripts/build_reclass_plan.py` | 从审核过的 TSV map 生成确定性的 JSONL `mkdir`/`move`/`rename` 计划；只写本地计划，不调用云盘。 |
+| 生成结构计划 | `scripts/build_structure_plan.py` | 从结构合同和已登记批次生成有序的 `mkdir` JSONL 计划；结构批次须登记到运行包后再进入后续阶段。 |
+| 执行前预检 | `scripts/preflight_reclass.py` | 对已登记的计划做新鲜只读云端核对，检查来源、目标、ID 和父级顺序，并输出预检报告及 `run.json`、各已登记计划的 SHA-256。 |
+
+运行 `preflight_reclass.py` 前，先在 `run.json.files.preflight_report` 登记一个尚不存在的、相对运行包的报告路径；脚本拒绝覆盖既有报告，也拒绝把 `--report` 写到未登记或运行包外的位置。非 final 的 `audit_run_bundle.py` 会调用 `scripts/preflight_gate.py` 对账；执行器的 `--execute` 分支必须显式传 `--run-dir`，并在首个云盘写入前即时调用 `verify_preflight_gate(Path(args.run_dir), plan_path=Path(args.plan))`，确认报告已登记且 `passed`、报告属于该运行包、当前执行计划已登记，并且 `run.json` 与所有登记计划的 SHA-256 未变化。纯 dry-run 可不传 `--run-dir`，但如提供则同样执行门禁。计划或 manifest 有任何变动，保留旧证据，登记新报告路径并重新预检；不得仅靠此前 audit 的结果执行。
+
+预检支持断点运行包：逐批读取 `result` ledger 中同一 operation key（`action_id/op/from/to/file_id`）的最新记录，只把最新状态为 `verified` / `completed` 且当前云端能以同一 `file_id` 证明计划终态的连续链前缀计为 `already_verified`。`mv → rename` 等链先验证最终落点，再按全局计划逆序回卷后重放；账本单方面声称成功、错误 ID、未登记 operation key 或中间断链都必须产生 violation。若已 verified 的空 `mkdir` 后续经用户批准送入回收站，只能通过 `run.files.empty_cleanup_evidence` 登记的 JSONL 证据转为 `superseded`；证据必须与缺失目标精确匹配、`files=0`、状态以 `removed_to_recycle_bin` 开头且子目录先于父目录。报告 `checked` 分开输出 `ready_actions`、`already_verified_actions` 与 `superseded_actions`；gate 的 SHA-256 绑定覆盖当前 `run.json`、全部登记计划和已登记 cleanup evidence。
+
 - **去营销尾巴**：目录名里的「公众号：XXX」「【xx.xGB】」「持续更新」等广告字样批量 rename 掉
-- **去套娃**：目录内只有一个子目录 → 内容上提一层、删壳
+- **去套娃**：目录内只有一个子目录时，先判定是否为 HTML/播放列表/字幕/脚本/配置引用的技术包或源码依赖；技术包、源码及其依赖目录必须整体保留，不拆文件、不编号、不因“只剩一个子目录”删壳。只有普通业务容器才可内容上提一层、再删空壳
 - **删广告**：「↑↑订阅↑↑」目录、`800T资源.txt`、`福利码.txt` 等先进入候选删除清单；获得用户对规则与范围的明确授权后再删
 - **按查找目的选主轴**：先从主题、用途、受众、阶段、状态、媒介等维度中选择本层主轴；不混用维度，不照抄历史目录，也不按可识别个人身份命名
 - **命名统一**：同级目录使用同一命名策略；用户选择编号排序时，再统一编号格式与步长
@@ -137,11 +155,13 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 |---|---|---|
 | 全盘/多分区馆藏总索引 | `scripts/gen_catalog_xlsx.py` | 轻量总入口 + 每分区明细；按 Markdown SHA-256 增量刷新 |
 | 单个学习分区的家长说明与课程导航 | `scripts/gen_family_nav_xlsx.mjs` | `01_先看这里` + `02_资源导航`；课程名称可点击直达 |
-| 已批准重分类方案的可恢复执行 | `scripts/apply_reclass.py` | 读取带 `action_id` 的 JSONL 计划；限定 `--root` 与可选 `--archive-root`、默认 dry-run、逐项回读、失败即停并写 verified 账本 |
-| 大批同源同目标移动的可恢复执行 | `scripts/apply_reclass_bulk.py` | 沿用相同计划/边界/账本合同；最多 20 项合并一次 `mv`，批前批后各读源与目标并逐 action 记终态；同一 drive 默认单路，双路须显式开启并把批次降到 10 项以内；默认 dry-run |
+| 已批准重分类方案的可恢复执行 | `scripts/apply_reclass.py` | 读取带 `action_id` 的 JSONL 计划；`mv`/`rename` 必须携带 `file_id`，写前、终态与 resume 都按 `name → file_id` 回读核验；限定 `--root` 与可选 `--archive-root`、默认 dry-run、失败即停并写 verified 账本 |
+| 大批同源同目标移动的可恢复执行 | `scripts/apply_reclass_bulk.py` | 沿用相同计划/边界/身份/账本合同；最多 20 项合并一次 `mv`，批前批后各读源与目标并逐 action 以 `file_id` 记终态；云盘写入始终单写者，`--max-parallel` 只能是 `1`；默认 dry-run |
 | 超长系列的可审核分组计划 | `scripts/plan_series_chunks.py` | 从逐文件扫描和本次规则 JSON 生成稳定的 `mkdir`/`mv` 计划与异常报告；自然排序、同课主媒体和侧车跟组，未匹配文件默认阻断；只生成计划，不写云盘 |
 | 编号、导览、云端关键产物、资源地图直达链接、长系列分组与待确认项闭环审计 | `scripts/audit_structure.py` | 从终态 scan JSONL 和本次合同检查实体结构、精确 SHA1/字节及消费端直达链接；失败时返回非零退出码 |
 | 特大模块运行包、焦点目录逐项覆盖、批次账本与 AI 复核闭环 | `scripts/audit_run_bundle.py` | 检查运行包路径安全、初末扫描、用户点名目标内容证据、动作计划/结果、结构审计和 AI 复核；失败时返回非零退出码 |
+
+`preflight_reclass.py` 和两条重分类执行器的每个 `aliyunpan` 调用都经同仓 `soia-pkm-alipan/scripts/run_with_env.py` 启动，以加载该原子 skill 的私有登录态。默认从当前脚本所在的 `skills/` 相对定位；只在调用方显式设置 `SOIA_ALIPAN_RUNNER` 时覆盖 runner。runner 缺失或无法启动会明确失败，绝不回退为裸 `aliyunpan` 或输出私有配置细节。
 
 不要在 vault、临时目录或会话产物目录另写一次性 builder。全盘索引的参数、依赖、数据口径、云端覆盖与验收见 [references/catalog-excel.md](references/catalog-excel.md)；家庭导航的 JSON 字段、运行命令、上传顺序与验收见 [references/family-navigation-excel.md](references/family-navigation-excel.md)。核心约定：
 
@@ -173,13 +193,14 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 1. **方案先行**：分类方案文档先写完整（现状/N类结构/归类规则/待裁定区），frontmatter `status: 待拍板`，不擅自开始移动
 2. **用户裁定**：疑难项（受众模糊/去向二选一/查重后留哪份）列清单给用户，逐项拍板
 3. **分批执行**：按"风险从低到高、跨库/跨盘操作放后面"分批，每批做完立即复核（重新 ls 对照终态），操作记一份移动日志（jsonl：原路径/新路径/操作类型/时间戳）
-4. **结构闭环 + 地图/总览刷新 + 文档回填**：终态扫描后先跑编号/导览/关键云端产物/长系列分组/待确认项审计，违规数为 0；再重建受影响地图（尤其跨盘导致 file_id 全换时），把最终 file_id 写入 `resource_maps` 合同并验证真实 Markdown 直达链接，随后同步总览、Excel 与方案文档变更史
+4. **结构闭环 + 地图/总览刷新 + 文档回填**：终态扫描后先跑编号/导览/关键云端产物/长系列分组/待确认项审计，违规数为 0；再重建受影响地图（尤其跨盘导致 file_id 全换时），把最终 file_id 写入 `resource_maps` 合同并验证真实 Markdown 直达链接。收官必须依次更新 OB 资源地图、Excel、云盘索引和 `01_先看这里`，并回填方案文档变更史；任何一个消费端未更新都不算完成
 
 特大模块在上述四步外增加运行包门禁：`run.json` 中的所有 `focus_targets` 必须同时出现在初始扫描、内容审计和终态扫描；所有批次 action 均有 verified/带原因 skipped 结果；`structure-audit.json` 与 `ai-review.json` 均通过；最后执行 `scripts/audit_run_bundle.py --run-dir <run-dir> --final`。运行时证据留在 XDG state，OB 只保存资源地图、冻结审计与短回执。
 
 ## 执行编排经验
 
 - **决策与执行分层**：主控只做审核决策（批方案/拍板疑难项/复核终态），执行代理只在已批准范围内运行 `ls`/`mv`/`rename`，不自行改变分类规则
+- **并行范围固定**：多 agent 仅可并行盘点、内容审核、计划和验证；merge map、云盘写入、索引/OB/Excel/导航产物写入均由主控或指定单写者串行完成。云盘写入不因分区互不相交而开第二路，`max_parallel` 永远为 1
 - **并行须给进度看板**：多代理并发跑不同分区时，给主控方一份一眼看完的进度看板，不要让用户去追多个会话各自输出
 - **写操作双层验证**：任何 `mv`/`rm`/`rename` 完成后立即用独立通道（换一次 ls / 用 Read 而非 Bash）核对结果，不要只信命令返回的成功提示——曾出现过"回显污染"（显示成功但实际未执行），靠双层验证纠正
 

@@ -8,6 +8,9 @@ import json
 import sys
 from pathlib import Path
 
+import audit_migration_conservation
+import preflight_gate
+
 
 FINAL_FILES = (
     "initial_scan",
@@ -140,12 +143,98 @@ def find_scan_target(rows: list[dict], target_id: str, target_path: str) -> bool
     )
 
 
-def audit_bundle(run_dir: Path, *, final: bool) -> dict:
+def append_migration_conservation_violations(
+    violations: list[dict],
+    run_dir: Path,
+    manifest: dict,
+) -> str:
+    """Require a current, registered, passing migration conservation report."""
+    configured_files = manifest.get("files")
+    if not isinstance(configured_files, dict) or "migration_conservation" not in configured_files:
+        violations.append({"kind": "migration_conservation_report_not_registered"})
+        return "not_registered"
+    try:
+        report_path = resolve_member(
+            run_dir,
+            configured_files["migration_conservation"],
+            "run.files.migration_conservation",
+        )
+    except ValueError as error:
+        violations.append({
+            "kind": "migration_conservation_report_path_invalid",
+            "detail": str(error),
+        })
+        return "invalid_path"
+    if not report_path.is_file():
+        violations.append({
+            "kind": "migration_conservation_report_missing",
+            "path": str(configured_files["migration_conservation"]),
+        })
+        return "missing"
+    try:
+        report = read_json(report_path)
+    except ValueError as error:
+        violations.append({"kind": "migration_conservation_report_invalid", "detail": str(error)})
+        return "invalid"
+
+    if report.get("status") != "passed":
+        violations.append({
+            "kind": "migration_conservation_report_not_passed",
+            "actual": report.get("status"),
+        })
+
+    try:
+        current_hashes = audit_migration_conservation.conservation_input_hashes(run_dir, manifest)
+    except (OSError, ValueError) as error:
+        violations.append({
+            "kind": "migration_conservation_report_hashes_unavailable",
+            "detail": str(error),
+        })
+        return "failed"
+
+    recorded_hashes = report.get("hashes")
+    if not isinstance(recorded_hashes, dict):
+        violations.append({"kind": "migration_conservation_report_hashes_missing_or_invalid"})
+        return "failed"
+
+    expected_members = set(current_hashes)
+    reported_members = {str(member) for member in recorded_hashes}
+    if expected_members != reported_members:
+        violations.append({
+            "kind": "migration_conservation_report_hash_set_mismatch",
+            "missing": sorted(expected_members - reported_members),
+            "unexpected": sorted(reported_members - expected_members),
+        })
+
+    for member in sorted(expected_members & reported_members):
+        expected = current_hashes[member]
+        actual = recorded_hashes.get(member)
+        if actual != expected:
+            violations.append({
+                "kind": "migration_conservation_report_hash_mismatch",
+                "member": member,
+                "expected": expected,
+                "actual": actual,
+            })
+    return "passed" if report.get("status") == "passed" and not any(
+        violation["kind"].startswith("migration_conservation_report_hash")
+        for violation in violations
+    ) else "failed"
+
+
+def audit_bundle(run_dir: Path, *, final: bool, require_preflight: bool | None = None) -> dict:
     violations: list[dict] = []
+    if require_preflight is None:
+        require_preflight = not final
     manifest_path = run_dir / "run.json"
     if not manifest_path.is_file():
         return {"status": "failed", "checked": {}, "violations": [{"kind": "run_manifest_missing"}]}
     manifest = read_json(manifest_path)
+
+    preflight_result = None
+    if require_preflight:
+        preflight_result = preflight_gate.verify_preflight_gate(run_dir)
+        violations.extend(preflight_result.get("violations", []))
 
     if manifest.get("schema_version") != 1:
         violations.append({"kind": "unsupported_schema_version", "actual": manifest.get("schema_version")})
@@ -262,7 +351,7 @@ def audit_bundle(run_dir: Path, *, final: bool) -> dict:
             continue
         plan_entries = read_jsonl_with_lines(plan_path)
         plans = [value for _, value in plan_entries]
-        results = read_jsonl(result_path) if result_path.is_file() else []
+        result_entries = read_jsonl_with_lines(result_path) if result_path.is_file() else []
         plan_ids = _append_plan_action_id_violations(
             violations,
             seen_action_ids,
@@ -271,18 +360,38 @@ def audit_bundle(run_dir: Path, *, final: bool) -> dict:
             batch.get("plan"),
             plan_entries,
         )
-        result_by_id = {str(item.get("action_id", "")): item for item in results}
+        result_by_id = {
+            str(item.get("action_id", "")).strip(): (line, item)
+            for line, item in result_entries
+        }
         planned_actions += len(plans)
         if not final:
             continue
-        for action_id in plan_ids:
-            result = result_by_id.get(action_id)
-            if result is None:
+        for line, action in plan_entries:
+            action_id = str(action.get("action_id", "")).strip()
+            if not action_id:
+                continue
+            result_entry = result_by_id.get(action_id)
+            if result_entry is None:
                 violations.append({"kind": "action_result_missing", "batch": index, "action_id": action_id})
                 continue
+            ledger_line, result = result_entry
             status = result.get("status")
             if status == "verified":
-                verified_actions += 1
+                identity_mismatches = audit_migration_conservation.operation_identity_mismatches(action, result)
+                if identity_mismatches:
+                    violations.append({
+                        "kind": "verified_ledger_operation_identity_mismatch",
+                        "batch": index,
+                        "action_id": action_id,
+                        "plan": str(batch.get("plan")),
+                        "plan_line": line,
+                        "ledger": str(batch.get("result")),
+                        "ledger_line": ledger_line,
+                        "mismatches": identity_mismatches,
+                    })
+                else:
+                    verified_actions += 1
             elif status == "skipped" and str(result.get("reason", "")).strip():
                 pass
             else:
@@ -309,6 +418,14 @@ def audit_bundle(run_dir: Path, *, final: bool) -> dict:
     if final and paths.get("receipt", Path()).is_file() and not paths["receipt"].read_text(encoding="utf-8").strip():
         violations.append({"kind": "receipt_empty"})
 
+    migration_conservation_status = None
+    if final:
+        migration_conservation_status = append_migration_conservation_violations(
+            violations,
+            run_dir,
+            manifest,
+        )
+
     checked = {
         "initial_scan_rows": len(initial_rows),
         "final_scan_rows": len(final_rows),
@@ -317,7 +434,10 @@ def audit_bundle(run_dir: Path, *, final: bool) -> dict:
         "batches": len(batches),
         "planned_actions": planned_actions,
         "verified_actions": verified_actions,
+        "preflight_gate": preflight_result["status"] if preflight_result is not None else "not_required",
     }
+    if final:
+        checked["migration_conservation_report"] = migration_conservation_status
     return {"status": "passed" if not violations else "failed", "checked": checked, "violations": violations}
 
 

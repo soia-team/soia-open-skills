@@ -3,6 +3,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -104,10 +105,103 @@ async function loadArtifactTool(runtimeRoot) {
   const entry = require.resolve("@oai/artifact-tool", { paths: [runtimeRoot] });
   const imported = await import(pathToFileURL(entry).href);
   const api = imported.default ? { ...imported.default, ...imported } : imported;
-  if (!api.Workbook || !api.SpreadsheetFile) {
-    throw new Error("@oai/artifact-tool 未暴露 Workbook / SpreadsheetFile");
+  if (!api.Workbook || !api.SpreadsheetFile || !api.FileBlob) {
+    throw new Error("@oai/artifact-tool 未暴露 Workbook / SpreadsheetFile / FileBlob");
   }
   return api;
+}
+
+
+function matchingFormulaErrors(inspection) {
+  return String(inspection.ndjson || "").trim().split("\n").filter(Boolean).filter((line) => {
+    try {
+      return JSON.parse(line).kind !== "notice";
+    } catch {
+      return true;
+    }
+  });
+}
+
+
+async function verifyNoFormulaErrors(workbook) {
+  const errors = await workbook.inspect({
+    kind: "match",
+    searchTerm: "#REF!|#DIV/0!|#VALUE!|#NAME\\?|#N/A|#NUM!|#NULL!|#SPILL!|#CALC!|#FIELD!|#BLOCKED!|#CONNECT!|#UNKNOWN!|#BUSY!|#GETTING_DATA",
+    options: { useRegex: true, maxResults: 100 },
+    summary: "final family navigation formula error scan",
+  });
+  const formulaMatches = matchingFormulaErrors(errors);
+  if (formulaMatches.length) {
+    throw new Error(`公式错误：${formulaMatches.join("\n")}`);
+  }
+}
+
+
+function assertFinalWorkbook(finalWorkbook, input) {
+  const expectedSheetNames = ["01_先看这里", "02_资源导航"];
+  const actualSheetNames = finalWorkbook.worksheets.items.map((sheet) => sheet.name);
+  if (
+    actualSheetNames.length !== expectedSheetNames.length ||
+    actualSheetNames.some((name, index) => name !== expectedSheetNames[index])
+  ) {
+    throw new Error(`最终 XLSX 工作表不符合预期：${actualSheetNames.join(" / ")}`);
+  }
+
+  const navigation = finalWorkbook.worksheets.getItem("02_资源导航");
+  const usedValues = navigation.getUsedRange().values;
+  const actualDataRows = usedValues.length - 4;
+  if (actualDataRows !== input.rows.length) {
+    throw new Error(`最终 XLSX 数据行数不匹配：期望 ${input.rows.length}，实际 ${actualDataRows}`);
+  }
+
+  const dataRows = navigation.getRangeByIndexes(4, 0, input.rows.length, 10).values;
+  const nameFormulas = navigation.getRangeByIndexes(4, 2, input.rows.length, 1).formulas;
+  const openFormulas = navigation.getRangeByIndexes(4, 9, input.rows.length, 1).formulas;
+  input.rows.forEach((row, index) => {
+    const excelRow = index + 5;
+    if (dataRows[index]?.[0] !== index + 1) {
+      throw new Error(`最终 XLSX 第 ${excelRow} 行序号不匹配`);
+    }
+    if (dataRows[index]?.[8] !== row.url) {
+      throw new Error(`最终 XLSX 第 ${excelRow} 行 URL 与输入不一致`);
+    }
+    const expectedNameFormula = `=HYPERLINK(I${excelRow},"${excelText(row.name)}")`;
+    const expectedOpenFormula = `=HYPERLINK(I${excelRow},"🔗 打开")`;
+    if (nameFormulas[index]?.[0] !== expectedNameFormula) {
+      throw new Error(`最终 XLSX 第 ${excelRow} 行资源名称 HYPERLINK 公式不符合输入 URL`);
+    }
+    if (openFormulas[index]?.[0] !== expectedOpenFormula) {
+      throw new Error(`最终 XLSX 第 ${excelRow} 行打开云盘 HYPERLINK 公式不符合输入 URL`);
+    }
+  });
+  return navigation;
+}
+
+
+async function verifyFinalXlsx(SpreadsheetFile, FileBlob, output, input) {
+  const finalFile = await FileBlob.load(output);
+  const finalWorkbook = await SpreadsheetFile.importXlsx(finalFile);
+  assertFinalWorkbook(finalWorkbook, input);
+  await verifyNoFormulaErrors(finalWorkbook);
+  return finalWorkbook;
+}
+
+
+async function renderPreviews(workbook, qaDir, usageLastRow, navigationLastRow) {
+  if (!qaDir) return [];
+  await fs.mkdir(qaDir, { recursive: true });
+  const specs = [
+    ["01_先看这里", `A1:J${Math.min(usageLastRow, 35)}`, "01_先看这里.png"],
+    ["02_资源导航", `A1:J${Math.min(navigationLastRow, 35)}`, "02_资源导航.png"],
+  ];
+  const previews = [];
+  for (const [sheetName, range, filename] of specs) {
+    const blob = await workbook.render({ sheetName, range, scale: 1, format: "png" });
+    const preview = path.join(qaDir, filename);
+    await fs.writeFile(preview, new Uint8Array(await blob.arrayBuffer()));
+    previews.push(preview);
+  }
+  return previews;
 }
 
 
@@ -261,6 +355,15 @@ function buildWorkbook(Workbook, input) {
 }
 
 
+function temporaryOutputPath(output) {
+  const parsed = path.parse(output);
+  return path.join(
+    parsed.dir,
+    `.${parsed.name}.tmp-${process.pid}-${randomUUID()}${parsed.ext}`
+  );
+}
+
+
 async function run() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) {
@@ -269,57 +372,45 @@ async function run() {
   }
   const input = JSON.parse(await fs.readFile(args.input, "utf8"));
   validateInput(input);
-  const { Workbook, SpreadsheetFile } = await loadArtifactTool(args.artifactRuntime);
+  const { Workbook, SpreadsheetFile, FileBlob } = await loadArtifactTool(args.artifactRuntime);
   const built = buildWorkbook(Workbook, input);
-  const errors = await built.workbook.inspect({
-    kind: "match",
-    searchTerm: "#REF!|#DIV/0!|#VALUE!|#NAME\\?|#N/A",
-    options: { useRegex: true, maxResults: 100 },
-    summary: "family navigation formula error scan",
-  });
-  const inspectionLines = String(errors.ndjson || "").trim().split("\n").filter(Boolean);
-  const formulaMatches = inspectionLines.filter((line) => {
-    try {
-      return JSON.parse(line).kind !== "notice";
-    } catch {
-      return true;
-    }
-  });
-  if (formulaMatches.length) {
-    throw new Error(`公式错误：${formulaMatches.join("\n")}`);
-  }
-
-  const previews = [];
-  if (args.qaDir) {
-    await fs.mkdir(args.qaDir, { recursive: true });
-    const specs = [
-      ["01_先看这里", `A1:J${Math.min(built.usageLastRow, 35)}`, "01_先看这里.png"],
-      ["02_资源导航", `A1:J${Math.min(built.navigationLastRow, 35)}`, "02_资源导航.png"],
-    ];
-    for (const [sheetName, range, filename] of specs) {
-      const blob = await built.workbook.render({ sheetName, range, scale: 1, format: "png" });
-      const preview = path.join(args.qaDir, filename);
-      await fs.writeFile(preview, new Uint8Array(await blob.arrayBuffer()));
-      previews.push(preview);
-    }
-  }
   built.navigation.getRangeByIndexes(4, 2, input.rows.length, 1).formulas = input.rows.map((row, index) => [
     `=HYPERLINK(I${index + 5},"${excelText(row.name)}")`
   ]);
   built.navigation.getRangeByIndexes(4, 9, input.rows.length, 1).formulas = input.rows.map((_, index) => [
     `=HYPERLINK(I${index + 5},"🔗 打开")`
   ]);
-  await fs.mkdir(path.dirname(args.output), { recursive: true });
-  const xlsx = await SpreadsheetFile.exportXlsx(built.workbook);
-  await xlsx.save(args.output);
-  if (args.soffice) await recalculateWithLibreOffice(args.output, args.soffice);
-  await fs.rm(`${args.output}.inspect.ndjson`, { force: true });
+  const output = path.resolve(args.output);
+  await fs.mkdir(path.dirname(output), { recursive: true });
+  let temporaryOutput = temporaryOutputPath(output);
+  let previews;
+  try {
+    const xlsx = await SpreadsheetFile.exportXlsx(built.workbook);
+    await xlsx.save(temporaryOutput);
+    if (args.soffice) await recalculateWithLibreOffice(temporaryOutput, args.soffice);
+    const finalWorkbook = await verifyFinalXlsx(SpreadsheetFile, FileBlob, temporaryOutput, input);
+    previews = await renderPreviews(
+      finalWorkbook,
+      args.qaDir,
+      built.usageLastRow,
+      built.navigationLastRow
+    );
+    await fs.rm(`${temporaryOutput}.inspect.ndjson`, { force: true });
+    await fs.rename(temporaryOutput, output);
+    temporaryOutput = undefined;
+  } finally {
+    if (temporaryOutput) {
+      await fs.rm(temporaryOutput, { force: true });
+      await fs.rm(`${temporaryOutput}.inspect.ndjson`, { force: true });
+    }
+  }
 
   console.log(JSON.stringify({
     status: "updated",
-    output: path.resolve(args.output),
+    output,
     rows: input.rows.length,
     recalculated: Boolean(args.soffice),
+    verified: true,
     previews,
   }));
 }

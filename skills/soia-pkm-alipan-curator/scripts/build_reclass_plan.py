@@ -148,13 +148,16 @@ def build_plan(args: argparse.Namespace) -> tuple[list[dict], dict]:
         {item["target_parent"] for item in selected},
         key=lambda value: (value.count("/"), value),
     )
-    for index, target_parent in enumerate(target_parents, 1):
-        actions.append({
-            "action_id": f"{args.action_prefix}-MK{index:04d}",
-            "op": "mkdir",
-            "to": target_parent,
-            "reason": "create mapped target directory",
-        })
+    mkdir_actions = []
+    if not getattr(args, "no_mkdir", False):
+        for index, target_parent in enumerate(target_parents, 1):
+            mkdir_actions.append({
+                "action_id": f"{args.action_prefix}-MK{index:04d}",
+                "op": "mkdir",
+                "to": target_parent,
+                "reason": "create mapped target directory",
+            })
+    actions.extend(mkdir_actions)
 
     move_index = 0
     rename_index = 0
@@ -189,7 +192,7 @@ def build_plan(args: argparse.Namespace) -> tuple[list[dict], dict]:
     return actions, {
         "mapping_rows": len(rows),
         "selected_items": len(selected),
-        "mkdir_actions": len(target_parents),
+        "mkdir_actions": len(mkdir_actions),
         "move_actions": move_index,
         "rename_actions": rename_index,
         "total_actions": len(actions),
@@ -215,6 +218,11 @@ def parse_args() -> argparse.Namespace:
         action="append",
         default=[],
         help="only emit mappings whose target is inside this cloud prefix; repeatable",
+    )
+    parser.add_argument(
+        "--no-mkdir",
+        action="store_true",
+        help="omit mkdir actions while keeping move and rename actions",
     )
     parser.add_argument("--source-path-column", default="source_path")
     parser.add_argument("--source-name-column", default="source_name")
