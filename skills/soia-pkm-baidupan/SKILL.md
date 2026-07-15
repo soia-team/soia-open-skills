@@ -11,7 +11,7 @@ description: 百度网盘原子操作层：基于百度官方 baidu-drive Skill 
 
 ## 定位
 
-本技能是 PKM 层的百度网盘适配器，默认使用百度官方公开的 [`baidu-drive`](https://github.com/baidu-netdisk/bdpan-storage/tree/main/skills/baidu-drive) Skill 及其 `bdpan` CLI。上游 Skill 负责 CLI 安装、授权和基础命令；本技能补充面向 PKM 的安全边界、只读扫描和标准 JSONL 输出。
+本技能是 PKM 层的百度网盘适配器，默认使用百度官方公开的 [`baidu-drive`](https://github.com/baidu-netdisk/bdpan-storage/tree/main/skills/baidu-drive) Skill 及其 `bdpan` CLI，也可显式切换到社区 [`mqhe2007/baidupan-cli`](https://github.com/mqhe2007/baidupan-cli) 做开放平台应用目录测试。两种后端都由同一份私有配置选择；本技能补充面向 PKM 的安全边界、只读扫描和标准 JSONL 输出。
 
 它不负责自动整理目录、生成馆藏或制定学习计划；这些应由上层 curator 技能消费扫描结果。
 
@@ -46,11 +46,20 @@ npx skills add https://github.com/baidu-netdisk/bdpan-storage/skills --skill bai
 
 上游 Skill 的路径是它自己的安装目录，不要把本技能目录误当成上游目录；缺少上游 Skill 时应停止并提示安装依赖。安装、登录和更新都需要用户明确意图，不要静默执行，也不要使用 `--yes` 绕过确认。
 
-本技能不需要 AppKey、SecretKey、`BAIDUPAN_APP_NAME` 或自建 OAuth 配置。社区项目 [`mqhe2007/baidupan-cli`](https://github.com/mqhe2007/baidupan-cli) 只作为备选参考，不是默认后端；详见 [provider-cli.md](references/provider-cli.md)。
+社区模式需要 AppKey、SecretKey 和应用名称；官方模式不需要这些变量。两种后端的事实、限制和切换边界见 [provider-cli.md](references/provider-cli.md)。
 
 ## 私密配置与路径合同
 
+- 私有配置默认放在：
+
+  ```text
+  ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-baidupan/config.yml
+  ```
+
+  可用 `SOIA_PKM_BAIDUPAN_CONFIG_FILE=<custom-config-path>` 覆盖。复制本技能的 [config.example.yml](config.example.yml) 后按所选后端填写；不要把私有 `config.yml` 放回仓库。
+- 配置选项只有 `provider: official|community` 和可选 `binary: bdpan|baidupan-cli`。`binary` 仅用于选择 CLI；缺省按 `provider` 选择。
 - 官方 provider 配置由 `bdpan` 自己维护在 `~/.config/bdpan/config.json`。Agent 不读取、不打印、不复制该文件，也不主动设置 `BDPAN_CONFIG_PATH`、`BDPAN_BIN` 或 `BDPAN_INSTALL_DIR`。
+- 社区 provider 只从私有配置的 `env:` 读取 `BAIDUPAN_APP_KEY`、`BAIDUPAN_APP_SECRET`、`BAIDUPAN_APP_NAME` 和可选的 `BAIDUPAN_CRYPTO_PASSPHRASE`；进程环境优先于配置文件。包装器不会执行 shell 插值，也不会打印这些值。
 - 官方应用隔离根是 `/apps/bdpan/`；用户可见名称通常是 `我的应用数据/bdpan/`。对用户展示和命令输入使用相对路径或本技能虚拟路径，例如 `/资料`、`/资料/a.pdf`，不要把完整 provider 前缀暴露给用户。
 - 禁止路径包含 `..` 或 `~`，也不要把本地绝对路径当成远端路径。写入前检查源、目标父目录和冲突策略。
 - `bdpan` 的 JSON 字段以 `fs_id`、`server_filename`、`isdir`、`size`、`md5`、`server_mtime` 为主；解析器仅兼容等价大小写字段，不解析人类表格。
@@ -60,55 +69,54 @@ npx skills add https://github.com/baidu-netdisk/bdpan-storage/skills --skill bai
 ### 1. 安装与登录
 
 ```bash
-command -v bdpan
-bdpan version
-bdpan whoami
+python3 <skill-path>/scripts/run_with_env.py -- version
+python3 <skill-path>/scripts/run_with_env.py -- whoami
 ```
 
-若 `bdpan` 不存在，先请用户确认，再运行上游安装脚本。若登录失效，运行上游 `scripts/login.sh`，不要直接调用 `bdpan login`。登录后再次执行 `bdpan whoami`；不要把授权码或 token 写入回执。
+包装器会按 `config.yml` 选择 `bdpan` 或 `baidupan-cli`。若官方模式的 `bdpan` 不存在，先请用户确认，再运行上游安装脚本；若社区模式的 `baidupan-cli` 不存在，从其 [Releases](https://github.com/mqhe2007/baidupan-cli/releases) 安装。官方模式登录失效时，运行上游 `scripts/login.sh`，不要直接调用 `bdpan login`；社区模式才使用 `baidupan-cli login`。登录后再次执行 `whoami`，不要把授权码或 token 写入回执。
 
 ### 2. 只读操作
 
 ```bash
-bdpan ls --json
-bdpan ls 资料 --json
-bdpan search "关键词" --json
-bdpan whoami
+python3 <skill-path>/scripts/run_with_env.py -- --json ls
+python3 <skill-path>/scripts/run_with_env.py -- --json ls 资料
+python3 <skill-path>/scripts/run_with_env.py -- --json search "关键词"
+python3 <skill-path>/scripts/run_with_env.py -- whoami
 ```
 
 优先读取已有扫描/索引产物；只有没有可用产物时才扫描远端。目录不存在、权限不足、非零退出码或扫描出现 `LIST_FAIL` 时，不得把结果说成“空目录”。
 
 ### 3. 远端写操作
 
-先用 `ls --json` 检查源和目标父目录，再明确确认精确范围、冲突策略和是否允许部分成功：
+先用包装器执行 `ls --json` 检查源和目标父目录，再明确确认精确范围、冲突策略和是否允许部分成功。命令名称和参数以所选 provider 的参考文档为准。
 
 ```bash
-bdpan mkdir 资料/新目录
-bdpan mv 资料/旧名 资料/
-bdpan cp 资料/a.pdf 备份/
-bdpan rename 资料/旧名 新名
+python3 <skill-path>/scripts/run_with_env.py -- mkdir 资料/新目录
+python3 <skill-path>/scripts/run_with_env.py -- mv 资料/旧名 资料/
+python3 <skill-path>/scripts/run_with_env.py -- cp 资料/a.pdf 备份/
+python3 <skill-path>/scripts/run_with_env.py -- rename 资料/旧名 新名
 ```
 
 所有写操作都要在执行后重新列受影响目录或核对目标。`share` 会调用可能收费的能力，必须单独提醒并获得确认：
 
 ```bash
-bdpan share 资料/a.pdf --period 7 --json
-bdpan transfer '<share-url>' -p '<提取码>' --json
+python3 <skill-path>/scripts/run_with_env.py -- share 资料/a.pdf --period 7 --json
+python3 <skill-path>/scripts/run_with_env.py -- transfer '<share-url>' -p '<提取码>' --json
 ```
 
 ### 4. 上传与下载
 
 ```bash
-bdpan upload <local-file> 资料/
-bdpan download 资料/a.pdf <local-file>
-bdpan download '<share-url>' <local-dir> -p '<提取码>'
+python3 <skill-path>/scripts/run_with_env.py -- upload <local-file> 资料/
+python3 <skill-path>/scripts/run_with_env.py -- download 资料/a.pdf <local-file>
+python3 <skill-path>/scripts/run_with_env.py -- download '<share-url>' <local-dir> -p '<提取码>'
 ```
 
 单文件上传的远端目标需包含文件名；目录上传以 `/` 结尾。覆盖、大文件、批量任务和分享转存都要先确认，完成后核对本地文件存在性、大小，必要时独立计算哈希。终端超时不等于传输失败，应先查询任务/目标状态再决定是否重试。
 
 ### 5. 全盘只读 JSONL 扫描
 
-扫描器只调用 `bdpan ls --json`，将条目归一化为 `path`、`name`、`id`、`dir`、`size`、`sha1`，并保留 `md5`、`mtime`：
+扫描器按配置选择 CLI，只调用对应 provider 的只读 `ls --json`，将条目归一化为 `path`、`name`、`id`、`dir`、`size`、`sha1`，并保留 `md5`、`mtime`：
 
 ```bash
 python3 <skill-path>/scripts/scan_drive.py \
@@ -164,5 +172,5 @@ python3 <skill-path>/scripts/scan_drive.py \
 ## 验证证据
 
 - 静态：`quick_validate.py skills/soia-pkm-baidupan`、`scripts/audit_skills.py`、`git diff --check`。
-- 前向：`tests/test_baidupan_scan.py` 用临时 fake `bdpan` 子进程验证官方 JSON 字段、两层目录转换、干净 JSONL、`.errors` 和 `.done` sidecar。
+- 前向：`tests/test_baidupan_scan.py` 用临时 fake CLI 验证官方 JSON 字段、两层目录转换、干净 JSONL、`.errors` 和 `.done` sidecar；配置加载测试验证 provider/binary 选择和秘密值不回显。
 - 未做：未使用真实百度账号做端到端上传、分享或转存测试；真实运行仍需按官方登录、用户确认和终态复核门禁执行。

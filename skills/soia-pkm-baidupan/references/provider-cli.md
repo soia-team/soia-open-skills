@@ -19,7 +19,7 @@
 | [`mqhe2007/baidupan-cli`](https://github.com/mqhe2007/baidupan-cli) | 社区 Rust 封装，基于开放平台 API，支持设备码 OAuth、JSON、文件管理、分片上传下载和批量任务；需要用户自建 AppKey/SecretKey/应用名 | 备选参考；不作为默认后端 |
 | `BaiduPCS-Go` 及其衍生项目 | 功能广，但多使用旧式账号、BDUSS 或非本技能优先的登录语义 | 不作为默认自动化后端 |
 
-这里的“官方 CLI”应准确理解为：百度官方发布的 Agent Skill + 百度 CDN 提供的 `bdpan` 二进制安装器，而不是把第三方仓库误标成百度官方 CLI。`mqhe2007/baidupan-cli` 仍可能适合需要自行管理开放平台应用的用户，但与官方 Skill 的固定应用目录和登录门禁不同。
+这里的“官方 CLI”应准确理解为：百度官方发布的 Agent Skill + 百度 CDN 提供的 `bdpan` 二进制安装器，而不是把第三方仓库误标成百度官方 CLI。`mqhe2007/baidupan-cli` 适合需要自行管理开放平台应用、测试应用目录原子操作的用户，但与官方 Skill 的固定应用目录和登录门禁不同。两者通过本技能配置显式选择，不自动混用登录态。
 
 ## 官方 `bdpan` 接口合同
 
@@ -45,4 +45,16 @@
 
 ## 社区 CLI 的保留边界
 
-若用户明确要求使用 `mqhe2007/baidupan-cli`，应重新核对其当前 README、版本和权限模型，再另行配置 `BAIDUPAN_APP_KEY`、`BAIDUPAN_APP_SECRET`、`BAIDUPAN_APP_NAME`。这些变量不属于官方 `bdpan` 路线，不应出现在本技能的默认配置或脚本中。
+若用户明确要求使用 `mqhe2007/baidupan-cli`，将配置切换为：
+
+```yaml
+schema_version: 1
+provider: community
+binary: baidupan-cli
+env:
+  BAIDUPAN_APP_KEY: "<YOUR_APP_KEY>"
+  BAIDUPAN_APP_SECRET: "<YOUR_SECRET_KEY>"
+  BAIDUPAN_APP_NAME: "<YOUR_APP_NAME>"
+```
+
+社区 CLI 的 `/` 是 `/apps/<BAIDUPAN_APP_NAME>`，不是用户普通网盘根目录；它支持 `rm`，但本技能仍要求先确认删除范围。配置完成后先验证 `whoami`、`ls /`，再做小文件上传/下载前向测试。

@@ -15,7 +15,11 @@ import queue
 import subprocess
 import threading
 import time
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
+
+from soia_env import configured_binary, load_private_env
+
+load_private_env(required=False)
 
 
 def normalize_virtual_path(path: str) -> str:
@@ -107,7 +111,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", action="append", required=True, dest="roots")
     parser.add_argument("--out", required=True)
-    parser.add_argument("--binary", default="bdpan")
+    parser.add_argument("--binary", default=None)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--timeout", type=int, default=90)
     parser.add_argument("--attempts", type=int, default=3)
@@ -120,6 +124,7 @@ def main() -> int:
 
     try:
         roots = [normalize_virtual_path(root) for root in args.roots]
+        binary = args.binary or configured_binary()
     except ValueError as exc:
         parser.error(str(exc))
 
@@ -158,10 +163,15 @@ def main() -> int:
     def list_dir(path: str) -> str | None:
         last = "unknown"
         relative = command_path(path)
-        command = [args.binary, "ls"]
-        if relative:
-            command.append(relative)
-        command.append("--json")
+        if Path(binary).name == "baidupan-cli":
+            command = [binary, "--json", "ls"]
+            if relative:
+                command.append(relative)
+        else:
+            command = [binary, "ls"]
+            if relative:
+                command.append(relative)
+            command.append("--json")
         for attempt in range(1, args.attempts + 1):
             with lock:
                 counts["calls"] += 1

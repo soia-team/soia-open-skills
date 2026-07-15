@@ -132,6 +132,8 @@ npx skills add soia-team/soia-open-skills
 | [`soia-dev-agent-md-advisor`](./skills/soia-dev-agent-md-advisor/) | AGENTS.md / CLAUDE.md / `.claude` 配置设计顾问：审查诊断 / 新项目起草 / 最佳实践问答三模式，六维度体检（长度预算/可执行性/分区路由/重复矛盾/入口一致性/时效）| ✅ 可用（纯方法论诊断，无脚本无强依赖）| 无 |
 | [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | 受控派发任务给外部编码 CLI（codex/agy/gemini/kimi/opencode/qwen 等）：任务边界拆分、防注入 prompt 写法、模型分级矩阵、Anti-Fake-Fix 三步验证 | ✅ 可用（命令模板 + 分级矩阵齐全）| 目标编码 CLI（按需 codex/agy/gemini/kimi/opencode/qwen 等）已安装登录 |
 
+百度网盘技能配置：复制 [`config.example.yml`](./skills/soia-pkm-baidupan/config.example.yml) 到技能专属私有配置目录，在 `provider` 中选择 `official` 或 `community`。社区模式填写百度开放平台的 AppKey、SecretKey、应用名称；不要把密钥提交仓库或发送到聊天。
+
 ### 🏢 CWork · 企业协作
 
 `soia-cwork-*` 面向企业日常工作系统，不绑定 Obsidian。它负责连接飞书等协作平台，读取和分析工作文档、云盘、知识库、权限与元数据，也可以把经过授权的工作资料镜像到 Git/Obsidian/VitePress；默认采用只读策略，应用凭据、租户范围和具体授权由使用者配置。
