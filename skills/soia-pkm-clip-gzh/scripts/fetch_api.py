@@ -40,7 +40,7 @@ lands them as Markdown notes in an Obsidian vault.
     的老文）用路 B。
 
 Credentials (never commit): WECHAT_APP_ID / WECHAT_APP_SECRET, loaded from
-SOIA_PKM_CLIP_GZH_CONFIG_FILE / skill-specific config.yml (see scripts/soia_env.py)
+SOIA_PKM_CLIP_GZH_CONFIG_FILE / skill-specific config.yml (see scripts/clip_gzh_env.py)
 or plain process env vars.
 
 Usage:
@@ -59,7 +59,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
-from soia_env import env_source_hint, load_private_env
+from clip_gzh_env import env_source_hint, load_private_env
 from save_articles import (
     html_to_markdown,
     resolve_out_dir,

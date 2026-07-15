@@ -12,7 +12,7 @@ import argparse
 import subprocess
 from pathlib import Path
 
-from soia_env import load_private_env
+from publish_env import load_private_env
 
 # 自动探测 skill-specific 私有 config.yml，
 # 把 WECHAT_APP_ID / WECHAT_APP_SECRET 等 setdefault 进环境（不覆盖已有进程变量）。

@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from soia_env import ALLOWED_BINARIES, configured_binary, load_private_env
+from baidupan_env import ALLOWED_BINARIES, configured_binary, load_private_env
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -64,7 +64,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
-from soia_env import env_source_hint, load_private_env
+from clip_gzh_env import env_source_hint, load_private_env
 from save_articles import (
     extract_js_content_markdown,
     resolve_out_dir,

@@ -97,7 +97,7 @@ without notice.
     200040 invalid csrf token —— token 和 Cookie 不是同一次登录会话抓的
 
 Credentials (never commit): WECHAT_MP_TOKEN / WECHAT_MP_COOKIE, loaded from
-SOIA_PKM_CLIP_GZH_CONFIG_FILE / skill-specific config.yml (see scripts/soia_env.py),
+SOIA_PKM_CLIP_GZH_CONFIG_FILE / skill-specific config.yml (see scripts/clip_gzh_env.py),
 or plain process env vars. token 取自登录 mp 后台后
 **地址栏 URL 里的 `token=` 那一串数字**（不是网络面板里某个请求参数名叫
 `appmsg_token` 的那个，两者是不同的票据，appmsgpublish 认的是地址栏 token）。
@@ -126,7 +126,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
-from soia_env import env_source_hint, load_private_env
+from clip_gzh_env import env_source_hint, load_private_env
 from save_articles import (
     extract_js_content_markdown,
     resolve_out_dir,

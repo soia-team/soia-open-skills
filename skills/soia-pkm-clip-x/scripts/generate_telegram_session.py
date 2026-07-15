@@ -31,7 +31,7 @@ Dependencies: pip install telethon
 import os
 import sys
 
-from soia_env import env_source_hint, load_private_env
+from clip_x_env import env_source_hint, load_private_env
 
 try:
     from telethon.sync import TelegramClient

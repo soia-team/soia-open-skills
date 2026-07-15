@@ -17,7 +17,7 @@ import threading
 import time
 from pathlib import Path, PurePosixPath
 
-from soia_env import configured_binary, load_private_env
+from baidupan_env import configured_binary, load_private_env
 
 load_private_env(required=False)
 

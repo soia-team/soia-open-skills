@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from soia_env import load_private_env
+from transform_env import load_private_env
 
 DEFAULT_HOME = "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-transform/notebooklm"
 NO_LANGUAGE_TARGETS = {"quiz", "flashcards"}

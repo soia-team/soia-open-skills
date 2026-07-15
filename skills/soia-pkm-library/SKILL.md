@@ -207,7 +207,7 @@ env:
 - `WEREAD_API_KEY` 已写入私有 `config.yml` 的 `env.WEREAD_API_KEY`，或由进程环境提供。
 - `OBSIDIAN_VAULT` 已配置，或命令行传入 `--vault <path>`。
 - 本机可联网访问 `https://i.weread.qq.com/api/agent/gateway`。
-- 运行环境有 Python 3；脚本只用 Python 标准库和本 skill 自带的 `scripts/soia_env.py`，不需要额外 pip 依赖。
+- 运行环境有 Python 3；脚本只用 Python 标准库和本 skill 自带的 `scripts/library_env.py`，不需要额外 pip 依赖。
 
 本地生成/补全类脚本（`backfill_reading_records.py` / `gen_library_md.py` / `gen_records_md.py` / `gen_genre_library_md.py`）不调用微信读书 API，因此不需要 `WEREAD_API_KEY`；它们只依赖 Python 3、vault 路径和本地 markdown 文件。
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ENV_SCRIPT = ROOT / "skills" / "soia-pkm-baidupan" / "scripts" / "soia_env.py"
+ENV_SCRIPT = ROOT / "skills" / "soia-pkm-baidupan" / "scripts" / "baidupan_env.py"
 
 
 def load_module():

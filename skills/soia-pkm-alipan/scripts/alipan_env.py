@@ -10,7 +10,6 @@ KEY: value pairs.
 from __future__ import annotations
 
 import os
-import shlex
 from pathlib import Path
 
 
@@ -100,8 +99,7 @@ def load_private_env(required: bool = False) -> Path | None:
 
 
 if __name__ == "__main__":
-    loaded = load_private_env(required=False)
-    if not loaded:
-        raise SystemExit(0)
-    for key, value in _parse_env_mapping(loaded.read_text(encoding="utf-8")).items():
-        print(f"export {key}={shlex.quote(value)}")
+    # This module is intentionally silent when run directly.  Its former
+    # ``export KEY=value`` output could disclose credentials from config.yml.
+    # Consumers should import ``load_private_env`` instead.
+    load_private_env(required=False)

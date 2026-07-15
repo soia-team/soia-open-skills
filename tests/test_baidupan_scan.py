@@ -14,15 +14,10 @@ SCRIPT = ROOT / "skills" / "soia-pkm-baidupan" / "scripts" / "scan_drive.py"
 
 def load_module():
     sys.path.insert(0, str(SCRIPT.parent))
-    previous = sys.modules.pop("soia_env", None)
-    try:
-        spec = importlib.util.spec_from_file_location("baidupan_scan", SCRIPT)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
-    finally:
-        if previous is not None:
-            sys.modules["soia_env"] = previous
+    spec = importlib.util.spec_from_file_location("baidupan_scan", SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class BaidupanScanTests(unittest.TestCase):

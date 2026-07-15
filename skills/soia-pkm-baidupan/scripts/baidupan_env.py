@@ -1,4 +1,4 @@
-"""Load the skill-specific private config without printing secrets."""
+"""Load the Baidu skill-specific private config without printing secrets."""
 
 from __future__ import annotations
 

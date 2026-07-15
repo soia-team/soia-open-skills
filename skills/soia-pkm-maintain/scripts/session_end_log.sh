@@ -39,8 +39,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 load_private_env() {
   command -v python3 >/dev/null 2>&1 || return 0
-  [ -f "$SCRIPT_DIR/soia_env.py" ] || return 0
-  eval "$(python3 "$SCRIPT_DIR/soia_env.py" 2>/dev/null || true)"
+  [ -f "$SCRIPT_DIR/maintain_env.py" ] || return 0
+  eval "$(python3 "$SCRIPT_DIR/maintain_env.py" 2>/dev/null || true)"
 }
 
 load_private_env

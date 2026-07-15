@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 from collections import defaultdict
 
-from soia_env import env_source_hint, load_private_env
+from library_env import env_source_hint, load_private_env
 
 load_private_env()
 
