@@ -156,7 +156,7 @@ Then copy [`assets/config.example.yml`](./skills/soia-cwork-feishu-cli/assets/co
 
 ### soia-cwork-feishu-doc-git-sync
 
-Mirrors a Feishu wiki into local Markdown so the same content can be backed up in Git and viewed in Obsidian or VitePress. The default direction is read-only “Feishu → local”; `10_飞书镜像/` is generated, while `20_本地补录/` is preserved for local additions.
+Syncs a Feishu knowledge base into local Markdown so the same content can be backed up in Git and viewed in Obsidian or VitePress. The default direction is read-only “Feishu → local”; `10_knowledge-base/` is generated, while `20_本地补录/` is preserved for local additions.
 
 ```text
 Mirror my Feishu wiki to Git/Obsidian/VitePress

@@ -156,7 +156,7 @@ npx skills add larksuite/cli -g -y
 
 ### soia-cwork-feishu-doc-git-sync
 
-把飞书知识库同步为本地 Markdown，并让同一份内容同时服务 Git 备份、Obsidian 和 VitePress。默认只读方向是“飞书 → 本地”；`10_飞书镜像/` 由同步程序维护，`20_本地补录/` 保留本地新增内容。
+把飞书知识库同步为本地 Markdown，并让同一份内容同时服务 Git 备份、Obsidian 和 VitePress。默认只读方向是“飞书 → 本地”；`10_knowledge-base/` 由同步程序维护，`20_本地补录/` 保留本地新增内容。
 
 ```text
 同步飞书知识库到 Git，并生成 VitePress/Obsidian 可查看的本地镜像

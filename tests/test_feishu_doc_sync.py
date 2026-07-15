@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for ID-based Feishu wiki mirroring."""
+"""Regression tests for ID-based Feishu knowledge-base sync."""
 
 from __future__ import annotations
 
@@ -49,6 +49,7 @@ class FeishuDocSyncTests(unittest.TestCase):
             rebuild_tree=False,
             rebuild_tree_only=False,
             refresh_tree_only=False,
+            validate_only=False,
             incremental=True,
             full_content=False,
             probe_remote_metadata=True,
@@ -62,12 +63,12 @@ class FeishuDocSyncTests(unittest.TestCase):
     def test_expandable_node_uses_same_name_index_without_sibling_file(self) -> None:
         used: set[str] = set()
         self.assertEqual(
-            sync.unique_path("规范", Path("10_飞书镜像"), used, "node-1", True).as_posix(),
-            "10_飞书镜像/规范/规范.md",
+            sync.unique_path("规范", Path("10_knowledge-base"), used, "node-1", True).as_posix(),
+            "10_knowledge-base/规范/规范.md",
         )
         self.assertEqual(
-            sync.unique_path("叶子", Path("10_飞书镜像/规范"), used, "node-2", False).as_posix(),
-            "10_飞书镜像/规范/叶子.md",
+            sync.unique_path("叶子", Path("10_knowledge-base/规范"), used, "node-2", False).as_posix(),
+            "10_knowledge-base/规范/叶子.md",
         )
 
     def test_event_file_maps_obj_token_and_tree_event(self) -> None:
@@ -109,6 +110,156 @@ class FeishuDocSyncTests(unittest.TestCase):
         }
         with mock.patch.object(sync, "run_cli", return_value=payload):
             self.assertEqual(sync.fetch_doc({}, "obj-1"), ("# 内容", "42"))
+
+    def test_parse_cli_json_skips_human_preamble_with_brackets(self) -> None:
+        payload = sync.parse_cli_json("notice [not-json-yet]\n{" + '"ok": true, "data": {}}')
+        self.assertTrue(payload["ok"])
+
+    def test_error_records_keep_only_safe_categories(self) -> None:
+        detail = (
+            "command failed for /Users/example/private.yml; "
+            '{"ok": false, "error": {"subtype": "rate_limit", "code": "99991400"}}'
+        )
+        self.assertEqual(sync.safe_error_category(detail), "rate_limit")
+
+    def test_validation_reports_failed_records_and_error_categories(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "docs"
+            mirror = output / "10_knowledge-base"
+            metadata = output / "90_同步元数据"
+            mirror.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            good_path = mirror / "可用文档.md"
+            failed_path = mirror / "待重试.md"
+            good_path.write_text(
+                '---\nnode_token: "node-good"\nsync_status: "ok"\n---\n\n# 正文\n',
+                encoding="utf-8",
+            )
+            failed_path.write_text(
+                '---\nnode_token: "node-failed"\nsync_status: "failed"\nerror: "rate_limit"\n---\n\n'
+                "同步正文失败（错误类别：rate_limit）。\n",
+                encoding="utf-8",
+            )
+            nodes = [
+                {
+                    "node_token": "node-good",
+                    "title": "可用文档",
+                    "obj_type": "docx",
+                    "sync_status": "ok",
+                    "relative_path": "10_knowledge-base/可用文档.md",
+                    "parent_node_token": "",
+                },
+                {
+                    "node_token": "node-failed",
+                    "title": "待重试",
+                    "obj_type": "docx",
+                    "sync_status": "failed",
+                    "error": "rate_limit",
+                    "relative_path": "10_knowledge-base/待重试.md",
+                    "parent_node_token": "",
+                },
+            ]
+            sidebar_file = metadata / "sidebar.json"
+            sidebar_file.write_text(
+                json.dumps(sync.build_sidebar(nodes), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            result = sync.validate_mirror(
+                output,
+                {"nodes": nodes},
+                sidebar_file=sidebar_file,
+            )
+
+        self.assertFalse(result["ok"])
+        self.assertIn("failed_records", result["errors"])
+        self.assertEqual(result["error_categories"], {"rate_limit": 1})
+        self.assertEqual(result["stats"]["failed_records"], 1)
+
+    def test_failed_refresh_keeps_body_as_stale_and_is_retryable(self) -> None:
+        nodes = [
+            {
+                "node_token": "node-stale",
+                "obj_token": "obj-stale",
+                "obj_type": "docx",
+                "title": "暂时不可读",
+                "parent_node_token": "",
+                "depth": 0,
+                "has_child": False,
+            }
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "docs"
+            mirror = output / "10_knowledge-base"
+            metadata = output / "90_同步元数据"
+            mirror.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            local = mirror / "暂时不可读.md"
+            local.write_text(
+                '---\nnode_token: "node-stale"\nsync_status: "ok"\n---\n\n旧正文\n',
+                encoding="utf-8",
+            )
+            old = {
+                "node_token": "node-stale",
+                "obj_token": "obj-stale",
+                "relative_path": "10_knowledge-base/暂时不可读.md",
+                "sync_status": "ok",
+                "content_hash": "old",
+                "obj_edit_time": "1",
+                "remote_updated_at": "1970-01-01T00:00:01Z",
+            }
+            (metadata / "sync-state.json").write_text(
+                json.dumps({"version": 1, "nodes": {"node-stale": old}}),
+                encoding="utf-8",
+            )
+            (metadata / "manifest.json").write_text(
+                json.dumps({"version": 1, "nodes": [old]}),
+                encoding="utf-8",
+            )
+            config = root / "config.yml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "version: 1",
+                        "provider:",
+                        "  cli: lark-cli",
+                        "space:",
+                        '  id: "space-1"',
+                        '  source_url_template: "https://example.test/wiki/{node_token}"',
+                        "paths:",
+                        f'  output_dir: "{output}"',
+                        '  generated_dir: "10_knowledge-base"',
+                        "sync:",
+                        "  mode: mirror",
+                        "  workers: 1",
+                        "  metadata_workers: 1",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            def fake_run_cli(_config, *args):
+                if args[:2] == ("wiki", "+node-get"):
+                    return {"data": {"obj_edit_time": "2", "updated_at": "1970-01-01T00:00:02Z"}}
+                if args[:2] == ("docs", "+fetch"):
+                    raise sync.CliCommandError("rate limited", category="rate_limit", retryable=True)
+                raise AssertionError(args)
+
+            with mock.patch.object(sync, "walk_nodes", return_value=nodes), mock.patch.object(
+                sync, "run_cli", side_effect=fake_run_cli
+            ):
+                result = sync.sync(self.sync_args(config))
+
+            updated = json.loads((metadata / "manifest.json").read_text(encoding="utf-8"))
+            record = updated["nodes"][0]
+            body = local.read_text(encoding="utf-8")
+
+        self.assertEqual(result, 2)
+        self.assertEqual(record["sync_status"], "stale")
+        self.assertEqual(record["error"], "rate_limit")
+        self.assertTrue(record["retryable"])
+        self.assertIn("旧正文", body)
 
     def test_frontmatter_contains_incremental_markers(self) -> None:
         output = sync.frontmatter(
@@ -154,7 +305,7 @@ class FeishuDocSyncTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             output = root / "docs"
-            mirror = output / "10_飞书镜像"
+            mirror = output / "10_knowledge-base"
             metadata = output / "90_同步元数据"
             stable_path = mirror / "稳定文档.md"
             changed_path = mirror / "变动文档.md"
@@ -166,14 +317,14 @@ class FeishuDocSyncTests(unittest.TestCase):
                 "node-stable": {
                     "node_token": "node-stable",
                     "obj_token": "obj-stable",
-                    "relative_path": "10_飞书镜像/稳定文档.md",
+                    "relative_path": "10_knowledge-base/稳定文档.md",
                     "sync_status": "ok",
                     "content_hash": "old-stable",
                 },
                 "node-changed": {
                     "node_token": "node-changed",
                     "obj_token": "obj-changed",
-                    "relative_path": "10_飞书镜像/变动文档.md",
+                    "relative_path": "10_knowledge-base/变动文档.md",
                     "sync_status": "ok",
                     "obj_edit_time": "100",
                     "remote_updated_at": "1970-01-01T00:01:40Z",
@@ -196,6 +347,7 @@ class FeishuDocSyncTests(unittest.TestCase):
                         '  source_url_template: "https://example.test/wiki/{node_token}"',
                         "paths:",
                         f'  output_dir: "{output}"',
+                        '  generated_dir: "10_knowledge-base"',
                         "sync:",
                         "  mode: mirror",
                         "  workers: 1",
@@ -249,24 +401,25 @@ class FeishuDocSyncTests(unittest.TestCase):
                 "node_token": "node-z",
                 "title": "知识库必读",
                 "parent_node_token": "",
-                "relative_path": "10_飞书镜像/知识库必读.md",
+                "relative_path": "10_knowledge-base/知识库必读.md",
             },
             {
                 "node_token": "node-a",
                 "title": "新人入职-从这里启程",
                 "parent_node_token": "",
-                "relative_path": "10_飞书镜像/新人入职-从这里启程/新人入职-从这里启程.md",
+                "relative_path": "10_knowledge-base/新人入职-从这里启程/新人入职-从这里启程.md",
             },
             {
                 "node_token": "node-b",
                 "title": "规范-需求开发",
                 "parent_node_token": "",
-                "relative_path": "10_飞书镜像/规范-需求开发/规范-需求开发.md",
+                "relative_path": "10_knowledge-base/规范-需求开发/规范-需求开发.md",
             },
         ]
 
         sidebar = sync.build_sidebar(nodes)
 
+        self.assertEqual(sidebar[0]["text"], "knowledge-base")
         self.assertEqual(
             [item["text"] for item in sidebar[0]["items"]],
             ["知识库必读", "新人入职-从这里启程", "规范-需求开发"],
@@ -280,7 +433,7 @@ class FeishuDocSyncTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            mirror = root / "10_飞书镜像"
+            mirror = root / "10_knowledge-base"
             target = mirror / "目录" / "文档.md"
             rewritten = sync.rewrite_asset_urls(
                 content,

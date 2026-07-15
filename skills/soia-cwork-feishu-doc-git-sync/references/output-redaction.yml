@@ -19,6 +19,7 @@ policy:
   allowed:
     - operation_status
     - counts
+    - error_categories
     - public_object_types
     - generic_placeholders
   placeholders:

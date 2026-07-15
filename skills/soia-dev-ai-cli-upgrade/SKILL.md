@@ -81,14 +81,14 @@ SOIA_DEV_AI_CLI_UPGRADE_CONFIG_FILE=<custom-config-path>
 
 | Tool | Command | Default upgrade method |
 |---|---|---|
-| Codex | `codex` | `npm install -g --prefix <npm-prefix> @openai/codex` |
-| Claude Code | `claude` | `npm install -g --prefix <npm-prefix> @anthropic-ai/claude-code` |
+| Codex | `codex` | `codex update` (auto-detects native/brew-cask/npm internally); installs via `curl https://chatgpt.com/codex/install.sh`, `brew install --cask codex`, or `npm install -g @openai/codex`; **⚑ npm path**: NOTE column shows curl recommendation |
+| Claude Code | `claude` | auto-detected: native → `claude update`; brew cask → `brew upgrade --cask claude-code[@@latest]`; npm (legacy) → `npm install -g @anthropic-ai/claude-code`; Desktop-managed → skip (MANUAL); **⚑ npm path**: NOTE column shows native-installer recommendation |
 | Antigravity CLI (consumer Google accounts) | `agy` | Official successor to Gemini CLI consumer Google login; native `agy update`; missing-command install is gated by `AGY_INSTALL=1` |
-| Gemini CLI (non-consumer lanes) | `gemini` | Retained for Code Assist Standard/Enterprise, Gemini API Key, and Vertex AI; explicit opt-in upgrade with `TOOLS=gemini` |
-| Qwen Code | `qwen` | `npm install -g --prefix <npm-prefix> @qwen-code/qwen-code` |
-| MiniMax CLI | `mmx` | `npm install -g --prefix <npm-prefix> mmx-cli` |
-| Kimi Code | `kimi` | `brew upgrade kimi-code`, install if missing |
-| OpenCode | `opencode` | `npm install -g --prefix <npm-prefix> opencode-ai` |
+| Gemini CLI (non-consumer lanes) | `gemini` | auto-detected: brew formula (`brew install gemini-cli`) → `brew upgrade <formula>`; npm → `npm install -g @google/gemini-cli`; native → `gemini update`; explicit opt-in with `TOOLS=gemini` |
+| Qwen Code | `qwen` | auto-detected: brew formula (`brew install qwen-code`) → `brew upgrade <formula>`; npm → `npm install -g @qwen-code/qwen-code`; native (curl) → `qwen update`; **⚑ npm path**: NOTE column shows curl recommendation |
+| MiniMax CLI | `mmx` | `mmx update` (wraps npm internally); npm-only: `npm install -g mmx-cli` |
+| Kimi Code | `kimi` | auto-detected: brew formula (`brew install kimi-code`) → `brew upgrade <formula>`; npm → `npm install -g @moonshot-ai/kimi-code`; native (curl) → `kimi upgrade`; **⚑ npm path**: NOTE column shows `brew install kimi-code` recommendation |
+| OpenCode | `opencode` | auto-detected: brew formula (`brew install opencode`) → `brew upgrade <formula>`; npm → `npm install -g opencode-ai`; native (curl) → MANUAL (re-run `curl -fsSL https://opencode.ai/install \| bash`); **⚑ npm path**: NOTE column shows curl recommendation |
 | Qoder CLI | `qodercli` | `qodercli update` |
 | Cursor | `cursor` | version audit only unless `CURSOR_UPGRADE_CMD` is set |
 

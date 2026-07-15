@@ -11,6 +11,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
@@ -34,7 +35,8 @@ DEFAULT_CONFIG = (
     / "soia-cwork-feishu-doc-git-sync"
     / "config.yml"
 )
-MIRROR_DIR = "10_飞书镜像"
+DEFAULT_MIRROR_DIR = "10_knowledge-base"
+MIRROR_DIR = DEFAULT_MIRROR_DIR
 METADATA_DIR = "90_同步元数据"
 STATE_FILE = "sync-state.json"
 MANIFEST_FILE = "manifest.json"
@@ -55,9 +57,58 @@ SENSITIVE_ENV_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SENSITIVE_FLAG_PATTERN = re.compile(
-    r"(--(?:app-secret|secret|password|passwd|access-token|token|doc|node-token|obj-token|space-id|config|output|output-dir))\s+([^\s]+)",
+    r"(--(?:app-secret|secret|password|passwd|access-token|token|doc|node-token|parent-node-token|obj-token|file-token|folder-token|space-id|config|output|output-dir))\s+([^\s]+)",
     re.IGNORECASE,
 )
+
+
+class CliCommandError(RuntimeError):
+    """A classified lark-cli failure safe to carry into the sync manifest."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        category: str = "cli_error",
+        code: str = "",
+        retryable: bool = False,
+    ) -> None:
+        super().__init__(message)
+        self.category = category
+        self.code = code
+        self.retryable = retryable
+
+
+class RequestLimiter:
+    """Coordinate request starts across worker threads and backoff all workers."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._interval = 0.0
+        self._next_slot = 0.0
+        self._cooldown_until = 0.0
+
+    def configure(self, interval_seconds: float) -> None:
+        with self._lock:
+            self._interval = max(0.0, interval_seconds)
+            self._next_slot = 0.0
+            self._cooldown_until = 0.0
+
+    def acquire(self) -> None:
+        with self._lock:
+            now = time.monotonic()
+            slot = max(now, self._next_slot, self._cooldown_until)
+            self._next_slot = slot + self._interval
+        delay = slot - now
+        if delay > 0:
+            time.sleep(delay)
+
+    def cooldown(self, seconds: float) -> None:
+        with self._lock:
+            self._cooldown_until = max(self._cooldown_until, time.monotonic() + max(0.0, seconds))
+
+
+REQUEST_LIMITER = RequestLimiter()
 
 
 def utc_now() -> str:
@@ -108,6 +159,11 @@ def parse_args() -> argparse.Namespace:
         "--refresh-tree-only",
         action="store_true",
         help="read the current Feishu node tree/order, rebuild paths/sidebar, and reuse existing local content",
+    )
+    parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="validate the existing local mirror, manifest, generated files, and sidebar without contacting Feishu",
     )
     parser.add_argument(
         "--incremental",
@@ -193,18 +249,59 @@ def cli_command(config: dict[str, Any], *args: str) -> list[str]:
 
 
 def parse_cli_json(stdout: str) -> dict[str, Any]:
-    """Parse lark-cli's optional human preamble followed by JSON."""
-    for marker in ("{", "["):
-        position = stdout.find(marker)
-        if position >= 0:
-            try:
-                value = json.loads(stdout[position:])
-            except json.JSONDecodeError:
-                continue
-            if isinstance(value, dict):
-                return value
-            return {"data": value}
+    """Parse a JSON envelope even when lark-cli prepends human-readable text."""
+    decoder = json.JSONDecoder()
+    for position, marker in enumerate(stdout):
+        if marker not in "[{":
+            continue
+        try:
+            value, _ = decoder.raw_decode(stdout[position:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            return value
+        return {"data": value}
     raise RuntimeError("lark-cli returned no JSON payload")
+
+
+def cli_error_info(detail: str) -> dict[str, Any]:
+    """Classify an lark-cli error without retaining its private command text."""
+    payload: dict[str, Any] = {}
+    for candidate in (detail,):
+        try:
+            parsed = parse_cli_json(candidate)
+        except RuntimeError:
+            continue
+        if isinstance(parsed, dict):
+            payload = parsed
+            break
+    error = payload.get("error", {}) if isinstance(payload, dict) else {}
+    if not isinstance(error, dict):
+        error = {}
+    code = str(error.get("code", "") or "")
+    subtype = str(error.get("subtype", "") or "").lower()
+    message = str(error.get("message", "") or "")
+    lower = " ".join((detail, subtype, message)).lower()
+    if (
+        code == "99991400"
+        or subtype in {"rate_limit", "frequency_limit"}
+        or any(marker in lower for marker in ("rate limit", "rate_limit", "frequency limit", "too many requests", "429"))
+    ):
+        category = "rate_limit"
+    elif code in {"403", "99991679", "99991672"} or any(
+        marker in lower for marker in ("permission denied", "permission_denied", "forbidden", "missing scope", "not authorized")
+    ):
+        category = "permission_denied"
+    elif code == "404" or any(marker in lower for marker in ("not found", "not_found", "node not found")):
+        category = "not_found"
+    elif any(marker in lower for marker in ("timeout", "timed out", "temporarily unavailable", "connection reset", "connection refused")):
+        category = "temporary_network"
+    elif payload.get("ok") is False or detail:
+        category = "cli_error"
+    else:
+        category = "invalid_response"
+    retryable = bool(error.get("retryable") is True) or category in {"rate_limit", "temporary_network"}
+    return {"category": category, "code": code, "retryable": retryable}
 
 
 def redact_output(value: Any) -> str:
@@ -222,6 +319,7 @@ def redact_output(value: Any) -> str:
 def run_cli(config: dict[str, Any], *args: str) -> dict[str, Any]:
     command = cli_command(config, *args)
     for attempt in range(5):
+        REQUEST_LIMITER.acquire()
         result = subprocess.run(
             command,
             check=False,
@@ -230,20 +328,39 @@ def run_cli(config: dict[str, Any], *args: str) -> dict[str, Any]:
             env=command_env(config),
         )
         if result.returncode == 0:
-            return parse_cli_json(result.stdout)
-        detail = (result.stderr or result.stdout).strip().replace("\n", " ")
-        transient = any(
-            marker in detail.lower()
-            for marker in ("429", "rate limit", "rate_limit", "99991400", "frequency limit", "temporarily unavailable", "timeout")
-        )
-        if transient and attempt < 4:
-            time.sleep(min(8, 2**attempt))
+            try:
+                payload = parse_cli_json(result.stdout)
+            except RuntimeError as exc:
+                raise CliCommandError("lark-cli returned invalid JSON", category="invalid_response") from exc
+            if payload.get("ok") is not False:
+                return payload
+        detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+        info = cli_error_info(detail)
+        if info["retryable"] and attempt < 4:
+            backoff = min(30, 2**attempt)
+            REQUEST_LIMITER.cooldown(backoff)
+            time.sleep(backoff)
             continue
-        raise RuntimeError(
-            f"command failed ({result.returncode}) for lark-cli operation: "
-            f"{redact_output(detail)[:500]}"
+        code_suffix = f" code={info['code']}" if info["code"] else ""
+        raise CliCommandError(
+            f"lark-cli request failed category={info['category']}{code_suffix}",
+            category=str(info["category"]),
+            code=str(info["code"]),
+            retryable=bool(info["retryable"]),
         )
-    raise RuntimeError("command failed after retries for lark-cli operation")
+    raise CliCommandError("lark-cli request failed after retries", category="rate_limit", retryable=True)
+
+
+def error_info(exc: Exception | str) -> dict[str, Any]:
+    """Return a small, safe error record for manifests and validation."""
+    if isinstance(exc, CliCommandError):
+        return {"category": exc.category, "code": exc.code, "retryable": exc.retryable}
+    return cli_error_info(str(exc))
+
+
+def safe_error_category(value: Exception | str) -> str:
+    """Keep only the stable public error category in generated artifacts."""
+    return str(error_info(value).get("category", "cli_error"))
 
 
 def node_list(config: dict[str, Any], space_id: str, parent: str | None = None) -> list[dict[str, Any]]:
@@ -754,6 +871,8 @@ def frontmatter(metadata: dict[str, Any], synced_at: str, content_hash: str) -> 
         "remote_updated_at",
         "revision_id",
         "sync_status",
+        "error",
+        "retryable",
         "synced_at",
         "content_hash",
     ):
@@ -871,14 +990,196 @@ def build_sidebar(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             entries.append(item)
         return entries
 
+    generated_name = Path(MIRROR_DIR).name
+    if generated_name.startswith("10_"):
+        generated_name = generated_name[3:]
     return [
-        {"text": "飞书知识库镜像", "link": "/feishu-knowledge/00_同步说明", "items": build(None)}
+        {"text": generated_name or "knowledge-base", "link": "/feishu-knowledge/00_同步说明", "items": build(None)}
     ]
 
 
 def write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def frontmatter_fields(raw: str) -> dict[str, str]:
+    """Read the small generated frontmatter contract without a YAML dependency."""
+    if not raw.startswith("---\n"):
+        return {}
+    end = raw.find("\n---", 4)
+    if end < 0:
+        return {}
+    fields: dict[str, str] = {}
+    for line in raw[4:end].splitlines():
+        match = re.match(r"^([A-Za-z_][A-Za-z0-9_-]*):\s*(.*)$", line)
+        if not match:
+            continue
+        value = match.group(2).strip()
+        if len(value) >= 2 and value[0] == value[-1] == '"':
+            value = value[1:-1].replace('\\"', '"').replace('\\\\', '\\')
+        fields[match.group(1)] = value
+    return fields
+
+
+def sidebar_links(value: Any) -> set[str]:
+    """Collect generated VitePress links without exposing their local names."""
+    links: set[str] = set()
+    if isinstance(value, dict):
+        link = value.get("link")
+        if isinstance(link, str):
+            links.add(link)
+        for child in value.values():
+            links.update(sidebar_links(child))
+    elif isinstance(value, list):
+        for child in value:
+            links.update(sidebar_links(child))
+    return links
+
+
+def has_error_placeholder(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError:
+        return True
+    body = raw.split("---", 2)[2] if raw.count("---") >= 2 else raw
+    return bool(re.search(r"同步正文(?:失败|未返回结果)", body))
+
+
+def validate_mirror(
+    output_dir: Path,
+    manifest: dict[str, Any] | None = None,
+    sidebar_file: Path | None = None,
+    require_local_assets: bool = False,
+) -> dict[str, Any]:
+    """Validate the generated mirror as a separate, deterministic acceptance gate."""
+    manifest = manifest if isinstance(manifest, dict) else load_json(output_dir / METADATA_DIR / MANIFEST_FILE, {})
+    records = manifest.get("nodes", []) if isinstance(manifest, dict) else []
+    if not isinstance(records, list):
+        records = []
+    root = output_dir.resolve()
+    errors: list[str] = []
+    seen_tokens: set[str] = set()
+    seen_paths: set[str] = set()
+    expected_sidebar_links: set[str] = set()
+    checked_files = 0
+    missing_files = 0
+    frontmatter_errors = 0
+    placeholder_errors = 0
+    unresolved_assets = 0
+    failed_records = 0
+    stale_records = 0
+    categories: dict[str, int] = {}
+
+    for record in records:
+        if not isinstance(record, dict):
+            errors.append("invalid_record")
+            continue
+        token = str(record.get("node_token", ""))
+        if not token or token in seen_tokens:
+            errors.append("duplicate_or_missing_node_token")
+        seen_tokens.add(token)
+        relative = record.get("relative_path")
+        if not isinstance(relative, str) or not relative:
+            errors.append("missing_relative_path")
+            continue
+        candidate = (output_dir / relative).resolve()
+        if not candidate.is_relative_to(root):
+            errors.append("path_outside_output_dir")
+            continue
+        if relative in seen_paths:
+            errors.append("duplicate_relative_path")
+        seen_paths.add(relative)
+        expected_sidebar_links.add(sidebar_path(relative))
+        status = str(record.get("sync_status", ""))
+        if status == "failed":
+            failed_records += 1
+        elif status == "stale":
+            stale_records += 1
+        raw_category = str(record.get("error", "") or "")
+        if raw_category:
+            known_categories = {
+                "rate_limit",
+                "permission_denied",
+                "not_found",
+                "temporary_network",
+                "invalid_response",
+                "cli_error",
+            }
+            category = raw_category if raw_category in known_categories else str(error_info(raw_category)["category"])
+            categories[category] = categories.get(category, 0) + 1
+        if not candidate.is_file():
+            missing_files += 1
+            continue
+        checked_files += 1
+        raw = candidate.read_text(encoding="utf-8")
+        fields = frontmatter_fields(raw)
+        if fields.get("node_token") != token or fields.get("sync_status") != status:
+            frontmatter_errors += 1
+        body = raw.split("---", 2)[2] if raw.count("---") >= 2 else raw
+        if status in {"ok", "stale"} and re.search(r"同步正文(?:失败|未返回结果)", body):
+            placeholder_errors += 1
+        if status == "ok":
+            unresolved_assets += len(extract_asset_references(body))
+
+    if missing_files:
+        errors.append("missing_generated_files")
+    if frontmatter_errors:
+        errors.append("invalid_frontmatter")
+    if placeholder_errors:
+        errors.append("error_placeholder_in_successful_document")
+    if failed_records:
+        errors.append("failed_records")
+    if stale_records:
+        errors.append("stale_records")
+    if require_local_assets and unresolved_assets:
+        errors.append("unresolved_assets")
+
+    sidebar_file = sidebar_file or output_dir / METADATA_DIR / SIDEBAR_FILE
+    sidebar_value = load_json(sidebar_file, None)
+    actual_sidebar_links = sidebar_links(sidebar_value)
+    sidebar_missing_links = len(expected_sidebar_links - actual_sidebar_links)
+    if sidebar_value is None:
+        errors.append("missing_sidebar")
+        sidebar_missing_links = len(expected_sidebar_links)
+    elif sidebar_missing_links:
+        errors.append("sidebar_missing_nodes")
+
+    stats = {
+        "records": len(records),
+        "files_checked": checked_files,
+        "missing_files": missing_files,
+        "frontmatter_errors": frontmatter_errors,
+        "placeholder_errors": placeholder_errors,
+        "failed_records": failed_records,
+        "stale_records": stale_records,
+        "unresolved_assets": unresolved_assets,
+        "sidebar_missing_links": sidebar_missing_links,
+    }
+    return {
+        "ok": not errors,
+        "errors": sorted(set(errors)),
+        "error_categories": dict(sorted(categories.items())),
+        "stats": stats,
+    }
+
+
+def print_validation(result: dict[str, Any]) -> None:
+    stats = result.get("stats", {}) if isinstance(result, dict) else {}
+    print(
+        "validation "
+        f"passed={str(bool(result.get('ok'))).lower()} "
+        f"records={stats.get('records', 0)} files_checked={stats.get('files_checked', 0)} "
+        f"missing_files={stats.get('missing_files', 0)} frontmatter_errors={stats.get('frontmatter_errors', 0)} "
+        f"placeholder_errors={stats.get('placeholder_errors', 0)} failed_records={stats.get('failed_records', 0)} "
+        f"stale_records={stats.get('stale_records', 0)} unresolved_assets={stats.get('unresolved_assets', 0)} "
+        f"sidebar_missing_links={stats.get('sidebar_missing_links', 0)}"
+    )
+    categories = result.get("error_categories", {}) if isinstance(result, dict) else {}
+    if categories:
+        print(f"validation error_categories={json.dumps(categories, ensure_ascii=False, sort_keys=True)}")
 
 
 def sync(args: argparse.Namespace) -> int:
@@ -896,6 +1197,44 @@ def sync(args: argparse.Namespace) -> int:
     cli = args.cli_path or str(nested(config, "provider", "cli", default="lark-cli"))
     config = json.loads(json.dumps(config))
     config.setdefault("provider", {})["cli"] = cli
+    global MIRROR_DIR
+    configured_mirror_dir = str(
+        nested(config, "paths", "generated_dir", default=DEFAULT_MIRROR_DIR)
+    ).strip()
+    if (
+        not configured_mirror_dir
+        or configured_mirror_dir.startswith("<")
+        or Path(configured_mirror_dir).is_absolute()
+        or Path(configured_mirror_dir).name != configured_mirror_dir
+        or configured_mirror_dir in {".", ".."}
+    ):
+        raise SystemExit("paths.generated_dir must be one relative directory name")
+    MIRROR_DIR = configured_mirror_dir
+    try:
+        request_delay = max(0.0, float(nested(config, "sync", "request_delay_seconds", default=0.0)))
+    except (TypeError, ValueError):
+        request_delay = 0.0
+    try:
+        min_request_interval = max(
+            0.0,
+            float(nested(config, "sync", "min_request_interval_seconds", default=0.5)),
+        )
+    except (TypeError, ValueError):
+        min_request_interval = 0.5
+    REQUEST_LIMITER.configure(max(request_delay, min_request_interval))
+    sidebar_path_file = output_dir / METADATA_DIR / str(
+        nested(config, "vitepress", "sidebar_file", default=SIDEBAR_FILE)
+    ).split("/")[-1]
+    if getattr(args, "validate_only", False):
+        validation = validate_mirror(
+            output_dir,
+            sidebar_file=sidebar_path_file,
+            require_local_assets=bool(
+                nested(config, "sync", "download_assets", default=False) and not args.skip_assets
+            ),
+        )
+        print_validation(validation)
+        return 0 if validation["ok"] else 2
     sync_started = utc_now()
     print("started space_id=<configured-space> identity=bot config=<private-config> output=<private-location>")
     previous_manifest = load_json(output_dir / METADATA_DIR / MANIFEST_FILE, {})
@@ -956,6 +1295,7 @@ def sync(args: argparse.Namespace) -> int:
         incremental
         and not args.rebuild_tree_only
         and not args.refresh_tree_only
+        and not args.retry_failed
         and not args.skip_content
         and not event_driven
         and (args.probe_remote_metadata or nested(config, "sync", "probe_remote_metadata", default=True))
@@ -1072,6 +1412,7 @@ def sync(args: argparse.Namespace) -> int:
         "updated": 0,
         "unchanged": 0,
         "failed": 0,
+        "stale": 0,
         "stub": 0,
         "remote_images": 0,
         "assets_downloaded": 0,
@@ -1082,6 +1423,7 @@ def sync(args: argparse.Namespace) -> int:
         "moved_deleted": 0,
         "content_fetched": 0,
         "content_reused": 0,
+        "error_categories": {},
     }
     # `wiki +node-list` returns siblings in the order configured in Feishu.
     # Keep that order all the way through records and sidebar generation.  A
@@ -1153,9 +1495,12 @@ def sync(args: argparse.Namespace) -> int:
             doc_nodes = [
                 node
                 for node in all_doc_nodes
-                if not (
-                    isinstance(old_nodes.get(str(node["node_token"])), dict)
-                    and old_nodes[str(node["node_token"])].get("sync_status") == "ok"
+                if (
+                    not isinstance(old_nodes.get(str(node["node_token"])), dict)
+                    or old_nodes[str(node["node_token"])].get("sync_status") != "ok"
+                    or has_error_placeholder(
+                        output_dir / str(old_nodes[str(node["node_token"])].get("relative_path", ""))
+                    )
                 )
             ]
         elif args.full_content or not incremental:
@@ -1179,6 +1524,7 @@ def sync(args: argparse.Namespace) -> int:
                     and old.get("content_hash")
                     and isinstance(old_path, str)
                     and (output_dir / old_path).is_file()
+                    and not has_error_placeholder(output_dir / old_path)
                 )
                 missing_baseline = not old_marker and not has_local_success
                 probe_failed = token in metadata_probe_errors
@@ -1211,7 +1557,11 @@ def sync(args: argparse.Namespace) -> int:
             token = str(node["node_token"])
             old = old_nodes.get(token, {}) if isinstance(old_nodes, dict) else {}
             old_path = old.get("relative_path") if isinstance(old, dict) else None
-            if not isinstance(old, dict) or old.get("sync_status") != "ok" or not isinstance(old_path, str):
+            if (
+                not isinstance(old, dict)
+                or old.get("sync_status") not in {"ok", "stale"}
+                or not isinstance(old_path, str)
+            ):
                 return None
             existing = output_dir / old_path
             if not existing.is_file():
@@ -1239,15 +1589,20 @@ def sync(args: argparse.Namespace) -> int:
                 content = normalize_content(raw_content, title, cite_links)
                 return token, "ok", content, "", revision_id
             except Exception as exc:  # keep inventory even when one document is unavailable
+                details = error_info(exc)
+                category = str(details["category"])
                 previous = previous_success_content(node)
                 if previous is not None:
-                    # A transient rate limit or permission change must never
-                    # replace a previously successful local mirror with an
-                    # error page. Keep the old body and retry next run.
-                    return token, "ok", previous[0], "", previous[1]
-                error = str(exc)
-                content = f"# {title}\n\n同步正文失败：`{error.replace('`', '')}`\n\n来源：{source_url(config, token)}"
-                return token, "failed", content, error, ""
+                    # Keep the last good body, but mark it stale so validation
+                    # and the next incremental run cannot mistake it for fresh.
+                    return token, "stale", previous[0], category, previous[1]
+                retryable = "是" if details["retryable"] else "否"
+                content = (
+                    f"# {title}\n\n"
+                    f"同步正文失败（错误类别：{category}，可重试：{retryable}）。\n\n"
+                    f"来源：{source_url(config, token)}"
+                )
+                return token, "failed", content, category, ""
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = [executor.submit(fetch_one, node) for node in doc_nodes]
@@ -1275,7 +1630,7 @@ def sync(args: argparse.Namespace) -> int:
         fetched[token] = (
             str(old.get("sync_status", "ok")),
             body.rstrip("\n"),
-            str(old.get("error", "")),
+            safe_error_category(str(old.get("error", ""))) if old.get("error") else "",
             str(old.get("revision_id", "")),
         )
         return True
@@ -1418,8 +1773,13 @@ def sync(args: argparse.Namespace) -> int:
                     "",
                 ),
             )
-            if status == "failed":
+            if status in {"failed", "stale"}:
                 counts["failed"] += 1
+                if status == "stale":
+                    counts["stale"] += 1
+                if error:
+                    categories = counts["error_categories"]
+                    categories[error] = categories.get(error, 0) + 1
         else:
             status = "metadata_stub"
             counts["stub"] += 1
@@ -1468,13 +1828,15 @@ def sync(args: argparse.Namespace) -> int:
             "remote_updated_at": remote_updated_at,
             "revision_id": revision_id,
             "sync_status": status,
+            "error": safe_error_category(error) if error else "",
+            "retryable": error_info(error)["retryable"] if error else False,
             "synced_at": sync_started,
             "content_hash": content_hash,
         }
         record = dict(metadata)
         record["relative_path"] = f"{MIRROR_DIR}/{relative.as_posix()}"
         if error:
-            record["error"] = error
+            record["error"] = safe_error_category(error)
         records.append(record)
         before_exists = target.is_file()
         old_record = old_nodes.get(token, {}) if isinstance(old_nodes, dict) else {}
@@ -1567,20 +1929,34 @@ def sync(args: argparse.Namespace) -> int:
     if not readme.exists():
         write_text(
             readme,
-            "# 飞书知识库同步说明\n\n"
+            "# feishu-knowledge 同步说明\n\n"
             "本目录由 `soia-cwork-feishu-doc-git-sync` 维护。\n\n"
-            "- `10_飞书镜像/`：飞书只读镜像，下一次同步可能覆盖。\n"
-            "- `20_本地补录/`：本地手工补录，不会被镜像同步覆盖。\n"
+            "- `10_knowledge-base/`：知识库生成内容，下一次同步可能覆盖。\n"
+            "- `20_本地补录/`：本地手工补录，不会被同步任务覆盖。\n"
             "- `90_同步元数据/`：节点清单、路径映射和 VitePress 侧边栏。\n\n"
             "图片和附件是否能在本地直接展示，取决于飞书应用是否具备对应资源下载权限。\n",
         )
+    validation = validate_mirror(
+        output_dir,
+        manifest=manifest,
+        sidebar_file=sidebar_path_file,
+        require_local_assets=download_assets_enabled,
+    )
+    manifest["validation"] = {
+        "ok": validation["ok"],
+        "errors": validation["errors"],
+        "error_categories": validation["error_categories"],
+        "stats": validation["stats"],
+    }
+    write_text(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     print(
         "completed "
         f"created={counts['created']} updated={counts['updated']} failed={counts['failed']} "
-        f"stubs={counts['stub']} unchanged={counts['unchanged']} moved_deleted={counts['moved_deleted']} "
+        f"stale={counts['stale']} stubs={counts['stub']} unchanged={counts['unchanged']} moved_deleted={counts['moved_deleted']} "
         f"deleted_marked={len(deleted)} remote_images={counts['remote_images']}"
     )
-    return 0 if counts["failed"] == 0 else 2
+    print_validation(validation)
+    return 0 if counts["failed"] == 0 and validation["ok"] else 2
 
 
 def main() -> int:
