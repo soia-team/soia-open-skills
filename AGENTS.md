@@ -97,6 +97,16 @@ npx skills add soia-team/soia-open-skills -l --full-depth
 npx skills add soia-team/soia-open-skills -g --all
 ```
 
+## Git Workflow
+
+- **Develop on `main` directly.** Do not create feature branches or long-lived
+  topic branches. Commit and push to `main` (or open a short-lived PR if branch
+  protection requires it).
+- **No worktrees.** Never run `git worktree add` in this repository. Worktrees
+  lock branches and block deletion; they caused real cleanup incidents in this
+  repo. If you need to inspect another ref, use `git show <ref>:<path>` or
+  `git stash` instead.
+
 ## Skill Debug Install Rules
 
 Local checkout installation is only for temporary debugging. It is not a release
