@@ -1,6 +1,11 @@
 ---
 name: soia-pkm-baidupan
 description: 百度网盘原子操作层：基于百度官方 baidu-drive Skill 与 bdpan CLI，完成登录、目录浏览、搜索、上传下载、分享转存、移动复制、重命名、建目录和只读 JSONL 扫描；记忆备份/恢复交由官方 Skill 处理。Triggers：「看下百度网盘」「百度网盘里有什么」「登录百度网盘」「下载百度网盘文件」「扫描百度网盘」「备份记忆」「查看记忆备份」「恢复记忆」
+dependencies:
+  external:
+    - name: baidu-drive
+      required: true
+      install: "npx skills add https://github.com/baidu-netdisk/bdpan-storage/skills --skill baidu-drive"
 ---
 
 # soia-pkm-baidupan — 百度网盘原子操作层
