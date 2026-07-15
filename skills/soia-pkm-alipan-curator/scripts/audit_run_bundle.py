@@ -143,6 +143,44 @@ def find_scan_target(rows: list[dict], target_id: str, target_path: str) -> bool
     )
 
 
+def collect_final_scan_rows(
+    run_dir: Path,
+    manifest: dict,
+    paths: dict[str, Path],
+    violations: list[dict],
+) -> list[dict]:
+    """Merge every registered final scan, honoring the plural-first contract.
+
+    ``run.files`` may register the terminal scan either as the legacy singular
+    ``final_scan`` member or as a non-empty ``final_scans`` array; the plural
+    form wins when both are present, mirroring
+    ``audit_migration_conservation.final_scan_members``.
+    """
+    configured_files = manifest.get("files", {})
+    if "final_scans" not in configured_files:
+        # Singular-only contract: keep the historical single-file behavior.
+        path = paths.get("final_scan")
+        return read_jsonl(path) if path is not None and path.is_file() else []
+    try:
+        members = audit_migration_conservation.final_scan_members(manifest)
+    except ValueError as error:
+        violations.append({"kind": "invalid_final_scan_declaration", "detail": str(error)})
+        return []
+    rows: list[dict] = []
+    for index, member in enumerate(members):
+        label = f"final_scans[{index}]"
+        try:
+            member_path = resolve_member(run_dir, member, f"run.files.{label}")
+        except ValueError as error:
+            violations.append({"kind": "invalid_run_file_path", "file": label, "detail": str(error)})
+            continue
+        if not member_path.is_file():
+            violations.append({"kind": "run_file_missing", "file": label, "path": member})
+            continue
+        rows.extend(read_jsonl(member_path))
+    return rows
+
+
 def append_migration_conservation_violations(
     violations: list[dict],
     run_dir: Path,
@@ -252,6 +290,10 @@ def audit_bundle(run_dir: Path, *, final: bool, require_preflight: bool | None =
     required_files = FINAL_FILES if final else ("initial_scan", "initial_errors", "content_audit")
     paths: dict[str, Path] = {}
     for key in required_files:
+        if key == "final_scan" and "final_scans" in configured_files:
+            # Plural registration takes precedence; validated by
+            # collect_final_scan_rows below.
+            continue
         if key not in configured_files:
             violations.append({"kind": "run_file_not_declared", "file": key})
             continue
@@ -266,7 +308,7 @@ def audit_bundle(run_dir: Path, *, final: bool, require_preflight: bool | None =
 
     initial_rows = read_jsonl(paths["initial_scan"]) if paths.get("initial_scan", Path()).is_file() else []
     audit_rows = read_jsonl(paths["content_audit"]) if paths.get("content_audit", Path()).is_file() else []
-    final_rows = read_jsonl(paths["final_scan"]) if paths.get("final_scan", Path()).is_file() else []
+    final_rows = collect_final_scan_rows(run_dir, manifest, paths, violations) if final else []
     if not initial_rows:
         violations.append({"kind": "initial_scan_empty"})
     if not audit_rows:

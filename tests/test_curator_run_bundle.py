@@ -354,6 +354,69 @@ class RunBundleTests(unittest.TestCase):
             {item["kind"] for item in stale["violations"]},
         )
 
+    def test_final_scans_plural_declaration_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            business_rows = [{"path": "/learning", "name": "10_course", "id": "course-id", "dir": True}]
+            archive_rows = [
+                {"path": "/learning", "name": "staging", "id": "staging-id", "dir": True},
+                {"path": "/learning", "name": "90_archive", "id": "archive-id", "dir": True},
+            ]
+            write_jsonl(root / "verification/final-business.scan.jsonl", business_rows)
+            write_jsonl(root / "verification/final-archive.scan.jsonl", archive_rows)
+            manifest = audit.read_json(root / "run.json")
+            manifest["files"].pop("final_scan")
+            manifest["files"]["final_scans"] = [
+                "verification/final-business.scan.jsonl",
+                "verification/final-archive.scan.jsonl",
+            ]
+            write_json(root / "run.json", manifest)
+            refresh_migration_conservation_report(root)
+            result = audit.audit_bundle(root, final=True)
+
+        kinds = {item["kind"] for item in result["violations"]}
+        self.assertNotIn("run_file_not_declared", kinds)
+        self.assertNotIn("final_scan_empty", kinds)
+        self.assertEqual(
+            result["checked"]["final_scan_rows"],
+            len(business_rows) + len(archive_rows),
+        )
+        self.assertEqual(result["status"], "passed")
+
+    def test_final_scans_missing_member_file_reports_run_file_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            manifest = audit.read_json(root / "run.json")
+            manifest["files"].pop("final_scan")
+            manifest["files"]["final_scans"] = ["verification/never-written.scan.jsonl"]
+            write_json(root / "run.json", manifest)
+            result = audit.audit_bundle(root, final=True)
+
+        missing = [item for item in result["violations"] if item["kind"] == "run_file_missing"]
+        self.assertEqual(missing, [{
+            "kind": "run_file_missing",
+            "file": "final_scans[0]",
+            "path": "verification/never-written.scan.jsonl",
+        }])
+        self.assertEqual(result["status"], "failed")
+
+    def test_final_scans_empty_array_reports_violation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            manifest = audit.read_json(root / "run.json")
+            manifest["files"].pop("final_scan")
+            manifest["files"]["final_scans"] = []
+            write_json(root / "run.json", manifest)
+            result = audit.audit_bundle(root, final=True)
+
+        kinds = {item["kind"] for item in result["violations"]}
+        self.assertIn("invalid_final_scan_declaration", kinds)
+        self.assertIn("final_scan_empty", kinds)
+        self.assertEqual(result["status"], "failed")
+
     def test_ai_review_requires_evidence_and_no_unresolved_items(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
