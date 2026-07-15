@@ -292,13 +292,13 @@ check "default run never asks npm for Gemini CLI" test "$gemini_npm_count" -eq 0
 # 9. Native install (symlink → ~/.local/share/claude/versions/) → must use
 # `claude update`, never npm.
 case9="$test_root/claude-native"
-mkdir -p "$case9/home/.local/share/claude/versions" "$case9/home/.local/bin"
-make_fake_claude "$case9/home/.local/share/claude/versions/fake-claude"
-ln -sf "$case9/home/.local/share/claude/versions/fake-claude" \
-  "$case9/home/.local/bin/claude"
+mkdir -p "$case9/fakehome/.local/share/claude/versions" "$case9/fakehome/.local/bin"
+make_fake_claude "$case9/fakehome/.local/share/claude/versions/fake-claude"
+ln -sf "$case9/fakehome/.local/share/claude/versions/fake-claude" \
+  "$case9/fakehome/.local/bin/claude"
 printf '2.1.209\n' >"$case9/claude-state"
 run_case "$case9" \
-  "PATH=$case9/home/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "PATH=$case9/fakehome/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
   "TOOLS=claude" "DRY_RUN=0" "NPM_BIN=$case9/missing-npm" \
   "FAKE_CLAUDE_STATE=$case9/claude-state" \
   "FAKE_CLAUDE_MARKER=$case9/claude-update.marker" \
