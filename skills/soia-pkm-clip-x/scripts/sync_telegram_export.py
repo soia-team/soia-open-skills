@@ -38,7 +38,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from soia_env import env_source_hint, load_private_env, write_failure_log
+from clip_x_env import env_source_hint, load_private_env, write_failure_log
 
 ARCHIVE_SCRIPT = Path(__file__).parent / "archive_x.py"
 

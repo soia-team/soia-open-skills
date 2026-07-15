@@ -48,7 +48,7 @@ import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-from soia_env import env_source_hint, load_private_env, write_failure_log
+from clip_x_env import env_source_hint, load_private_env, write_failure_log
 
 try:
     from telethon import TelegramClient

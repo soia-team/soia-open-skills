@@ -16,11 +16,47 @@
 扫描根自身不入 JSONL（其 file_id 另用 roots.json 提供给 gen_catalog）。
 错误/进度写 <out>.errors / <out>.progress。被 kill 后加 --resume 重跑接着扫。
 """
-import argparse, json, os, queue, subprocess, threading, time
+import argparse, json, os, queue, subprocess, sys, threading, time
+from pathlib import Path
 
-from soia_env import load_private_env
+RUNNER_ENV = "SOIA_ALIPAN_RUNNER"
 
-load_private_env(required=False)
+
+def alipan_runner_path():
+    """Locate this skill's private-environment runner without a bare fallback."""
+    override = os.environ.get(RUNNER_ENV)
+    candidate = (
+        Path(override).expanduser()
+        if override
+        else Path(__file__).resolve().with_name("run_with_env.py")
+    )
+    return candidate if candidate.is_file() else None
+
+
+def require_alipan_runner():
+    """Return the runner or fail before the scan creates any output files."""
+    runner = alipan_runner_path()
+    if runner is None:
+        raise FileNotFoundError(
+            "aliyunpan environment runner unavailable; set SOIA_ALIPAN_RUNNER "
+            "or install this skill's scripts/run_with_env.py"
+        )
+    return runner
+
+
+def run_aliyunpan_ll(runner, drive_id, path, timeout):
+    """List one directory only through the private-environment runner."""
+    args = [
+        sys.executable,
+        str(runner),
+        "--",
+        "aliyunpan",
+        "ll",
+        "--driveId",
+        drive_id,
+        path,
+    ]
+    return subprocess.run(args, capture_output=True, text=True, timeout=timeout)
 
 def parse_ll_output(out):
     """Parse ``aliyunpan ll`` without normalizing whitespace in file names.
@@ -64,6 +100,16 @@ def parse_ll_output(out):
         })
     return rows
 
+
+def row_identity(row):
+    """Return the stable physical key used to compact scan JSONL rows.
+
+    ``path`` is the parent directory in scan output.  ``id`` distinguishes
+    separate cloud objects that happen to share a logical parent/name path;
+    mutable metadata such as size and SHA-1 must not split one physical row.
+    """
+    return (row.get('path'), row.get('name'), row.get('id'), row.get('dir'))
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--driveId', required=True)
@@ -78,6 +124,7 @@ def main():
     ap.add_argument('--agg-threshold', type=int, default=200)
     ap.add_argument('--agg-min-depth', type=int, default=3, help='相对扫描根的深度(根=0)')
     a = ap.parse_args()
+    runner = require_alipan_runner()
     err_p, prog_p = a.out + '.errors', a.out + '.progress'
 
     done = set()
@@ -102,8 +149,7 @@ def main():
         for att in range(1, a.attempts + 1):
             with lock: cnt['calls'] += 1
             try:
-                r = subprocess.run(['aliyunpan', 'll', '--driveId', a.driveId, path],
-                                   capture_output=True, text=True, timeout=a.timeout)
+                r = run_aliyunpan_ll(runner, a.driveId, path, a.timeout)
                 if r.returncode == 0 and '当前目录' in r.stdout: return r.stdout
                 last = f"rc={r.returncode} {r.stdout[:200]!r}"
             except Exception as e:

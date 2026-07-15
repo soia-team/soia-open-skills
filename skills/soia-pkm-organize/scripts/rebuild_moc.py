@@ -28,7 +28,7 @@ from datetime import date
 from pathlib import Path
 from collections import defaultdict
 
-from soia_env import load_private_env
+from organize_env import load_private_env
 
 # ── Default category → topic table ───────────────────────────────────────────
 # Vault-agnostic default. Override per-vault via _MOC/.categories.json.

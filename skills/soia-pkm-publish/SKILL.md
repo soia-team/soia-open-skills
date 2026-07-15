@@ -175,7 +175,7 @@ SOIA_PKM_PUBLISH_CONFIG_FILE=<custom-config-path>
   - **开发者ID（AppID）**：直接可见、可复制，对应下面的 `WECHAT_APP_ID`。
   - **开发者密码（AppSecret）**：点「重置」，管理员扫码确认后才显示，**只显示这一次**，当场复制保存，对应 `WECHAT_APP_SECRET`；重置会让旧 secret 立即失效，别处如果还在用会一并断掉。
 - **IP 白名单（关键，漏了必失败）**：同一张「基本配置」页里有「IP白名单」，必须把实际调用 API 的机器的**公网 IP** 加进去，否则换 access_token 时会报 `40164 invalid ip`。本地跑就先查一下本机公网 IP（如 `curl ifconfig.me`），换网络后要记得更新。
-- **放哪**：秘钥只放私有 `config.yml`，不进 vault、不进这个开源 skill 仓库、也不进 shell 启动文件。`publish.py` 已接入 `scripts/soia_env.py`，跑起来会**自动探测并加载** `$SOIA_PKM_PUBLISH_CONFIG_FILE`（或兼容别名 `$SOIA_PKM_PUBLISH_ENV_FILE`）以及默认路径 `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-publish/config.yml`，**无需手动 source**：
+- **放哪**：秘钥只放私有 `config.yml`，不进 vault、不进这个开源 skill 仓库、也不进 shell 启动文件。`publish.py` 已接入 `scripts/publish_env.py`，跑起来会**自动探测并加载** `$SOIA_PKM_PUBLISH_CONFIG_FILE`（或兼容别名 `$SOIA_PKM_PUBLISH_ENV_FILE`）以及默认路径 `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-publish/config.yml`，**无需手动 source**：
 
   ```
   # ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-publish/config.yml

@@ -45,6 +45,21 @@ SOIA_PKM_ALIPAN_CONFIG_FILE=<custom-config-path>
 - 强依赖、可选依赖和第三方 skill 关系必须以本 `SKILL.md` 后续的“依赖 / 前置 / 资源 / 边界”说明为准；没有写清楚时，先补说明或询问客户，不要猜。
 - 第三方 skill 只能声明依赖和安装方式，不直接修改第三方 skill 文件。
 
+### 私有配置加载与命令入口
+
+以下命令从本 skill 目录执行；若当前目录不同，请将 `scripts/run_with_env.py` 换成 `<skill-dir>/scripts/run_with_env.py`。运行 `aliyunpan` 时，优先使用本技能的包装器加载私有配置，再执行命令：
+
+```bash
+python3 scripts/run_with_env.py -- aliyunpan who
+python3 scripts/run_with_env.py -- aliyunpan quota
+python3 scripts/run_with_env.py -- aliyunpan ls --driveId "$DRIVE_ID" "/目标目录/"
+```
+
+包装器只会启动 `aliyunpan`、`aliyunpan.exe` 或 basename 为两者之一的绝对路径；它会拒绝 `env`、shell 和其他任意命令。包装器会读取本技能私有 `config.yml` 的 `env:` 映射，并在子进程中加载
+`ALIYUNPAN_CONFIG_DIR`。这样 Homebrew 安装的 `aliyunpan` 也会使用同一份指定登录态，避免与默认的 `~/.config/aliyunpan/` 形成两套会话。配置文件只应由包装器读取；`alipan_env.py` 仅供脚本作为模块加载，直接运行时不会输出配置。不要执行 `cat config.yml`、`env`、`printenv` 或 `set -x` 来排查配置。
+
+直接运行 `aliyunpan <command>` 仍保持兼容，适用于使用 provider 默认登录态的场景；但配置了私有 `ALIYUNPAN_CONFIG_DIR` 后，优先使用上面的包装器，避免命令落到另一套登录态。日志和回复中只能说明配置是否存在或命令是否成功，**不得打印 token、cookie、session 或任何环境变量的值**。
+
 ### 日志与完成回执
 
 每次执行都要让客户看见过程和结果。最低回执格式：
@@ -78,10 +93,13 @@ SOIA_PKM_ALIPAN_CONFIG_FILE=<custom-config-path>
 # 1. 安装（macOS，brew 官方 formula）
 brew install aliyunpan          # 更新: brew upgrade aliyunpan
 # 2. 登录（扫码，需用户本人在终端操作）
-aliyunpan login
+python3 scripts/run_with_env.py -- aliyunpan login
 # 3. 验证
-aliyunpan who && aliyunpan quota
+python3 scripts/run_with_env.py -- aliyunpan who
+python3 scripts/run_with_env.py -- aliyunpan quota
 ```
+
+如果尚未配置私有 `ALIYUNPAN_CONFIG_DIR`，上述登录和验证命令也可以直接写成 `aliyunpan login`、`aliyunpan who` 和 `aliyunpan quota`。
 
 ## 双盘模型（关键概念）
 
@@ -123,6 +141,7 @@ aliyunpan ls "$DIR" </dev/null 2>/dev/null | \
 3. **高危操作留人**：清空目录、批量删除、跨盘手动迁移，列清单请用户确认或亲手操作。
 4. **凭据**：登录态属于 aliyunpan provider，默认在 `~/.config/aliyunpan/`，不要搬进 skill，也不要 cat 打印 token。若需要改登录态目录，只把 `ALIYUNPAN_CONFIG_DIR` 这个 override 放进本技能私有配置：
    `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-alipan/config.yml`（见 `config.example.yml`）。
+   运行命令优先使用 `python3 scripts/run_with_env.py -- aliyunpan <command>` 加载该 override；任何日志、诊断输出和最终回执都不得打印 token 或 env 值。
 5. **删除/移动/重命名前先确认**：命中路径、显式技能调用、任何默认配置都只是推荐输入，不构成跳过确认的理由；唯一跳过条件是客户当前这句话明确说"直接删/不用确认"，跳过后要在回执里说明本次沿用的范围假设。
 6. **批量前先小样本探测**：批量 `mv`/`rm`/`rename` 前，先用最小样本（如 1 条）跑一遍并汇报预计总量，客户确认规模无误后再放开全量执行，不要对着未知规模的目录直接下手。
 

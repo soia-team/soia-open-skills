@@ -11,19 +11,36 @@ brew upgrade aliyunpan      # 已装则升级到最新
 aliyunpan --version         # 确认版本
 ```
 
+安装完成后，运行云盘命令优先通过本 skill 的环境包装器加载私有配置：
+
+```bash
+python3 scripts/run_with_env.py -- aliyunpan --version
+python3 scripts/run_with_env.py -- aliyunpan who
+```
+
+包装器会从本 skill 私有 `config.yml` 加载 `ALIYUNPAN_CONFIG_DIR`，让 Homebrew 安装的 `aliyunpan` 复用指定登录态，避免与默认 `~/.config/aliyunpan/` 分叉。直接 `aliyunpan <command>` 仍可用，作为兼容入口；如果配置了私有目录，应优先使用包装器。不要打印 token、cookie、session 或任何 env 值，也不要用 `cat config.yml`、`env`、`printenv` 或 `set -x` 排查登录态。
+
 ### 1.2 登录（两步授权 + 扫码）
 `aliyunpan login` 走扫码登录，分两步：
 1. CLI 打印一个二维码（或授权链接），需要**用户本人**用阿里云盘 App 扫码授权
-2. 授权后 CLI 自动完成登录，写入登录态到 `~/.config/aliyunpan/`
+2. 授权后 CLI 自动完成登录，写入由 `ALIYUNPAN_CONFIG_DIR` 指定的登录态目录；未配置时使用 `~/.config/aliyunpan/`
+
+优先用包装器启动扫码登录，确保登录态写入与后续命令相同的目录：
+
+```bash
+python3 scripts/run_with_env.py -- aliyunpan login
+```
+
+若未配置私有目录，直接运行 `aliyunpan login` 仍然兼容。登录过程的输出和后续回执不得包含 token 或环境变量值。
 
 登录**必须由用户本人操作**——代理不能替用户扫码，只能引导用户完成这一步。
 
 ### 1.3 登录态约 3 天过期
 **症状**：任意命令（`ls`/`quota`/`who`）报错或返回异常，常见提示词含「未登录账号」类字样。
-**处理**：不要反复重试或换参数——这是过期而非命令写错，直接告知用户「登录态过期了，需要重新扫码」，引导跑 `aliyunpan login`。实战中一周整理战役期间发生过 1 次过期（傍晚时段），当场重登即恢复，不影响已完成的操作结果。
+**处理**：不要反复重试或换参数——这是过期而非命令写错，直接告知用户「登录态过期了，需要重新扫码」，优先引导跑 `python3 scripts/run_with_env.py -- aliyunpan login`；未配置私有目录时也可运行 `aliyunpan login`。实战中一周整理战役期间发生过 1 次过期（傍晚时段），当场重登即恢复，不影响已完成的操作结果。
 
 ### 1.4 非交互环境取登录链接的技巧
-纯脚本/后台代理环境里没有真 TTY，`aliyunpan login` 可能拿不到可扫的二维码输出。两个可行技巧：
+纯脚本/后台代理环境里没有真 TTY，包装器调用的 `aliyunpan login` 可能拿不到可扫的二维码输出。两个可行技巧：
 - **伪终端（pty）**：用 `script`/`expect`/Python `pty.spawn` 包一层伪终端运行 `aliyunpan login`，让 CLI 以为自己在交互终端里，从而正常吐出二维码链接文本
 - **交互进程读 stdout**：把 `aliyunpan login` 作为长驻子进程启动，持续读取其 stdout 流（而不是等它退出再读），二维码链接一出现就截取，转给用户点击或扫码
 
@@ -77,6 +94,7 @@ python3 <本skill>/scripts/scan_drive.py --driveId <你的driveId> \
     [--agg-prefix /<超大资源包路径> --agg-threshold 200]
 # 输出 <out> + <out>.errors + <out>.progress；被 kill 后加 --resume 接着扫。
 ```
+扫描器自身不读取外层 `eval` 注入的登录态，也绝不直接执行裸 `aliyunpan`：每一次 `ll` 都经同技能相邻的 `scripts/run_with_env.py` 启动。默认按扫描器所在目录动态定位；仅在调用方明确设置 `SOIA_ALIPAN_RUNNER` 时替换。runner 缺失会在创建扫描产出前明确失败，绝不降级为裸命令。
 **完整图书馆流水线**：`scan_drive.py`（实盘→JSONL，本 skill）→ `gen_catalog.py`（JSONL→折叠树总览+全文检索，alipan-curator skill）。扫描根自身不入 JSONL，其 file_id 用一份 `roots.json`（`{"/区":"file_id"}`，`aliyunpan ll <区>` 取根 id）传给 gen_catalog 的 `--roots`；整理挪动后另存移动日志 jsonl 传 `--moves`，无需重扫全盘即可刷新总览。
 
 ### 3.1 基本方法论（scan_drive.py 已实现，改脚本/换盘时参考）

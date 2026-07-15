@@ -9,7 +9,7 @@ import os
 import sys
 from pathlib import Path
 
-from soia_env import load_private_env
+from transform_env import load_private_env
 
 CONFIG_NAMES = (
     "transform.config.yml",

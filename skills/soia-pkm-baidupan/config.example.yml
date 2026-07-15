@@ -1,0 +1,19 @@
+# soia-pkm-baidupan private config example.
+# Copy to:
+# ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-baidupan/config.yml
+# Never commit the copied private config or send its values in chat.
+
+schema_version: 1
+
+# official = Baidu's baidu-drive Skill + bdpan (default)
+# community = mqhe2007/baidupan-cli + an Open Platform application
+provider: official
+binary: bdpan
+
+env:
+  # Community provider only. Leave these placeholders unchanged for official mode.
+  BAIDUPAN_APP_KEY: "<YOUR_APP_KEY>"
+  BAIDUPAN_APP_SECRET: "<YOUR_SECRET_KEY>"
+  BAIDUPAN_APP_NAME: "<YOUR_APP_NAME>"
+  # Optional; only for baidupan-cli --encrypt / --decrypt.
+  BAIDUPAN_CRYPTO_PASSPHRASE: "<YOUR_LOCAL_ENCRYPTION_PASSPHRASE>"

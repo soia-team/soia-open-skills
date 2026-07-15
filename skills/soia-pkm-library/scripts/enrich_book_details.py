@@ -30,7 +30,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from soia_env import env_source_hint, load_private_env, require_weread_skills, weread_api_key_hint
+from library_env import env_source_hint, load_private_env, require_weread_skills, weread_api_key_hint
 
 load_private_env()
 require_weread_skills()
