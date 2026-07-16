@@ -202,7 +202,7 @@ mindmap
 
 - NotebookLM `generate report` 适合 grounded 资料报告。
 - 本地 Markdown report 适合快速总结和轻量加工。
-- 如果用户要原创文章而不是报告，转交 `soia-pkm-compose`。
+- 如果用户要原创文章而不是报告，转交 `soia-pkm-compose-article-draft`。
 
 开始前读取 [prompt-report.md](prompt-report.md)。如果用户明确要求 NotebookLM grounded report，先读取 [prompt-notebooklm-report.md](prompt-notebooklm-report.md) 并按 provider bootstrap 检查。
 

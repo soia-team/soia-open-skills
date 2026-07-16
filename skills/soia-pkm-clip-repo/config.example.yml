@@ -1,6 +1,0 @@
-# soia-pkm-clip-repo private config example.
-# Copy to ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-clip-repo/config.yml.
-
-env:
-  OBSIDIAN_VAULT: "<vault-path>"
-  SOIA_REPO_UPSTREAM_DIR: "<path-to-upstream-repo-cache>"

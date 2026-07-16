@@ -13,7 +13,7 @@ from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS_DIR = REPO_ROOT / "skills" / "soia-pkm-alipan" / "scripts"
+SCRIPTS_DIR = REPO_ROOT / "skills" / "soia-pkm-alipan-drive-ops" / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import run_with_env  # noqa: E402
@@ -33,7 +33,7 @@ class RunWithEnvTests(unittest.TestCase):
 
             with mock.patch.dict(
                 os.environ,
-                {"SOIA_PKM_ALIPAN_CONFIG_FILE": str(config)},
+                {"SOIA_PKM_ALIPAN_DRIVE_OPS_CONFIG_FILE": str(config)},
                 clear=False,
             ), mock.patch.object(run_with_env.subprocess, "run", return_value=completed) as run:
                 stdout = StringIO()
@@ -127,7 +127,7 @@ class RunWithEnvTests(unittest.TestCase):
             config = Path(temporary) / "config.yml"
             config.write_text(f"env:\n  ALIPAN_RUN_WITH_ENV_TEST: {TEST_SECRET}\n", encoding="utf-8")
             environment = os.environ.copy()
-            environment["SOIA_PKM_ALIPAN_CONFIG_FILE"] = str(config)
+            environment["SOIA_PKM_ALIPAN_DRIVE_OPS_CONFIG_FILE"] = str(config)
 
             import subprocess
 

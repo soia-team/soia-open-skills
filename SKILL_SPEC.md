@@ -102,8 +102,8 @@ Skills with install-level relationships must declare them machine-readably in
 
 ```yaml
 dependencies:
-  hard: [soia-pkm-alipan]          # cannot run without; sync tools auto-include
-  optional: [soia-pkm-organize]    # enhances, degrades gracefully; never auto-installed
+  hard: [soia-pkm-alipan-drive-ops]          # cannot run without; sync tools auto-include
+  optional: [soia-pkm-organize-article-moc]    # enhances, degrades gracefully; never auto-installed
   external:                        # skills outside the SOIA repos; declare install only
     - name: weread-skills
       required: true               # true = core workflows stop without it

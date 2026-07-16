@@ -11,7 +11,7 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "skills" / "soia-pkm-alipan" / "scripts" / "scan_drive.py"
+SCRIPT = ROOT / "skills" / "soia-pkm-alipan-drive-ops" / "scripts" / "scan_drive.py"
 
 
 def load_module():

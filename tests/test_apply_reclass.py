@@ -110,7 +110,7 @@ class ApplyReclassTests(unittest.TestCase):
     def test_runner_is_located_from_portable_skill_tree(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "portable-package" / "skills"
-            runner = root / "soia-pkm-alipan" / "scripts" / "run_with_env.py"
+            runner = root / "soia-pkm-alipan-drive-ops" / "scripts" / "run_with_env.py"
             runner.parent.mkdir(parents=True)
             runner.write_text("# test runner\n", encoding="utf-8")
             synthetic_executor = root / "soia-pkm-alipan-curator" / "scripts" / "apply_reclass.py"

@@ -1,0 +1,25 @@
+# soia-pkm-clip-wechat-account private config example.
+# Copy to ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-clip-wechat-account/config.yml.
+# Keep real values outside git.
+
+env:
+  # Route A: official WeChat API.
+  WECHAT_APP_ID: "<YOUR_APP_ID>"
+  WECHAT_APP_SECRET: "<YOUR_APP_SECRET>"
+
+  # Route B: profile_ext login-ticket backup path.
+  WECHAT_BIZ: "<__biz>"
+  WECHAT_KEY: "<key>"
+  WECHAT_PASS_TICKET: "<pass_ticket>"
+  WECHAT_APPMSG_TOKEN: "<appmsg_token>"
+  WECHAT_COOKIE: "<complete Cookie header>"
+  WECHAT_UIN: "777"
+
+  # Route C: mp.weixin.qq.com backend appmsgpublish path.
+  WECHAT_MP_TOKEN: "<mp backend token>"
+  WECHAT_MP_COOKIE: "<complete mp backend Cookie header>"
+  WECHAT_MP_FAKEID: "<optional fakeid>"
+
+  WECHAT_ACCOUNT_NAME: "<account display name>"
+  OBSIDIAN_VAULT: "<vault-path>"
+  OBSIDIAN_GZH_OUT: "Inbox/gzh-articles"

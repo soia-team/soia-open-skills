@@ -34,7 +34,7 @@ def alipan_runner_path() -> Path | None:
 
     override = os.environ.get(RUNNER_ENV)
     candidate = Path(override).expanduser() if override else (
-        Path(__file__).resolve().parents[2] / "soia-pkm-alipan" / "scripts" / "run_with_env.py"
+        Path(__file__).resolve().parents[2] / "soia-pkm-alipan-drive-ops" / "scripts" / "run_with_env.py"
     )
     return candidate if candidate.is_file() else None
 
@@ -44,7 +44,7 @@ def require_alipan_runner() -> Path:
     if runner is None:
         raise FileNotFoundError(
             "aliyunpan environment runner unavailable; set SOIA_ALIPAN_RUNNER "
-            "or install the adjacent soia-pkm-alipan skill"
+            "or install the adjacent soia-pkm-alipan-drive-ops skill"
         )
     return runner
 

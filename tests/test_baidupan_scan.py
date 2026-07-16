@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "skills" / "soia-pkm-baidupan" / "scripts" / "scan_drive.py"
+SCRIPT = ROOT / "skills" / "soia-pkm-baidu-netdisk-ops" / "scripts" / "scan_drive.py"
 
 
 def load_module():

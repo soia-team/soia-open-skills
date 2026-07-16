@@ -2,7 +2,7 @@
 name: soia-pkm-maintain
 description: Obsidian vault 维护技能（支撑类）——三个工作流：①周维护（lint 四类体检 + 周简报）②全库地图重生成 ③AI 会话日志接入（Claude Code / Codex 双平台）。底层机械脚本纯 Python stdlib / bash，参数化支持任意 vault 路径，不硬编码具体库。Triggers：「vault 周维护」「跑周维护」「重建全库地图」「更新知识库地图」「接入会话日志」「配置会话日志」
 dependencies:
-  optional: [soia-pkm-organize]
+  optional: [soia-pkm-organize-article-moc]
 version: 1.0.0
 created_at: 2026-07-07 13:32:04
 updated_at: 2026-07-15 18:27:15
@@ -93,7 +93,7 @@ vault 用久了会积累三类"基础设施债"：
 - Python 3，纯 stdlib（`lint_vault.py` / `gen_vault_map.py` 无第三方依赖）
 - bash（`session_end_log.sh` / `codex_notify_wrapper.sh`）
 - `--vault <path>`，或私有 `config.yml` 里的 `env.OBSIDIAN_VAULT`（二选一，`--vault` 优先）
-- 软依赖 `soia-pkm-organize`：MOC 重建、主题归类是它的职责，本 skill **只引用，不重复实现**——lint 报告里的"重复文件名"如果是需要合并 MOC 的场景，转给 `soia-pkm-organize` 处理
+- 软依赖 `soia-pkm-organize-article-moc`：MOC 重建、主题归类是它的职责，本 skill **只引用，不重复实现**——lint 报告里的"重复文件名"如果是需要合并 MOC 的场景，转给 `soia-pkm-organize-article-moc` 处理
 
 ## 触发词
 
@@ -130,7 +130,7 @@ vault 用久了会积累三类"基础设施债"：
    - **已执行的安全修复**（本轮 AI 已经直接改掉的，见第 4 步）
    - **建议人工处理清单**（拿不准、需要用户判断的项）
 
-3. **MOC 归并声明依赖 `soia-pkm-organize`**：如果发现的重复文件名/标签漂移背后是"需要重新归类/合并 MOC"，本 skill 不做这个判断，只在简报里标注并建议衔接 `soia-pkm-organize`，不越界重复实现它的主题归类逻辑。
+3. **MOC 归并声明依赖 `soia-pkm-organize-article-moc`**：如果发现的重复文件名/标签漂移背后是"需要重新归类/合并 MOC"，本 skill 不做这个判断，只在简报里标注并建议衔接 `soia-pkm-organize-article-moc`，不越界重复实现它的主题归类逻辑。
 4. 只有**能确定是安全修复**的项才直接改（比如死链明显是打错了大小写/多了个空格、能一一对应到唯一同名文件）；只要有歧义（比如同名文件不止一个候选、标签漂移可能是故意的新分类）就只写进简报，不擅自动内容。
 
 ## 工作流② 全库地图重生成
@@ -178,7 +178,7 @@ bash scripts/session_end_log.sh --vault <path> --agent Codex
 |------|------|
 | 未指定 `--vault` 且私有 `config.yml` 中无 `OBSIDIAN_VAULT` | 报错退出（`exit 1`），提示二选一 |
 | lint 四类发现都为空 | 周简报里写"无"，不是省略该小节 |
-| lint 报告里的重复文件名/标签漂移涉及主题归类判断 | 转交 `soia-pkm-organize`，本 skill 不做归类决策 |
+| lint 报告里的重复文件名/标签漂移涉及主题归类判断 | 转交 `soia-pkm-organize-article-moc`，本 skill 不做归类决策 |
 | 微信读书同步 / 书库总览生成需求 | 转交 `soia-pkm-library`，本 skill 不碰书库数据线 |
 | 会话日志接入需要改 `settings.json` / `config.toml` | 必须先征询用户、拿到同意才写，绝不静默改配置；已有配置要合并不要覆盖 |
 | Codex `notify` 已经接了别的用途（如 computer-use 客户端） | 用 `codex_notify_wrapper.sh` 包装，不覆盖原命令，见 references 文档 |
@@ -191,4 +191,4 @@ bash scripts/session_end_log.sh --vault <path> --agent Codex
 
 1. **做了什么** — 一句话总结完成的工作。
 2. **文件变更** — 列出新建 / 修改 / 移动的文件（完整路径）；未改动文件则说明"未改动文件"。
-3. **下一步** — 可选的后续建议（如衔接 `soia-pkm-organize` 处理 MOC 归并）。
+3. **下一步** — 可选的后续建议（如衔接 `soia-pkm-organize-article-moc` 处理 MOC 归并）。

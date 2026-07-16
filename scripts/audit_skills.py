@@ -57,7 +57,7 @@ DIRECT_SKILL_COPY_RE = re.compile(
 LINK_TARGET_RE = re.compile(r"\]\(([^)]+)\)")
 SRC_TARGET_RE = re.compile(r'src\s*=\s*"([^"]+)"')
 # Explicit repo-root docs that skills are allowed to link out to (established usage:
-# skills/soia-pkm-clip-gzh/SKILL.md links to ../../SKILL_SPEC.md).
+# skills/soia-pkm-clip-wechat-account/SKILL.md links to ../../SKILL_SPEC.md).
 ALLOWED_ROOT_DOC_LINKS = {"README.md", "SKILL_SPEC.md", "CONTRIBUTING.md", "LICENSE", "AGENTS.md"}
 CUSTOMER_READABLE_RULES = (
     ("customer-readable introduction", ("客户可读说明", "客户可见介绍")),
