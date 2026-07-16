@@ -1,9 +1,9 @@
 ---
-name: soia-pkm-transform-article-pdf
-description: 把 X/公众号/网页/Markdown 文章导出为 PDF 文件。优先调用 Obsidian 原生「导出 PDF」，vault 外文章走本地渲染降级。Triggers：「转成PDF」「导出PDF」「归档并转PDF」「生成PDF」「export PDF」
+name: soia-pkm-transform-obsidian-pdf
+description: 用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint。Triggers：「转成PDF」「导出PDF」「归档并转PDF」「生成PDF」「export PDF」
 ---
 
-# soia-pkm-transform-article-pdf
+# soia-pkm-transform-obsidian-pdf
 
 把已归档或指定的 Markdown/vault 文章导出为 PDF，输出到与源文件同目录（或用户指定目录）。
 
@@ -32,7 +32,7 @@ description: 把 X/公众号/网页/Markdown 文章导出为 PDF 文件。优先
 安装本技能：
 
 ```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s soia-pkm-transform-article-pdf -y
+npx skills add soia-team/soia-open-skills -g -a '*' -s soia-pkm-transform-obsidian-pdf -y
 ```
 
 - 强依赖：Obsidian（vault 内文章）或 pandoc/weasyprint（vault 外降级）
