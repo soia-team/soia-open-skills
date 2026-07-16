@@ -148,8 +148,9 @@ Rules:
   skill (SKILL.md, scripts, or references). Update on every commit that
   touches this skill.
 - `created_by`: the AI model that authored the skill. Never changes.
-  Use model name with version (e.g. `claude opus 4.6`, `codex 5.6`,
-  `claude opus 4.8`).
+  Use the concrete model name, not the CLI product name: `claude opus 4.6`,
+  `gpt-5.6-luna` are valid; `codex` / `codex 5.6` are not (codex is a CLI —
+  record the model behind it, see `model` in `~/.codex/config.toml`).
 - `updated_by`: the AI model that made the most recent substantive change.
   Update together with `updated_at`.
 - All datetimes use `YYYY-MM-DD HH:mm:ss` format (24-hour, local time).

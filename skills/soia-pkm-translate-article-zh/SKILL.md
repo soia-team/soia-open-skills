@@ -5,7 +5,7 @@ version: 2.0.0
 created_at: 2026-07-09 20:56:44
 updated_at: 2026-07-16 15:34:25
 created_by: claude opus 4.6
-updated_by: codex 5.6
+updated_by: gpt-5.6-luna
 ---
 
 # soia-pkm-translate-article-zh
