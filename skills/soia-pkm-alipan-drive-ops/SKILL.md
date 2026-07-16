@@ -3,7 +3,7 @@ name: soia-pkm-alipan-drive-ops
 description: 阿里云盘原子操作层：安装/登录 aliyunpan、显式 driveId 双盘操作、目录浏览、移动/重命名/删除、下载上传、容量查询、全盘 JSONL 扫描。作为 curator 的底层依赖。Triggers：「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」「云盘登录过期了」「全盘扫描云盘」
 version: 2.1.0
 created_at: 2026-07-02 23:02:39
-updated_at: 2026-07-16 23:56:26
+updated_at: 2026-07-17 07:06:52
 created_by: claude opus 4.6
 updated_by: gpt-5.6-terra
 ---
@@ -160,12 +160,13 @@ aliyunpan ls "$DIR" </dev/null 2>/dev/null | \
    运行命令优先使用 `python3 scripts/run_with_env.py -- aliyunpan <command>` 加载该 override；任何日志、诊断输出和最终回执都不得打印 token 或 env 值。
 5. **删除/移动/重命名前先确认**：命中路径、显式技能调用、任何默认配置都只是推荐输入，不构成跳过确认的理由；唯一跳过条件是客户当前这句话明确说"直接删/不用确认"，跳过后要在回执里说明本次沿用的范围假设。
 6. **批量前先小样本探测**：批量 `mv`/`rm`/`rename` 前，先用最小样本（如 1 条）跑一遍并汇报预计总量，客户确认规模无误后再放开全量执行，不要对着未知规模的目录直接下手。
+7. **限流先服从再恢复**：批量写操作按每次 200–300 ms 节流，批量 listing 不低于每次 300 ms；收到 429 时读取 `x-retry-after` 并等待，绝不连续重试。详见 ops-playbook 的「API 限流与 429 纪律」。
 
 ## 深入实战手册
 
 以下场景遇到时先读 `references/ops-playbook.md`（2026-07 云盘整理战役实战沉淀），不要重新试错：
 - 安装/登录细节：两步授权+扫码流程、登录态约 3 天过期的症状与处理，以及非交互环境标准远程恢复的第一步（伪终端 pty / 长驻进程读 stdout）；完整恢复流程见上文「登录失效的远程协作恢复」
 - `--driveId` 显式传参铁律：为什么绝不能用 `aliyunpan drive <id>` 切全局盘（多代理并发会互相污染当前盘上下文）
-- 批量操作实战坑：批量 rename 的 cd 依赖坑与恢复方法、`ll` 输出里的 FILE ID 与直达链接拼法、移动改名不改 file_id 但跨盘移动会换 file_id、删除进回收站 30 天且回收站清空才真正释放配额
+- 批量操作实战坑与限流纪律：批量 rename 的 cd 依赖坑、API 桶与 429 等待、`ll` 输出里的 FILE ID 与直达链接拼法、移动改名不改 file_id 但跨盘移动会换 file_id、删除进回收站 30 天且回收站清空才真正释放配额
 - 全盘 JSONL 爬虫：**已脚本化为 `scripts/scan_drive.py`**（参数化 DFS + 线程池 + 重试 + 断点续扫 + 聚合剪枝 + 敏感目录不下钻）；输出保留目录名原始连续空格，并记录 file_id、大小与 SHA-1。用法见 ops-playbook §三。**完整图书馆流水线** = `scan_drive.py`（实盘→JSONL）→ alipan-curator 的 `gen_catalog.py`（JSONL→折叠树总览+全文检索）。登录瞬断、历史解析器折叠特殊空格两坑的处理见 ops-playbook。`scan_drive.py` 产出的 `.errors`/`.progress`/`.done` sidecar 刻意与 `--out` 主产出同目录、同生命周期——断点续扫（`--resume`）靠 sidecar 定位进度（`.done` 逐行记录已完整列出的目录，是续扫的权威断点）、质量核对要和主产出对得上，这是设计而非遗漏，不要挪去临时目录
 - 防代理卡死纪律：长内容一律脚本落文件、对话回复限 15 行
