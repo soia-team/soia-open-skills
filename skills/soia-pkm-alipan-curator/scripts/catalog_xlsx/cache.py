@@ -348,7 +348,10 @@ def aggregate(catalog: dict[str, Any], partition_caches: list[dict[str, Any]]) -
 def default_cache_dir(catalog: Path, search_dir: Path) -> Path:
     identity = f"{catalog.resolve()}\n{search_dir.resolve()}".encode("utf-8")
     key = hashlib.sha256(identity).hexdigest()[:16]
-    root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+    if os.name == "nt":
+        root = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local"))
+    else:
+        root = Path(os.environ.get("XDG_CACHE_HOME") or (Path.home() / ".cache"))
     return root / "soia-pkm-alipan-curator" / "catalog-xlsx" / key
 
 

@@ -138,13 +138,13 @@ node '<skill-dir>/scripts/gen_family_nav_xlsx.mjs' --help
 ```bash
 node '<skill-dir>/scripts/gen_family_nav_xlsx.mjs' \
   --input '<run-dir>/navigation.json' \
-  --output '<output-dir>/01_家庭学习导航.xlsx' \
+  [--output-dir '<absolute-output-dir>'] \
   --artifact-runtime '<runtime-with-node_modules>' \
   --qa-dir '<cache-or-run-dir>/qa' \
   --soffice '<soffice-path>'
 ```
 
-依赖规则与总索引相同：必须使用 `@oai/artifact-tool`，不临时换 Excel 库。`navigation.json` 和 QA 图片属于运行中间物，放用户缓存或临时目录；正式 `.xlsx` 放用户指定交付目录。
+依赖规则与总索引相同：必须使用 `@oai/artifact-tool`，不临时换 Excel 库。`navigation.json` 和 QA 图片属于运行中间物，放用户缓存或临时目录；正式 `.xlsx` 放用户指定交付目录，未指定时按 curator 的三级输出目录优先级落到默认 Downloads 目录。
 
 脚本返回 JSON，至少包含：
 

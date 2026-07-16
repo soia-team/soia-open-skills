@@ -1,16 +1,25 @@
+# @created_by  unknown
+# @created_at  unknown
+# @modified_by openai/gpt-5
+# @modified_at 2026-07-11 00:15:52
+# @version     0.1.0
+# @description Resolve public SOIA PKM WeRead-sync configuration and dependencies.
+# @changelog   Discover weread-skills from Antigravity global and workspace skill roots.
 from __future__ import annotations
 
-import json
 import os
 import re
 import shlex
 import sys
-import tempfile
-from datetime import datetime
 from pathlib import Path
 
-OVERRIDE_CONFIG_NAME = "SOIA_PKM_CLIP_X_CONFIG_FILE"
-OVERRIDE_ENV_NAME = "SOIA_PKM_CLIP_X_ENV_FILE"
+OVERRIDE_CONFIG_NAME = "SOIA_PKM_LIBRARY_WEREAD_SYNC_CONFIG_FILE"
+OVERRIDE_ENV_NAME = "SOIA_PKM_LIBRARY_WEREAD_SYNC_ENV_FILE"
+LEGACY_OVERRIDE_CONFIG_NAME = "SOIA_PKM_LIBRARY_CONFIG_FILE"
+LEGACY_OVERRIDE_ENV_NAME = "SOIA_PKM_LIBRARY_ENV_FILE"
+DEFAULT_CONFIG_FILE = "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-library-weread-sync/config.yml"
+WEREAD_SKILL_URL = "https://weread.qq.com/r/weread-skills"
+WEREAD_SKILL_INSTALL = "npx skills add Tencent/WeChatReading -g"
 
 KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 PATH_LIKE_KEYS = {
@@ -19,23 +28,17 @@ PATH_LIKE_KEYS = {
 }
 
 
-def default_config_file() -> Path:
-    if os.name == "nt":
-        base = Path(os.environ.get("APPDATA") or (Path.home() / "AppData" / "Roaming"))
-    else:
-        base = Path.home() / ".config"
-    return base / "soia-skills" / "soia-open-skills" / "soia-pkm" / "soia-pkm-clip-x" / "config.yml"
-
-
 def _candidate_paths() -> list[Path]:
     paths: list[Path] = []
-    configured_config = os.environ.get(OVERRIDE_CONFIG_NAME)
-    if configured_config:
-        paths.append(Path(configured_config).expanduser())
-    configured = os.environ.get(OVERRIDE_ENV_NAME)
-    if configured:
-        paths.append(Path(configured).expanduser())
-    paths.append(default_config_file())
+    for name in (OVERRIDE_CONFIG_NAME, LEGACY_OVERRIDE_CONFIG_NAME):
+        configured_config = os.environ.get(name)
+        if configured_config:
+            paths.append(Path(configured_config).expanduser())
+    for name in (OVERRIDE_ENV_NAME, LEGACY_OVERRIDE_ENV_NAME):
+        configured = os.environ.get(name)
+        if configured:
+            paths.append(Path(configured).expanduser())
+    paths.append(Path(DEFAULT_CONFIG_FILE).expanduser())
     return paths
 
 
@@ -96,26 +99,46 @@ def load_private_env(required: bool = False) -> Path | None:
 
 
 def env_source_hint() -> str:
-    return f"{OVERRIDE_CONFIG_NAME}, {OVERRIDE_ENV_NAME}, or {default_config_file()}"
-
-
-def write_failure_log(failures: list[dict[str, object]], prefix: str = "telegram_sync_failures") -> Path:
-    """Persist a batch-sync failure list to the platform temp dir and return its path.
-
-    Failure lists are use-once-then-discard run reports, not an audit trail, so
-    they belong under the platform's temporary directory /soia-pkm-clip-x/ instead of the caller's cwd
-    (which may be the vault root, a read-only dir, or anything else at call time).
-    Shared by sync_telegram_export.py and sync_telegram_saved.py so both behave
-    the same way.
-    """
-    base_dir = Path(tempfile.gettempdir()) / "soia-pkm-clip-x"
-    base_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    fail_log = base_dir / f"{prefix}-{timestamp}.json"
-    fail_log.write_text(
-        json.dumps(failures, ensure_ascii=False, indent=2), encoding="utf-8"
+    return (
+        f"{OVERRIDE_CONFIG_NAME}, {OVERRIDE_ENV_NAME}, "
+        f"兼容别名 {LEGACY_OVERRIDE_CONFIG_NAME}/{LEGACY_OVERRIDE_ENV_NAME}, "
+        f"或 {DEFAULT_CONFIG_FILE}"
     )
-    return fail_log
+
+
+def weread_skills_installed() -> bool:
+    home = Path.home()
+    workspace_roots = (Path.cwd(), *Path.cwd().parents)
+    return any(
+        path.exists()
+        for path in (
+            *(root / ".agents/skills/weread-skills" for root in workspace_roots),
+            home / ".agents/skills/weread-skills",
+            home / ".gemini/antigravity-cli/skills/weread-skills",
+            home / ".codex/skills/weread-skills",
+            home / ".claude/skills/weread-skills",
+        )
+    )
+
+
+def weread_dependency_status() -> str:
+    return "已安装" if weread_skills_installed() else f"未检测到，请先执行 `{WEREAD_SKILL_INSTALL}`"
+
+
+def require_weread_skills() -> None:
+    if weread_skills_installed():
+        return
+    raise SystemExit(
+        "缺少强依赖 weread-skills：请先安装微信读书官方 Skill："
+        f"{WEREAD_SKILL_INSTALL}；官方页面：{WEREAD_SKILL_URL}"
+    )
+
+
+def weread_api_key_hint() -> str:
+    return (
+        f"请打开 {WEREAD_SKILL_URL} 登录微信读书获取 WEREAD_API_KEY；"
+        f"强依赖 weread-skills 状态：{weread_dependency_status()}"
+    )
 
 
 def main() -> int:

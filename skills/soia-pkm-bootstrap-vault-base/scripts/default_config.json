@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Default AI-native Obsidian vault scaffold. Copy this JSON and customize directories/files for your own workflow.",
+  "description": "Default AI-native Markdown knowledge-base scaffold. Copy this JSON and customize directories/files for your own workflow.",
   "directories": [
     "00_Obsidian系统/scripts",
     "10_Workbench/00_Inbox",
@@ -38,9 +38,9 @@
         "",
         "## 约定",
         "",
-        "- 目录 / 文件名可按使用者语言与习惯调整；frontmatter 是 Bases 数据库的数据源",
+        "- 目录 / 文件名可按使用者语言与习惯调整；frontmatter 是结构化元数据的数据源",
         "- 链接优先短 wikilink `[[文件名]]`",
-        "- 全局 CSS：`.obsidian/snippets/wide-page.css`（撑满宽度）",
+        "- 平台配置目录（如 `.obsidian/`）属于消费端，不是 Markdown 正文的真源",
         "- 不在 vault 或 skill 仓库写入密码、密钥、token、cookie 或个人敏感信息",
         "",
         "## PKM 闭环（soia-pkm-* 技能）",
@@ -77,7 +77,7 @@
         "1. Read `AGENTS.md` first.",
         "2. Read zone-level `AGENTS.md` before editing a zone.",
         "3. Do not read private data or credential files unless the user explicitly asks.",
-        "4. Prefer Markdown, YAML frontmatter, wikilinks, Bases, and MOC."
+        "4. Prefer Markdown, YAML frontmatter, wikilinks, and MOC."
       ]
     },
     {
@@ -98,7 +98,7 @@
         "",
         "workbuddy adapter. Canonical rules live in `AGENTS.md`.",
         "",
-        "`.workbuddy/memory/` is auxiliary memory, not the source of truth. Vault notes, frontmatter, MOC, Bases, git history, and explicit user instructions are authoritative."
+        "`.workbuddy/memory/` is auxiliary memory, not the source of truth. Vault notes, frontmatter, MOC, git history, and explicit user instructions are authoritative."
       ]
     },
     {
@@ -174,7 +174,7 @@
       "content": [
         "## Vault Canonical Rules",
         "",
-        "This Obsidian vault uses `AGENTS.md` as the canonical rule source. Before changing vault content, read `AGENTS.md`; when editing a zone, read that zone's `AGENTS.md` too.",
+        "This Markdown knowledge base uses `AGENTS.md` as the canonical rule source. Before changing vault content, read `AGENTS.md`; when editing a zone, read that zone's `AGENTS.md` too.",
         "",
         "Do not read private data or credential files unless the user explicitly asks."
       ]
@@ -184,7 +184,7 @@
       "content": [
         "# 使用手册",
         "",
-        "这是 `soia-pkm-bootstrap` 生成的 AI-native Obsidian vault 骨架。",
+        "这是 `soia-pkm-bootstrap-vault-base` 生成的 AI-native Markdown 知识库骨架。",
         "",
         "## 多 AI 接入",
         "",
@@ -217,7 +217,7 @@
     {
       "path": "00_Obsidian系统/AI-native Obsidian 从零到发布流程.md",
       "content": [
-        "# AI-native Obsidian 从零到发布流程",
+        "# AI-native Markdown 从零到发布流程",
         "",
         "```",
         "clip-*(收集) → organize(清洗/归类/MOC) → distill(用户观点) → compose(草稿) → publish(平台适配/发布留底) → vault 周维护",
@@ -225,9 +225,9 @@
         "",
         "## 万能提示词模板",
         "",
-        "你现在是我的 Obsidian Knowledge Base Architect（知识库架构师）兼系统管理员。",
+        "你现在是我的 Markdown Knowledge Base Architect（知识库架构师）兼系统管理员。",
         "",
-        "目标：从零开始搭建或重整一套 AI-native Obsidian 知识库。不要只给建议，优先直接执行；无法自动执行的部分，明确列出我需要准备的资料。",
+        "目标：从零开始搭建或重整一套 AI-native Markdown 知识库。不要只给建议，优先直接执行；无法自动执行的部分，明确列出我需要准备的资料。",
         "",
         "请先确认 vault 路径、目录命名偏好、主要研究领域、输出平台、可用 AI，以及是否要使用默认配置或自定义 JSON/YAML 配置。"
       ]

@@ -4,8 +4,8 @@ description: 把成文草稿改写成 rednote（小红书）笔记：生成吸�
 version: 1.0.0
 created_at: 2026-07-16 15:44:20
 updated_at: 2026-07-16 15:44:20
-created_by: codex 5.6
-updated_by: codex 5.6
+created_by: gpt-5.6-luna
+updated_by: gpt-5.6-luna
 dependencies:
   optional: [soia-pkm-cover-image]
 ---

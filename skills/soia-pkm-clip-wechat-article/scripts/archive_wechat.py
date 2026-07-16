@@ -35,6 +35,10 @@ from typing import Optional
 
 CST = timezone(timedelta(hours=8))
 DEFAULT_ARTICLES_DIR = "Articles"
+FALLBACK_ARTICLES_WARNING = (
+    "WARN: 未找到 articles 目录配置（--articles-dir / OBSIDIAN_ARTICLES / config.yml），"
+    "已落默认 Articles/——该目录不是本 vault 的正式归档位，请确认或配置"
+)
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -113,7 +117,10 @@ def resolve_contained_path(root: Path, candidate: Path, label: str) -> Path:
 
 
 def resolve_article_root(vault: Path, cli_articles_dir: Optional[str]) -> Path:
-    configured = cli_articles_dir or os.environ.get("OBSIDIAN_ARTICLES") or DEFAULT_ARTICLES_DIR
+    configured = cli_articles_dir or os.environ.get("OBSIDIAN_ARTICLES")
+    if not configured:
+        print(FALLBACK_ARTICLES_WARNING, file=sys.stderr)
+        configured = DEFAULT_ARTICLES_DIR
     path = Path(configured).expanduser()
     candidate = path.resolve() if path.is_absolute() else (vault / path).resolve()
     return resolve_contained_path(vault, candidate, "Article directory")

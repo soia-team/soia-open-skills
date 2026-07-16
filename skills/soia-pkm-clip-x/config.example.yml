@@ -3,7 +3,7 @@
 
 env:
   OBSIDIAN_VAULT: "<vault-path>"
-  OBSIDIAN_ARTICLES: "Articles"
+  OBSIDIAN_ARTICLES: "<vault-relative-articles-dir>"
   X_ARCHIVE_LANG: "zh"
   TELEGRAM_API_ID: "<optional api id>"
   TELEGRAM_API_HASH: "<optional api hash>"
