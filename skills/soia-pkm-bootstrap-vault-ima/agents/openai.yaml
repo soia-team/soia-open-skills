@@ -1,0 +1,4 @@
+interface:
+  display_name: "ima Vault Connector"
+  short_description: "将本地 Markdown vault 单向接入腾讯 ima 知识库"
+  default_prompt: "Use soia-pkm-bootstrap-vault-ima: 将这个 Markdown vault 的指定目录同步到腾讯 ima 知识库并验证检索"

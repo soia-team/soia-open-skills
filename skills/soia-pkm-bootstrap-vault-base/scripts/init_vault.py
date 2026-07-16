@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Initialize an AI-native Obsidian vault from a JSON/YAML config.
+"""Initialize an AI-native Markdown knowledge base from a JSON/YAML config.
 
 The script is intentionally configuration-driven: the open-source skill should
 not assume every user wants the same folder names, log locations, templates, or
@@ -125,6 +125,12 @@ def render_content(raw: Any) -> str:
     raise ValueError("file content must be a string or list of lines")
 
 
+def is_obsidian_path(relative_path: str) -> bool:
+    """Return whether a configured path belongs to Obsidian-only output."""
+    parts = Path(relative_path).parts
+    return ".obsidian" in parts
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("vault", nargs="?", help="目标 vault 路径")
@@ -141,6 +147,11 @@ def parse_args() -> argparse.Namespace:
         "--print-default-config",
         action="store_true",
         help="打印默认 JSON 配置后退出，方便复制后改成自己的结构",
+    )
+    parser.add_argument(
+        "--no-obsidian",
+        action="store_true",
+        help="跳过配置中 .obsidian/** 的目录和文件；默认行为保持不变",
     )
     return parser.parse_args()
 
@@ -162,6 +173,9 @@ def main() -> int:
 
     directories = [str(item) for item in cfg.get("directories", [])]
     files = file_entries(cfg.get("files"))
+    if args.no_obsidian:
+        directories = [rel for rel in directories if not is_obsidian_path(rel)]
+        files = [entry for entry in files if not is_obsidian_path(str(entry["path"]))]
 
     created_dirs = 0
     for rel in directories:

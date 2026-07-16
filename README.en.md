@@ -45,7 +45,8 @@ Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, K
       ↑                                                       ▼
       └──── flywheel: publish → feedback into vault → better input ────┘
 
-  Support: soia-pkm-bootstrap (one command to bootstrap a vault + wire up multiple AIs)
+  Support: soia-pkm-bootstrap-vault-base (one command to bootstrap a Markdown vault + wire up multiple AIs)
+           soia-pkm-bootstrap-vault-obsidian / soia-pkm-bootstrap-vault-ima (Obsidian / ima consumer specializations)
            soia-pkm-transform (transform line: article → PDF/PPT/image/quiz/mindmap/podcast/flashcards)
            soia-pkm-reading-plan (reading line: turn a book list into an executable reading schedule)
            soia-pkm-library (library line: WeChat Reading sync + record backfill + overview generation)
@@ -64,7 +65,7 @@ Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, K
 
 > **Shared capabilities (common to every skill)**
 > - 🤖 **Supported AI**: agent-agnostic — Claude Code, Codex, Cursor, Antigravity, Gemini, Kimi, amp, Warp, Zed, and any AI compatible with the [skills.sh](https://skills.sh) standard. Write `SKILL.md` once, run it anywhere.
-> - 📚 **Target knowledge base**: an Obsidian vault (PARA structure recommended; don't have one yet? use `bootstrap` to set one up in one shot). The underlying storage is plain Markdown + YAML frontmatter — no platform lock-in.
+> - 📚 **Target knowledge base**: a local Markdown vault (PARA structure recommended; connect Obsidian or Tencent ima as needed). The underlying storage is plain Markdown + YAML frontmatter — no platform lock-in.
 > - 🔗 **Dependency chain**: `clip-*` is the entry point (usable standalone) → `organize` / `distill` need content already in the vault → `compose` needs an opinion produced by `distill` → `publish` needs a draft produced by `compose`.
 > - 🧩 **Third-party skill policy**: this repo's own skills only *declare* dependencies / optional enhancements / methodology references on third-party skills — it never modifies third-party skill files. The actual source of truth is `~/.agents/.skill-lock.json`.
 > - **Status legend**: ✅ ready to use · 🟡 usable but needs a script filled in / credentials configured
@@ -119,7 +120,9 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 
 | Skill | What it does | Ready now? | Dependencies |
 |-------|------|----------|------|
-| [`soia-pkm-bootstrap`](./skills/soia-pkm-bootstrap/) | Bootstrap an AI-native vault from scratch (PARA + AGENTS + templates + Bases + CSS + multi-AI wiring) | ✅ Usable (`init_vault.py` verified end to end) | None (this is the starting point) |
+| [`soia-pkm-bootstrap-vault-base`](./skills/soia-pkm-bootstrap-vault-base/) | Bootstrap a knowledge-base-neutral Markdown vault (PARA + AGENTS + templates + multi-AI wiring) | ✅ Usable (`init_vault.py` verified end to end) | None (this is the starting point) |
+| [`soia-pkm-bootstrap-vault-obsidian`](./skills/soia-pkm-bootstrap-vault-obsidian/) | Obsidian specialization: enable Bases and configure `.obsidian` / CSS snippets | ✅ Usable | `soia-pkm-bootstrap-vault-base` |
+| [`soia-pkm-bootstrap-vault-ima`](./skills/soia-pkm-bootstrap-vault-ima/) | Tencent ima specialization: connect local Markdown to an ima knowledge base one-way and verify retrieval | 🟡 Requires client-specific setup | `soia-pkm-bootstrap-vault-base` |
 | [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | Scenario-based reading plans (book list/topic → scheduled by real word count) | ✅ Usable | `weread-skills` optionally enhances real word counts/ratings; `huashu-weread-advisor` optionally reuses its recommendation methodology; no hard third-party dependency |
 | [`soia-pkm-library`](./skills/soia-pkm-library/) | Maintain the book library: WeChat Reading sync (catalog/highlights) + enrich book details + backfill reading records + generate three overview views (library/reading records/genre) | ✅ Usable (7 mechanical scripts, idempotent and safe to re-run) | Sync scripts hard-depend on the official `weread-skills` + `WEREAD_API_KEY`; local overview scripts only depend on the vault |
 | [`soia-pkm-maintain`](./skills/soia-pkm-maintain/) | Weekly vault maintenance, full-vault map regeneration, AI session-log ingestion | ✅ Usable (Python stdlib / bash scripts) | An Obsidian vault, via `--vault <path>` or `OBSIDIAN_VAULT` |
@@ -298,7 +301,9 @@ This installs every skill under `skills/` into your agent's skill directory — 
 | `Turn these opinions into an article` | compose |
 | `Convert this article to PPT` / `Turn this into a mindmap` | transform |
 | `Publish this as a WeChat article` | publish |
-| `Bootstrap a knowledge base from scratch` | bootstrap |
+| `Bootstrap a knowledge base from scratch` | soia-pkm-bootstrap-vault-base |
+| `Configure Obsidian` / `Enable Bases` | soia-pkm-bootstrap-vault-obsidian |
+| `Connect to ima` / `Sync to an ima knowledge base` | soia-pkm-bootstrap-vault-ima |
 | `Draw an architecture diagram for the README` / `Redraw this flow with Archify` | soia-dev-archify-diagrams |
 | `Check this PR's checks` / `Find out why the recent GitHub Actions run failed` | soia-dev-github-ops |
 | `Upgrade my local AI CLIs` / `Dry-run to check codex/claude versions` | soia-dev-ai-cli-upgrade |
@@ -402,7 +407,8 @@ soia-open-skills/
     ├── soia-pkm-organize-article-moc/     ├── soia-pkm-distill-article-opinion/
     ├── soia-pkm-compose-article-draft/      ├── soia-pkm-publish-wechat-draft/
     ├── soia-pkm-publish-x-thread/           ├── soia-pkm-publish-rednote-card/
-    ├── soia-pkm-transform/    ├── soia-pkm-bootstrap/
+    ├── soia-pkm-transform/    ├── soia-pkm-bootstrap-vault-base/
+    ├── soia-pkm-bootstrap-vault-obsidian/  ├── soia-pkm-bootstrap-vault-ima/
     ├── soia-pkm-reading-plan/ ├── soia-pkm-library/
     ├── soia-pkm-maintain/     ├── soia-pkm-alipan-drive-ops/
     ├── soia-pkm-alipan-curator/

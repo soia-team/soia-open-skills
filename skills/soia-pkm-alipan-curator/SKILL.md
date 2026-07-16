@@ -7,7 +7,7 @@ version: 1.0.0
 created_at: 2026-07-02 23:02:39
 updated_at: 2026-07-16 15:34:25
 created_by: claude opus 4.6
-updated_by: codex 5.6
+updated_by: gpt-5.6-luna
 ---
 
 # soia-pkm-alipan-curator — 云盘资源顾问
