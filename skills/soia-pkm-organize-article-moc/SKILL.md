@@ -92,7 +92,7 @@ SOIA_PKM_ORGANIZE_ARTICLE_MOC_CONFIG_FILE=<custom-config-path>
 ## 底层脚本（机械层，organize 调用）
 
 - `scripts/rebuild_moc.py`：扫全部文章 topics，重建 `_MOC/` 两级地图。支持 `--vault`/`OBSIDIAN_VAULT` 指定库路径，分类表可用 `_MOC/.categories.json` 按库覆盖默认值（见脚本 `--help`）。
-- `backfill_reading_records.py`：书库 → 阅读记录补齐（读书线）。
+- `soia-pkm-library-book-catalog/scripts/backfill_reading_records.py`：书库 → 阅读记录补齐（读书线的本地 catalog）。
 - 按月归位：`mv <年>/*.md <年>/<月>/`（按文件名日期）。
 
 > organize = **LLM 判断分类 / 综述 + 机械层脚本批量执行**。脚本负责确定性批量操作；LLM 负责"这篇属于什么主题""这个 MOC 的核心判断是什么"。

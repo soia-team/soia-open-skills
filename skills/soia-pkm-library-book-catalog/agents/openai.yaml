@@ -1,0 +1,7 @@
+# Optional OpenAI/Codex/SOIA catalog metadata.
+# Canonical instructions still live in ../SKILL.md so Claude Code and other
+# skills.sh-compatible agents receive the same dependencies and workflow rules.
+interface:
+  display_name: "PKM Book Catalog"
+  short_description: "纯本地、幂等地补建待读记录并生成图书馆、阅读记录和按类型总览，不依赖微信读书。"
+  default_prompt: "Use soia-pkm-library-book-catalog: 补建待读记录、重新生成图书馆总览或整理本地书库；只读取和写入 vault，不需要微信读书配置。"
