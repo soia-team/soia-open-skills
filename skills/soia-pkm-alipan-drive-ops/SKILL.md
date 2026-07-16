@@ -1,11 +1,11 @@
 ---
 name: soia-pkm-alipan-drive-ops
 description: 阿里云盘原子操作层：安装/登录 aliyunpan、显式 driveId 双盘操作、目录浏览、移动/重命名/删除、下载上传、容量查询、全盘 JSONL 扫描。作为 curator 的底层依赖。Triggers：「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」「云盘登录过期了」「全盘扫描云盘」
-version: 2.0.0
+version: 2.1.0
 created_at: 2026-07-02 23:02:39
-updated_at: 2026-07-16 15:34:25
+updated_at: 2026-07-16 23:56:26
 created_by: claude opus 4.6
-updated_by: gpt-5.6-luna
+updated_by: gpt-5.6-terra
 ---
 
 # soia-pkm-alipan-drive-ops — 阿里云盘原子操作层
@@ -106,6 +106,17 @@ python3 scripts/run_with_env.py -- aliyunpan quota
 
 如果尚未配置私有 `ALIYUNPAN_CONFIG_DIR`，上述登录和验证命令也可以直接写成 `aliyunpan login`、`aliyunpan who` 和 `aliyunpan quota`。
 
+## 登录失效的远程协作恢复
+
+当云盘命令返回「尝试登录失败，请使用 login 命令进行重新登录」，即判定登录态失效；这不是要求用户到 agent 所在终端扫码的硬阻塞。按以下流程远程恢复：
+
+1. 在非交互环境启动 `python3 scripts/run_with_env.py -- aliyunpan login`，以伪终端（pty）或长驻进程持续读取 stdout 的方式抓取授权二维码链接；不要等待命令退出。具体做法见 [ops-playbook §1.4](references/ops-playbook.md#14-非交互环境取登录链接标准恢复流程)。
+2. 仅把授权链接推送给本任务的授权用户本人，绝不打印 token、cookie、session 或其他凭据。用户可在手机上点击链接或扫码并确认授权。
+3. 保持登录进程存活，并每 60 秒轮询一次 `python3 scripts/run_with_env.py -- aliyunpan who`；命令返回 UID 即表示恢复成功，可以继续云盘操作。
+4. 长任务以已有 ledger、progress 或断点续跑机制衔接；等待授权期间优先推进不依赖云盘的工作，不要空等或从头重跑。
+
+纪律：绝不尝试读取、复制或转发登录凭据文件；授权链接只可发给该任务的授权用户本人。
+
 ## 双盘模型（关键概念）
 
 一个账号两个盘，**共享同一容量配额**（用 `aliyunpan quota` 看总量）：
@@ -153,7 +164,7 @@ aliyunpan ls "$DIR" </dev/null 2>/dev/null | \
 ## 深入实战手册
 
 以下场景遇到时先读 `references/ops-playbook.md`（2026-07 云盘整理战役实战沉淀），不要重新试错：
-- 安装/登录细节：两步授权+扫码流程、登录态约 3 天过期的症状与处理、非交互环境（无真 TTY）取二维码链接的技巧（伪终端 pty / 长驻进程读 stdout）
+- 安装/登录细节：两步授权+扫码流程、登录态约 3 天过期的症状与处理，以及非交互环境标准远程恢复的第一步（伪终端 pty / 长驻进程读 stdout）；完整恢复流程见上文「登录失效的远程协作恢复」
 - `--driveId` 显式传参铁律：为什么绝不能用 `aliyunpan drive <id>` 切全局盘（多代理并发会互相污染当前盘上下文）
 - 批量操作实战坑：批量 rename 的 cd 依赖坑与恢复方法、`ll` 输出里的 FILE ID 与直达链接拼法、移动改名不改 file_id 但跨盘移动会换 file_id、删除进回收站 30 天且回收站清空才真正释放配额
 - 全盘 JSONL 爬虫：**已脚本化为 `scripts/scan_drive.py`**（参数化 DFS + 线程池 + 重试 + 断点续扫 + 聚合剪枝 + 敏感目录不下钻）；输出保留目录名原始连续空格，并记录 file_id、大小与 SHA-1。用法见 ops-playbook §三。**完整图书馆流水线** = `scan_drive.py`（实盘→JSONL）→ alipan-curator 的 `gen_catalog.py`（JSONL→折叠树总览+全文检索）。登录瞬断、历史解析器折叠特殊空格两坑的处理见 ops-playbook。`scan_drive.py` 产出的 `.errors`/`.progress`/`.done` sidecar 刻意与 `--out` 主产出同目录、同生命周期——断点续扫（`--resume`）靠 sidecar 定位进度（`.done` 逐行记录已完整列出的目录，是续扫的权威断点）、质量核对要和主产出对得上，这是设计而非遗漏，不要挪去临时目录
