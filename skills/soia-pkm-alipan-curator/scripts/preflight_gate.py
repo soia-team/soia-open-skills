@@ -10,9 +10,21 @@ executor immediately before its first remote write.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 from collections.abc import Mapping
 from pathlib import Path
+
+
+_AUDIT_MIGRATION_PATH = Path(__file__).with_name("audit_migration_conservation.py")
+_AUDIT_MIGRATION_SPEC = importlib.util.spec_from_file_location(
+    "_preflight_gate_audit_migration_conservation",
+    _AUDIT_MIGRATION_PATH,
+)
+if _AUDIT_MIGRATION_SPEC is None or _AUDIT_MIGRATION_SPEC.loader is None:  # pragma: no cover
+    raise ImportError(f"cannot import {_AUDIT_MIGRATION_PATH}")
+audit_migration_conservation = importlib.util.module_from_spec(_AUDIT_MIGRATION_SPEC)
+_AUDIT_MIGRATION_SPEC.loader.exec_module(audit_migration_conservation)
 
 
 def sha256_file(path: Path) -> str:
@@ -53,17 +65,42 @@ def _relative_member(value: object, label: str) -> str:
     return value
 
 
-def registered_plan_paths(manifest: Mapping[str, object]) -> list[str]:
+def _registered_batch_members(manifest: Mapping[str, object], group: str, member: str) -> list[str]:
+    """Return registered relative batch members, including cleanup batches."""
+
     batches = manifest.get("batches")
     if not isinstance(batches, list):
         raise ValueError("run.batches must be an array")
-    plans: list[str] = []
-    for index, batch in enumerate(batches):
-        if not isinstance(batch, Mapping):
-            raise ValueError(f"run.batches[{index}] must be an object")
-        plan = _relative_member(batch.get("plan"), f"run.batches[{index}].plan")
-        plans.append(plan)
-    return plans
+    cleanup_batches = manifest.get("cleanup_batches", [])
+    if not isinstance(cleanup_batches, list):
+        raise ValueError("run.cleanup_batches must be an array")
+    values: list[str] = []
+    for batch_group, entries in (("batches", batches), ("cleanup_batches", cleanup_batches)):
+        for index, batch in enumerate(entries):
+            if not isinstance(batch, Mapping):
+                raise ValueError(f"run.{batch_group}[{index}] must be an object")
+            values.append(_relative_member(batch.get(member), f"run.{batch_group}[{index}].{member}"))
+    return values
+
+
+def registered_plan_paths(manifest: Mapping[str, object]) -> list[str]:
+    """Return every immutable plan, including cleanup plans."""
+
+    return _registered_batch_members(manifest, "all", "plan")
+
+
+def registered_cleanup_result_paths(manifest: Mapping[str, object]) -> list[str]:
+    """Validate cleanup ledgers are registered inside the run, but do not hash them.
+
+    Result ledgers are append-only operational evidence and may legitimately
+    change after preflight.  The execution gate therefore validates their
+    declared locations but intentionally excludes their contents from hashes.
+    """
+
+    # The conservation module owns cleanup path and authorization contracts.
+    # It imports no gate code, so this reuse keeps validation consistent without
+    # creating an import cycle.
+    return audit_migration_conservation.validate_cleanup_result_paths(dict(manifest))
 
 
 def registered_preflight_report(manifest: Mapping[str, object]) -> str:
@@ -91,6 +128,23 @@ def registered_cleanup_evidence(manifest: Mapping[str, object]) -> str | None:
     return _relative_member(value, "run.files.empty_cleanup_evidence")
 
 
+def registered_cleanup_authorizations(manifest: Mapping[str, object]) -> str | None:
+    """Return the immutable authorization JSONL required for cleanup batches."""
+
+    cleanup_batches = manifest.get("cleanup_batches", [])
+    if not isinstance(cleanup_batches, list):
+        raise ValueError("run.cleanup_batches must be an array")
+    files = manifest.get("files")
+    if not isinstance(files, Mapping):
+        raise ValueError("run.files must be an object")
+    value = files.get("cleanup_authorizations")
+    if value in (None, ""):
+        if cleanup_batches:
+            raise ValueError("run.files.cleanup_authorizations is not registered")
+        return None
+    return _relative_member(value, "run.files.cleanup_authorizations")
+
+
 def validate_preflight_gate(
     *,
     manifest: Mapping[str, object],
@@ -103,7 +157,9 @@ def validate_preflight_gate(
     """Purely validate one report against the current manifest and plan hashes.
 
     The function reads and writes no files.  ``current_hashes`` must contain
-    ``run.json``, every registered plan, and registered cleanup evidence.
+    ``run.json``, every registered plan, and immutable cleanup authorizations.
+    Cleanup result ledgers are intentionally not preflight-hashed because they
+    are append-only execution evidence.
     When supplied by an executor, ``drive_id`` must hash to the report's
     ``drive_id_sha256`` value.
     """
@@ -151,11 +207,18 @@ def validate_preflight_gate(
         violations.append({"kind": "preflight_manifest_invalid", "detail": str(error)})
         plans = []
     try:
+        cleanup_authorizations = registered_cleanup_authorizations(manifest)
+    except ValueError as error:
+        violations.append({"kind": "preflight_manifest_invalid", "detail": str(error)})
+        cleanup_authorizations = None
+    try:
         cleanup_evidence = registered_cleanup_evidence(manifest)
     except ValueError as error:
         violations.append({"kind": "preflight_manifest_invalid", "detail": str(error)})
         cleanup_evidence = None
     expected_keys = {"run.json", *plans}
+    if cleanup_authorizations is not None:
+        expected_keys.add(cleanup_authorizations)
     if cleanup_evidence is not None:
         expected_keys.add(cleanup_evidence)
     report_hashes = report.get("hashes")
@@ -271,6 +334,33 @@ def validate_preflight_gate(
         else:
             matched_plans += 1
 
+    cleanup_authorizations_hash_matched = None
+    if cleanup_authorizations is not None:
+        current = current_hashes.get(cleanup_authorizations)
+        recorded = report_hashes.get(cleanup_authorizations)
+        cleanup_authorizations_hash_matched = (
+            cleanup_authorizations in current_hashes
+            and cleanup_authorizations in report_hashes
+            and current == recorded
+        )
+        if cleanup_authorizations not in current_hashes or cleanup_authorizations not in report_hashes:
+            violations.append({
+                "kind": "preflight_report_stale",
+                "reason": "cleanup_authorizations_hash_missing",
+                "path": cleanup_authorizations,
+            })
+        if (
+            cleanup_authorizations in current_hashes
+            and cleanup_authorizations in report_hashes
+            and not cleanup_authorizations_hash_matched
+        ):
+            violations.append({
+                "kind": "preflight_cleanup_authorizations_changed",
+                "path": cleanup_authorizations,
+                "expected": recorded,
+                "actual": current,
+            })
+
     cleanup_evidence_hash_matched = None
     if cleanup_evidence is not None:
         current = current_hashes.get(cleanup_evidence)
@@ -303,6 +393,7 @@ def validate_preflight_gate(
         "matched_plans": matched_plans,
         "execution_drive_hash_matched": execution_drive_hash_matched,
         "manifest_hash_matched": manifest_hash_matched,
+        "cleanup_authorizations_hash_matched": cleanup_authorizations_hash_matched,
         "cleanup_evidence_hash_matched": cleanup_evidence_hash_matched,
     }
     return {
@@ -372,6 +463,20 @@ def verify_preflight_gate(
             current_hashes[plan] = sha256_file(registered_plan_path)
             if resolved_executor_plan == registered_plan_path:
                 executor_plan_member = plan
+        for index, result in enumerate(registered_cleanup_result_paths(manifest)):
+            # Deliberately only resolve: a cleanup executor may create or append
+            # this ledger after its preflight gate has passed.
+            resolve_run_member(run_dir, result, f"run.cleanup_batches[{index}].result")
+        cleanup_authorizations = registered_cleanup_authorizations(manifest)
+        if cleanup_authorizations is not None:
+            authorizations_path = resolve_run_member(
+                run_dir,
+                cleanup_authorizations,
+                "run.files.cleanup_authorizations",
+            )
+            if not authorizations_path.is_file():
+                return _failed("preflight_cleanup_authorizations_missing", path=cleanup_authorizations)
+            current_hashes[cleanup_authorizations] = sha256_file(authorizations_path)
         cleanup_evidence = registered_cleanup_evidence(manifest)
         if cleanup_evidence is not None:
             evidence_path = resolve_run_member(

@@ -3,7 +3,7 @@ name: soia-pkm-alipan-curator
 description: 阿里云盘资源顾问：提供 inventory/organize/catalog/plan 四类工作流，盘点和整理资源、生成 Obsidian 馆藏与增量 Excel/家庭导航，并按用户提供的学情生成学习计划。Triggers：「整理云盘」「云盘盘点」「更新云盘索引」「更新Excel总索引」「生成家庭导航Excel」「给云盘建图书馆」「用网盘资源做学习计划」
 dependencies:
   hard: [soia-pkm-alipan-drive-ops]
-version: 1.0.0
+version: 1.1.0
 created_at: 2026-07-02 23:02:39
 updated_at: 2026-07-16 15:34:25
 created_by: claude opus 4.6
@@ -104,11 +104,11 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 ### organize — 整理
 执行规范（每步终态验证，安全守则见 soia-pkm-alipan-drive-ops）：
 
-**硬约定（先记录后动手）**：AI 生成并将执行的移动/删除清单——即本 skill `scripts/gen_catalog.py` 的 `--moves` / `--deletes` / `--roots` 输入文件——标准落盘位置为 `${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/moves/<date>-<batch>.jsonl`。执行云盘 `mv`/`rmdir` 前必须先把该清单落盘到此路径，不允许先动手再补记录；事后可凭这份清单追溯操作。
+**硬约定（先记录后动手）**：AI 生成并将执行的移动清单——即本 skill `scripts/gen_catalog.py` 的 `--moves` / `--roots` 输入文件——标准落盘位置为 `${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/moves/<date>-<batch>.jsonl`。`--deletes` 只生成删除候选，必须另行登记到运行包的 `cleanup_batches`，不得混入重分类计划；每条 prospective cleanup 必须在写前有不可变的 `approved` 授权和带时区的 `authorized_at`。执行云盘 `mv`/`rmdir` 前必须先把对应清单落盘到此路径，不允许先动手再补记录；事后可凭清单追溯操作。
 
 **大型整理固定执行链**：统一按 `merge map → assign numbers (optional) → build reclass → build structure → preflight → audit → dry-run → execute → fresh terminal scan` 顺序推进；任何一步失败都停在该步，不得跳过门禁直接写云盘。多 agent 只可并行做只读盘点、内容审核、计划生成和独立验证；`mkdir` / `mv` / `rename` / 回收站删除 / 上传等云盘写入始终由一个写入者执行，批量入口显式使用 `--max-parallel 1`。计划和结构合同合并后，写入者还必须按 file_id 做迁移后终态扫描，确认空壳确实存在且子项为 0，再按已批准清单送回收站。
 
-阶段入口按本 skill 的脚本职责对应：`merge_classification_map.py` → `assign_resource_numbers.py`（仅编号已确认时）→ `build_reclass_plan.py` → `build_structure_plan.py` → `preflight_reclass.py` → 非 `--final` 的 `audit_run_bundle.py` → `apply_reclass.py`/`apply_reclass_bulk.py` 的 dry-run → 同一写入者加 `--execute`。`audit_structure.py --final` 和 `audit_run_bundle.py --final` 属于 fresh terminal scan 后的收官审计，不得用前置 audit 代替。
+阶段入口按本 skill 的职责对应：`merge_classification_map.py` → `assign_resource_numbers.py`（仅编号已确认时）→ `build_reclass_plan.py` → `build_structure_plan.py` → `preflight_reclass.py` → 非 `--final` 的 `audit_run_bundle.py` → `apply_reclass.py`/`apply_reclass_bulk.py` 的 dry-run → 同一写入者加 `--execute`。`audit_structure.py --final` 和 `audit_run_bundle.py --final` 属于 fresh terminal scan 后的收官审计，不得用前置 audit 代替。删除动作不属于这条链：登记到 `cleanup_batches`，由原子层在用户授权和新鲜空壳验证后执行并复核 ledger。
 
 **大型整理正式脚本表**：以下是可复用的正式入口；不要在运行包、临时目录或会话里另写同职能 builder。
 
@@ -120,9 +120,13 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 | 生成结构计划 | `scripts/build_structure_plan.py` | 从结构合同和已登记批次生成有序的 `mkdir` JSONL 计划；结构批次须登记到运行包后再进入后续阶段。 |
 | 执行前预检 | `scripts/preflight_reclass.py` | 对已登记的计划做新鲜只读云端核对，检查来源、目标、ID 和父级顺序，并输出预检报告及 `run.json`、各已登记计划的 SHA-256。 |
 
-运行 `preflight_reclass.py` 前，先在 `run.json.files.preflight_report` 登记一个尚不存在的、相对运行包的报告路径；脚本拒绝覆盖既有报告，也拒绝把 `--report` 写到未登记或运行包外的位置。非 final 的 `audit_run_bundle.py` 会调用 `scripts/preflight_gate.py` 对账；执行器的 `--execute` 分支必须显式传 `--run-dir`，并在首个云盘写入前即时调用 `verify_preflight_gate(Path(args.run_dir), plan_path=Path(args.plan))`，确认报告已登记且 `passed`、报告属于该运行包、当前执行计划已登记，并且 `run.json` 与所有登记计划的 SHA-256 未变化。纯 dry-run 可不传 `--run-dir`，但如提供则同样执行门禁。计划或 manifest 有任何变动，保留旧证据，登记新报告路径并重新预检；不得仅靠此前 audit 的结果执行。
+运行 `preflight_reclass.py` 前，先在 `run.json.files.preflight_report` 登记一个尚不存在的、相对运行包的报告路径；脚本拒绝覆盖既有报告，也拒绝把 `--report` 写到未登记或运行包外的位置。非 final 的 `audit_run_bundle.py` 会先校验 cleanup 授权的精确绑定、`decision=approved` 与带时区 ISO-8601 `authorized_at`，再调用 `scripts/preflight_gate.py` 对账；`denied`、无效时间或不精确绑定均 fail closed。执行器的 `--execute` 分支必须显式传 `--run-dir`，并在首个云盘写入前即时调用 `verify_preflight_gate(Path(args.run_dir), plan_path=Path(args.plan))`，确认报告已登记且 `passed`、报告属于该运行包、当前执行计划已登记，并且 `run.json`、所有登记计划、cleanup authorizations 与可选 empty-cleanup evidence 的 SHA-256 未变化。纯 dry-run 可不传 `--run-dir`，但如提供则同样执行门禁。计划或 manifest 有任何变动，保留旧证据，登记新报告路径并重新预检；不得仅靠此前 audit 的结果执行。
 
-预检支持断点运行包：逐批读取 `result` ledger 中同一 operation key（`action_id/op/from/to/file_id`）的最新记录，只把最新状态为 `verified` / `completed` 且当前云端能以同一 `file_id` 证明计划终态的连续链前缀计为 `already_verified`。`mv → rename` 等链先验证最终落点，再按全局计划逆序回卷后重放；账本单方面声称成功、错误 ID、未登记 operation key 或中间断链都必须产生 violation。若已 verified 的空 `mkdir` 后续经用户批准送入回收站，只能通过 `run.files.empty_cleanup_evidence` 登记的 JSONL 证据转为 `superseded`；证据必须与缺失目标精确匹配、`files=0`、状态以 `removed_to_recycle_bin` 开头且子目录先于父目录。报告 `checked` 分开输出 `ready_actions`、`already_verified_actions` 与 `superseded_actions`；gate 的 SHA-256 绑定覆盖当前 `run.json`、全部登记计划和已登记 cleanup evidence。
+重分类计划和恢复型执行器只接受 `mkdir`、`mv`、`rename`。若计划出现 `delete`、`remove` 或 `trash`，会在解析阶段拒绝并输出：“删除动作应登记在 cleanup_batches，由原子层在用户授权+空壳验证后执行，不进入重分类恢复/重放”；此时不调用云盘 runner。删除动作必须按 [references/run-bundle.md](references/run-bundle.md) 的 `cleanup_batches` 合同单独执行。
+
+预检支持断点运行包：逐批读取 `result` ledger 中同一 operation key（`action_id/op/from/to/file_id`）的最新记录，只把最新状态为 `verified` / `completed` 且当前云端能以同一 `file_id` 证明计划终态的连续链前缀计为 `already_verified`。`mv → rename` 等链先验证最终落点，再按全局计划逆序回卷后重放；账本单方面声称成功、错误 ID、未登记 operation key 或中间断链都必须产生 violation。若已 verified 的空 `mkdir` 后续经用户批准送入回收站，只能通过 `run.files.empty_cleanup_evidence` 登记的 JSONL 证据转为 `superseded`；证据必须与缺失目标精确匹配、`files=0`、`status` 严格等于 `removed_to_recycle_bin_verified` 且子目录先于父目录。报告 `checked` 分开输出 `ready_actions`、`already_verified_actions` 与 `superseded_actions`；preflight 的 SHA-256 绑定覆盖当前 `run.json`、全部登记计划、cleanup authorizations 与已登记 empty-cleanup evidence。cleanup result ledger 是执行期可追加证据，不能写入 preflight hash；但 final migration conservation 必须 hash 完整 ledger 历史，截断或篡改即阻断收官。
+
+**历史 debt 不得洗白**：已经发生、但缺少删除前用户授权原件的 cleanup 不是 `cleanup_batches` 的合规输入，也绝不可补造或事后倒填 `authorized_at`。它必须以 `run.files.cleanup_process_debt` 在 XDG state 内的运行包单独登记，分类只能是 `legacy_process_debt` 或 `authorization_unproven_execution`，并保留原始 plan/result 做终态缺席/ID 守恒对账。报告会分别给出 `payload_conservation` 与 `structural_process_debt`：前者可显示 payload 已对账，后者仍会阻断 final `completed`，且绝不授予 `authorized_missing`。正式 cleanup authorizations 只适用于尚未执行的未来删除。Obsidian 只保留冻结审计和短回执，不能把运行期 debt ledger 或其历史复制进 vault/outputs；细则见 [references/run-bundle.md](references/run-bundle.md)。
 
 - **去营销尾巴**：目录名里的「公众号：XXX」「【xx.xGB】」「持续更新」等广告字样批量 rename 掉
 - **去套娃**：目录内只有一个子目录时，先判定是否为 HTML/播放列表/字幕/脚本/配置引用的技术包或源码依赖；技术包、源码及其依赖目录必须整体保留，不拆文件、不编号、不因“只剩一个子目录”删壳。只有普通业务容器才可内容上提一层、再删空壳
@@ -177,6 +181,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 - Excel 作者层必须使用宿主提供的 `@oai/artifact-tool`；缺失时停止并说明，不临时换库。交付验收时加 `--verify`，有 `soffice` 时传入以预计算链接显示值。
 - 分区需要面向家长的简明说明、筛选表和课程直达链接时，家庭导航输入必须来自终态扫描；传 `--soffice` 预计算 `HYPERLINK` 显示值，避免在线预览只显示公式。
 - 家庭导航先上传并复核，再做终态扫描与总索引；否则索引会少算刚上传的文件。
+- 某个新分区由已验证迁移动作产生、而本轮不应重复全盘扫描时，只能用 `scripts/materialize_catalog_snapshot.py` 从完整基础逐文件扫描与 `run.json.batches` 的闭合 ledger 物化分区快照；脚本拒绝 cleanup、未闭合动作、错误 identity、重复 ID 和路径冲突。历史 `mkdir` 未记录目录 ID 时，传入由浅层终态列表得到的 `--directory-identities`，不得猜测 file_id。快照、空错误侧车和 provenance 只放 XDG state 运行包；若要把这个新分区插入既有总览，必须显式给 `gen_catalog.py --allow-new-partition`，默认仍 fail closed。
 - 深度整理完成前运行 `audit_structure.py --scan <scan.jsonl> --contract <contract.json> [--scan-errors <scan.errors>] [--unclear <unclear.jsonl>] --final`。必须先确认终态扫描进程已退出且退出码为 0，不能审计仍在增长的 JSONL。`contract.json` 只声明本次用户选择的编号层、根级/分类导览、关键云端产物、资源地图链接、已知长系列分组、未声明长系列发现范围和可选待确认根；所有阈值、路径、file_id、URL 前缀、哈希与语义桶例外由调用方从本次终态证据传入，脚本不内置任何个人目录、真实云盘 ID 或固定集数。发现范围必须使用逐文件、无聚合、无 `no-descend` 的终态扫描；聚合行、非空或缺失的错误 sidecar、关键产物不匹配、资源地图缺少真实链接都会使审计失败，分类导览或发现规则零匹配也默认失败。只有已通过其他证据确认确实为空时才设置规则级 `allow_empty=true`；只有独立验证扫描完整性后才可使用 CLI 的 `--allow-missing-scan-errors`。
 - 同参数第二次运行全盘生成器必须返回 `status=unchanged`、`rebuilt=[]`；若已上传，远端 SHA1/bytes 必须与本地一致。
 

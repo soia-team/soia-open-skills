@@ -40,6 +40,12 @@ def refresh_preflight_report(root: Path) -> None:
     hashes = {"run.json": audit.preflight_gate.sha256_file(root / "run.json")}
     for plan in audit.preflight_gate.registered_plan_paths(manifest):
         hashes[plan] = audit.preflight_gate.sha256_file(root / plan)
+    cleanup_authorizations = audit.preflight_gate.registered_cleanup_authorizations(manifest)
+    if cleanup_authorizations is not None:
+        hashes[cleanup_authorizations] = audit.preflight_gate.sha256_file(root / cleanup_authorizations)
+    cleanup_evidence = audit.preflight_gate.registered_cleanup_evidence(manifest)
+    if cleanup_evidence is not None:
+        hashes[cleanup_evidence] = audit.preflight_gate.sha256_file(root / cleanup_evidence)
     write_json(root / manifest["files"]["preflight_report"], {
         "schema_version": 1,
         "status": "passed",
@@ -54,6 +60,69 @@ def refresh_migration_conservation_report(root: Path) -> None:
         root / report_member,
         audit.audit_migration_conservation.audit_run(root),
     )
+
+
+def add_cleanup_batch(
+    root: Path,
+    plan: list[dict],
+    ledger: list[dict],
+    *,
+    authorizations: list[dict] | None = None,
+) -> None:
+    manifest = audit.read_json(root / "run.json")
+    if authorizations is None:
+        authorizations = [cleanup_authorization(action) for action in plan]
+    manifest["cleanup_batches"] = [{
+        "plan": "actions/cleanup.plan.jsonl",
+        "result": "actions/cleanup.result.jsonl",
+    }]
+    manifest["files"]["cleanup_authorizations"] = "actions/cleanup.authorizations.jsonl"
+    write_jsonl(root / "actions/cleanup.plan.jsonl", plan)
+    write_jsonl(root / "actions/cleanup.result.jsonl", ledger)
+    write_jsonl(root / "actions/cleanup.authorizations.jsonl", authorizations)
+    write_json(root / "run.json", manifest)
+
+
+def cleanup_action(**overrides: object) -> dict:
+    action = {
+        "action_id": "CLEAN-COURSE",
+        "op": "trash",
+        "from": "/learning/10_course",
+        "file_id": "course-id",
+        "allow_missing": True,
+        "reason": "user approved removal of the course shell",
+        "authorization_ref": "approval-2026-07-16",
+    }
+    action.update(overrides)
+    return action
+
+
+def cleanup_authorization(action: dict, **overrides: object) -> dict:
+    authorization = {
+        field: action.get(field)
+        for field in ("authorization_ref", "action_id", "file_id", "from")
+    }
+    authorization.update({
+        "decision": "approved",
+        "authorized_at": "2026-07-16T11:59:00+08:00",
+    })
+    authorization.update(overrides)
+    return authorization
+
+
+def verified_cleanup_result(action: dict, **overrides: object) -> dict:
+    result = {
+        **action,
+        "status": "verified",
+        "ts": "2026-07-16T12:00:00+08:00",
+        "verify": {
+            "predelete": {"files": 0, "dirs": 0},
+            "recycle_bin_status": "removed_to_recycle_bin_verified",
+            "postdelete_absence_verified": True,
+        },
+    }
+    result.update(overrides)
+    return result
 
 
 def make_valid_bundle(root: Path) -> None:
@@ -118,6 +187,249 @@ class RunBundleTests(unittest.TestCase):
             make_valid_bundle(root)
             result = audit.audit_bundle(root, final=True)
             self.assertEqual(result["status"], "passed")
+
+    def test_verified_cleanup_exempts_missing_focus_target(self) -> None:
+        cleanup = [cleanup_action()]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            write_jsonl(root / "verification/final.scan.jsonl", [
+                {"path": "/learning", "name": "staging", "id": "staging-id", "dir": True},
+            ])
+            add_cleanup_batch(
+                root,
+                cleanup,
+                [verified_cleanup_result(cleanup[0])],
+                authorizations=[cleanup_authorization(cleanup_action())],
+            )
+            refresh_migration_conservation_report(root)
+            result = audit.audit_bundle(root, final=True)
+
+        self.assertEqual(result["status"], "passed")
+        self.assertEqual(result["checked"]["cleanup_batches"], 1)
+        self.assertEqual(result["checked"]["planned_actions"], 2)
+        self.assertNotIn(
+            "focus_target_missing_from_final_scan",
+            {item["kind"] for item in result["violations"]},
+        )
+
+    def test_forged_conservation_summary_cannot_exempt_missing_focus_target(self) -> None:
+        unauthorized_action = cleanup_action()
+        unauthorized_action.pop("authorization_ref")
+        cleanup = [unauthorized_action]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            write_jsonl(root / "verification/final.scan.jsonl", [
+                {"path": "/learning", "name": "staging", "id": "staging-id", "dir": True},
+            ])
+            add_cleanup_batch(root, cleanup, [verified_cleanup_result(cleanup[0])])
+            manifest = audit.read_json(root / "run.json")
+            write_json(root / "verification/migration-conservation.json", {
+                "status": "passed",
+                "checked": {"authorized_missing": 1},
+                "hashes": audit.audit_migration_conservation.conservation_input_hashes(root, manifest),
+            })
+            result = audit.audit_bundle(root, final=True)
+
+        kinds = {item["kind"] for item in result["violations"]}
+        self.assertIn("focus_target_missing_from_final_scan", kinds)
+        self.assertNotIn("migration_conservation_report_not_passed", kinds)
+
+    def test_final_migration_report_blocks_reuse_of_authorized_missing_path(self) -> None:
+        cleanup = [cleanup_action()]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            write_jsonl(root / "verification/final.scan.jsonl", [
+                {
+                    "path": "/learning",
+                    "name": "10_course",
+                    "id": "replacement-course-id",
+                    "dir": True,
+                },
+            ])
+            add_cleanup_batch(root, cleanup, [verified_cleanup_result(cleanup[0])])
+            refresh_migration_conservation_report(root)
+            result = audit.audit_bundle(root, final=True)
+
+        kinds = {item["kind"] for item in result["violations"]}
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("migration_conservation_report_not_passed", kinds)
+
+    def test_cleanup_actions_share_the_global_action_id_namespace(self) -> None:
+        cleanup = [cleanup_action(
+            action_id="B10-001",
+            allow_missing=False,
+            reason="attempted duplicate action",
+        )]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            add_cleanup_batch(root, cleanup, [verified_cleanup_result(cleanup[0])])
+            refresh_migration_conservation_report(root)
+            result = audit.audit_bundle(root, final=True)
+
+        duplicates = [item for item in result["violations"] if item["kind"] == "duplicate_plan_action_id"]
+        self.assertEqual(len(duplicates), 1)
+        self.assertEqual(duplicates[0]["action_id"], "B10-001")
+        self.assertEqual(duplicates[0]["batch_group"], "cleanup_batches")
+
+    def test_final_cleanup_action_must_close(self) -> None:
+        cleanup = [cleanup_action(allow_missing=False, reason="attempted removal")]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            add_cleanup_batch(root, cleanup, [verified_cleanup_result(cleanup[0], status="failed")])
+            refresh_migration_conservation_report(root)
+            result = audit.audit_bundle(root, final=True)
+
+        unclosed = [item for item in result["violations"] if item["kind"] == "action_not_closed"]
+        self.assertEqual(len(unclosed), 1)
+        self.assertEqual(unclosed[0]["batch_group"], "cleanup_batches")
+
+    def test_denied_cleanup_authorization_fails_nonfinal_audit(self) -> None:
+        cleanup = [cleanup_action()]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            add_cleanup_batch(
+                root,
+                cleanup,
+                [],
+                authorizations=[cleanup_authorization(cleanup[0], decision="denied")],
+            )
+            result = audit.audit_bundle(root, final=False, require_preflight=False)
+
+        invalid = [item for item in result["violations"] if item["kind"] == "invalid_cleanup_authorization"]
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(len(invalid), 1)
+        self.assertIn("authorization_decision_not_approved", invalid[0]["problems"])
+
+    def test_cleanup_result_paths_cannot_alias_inputs_or_each_other(self) -> None:
+        with self.subTest("immutable input alias"), tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            cleanup = cleanup_action()
+            add_cleanup_batch(root, [cleanup], [])
+            manifest = audit.read_json(root / "run.json")
+            manifest["cleanup_batches"][0]["result"] = "inventory/initial.scan.jsonl"
+            write_json(root / "run.json", manifest)
+            aliased = audit.audit_bundle(root, final=False, require_preflight=False)
+
+        self.assertIn("invalid_cleanup_result_path", {item["kind"] for item in aliased["violations"]})
+
+        with self.subTest("duplicate cleanup result"), tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            first = cleanup_action()
+            second = cleanup_action(
+                action_id="CLEAN-SECOND",
+                **{"from": "/learning/other", "file_id": "other-id", "authorization_ref": "approval-second"},
+            )
+            add_cleanup_batch(root, [first], [])
+            manifest = audit.read_json(root / "run.json")
+            manifest["cleanup_batches"].append({
+                "plan": "actions/cleanup-second.plan.jsonl",
+                "result": "actions/cleanup.result.jsonl",
+            })
+            write_jsonl(root / "actions/cleanup-second.plan.jsonl", [second])
+            write_jsonl(root / "actions/cleanup.authorizations.jsonl", [
+                cleanup_authorization(first),
+                cleanup_authorization(second),
+            ])
+            write_json(root / "run.json", manifest)
+            duplicate = audit.audit_bundle(root, final=False, require_preflight=False)
+
+        self.assertIn("invalid_cleanup_result_path", {item["kind"] for item in duplicate["violations"]})
+
+    def test_cleanup_result_canonical_alias_variants_fail_closed(self) -> None:
+        aliases = [
+            "actions/./cleanup.plan.jsonl",
+            "actions/temporary/../cleanup.plan.jsonl",
+            "actions//cleanup.plan.jsonl",
+        ]
+        for alias in aliases:
+            with self.subTest(alias=alias), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                make_valid_bundle(root)
+                cleanup = cleanup_action()
+                add_cleanup_batch(root, [cleanup], [])
+                manifest = audit.read_json(root / "run.json")
+                manifest["cleanup_batches"][0]["result"] = alias
+                write_json(root / "run.json", manifest)
+                result = audit.audit_bundle(root, final=False, require_preflight=False)
+
+            self.assertIn(
+                "invalid_cleanup_result_path",
+                {item["kind"] for item in result["violations"]},
+            )
+
+    def test_cleanup_result_path_rejects_run_directory_escape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            cleanup = cleanup_action()
+            add_cleanup_batch(root, [cleanup], [])
+            manifest = audit.read_json(root / "run.json")
+            manifest["cleanup_batches"][0]["result"] = "actions/../../outside.result.jsonl"
+            write_json(root / "run.json", manifest)
+            result = audit.audit_bundle(root, final=False, require_preflight=False)
+
+        self.assertIn(
+            "invalid_cleanup_result_path",
+            {item["kind"] for item in result["violations"]},
+        )
+
+    def test_cleanup_ledger_history_tamper_invalidates_final_conservation(self) -> None:
+        cleanup = cleanup_action()
+        verified = verified_cleanup_result(cleanup)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            write_jsonl(root / "verification/final.scan.jsonl", [
+                {"path": "/learning", "name": "staging", "id": "staging-id", "dir": True},
+            ])
+            add_cleanup_batch(root, [cleanup], [
+                {**cleanup, "status": "failed", "reason": "transient provider error"},
+                verified,
+            ])
+            refresh_migration_conservation_report(root)
+            write_jsonl(root / "actions/cleanup.result.jsonl", [verified])
+            result = audit.audit_bundle(root, final=True)
+
+        mismatches = [
+            item for item in result["violations"]
+            if item["kind"] == "migration_conservation_report_hash_mismatch"
+        ]
+        self.assertTrue(any(item["member"] == "actions/cleanup.result.jsonl" for item in mismatches))
+
+    def test_historic_cleanup_debt_blocks_final_complete_without_claiming_authorization(self) -> None:
+        debt = {
+            "action_id": "historic-action-unproven",
+            "file_id": "course-id",
+            "from": "/learning/10_course",
+            "classification": "authorization_unproven_execution",
+            "recorded_at": "2026-07-16T12:00:00+08:00",
+            "historic_plan": "evidence/historic-action-unproven.plan.jsonl",
+            "historic_result": "evidence/historic-action-unproven.result.jsonl",
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            write_jsonl(root / "verification/final.scan.jsonl", [])
+            write_jsonl(root / debt["historic_plan"], [{"action_id": debt["action_id"], "op": "trash"}])
+            write_jsonl(root / debt["historic_result"], [{"action_id": debt["action_id"], "status": "verified"}])
+            manifest = audit.read_json(root / "run.json")
+            manifest["files"]["cleanup_process_debt"] = "analysis/cleanup-process-debt.jsonl"
+            write_jsonl(root / manifest["files"]["cleanup_process_debt"], [debt])
+            write_json(root / "run.json", manifest)
+            refresh_migration_conservation_report(root)
+            result = audit.audit_bundle(root, final=True)
+
+        kinds = {item["kind"] for item in result["violations"]}
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("cleanup_process_debt_blocks_final_complete", kinds)
 
     def test_in_progress_bundle_validates_plans_without_results(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

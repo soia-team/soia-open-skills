@@ -54,6 +54,10 @@ class PlanSeriesChunksTests(unittest.TestCase):
         ])
         groups = [item["group"] for item in first if item["op"] == "mkdir"]
         self.assertEqual(groups, ["10_001-002", "20_003"])
+        self.assertEqual(
+            [item["file_id"] for item in moves],
+            ["Episode 1.mp4", "Episode 2.mp4", "Episode 10.mp4"],
+        )
 
     def test_same_episode_regular_and_listening_media_stays_together(self) -> None:
         names = [
@@ -273,7 +277,17 @@ class PlanSeriesChunksTests(unittest.TestCase):
         self.assertEqual(protected_move["op"], "mv")
         self.assertEqual(protected_move["from"], f"{self.parent}/02.mp4")
         self.assertEqual(protected_move["to"], f"{self.parent}/配套资料")
+        self.assertEqual(protected_move["file_id"], "02.mp4")
         self.assertEqual(len({item["action_id"] for item in first}), len(first))
+
+    def test_missing_file_id_fails_closed(self) -> None:
+        rows = [{"path": self.parent, "name": "01.mp4", "dir": False, "size": 1, "sha1": "0" * 40}]
+        rules = [{"parent": self.parent, "max_items": 1, "primary_pattern": r"\.mp4$"}]
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rules.json"
+            path.write_text(json.dumps({"series": rules}), encoding="utf-8")
+            with self.assertRaises(planner.InputError):
+                planner.build_plan(rows, planner.load_rules(path))
 
     def test_protected_dir_must_be_one_safe_name(self) -> None:
         for protected_dir in ("", " ", " padded", "padded ", ".", "..", "a/b", r"a\b", "a/b/c", "bad\x00name"):

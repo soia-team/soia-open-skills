@@ -126,6 +126,8 @@ def validate_scan(rows: list[dict[str, Any]]) -> None:
             raise InputError(f"scan row {index} must contain string path and name")
         if row.get("dir") not in (True, False):
             raise InputError(f"scan row {index} dir must be boolean")
+        if not isinstance(row.get("id"), str) or not row["id"].strip():
+            raise InputError(f"scan row {index} must contain a non-empty string id")
         normalize_cloud_path(row["path"])
         if not row["name"] or "/" in row["name"]:
             raise InputError(f"scan row {index} has an invalid name")
@@ -458,6 +460,7 @@ def build_plan(
                         "op": "mv",
                         "from": path,
                         "to": protected_target,
+                        "file_id": str(row["id"]),
                         "reason": f"move protected file {row['name']} into {rule['protected_dir']}",
                         "series_parent": parent,
                         "protected_dir": rule["protected_dir"],
@@ -589,6 +592,7 @@ def build_plan(
                     "op": "mv",
                     "from": path,
                     "to": group["target"],
+                    "file_id": str(row["id"]),
                     "reason": f"move {row['name']} into ordered group {group['name']}",
                     "series_parent": parent,
                     "group": group["name"],

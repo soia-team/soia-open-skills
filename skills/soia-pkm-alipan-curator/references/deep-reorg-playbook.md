@@ -108,7 +108,7 @@ merge map → assign numbers (optional) → build reclass → build structure
 }
 ```
 
-上例是带占位符的 JSONC 结构说明，执行前把 `USER_CONFIRMED_LIMIT`、`EXPECTED_BYTES`、SHA1、file_id、地图路径和 URL 前缀替换为本次终态证据。换用户、换客户端或换资源类型时重新确认。只有主媒体带字幕/元数据等侧车时才填 `count_pattern`；没有侧车时删除该字段。没有需豁免的同级技术目录/语义桶时传空数组；`exclude` 与 `exclude_path_patterns` 必须显式声明，不能隐藏未知目录。公共 skill 不保存这些真实值。
+上例是带占位符的 JSONC 结构说明，执行前把 `USER_CONFIRMED_LIMIT`、`EXPECTED_BYTES`、SHA1、file_id、地图路径和 URL 前缀替换为本次终态证据。换用户、换客户端或换资源类型时重新确认。只有主媒体带字幕/元数据等侧车时才填 `count_pattern`；没有侧车时删除该字段。没有需豁免的同级技术目录/语义桶时传空数组；`exclude` 与 `exclude_path_patterns` 必须显式声明，不能隐藏未知目录。不得把 `day`、章、卷、视频、课件、资料、字幕等泛化名称直接写成排除规则；含主媒体的目录仍是课程内容。只有逐路径证明为非课程技术依赖或纯素材树的目录才允许窄范围排除。已有旧分组与课程根散文件共同组成连续系列时，先归并到逻辑课程根再重分，不能在旧卷下继续套娃。公共 skill 不保存这些真实值。
 
 `unclear` JSONL 每行格式为：
 
