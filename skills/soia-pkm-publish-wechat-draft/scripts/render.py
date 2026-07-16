@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""render.py — Markdown → 带样式 HTML（公众号可直接贴）。soia-pkm-publish 的渲染器。
+"""render.py — Markdown → 带样式 HTML（公众号可直接贴）。soia-pkm-publish-wechat-draft 的渲染器。
 
 三级强调：**短语** → 主题色加粗；==关键== → 红色加粗；`code` → 等宽。
 风格：editorial（干净）/ tech（代码块+表格）。纯标准库，无外部依赖。

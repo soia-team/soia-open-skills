@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """archive.py — 发布后归档：frontmatter status → 已发布 + 记链接/日期。
-soia-pkm-publish 的归档器。用法：python3 archive.py --article <md> --url <link> [--date YYYY-MM-DD]
+soia-pkm-publish-wechat-draft 的归档器。用法：python3 archive.py --article <md> --url <link> [--date YYYY-MM-DD]
 """
 import re
 import argparse

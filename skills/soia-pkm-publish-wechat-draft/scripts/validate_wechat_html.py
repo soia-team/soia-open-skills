@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""validate_wechat_html.py — 微信公众号 HTML 排版红线校验（soia-pkm-publish skill 机械层）
+"""validate_wechat_html.py — 微信公众号 HTML 排版红线校验（soia-pkm-publish-wechat-draft skill 机械层）
 
 公众号编辑器（网页粘贴 / draft/add 接口）会主动过滤或丢弃大量 HTML/CSS 写法，
 排版稿一旦踩中这些红线，样式大概率在粘贴或推送后整段消失。本脚本只读扫描一份

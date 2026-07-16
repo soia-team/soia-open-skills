@@ -1,4 +1,0 @@
-interface:
-  display_name: "PKM Publish"
-  short_description: "把写好的文章草稿适配并发布到多平台——公众号（排版 + 推草稿箱）、X thread、小红书卡片。核心是公众号：按强调密度模型渲染成遵守\"微信平台红线\"的内联样式 HTML，机械校验通过后调微信 draft/add API 推到草稿箱（只建草稿、绝不自动群发）"
-  default_prompt: "Use soia-pkm-publish: 把写好的文章草稿适配并发布到多平台——公众号（排版 + 推草稿箱）、X thread、小红书卡片。核心是公众号：按强调密度模型渲染成遵守\"微信平台红线\"的内联样式 HTML，机械校验通过后调微信 draft/add API 推到草稿箱（只建草稿、绝不自动群发）"
