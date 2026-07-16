@@ -5,8 +5,8 @@ dependencies:
   hard: [soia-cwork-feishu-cli]
 created_at: 2026-07-14 23:24:26
 updated_at: 2026-07-15 17:26:36
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-cwork-feishu-doc-git-sync

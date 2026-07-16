@@ -6,8 +6,8 @@ dependencies:
 version: 1.0.0
 created_at: 2026-07-07 13:32:04
 updated_at: 2026-07-15 18:27:15
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-pkm-maintain

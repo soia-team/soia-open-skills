@@ -9,8 +9,8 @@ dependencies:
 version: 1.0.0
 created_at: 2026-07-15 18:27:15
 updated_at: 2026-07-15 18:57:32
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-pkm-baidupan — 百度网盘原子操作层

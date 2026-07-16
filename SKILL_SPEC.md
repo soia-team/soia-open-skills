@@ -133,8 +133,8 @@ description: ...
 version: 1.0.0
 created_at: 2026-07-16 10:58:46
 updated_at: 2026-07-16 13:25:56
-created_by: zp / claude opus 4.6
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 ```
 
@@ -147,12 +147,11 @@ Rules:
 - `updated_at`: the datetime of the most recent substantive change to the
   skill (SKILL.md, scripts, or references). Update on every commit that
   touches this skill.
-- `created_by`: who originally authored the skill. Never changes.
-  Use short identifiers with model version; collaborative work uses `/`
-  (e.g. `zp / claude opus 4.6`, `zp / codex 5.6`).
-  Solo work uses a single id (e.g. `zp`, `claude opus 4.8`).
-- `updated_by`: who made the most recent substantive change. Update together
-  with `updated_at`. Same format as `created_by`.
+- `created_by`: the AI model that authored the skill. Never changes.
+  Use model name with version (e.g. `claude opus 4.6`, `codex 5.6`,
+  `claude opus 4.8`).
+- `updated_by`: the AI model that made the most recent substantive change.
+  Update together with `updated_at`.
 - All datetimes use `YYYY-MM-DD HH:mm:ss` format (24-hour, local time).
 - New skills must include all five fields.
 

@@ -4,8 +4,8 @@ description: 把 Obsidian vault 里收藏的文章「炼」成你自己的观点
 version: 1.0.0
 created_at: 2026-07-02 16:41:13
 updated_at: 2026-07-09 19:32:52
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-pkm-distill

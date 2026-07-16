@@ -6,8 +6,8 @@ dependencies:
 version: 1.0.0
 created_at: 2026-07-02 23:02:39
 updated_at: 2026-07-15 18:57:32
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-pkm-alipan-curator — 云盘资源顾问

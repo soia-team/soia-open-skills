@@ -4,8 +4,8 @@ description: 整理 Obsidian 文章库——补 frontmatter（topics/captured_at
 version: 1.0.0
 created_at: 2026-07-02 17:57:11
 updated_at: 2026-07-15 18:27:15
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-pkm-organize
