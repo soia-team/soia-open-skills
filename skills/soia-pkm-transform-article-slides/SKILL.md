@@ -4,6 +4,8 @@ description: 把文章转换为 PPT / PPTX / HTML 演示文稿或课件。本地
 version: 1.0.0
 created_at: 2026-07-16
 updated_at: 2026-07-16
+created_by: zp
+updated_by: zp
 ---
 
 # soia-pkm-transform-article-slides
