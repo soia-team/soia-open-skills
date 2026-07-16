@@ -207,7 +207,7 @@
         "| 整理 | `soia-pkm-organize-article-moc` | 分类 / 建 MOC / 补双链 |",
         "| 点 | `soia-pkm-distill-article-opinion` | 把收藏炼成你的观点 |",
         "| 写 | `soia-pkm-compose-article-draft` | 把观点写成文章草稿 |",
-        "| 发 | `soia-pkm-publish` | 一稿适配多平台并发布 |",
+        "| 发 | `publish-*` 家族 | 按公众号、X thread、小红书平台适配内容 |",
         "",
         "## 自定义初始化",
         "",

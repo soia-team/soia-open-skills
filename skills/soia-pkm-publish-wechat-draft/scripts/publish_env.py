@@ -6,9 +6,9 @@ import shlex
 import sys
 from pathlib import Path
 
-OVERRIDE_CONFIG_NAME = "SOIA_PKM_PUBLISH_CONFIG_FILE"
+OVERRIDE_CONFIG_NAME = "SOIA_PKM_PUBLISH_WECHAT_DRAFT_CONFIG_FILE"
 OVERRIDE_ENV_NAME = "SOIA_PKM_PUBLISH_ENV_FILE"
-DEFAULT_CONFIG_FILE = "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-publish/config.yml"
+DEFAULT_CONFIG_FILE = "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-publish-wechat-draft/config.yml"
 
 KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 PATH_LIKE_KEYS = {

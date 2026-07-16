@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""publish.py — 渲染 + 推微信公众号草稿箱。soia-pkm-publish 的发布器（框架）。
+"""publish.py — 渲染 + 推微信公众号草稿箱。soia-pkm-publish-wechat-draft 的发布器（框架）。
 
 凭据从环境变量 / 私有 config.yml 读 WECHAT_APP_ID / WECHAT_APP_SECRET。
 --dry-run 只渲染不推送。安全：只建草稿（draft/add），绝不群发。

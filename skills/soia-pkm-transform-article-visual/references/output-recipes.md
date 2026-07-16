@@ -222,7 +222,7 @@ mindmap
 
 ## WeChat / X / Xiaohongshu
 
-直接转交 `soia-pkm-publish`：
+按目标平台转交 `publish-*` 家族：
 
 - 公众号：Markdown -> WeChat-ready HTML / 草稿箱。
 - X：thread 拆条。

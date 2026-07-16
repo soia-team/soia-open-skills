@@ -100,8 +100,10 @@ Core value: the real value-conversion stage of the loop — turning someone else
 | [`soia-pkm-interpret-article-analysis`](./skills/soia-pkm-interpret-article-analysis/) | **Saved content → AI reading**: a five-part structure (overview / key points / insights / critique / further reading) that helps you decide whether an article is worth distilling before you invest in `distill`; produces an independent `-AI解读.md`, never touches the original's "My Take" | ✅ Usable (pure LLM reading, no scripts needed) | No hard dependency (the `clip-*` family is a common upstream source) |
 | [`soia-pkm-distill-article-opinion`](./skills/soia-pkm-distill-article-opinion/) | **Saved content → opinion**: read the source → ask one question at a time → you answer → "my take" (the content is yours, AI only writes it down) | ✅ Fully usable (battle-tested) | Articles already in the vault (produced by `clip-*`) |
 | [`soia-pkm-compose-article-draft`](./skills/soia-pkm-compose-article-draft/) | **Opinion → article draft** (your opinion as the skeleton, excerpts as supporting material) | ✅ Usable (pure LLM, no scripts needed) | An opinion produced by `distill` |
-| [`soia-pkm-cover-image`](./skills/soia-pkm-cover-image/) | Generates a cover image for WeChat/X/RedNote articles (five parameters: type/palette/rendering/text/mood); output feeds directly into `publish --cover` | ✅ Usable (backend is codex CLI's built-in image generation; stops and prompts if not installed/logged in — never degrades silently) | codex CLI (`codex exec`, must be logged in) |
-| [`soia-pkm-publish`](./skills/soia-pkm-publish/) | **One draft → multiple platforms**: WeChat formatting + push to drafts / X thread / RedNote (Xiaohongshu) | 🟡 The `render.py` renderer is usable; WeChat push needs a private `config.yml` with credentials | A draft from `compose` + WeChat Official Account API |
+| [`soia-pkm-cover-image`](./skills/soia-pkm-cover-image/) | Generates a cover image for WeChat/X/RedNote articles (five parameters: type/palette/rendering/text/mood); WeChat output feeds `soia-pkm-publish-wechat-draft --cover` | ✅ Usable (backend is codex CLI's built-in image generation; stops and prompts if not installed/logged in — never degrades silently) | codex CLI (`codex exec`, must be logged in) |
+| [`soia-pkm-publish-wechat-draft`](./skills/soia-pkm-publish-wechat-draft/) | **Article → WeChat draft**: formats with inline styles, mechanically validates, and pushes to drafts; never broadcasts automatically | 🟡 Rendering and validation are usable; WeChat push needs a private `config.yml` with credentials | A draft from `compose` + WeChat Official Account API |
+| [`soia-pkm-publish-x-thread`](./skills/soia-pkm-publish-x-thread/) | **Article → X thread text**: splits into numbered posts under 280 characters, preserving links/code for manual copying | ✅ Usable (pure LLM, no API) | A draft from `compose` (optional) |
+| [`soia-pkm-publish-rednote-card`](./skills/soia-pkm-publish-rednote-card/) | **Article → RedNote text**: title, 3–5 short paragraphs, hashtags, and image suggestions for manual posting | ✅ Usable (pure LLM, no API) | A draft from `compose` (optional); `soia-pkm-cover-image` optional |
 
 ### 🔁 Transform · article → artifacts
 
@@ -218,9 +220,9 @@ Write an article on the "X" topic
 
 **Typical output**: a new Markdown draft appears in the drafts folder with `tags:[draft]` frontmatter, along with an outline, a word count, and suggested edits.
 
-### soia-pkm-publish
+### soia-pkm-publish-wechat-draft
 
-Adapts a finished draft and publishes it across platforms — WeChat Official Account (formatting + push to drafts), X threads, RedNote (Xiaohongshu) cards. WeChat is the primary flow: it renders inline-styled HTML that respects WeChat's platform restrictions, runs it through mechanical validation, and only then creates a draft — it never broadcasts automatically.
+Formats a finished draft as inline-styled HTML that respects WeChat's platform restrictions, mechanically validates it, and pushes it to the WeChat Official Account drafts area — it never broadcasts automatically.
 
 ```bash
 python3 scripts/render_wechat.py --file <article.md> --output <out.html>
@@ -230,6 +232,14 @@ python3 scripts/archive.py --article <article.md> --url <published-article-link>
 ```
 
 **Typical output**: a draft appears in the WeChat Official Account backend (not yet broadcast), and the terminal reminds you to "confirm and broadcast manually, then come back to run archive afterward."
+
+### soia-pkm-publish-x-thread
+
+Turns a finished draft into numbered X thread text under 280 characters per post, preserving code and links. It produces text only for manual copying and does not use the X API.
+
+### soia-pkm-publish-rednote-card
+
+Turns a finished draft into RedNote (Xiaohongshu) copy: an engaging title, 3–5 short paragraphs, hashtags, and image suggestions. It produces text only for manual posting and does not use the platform API.
 
 ### soia-pkm-transform
 
@@ -390,7 +400,8 @@ soia-open-skills/
     ├── soia-pkm-clip-wechat-account/     ├── soia-pkm-clip-web/
     ├── soia-pkm-clip-drive/   ├── soia-pkm-clip-github-repo/
     ├── soia-pkm-organize-article-moc/     ├── soia-pkm-distill-article-opinion/
-    ├── soia-pkm-compose-article-draft/      ├── soia-pkm-publish/
+    ├── soia-pkm-compose-article-draft/      ├── soia-pkm-publish-wechat-draft/
+    ├── soia-pkm-publish-x-thread/           ├── soia-pkm-publish-rednote-card/
     ├── soia-pkm-transform/    ├── soia-pkm-bootstrap/
     ├── soia-pkm-reading-plan/ ├── soia-pkm-library/
     ├── soia-pkm-maintain/     ├── soia-pkm-alipan-drive-ops/

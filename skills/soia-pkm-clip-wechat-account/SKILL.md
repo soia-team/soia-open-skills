@@ -124,12 +124,12 @@ SOIA_PKM_CLIP_WECHAT_ACCOUNT_CONFIG_FILE=<custom-config-path>
 
 - `freepublish/batchget` **只返回通过草稿箱「发布」动作发出的文章**。只走过"群发"但没点过"发布"的内容、以及草稿箱功能上线前的旧版图文消息，官方目前**没有任何 API** 能拿到——这不是本 skill 的实现缺陷，是微信开放社区多个帖子交叉确认过的平台限制。
 - `material/batchget_material`（type=news）返回的是永久图文素材；据社区反馈，一篇文章一旦经草稿箱正式「发布」，可能就从这个素材列表里消失。两个接口是**互补关系**，取并集也不等于"全部已发布历史"。
-- 「发布能力」相关接口文档注明：**自 2025-07 起，个人主体账号、企业主体未认证账号、以及不支持认证的账号，这些接口的调用权限会被回收**。多数个人订阅号大概率整条路线都跑不通，需要已认证服务号/订阅号（同 `soia-pkm-publish` 的 `draft/add` 一样的账号门槛）。
+- 「发布能力」相关接口文档注明：**自 2025-07 起，个人主体账号、企业主体未认证账号、以及不支持认证的账号，这些接口的调用权限会被回收**。多数个人订阅号大概率整条路线都跑不通，需要已认证服务号/订阅号（同 `soia-pkm-publish-wechat-draft` 的 `draft/add` 一样的账号门槛）。
 - 结论：路 A 更适合"抽查/核对/增量同步已发布内容"，不要指望它是"全量备份"。要读全部历史（含手动群发的老文）优先用路 C，路 B 作为备选。
 
 ### 凭据与限制
 
-- `WECHAT_APP_ID` / `WECHAT_APP_SECRET`：获取路径、IP 白名单配置同 `soia-pkm-publish` SKILL.md「如何获取并配置微信公众号 AppID / AppSecret」一节，不重复贴——两个 skill 用同一套公众号开发凭据。
+- `WECHAT_APP_ID` / `WECHAT_APP_SECRET`：获取路径、IP 白名单配置同 `soia-pkm-publish-wechat-draft` SKILL.md「如何获取并配置微信公众号 AppID / AppSecret」一节，不重复贴——两个 skill 用同一套公众号开发凭据。
 - 私有配置自动探测：`$SOIA_PKM_CLIP_WECHAT_ACCOUNT_CONFIG_FILE`（兼容别名 `$SOIA_PKM_CLIP_GZH_CONFIG_FILE`，以及原有 `$SOIA_PKM_CLIP_GZH_ENV_FILE`）> `~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-clip-wechat-account/config.yml`。配置文件使用 YAML `env:` 映射，示例见 `config.example.yml`；秘钥不进 vault、不进这个开源 skill 仓库。
 
 ### 用法

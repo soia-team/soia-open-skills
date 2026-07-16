@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""render_wechat.py — Markdown → 微信公众号安全 HTML（soia-pkm-publish skill 机械层）
+"""render_wechat.py — Markdown → 微信公众号安全 HTML（soia-pkm-publish-wechat-draft skill 机械层）
 
 只使用公众号编辑器认可的标签/内联样式来渲染，逐条对齐 SKILL.md「微信平台红线」：
 不出现 <div>/class/id/position/float/媒体查询/动画/CSS 变量/<style> 块；所有样式内联
