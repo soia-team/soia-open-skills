@@ -1,6 +1,9 @@
 ---
 name: soia-pkm-transform-article-slides
 description: 把文章转换为 PPT / PPTX / HTML 演示文稿或课件。本地 HTML deck 优先，可选 Open Design 或 NotebookLM PPT。Triggers：「做成PPT」「转成幻灯片」「生成课件」「转PPT」「export slides」「生成演示文稿」「make slides」
+version: 1.0.0
+created_at: 2026-07-16
+updated_at: 2026-07-16
 ---
 
 # soia-pkm-transform-article-slides

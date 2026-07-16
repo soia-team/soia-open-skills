@@ -192,3 +192,41 @@ symlinks in `~/.claude/skills/` and `~/.agents/skills/`. Future updates via
   deleted after merge.
 - Other agents (Codex, Gemini CLI) that read `.skill-lock.json` will not
   discover manually linked skills.
+
+## Skill Rename / Split / Delete
+
+`npx skills add` does not auto-remove old names. When renaming, splitting, or
+deleting a skill, manually clean up old installs.
+
+### Rename or split
+
+1. Create the new skill(s) in the repo (follow "New Skill Lifecycle" above).
+2. Remove the old skill directory from the repo: `git rm -r skills/<old-name>`.
+3. After merge, clean up old local installs:
+
+```bash
+rm -rf ~/.agents/skills/<old-name>
+rm -f  ~/.claude/skills/<old-name>
+```
+
+4. Install the new skill(s) from remote:
+
+```bash
+npx skills add soia-team/soia-open-skills -g -a '*' -s <new-name> -y
+```
+
+### Delete (no replacement)
+
+Same as above, skip step 4.
+
+### Avoiding broken reference links during split
+
+When splitting a monolithic skill into multiple sub-skills, each sub-skill
+inherits reference files that cross-link each other. The audit script checks
+relative links — a missing target fails CI.
+
+Rule: **copy the full `references/` set into every sub-skill**, even if a
+sub-skill doesn't directly use all references. The cost is disk duplication;
+the benefit is zero broken links and independent installability. Do not try to
+share references across skills via symlinks or relative paths outside the
+skill directory — `npx skills add` copies each skill as an isolated unit.
