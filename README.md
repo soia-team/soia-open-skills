@@ -46,7 +46,7 @@ npx skills add soia-team/soia-open-skills
       └─────────  飞轮：发布 → 心得喂回 vault → 更好的输入  ──┘
 
   支撑：soia-pkm-bootstrap（一句话从零搭 vault + 接入多 AI）
-        soia-pkm-transform（转化线：文章 → PDF/PPT/图片/试卷/脑图/播客/闪卡）
+        soia-pkm-transform-obsidian-pdf/slides/visual/notebook（转化线：按输出类型拆分）
         soia-pkm-reading-plan（读书线：把书单排成可执行阅读计划）
         soia-pkm-library（书库线：微信读书同步 + 记录补齐 + 总览生成）
         soia-pkm-alipan（云盘线·原子层：aliyunpan CLI 可靠原子操作）
@@ -110,7 +110,11 @@ npx skills add soia-team/soia-open-skills
 
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
-| [`soia-pkm-transform`](./skills/soia-pkm-transform/) | **文章 → 多产物**：PDF / PPT / 图片长图 / 试卷 / 脑图 / 播客 / 闪卡 / 报告；公共路由层，可选调用 Obsidian、NotebookLM、Codex 内置文档/图片/PPT 能力与 `publish` | ✅ 可用（路由 skill + 配置模板；具体产物取决于本机 provider） | vault 文章或 URL；NotebookLM / Obsidian / Codex 内置能力按需可选 |
+| [`soia-pkm-transform-obsidian-pdf`](./skills/soia-pkm-transform-obsidian-pdf/) | **文章 → PDF**：Obsidian 原生导出优先，vault 外降级 pandoc/weasyprint | ✅ 可用 | Obsidian（vault 内）或 pandoc/weasyprint（降级）|
+| [`soia-pkm-transform-article-slides`](./skills/soia-pkm-transform-article-slides/) | **文章 → PPT/课件**：本地 HTML deck / PPTX，可选 Open Design / NotebookLM PPT | ✅ 可用 | python-pptx；Open Design / NotebookLM 可选 |
+| [`soia-pkm-transform-article-visual`](./skills/soia-pkm-transform-article-visual/) | **文章 → 长图/信息图/海报/封面**：HTML/CSS 截图本地优先，可选 Open Design / Codex imagegen | ✅ 可用 | playwright（截图）；Open Design / Codex imagegen 可选 |
+| [`soia-pkm-transform-article-learning`](./skills/soia-pkm-transform-article-learning/) | **文章 → 试卷/闪卡/脑图/播客**：NotebookLM 优先，降级本地 Markdown | ✅ 可用 | NotebookLM 可选；降级无额外依赖 |
+| ~~[`soia-pkm-transform`](./skills/soia-pkm-transform/)~~ | ⚠️ 已被上方 4 个按输出类型拆分的 skill 覆盖，保留作降级后备 | 可用（降级） | — |
 
 ### 🧰 支撑
 
