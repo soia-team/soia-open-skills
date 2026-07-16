@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 
 
-ALLOWED_FRONTMATTER = {"name", "description", "dependencies", "version", "created_at", "updated_at"}
+ALLOWED_FRONTMATTER = {"name", "description", "dependencies", "version", "created_at", "updated_at", "created_by", "updated_by"}
 DEPENDENCY_KEYS = {"hard", "optional", "external"}
 MAX_SKILL_LINES = 500
 DISALLOWED_SKILL_DOCS = {

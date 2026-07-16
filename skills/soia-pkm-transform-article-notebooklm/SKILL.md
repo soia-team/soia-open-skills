@@ -1,12 +1,14 @@
 ---
-name: soia-pkm-transform-article-learning
-description: 把文章转换为试卷、闪卡、脑图、播客、学习笔记等学习类产物，本地 Markdown 优先，可选 NotebookLM 增强。Triggers：「生成试卷」「做成闪卡」「生成脑图」「做播客」「generate quiz」「make flashcards」「mindmap」「podcast」
+name: soia-pkm-transform-article-notebooklm
+description: 用 NotebookLM 把文章转换为试卷、闪卡、脑图、播客、学习笔记等学习类产物，降级为本地 Markdown。Triggers：「生成试卷」「做成闪卡」「生成脑图」「做播客」「NotebookLM」「generate quiz」「make flashcards」「mindmap」「podcast」
 version: 1.0.0
 created_at: 2026-07-16
 updated_at: 2026-07-16
+created_by: zp
+updated_by: zp
 ---
 
-# soia-pkm-transform-article-learning
+# soia-pkm-transform-article-notebooklm
 
 把已归档或指定文章转换为学习类或互动类产物：试卷、闪卡、脑图、播客脚本、学习笔记，优先使用 NotebookLM，降级为本地 Markdown。
 
@@ -39,7 +41,7 @@ updated_at: 2026-07-16
 ### 依赖与安装
 
 ```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s soia-pkm-transform-article-learning -y
+npx skills add soia-team/soia-open-skills -g -a '*' -s soia-pkm-transform-article-notebooklm -y
 ```
 
 - 本地方案：无额外依赖（生成 Markdown）

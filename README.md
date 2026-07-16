@@ -113,8 +113,7 @@ npx skills add soia-team/soia-open-skills
 | [`soia-pkm-transform-obsidian-pdf`](./skills/soia-pkm-transform-obsidian-pdf/) | **文章 → PDF**：Obsidian 原生导出优先，vault 外降级 pandoc/weasyprint | ✅ 可用 | Obsidian（vault 内）或 pandoc/weasyprint（降级）|
 | [`soia-pkm-transform-article-slides`](./skills/soia-pkm-transform-article-slides/) | **文章 → PPT/课件**：本地 HTML deck / PPTX，可选 Open Design / NotebookLM PPT | ✅ 可用 | python-pptx；Open Design / NotebookLM 可选 |
 | [`soia-pkm-transform-article-visual`](./skills/soia-pkm-transform-article-visual/) | **文章 → 长图/信息图/海报/封面**：HTML/CSS 截图本地优先，可选 Open Design / Codex imagegen | ✅ 可用 | playwright（截图）；Open Design / Codex imagegen 可选 |
-| [`soia-pkm-transform-article-learning`](./skills/soia-pkm-transform-article-learning/) | **文章 → 试卷/闪卡/脑图/播客**：NotebookLM 优先，降级本地 Markdown | ✅ 可用 | NotebookLM 可选；降级无额外依赖 |
-| ~~[`soia-pkm-transform`](./skills/soia-pkm-transform/)~~ | ⚠️ 已被上方 4 个按输出类型拆分的 skill 覆盖，保留作降级后备 | 可用（降级） | — |
+| [`soia-pkm-transform-article-notebooklm`](./skills/soia-pkm-transform-article-notebooklm/) | **文章 → 试卷/闪卡/脑图/播客**：NotebookLM 优先，降级本地 Markdown | ✅ 可用 | NotebookLM 可选；降级无额外依赖 |
 
 ### 🧰 支撑
 

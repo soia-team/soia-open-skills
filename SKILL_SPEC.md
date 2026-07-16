@@ -133,6 +133,8 @@ description: ...
 version: 1.0.0
 created_at: 2026-07-16
 updated_at: 2026-07-16
+created_by: zp
+updated_by: zp
 ---
 ```
 
@@ -145,8 +147,12 @@ Rules:
 - `updated_at`: the date of the most recent substantive change to the skill
   (SKILL.md, scripts, or references). Update on every commit that touches
   this skill.
+- `created_by`: the person (or agent) who originally authored the skill.
+  Never changes. Use short identifier (e.g. `zp`, `codex`, `claude`).
+- `updated_by`: the person (or agent) who made the most recent substantive
+  change. Update together with `updated_at`.
 - All dates use `YYYY-MM-DD` format, no time component.
-- New skills must include all three fields. Existing skills should add them
+- New skills must include all five fields. Existing skills should add them
   on the next edit.
 
 ### 1. No hardcoded personal paths
