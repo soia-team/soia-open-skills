@@ -1,4 +1,0 @@
-interface:
-  display_name: "PKM Library"
-  short_description: "维护 Obsidian 书库：同步微信读书书架、已读/在读记录、划线/想法和单本详情，并生成图书馆/阅读记录/类型总览。微信读书同步强依赖 weread-skills + WEREAD_API_KEY；每次执行必须输出客户可见日志、总结、文件变更和下一步建议。"
-  default_prompt: "Use soia-pkm-library: 同步微信读书书架、阅读记录、划线/想法和单本详情到 Obsidian 书库，并生成总览。执行前检查 weread-skills + WEREAD_API_KEY；执行后输出客户可见日志摘要、文件变更和下一步建议。"

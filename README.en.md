@@ -49,7 +49,7 @@ Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, K
            soia-pkm-bootstrap-vault-obsidian / soia-pkm-bootstrap-vault-ima (Obsidian / ima consumer specializations)
            soia-pkm-transform (transform line: article → PDF/PPT/image/quiz/mindmap/podcast/flashcards)
            soia-pkm-reading-plan (reading line: turn a book list into an executable reading schedule)
-           soia-pkm-library (library line: WeChat Reading sync + record backfill + overview generation)
+           soia-pkm-library-weread-sync / soia-pkm-library-book-catalog (library line: WeChat Reading sync / local catalog)
            soia-pkm-alipan-drive-ops (cloud drive line · atomic layer: reliable atomic operations via the aliyunpan CLI)
            soia-pkm-alipan-curator (cloud drive line · advisor layer: inventory/organize/catalog/study plans)
            soia-dev-archify-diagrams (doc diagram line: Archify JSON IR → README/docs PNG diagrams)
@@ -124,7 +124,8 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 | [`soia-pkm-bootstrap-vault-obsidian`](./skills/soia-pkm-bootstrap-vault-obsidian/) | Obsidian specialization: enable Bases and configure `.obsidian` / CSS snippets | ✅ Usable | `soia-pkm-bootstrap-vault-base` |
 | [`soia-pkm-bootstrap-vault-ima`](./skills/soia-pkm-bootstrap-vault-ima/) | Tencent ima specialization: connect local Markdown to an ima knowledge base one-way and verify retrieval | 🟡 Requires client-specific setup | `soia-pkm-bootstrap-vault-base` |
 | [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | Scenario-based reading plans (book list/topic → scheduled by real word count) | ✅ Usable | `weread-skills` optionally enhances real word counts/ratings; `huashu-weread-advisor` optionally reuses its recommendation methodology; no hard third-party dependency |
-| [`soia-pkm-library`](./skills/soia-pkm-library/) | Maintain the book library: WeChat Reading sync (catalog/highlights) + enrich book details + backfill reading records + generate three overview views (library/reading records/genre) | ✅ Usable (7 mechanical scripts, idempotent and safe to re-run) | Sync scripts hard-depend on the official `weread-skills` + `WEREAD_API_KEY`; local overview scripts only depend on the vault |
+| [`soia-pkm-library-weread-sync`](./skills/soia-pkm-library-weread-sync/) | WeChat Reading sync: read books, highlights/notes, and API-based single-book detail enrichment | ✅ Usable (3 mechanical scripts, idempotent and safe to re-run) | Official `weread-skills` + `WEREAD_API_KEY` |
+| [`soia-pkm-library-book-catalog`](./skills/soia-pkm-library-book-catalog/) | Local-only book catalog: backfill pending reading records and generate library/reading-record/genre overviews | ✅ Usable (4 mechanical scripts, idempotent and safe to re-run) | Python 3 + local vault; no WeChat Reading dependency |
 | [`soia-pkm-maintain`](./skills/soia-pkm-maintain/) | Weekly vault maintenance, full-vault map regeneration, AI session-log ingestion | ✅ Usable (Python stdlib / bash scripts) | An Obsidian vault, via `--vault <path>` or `OBSIDIAN_VAULT` |
 | [`soia-pkm-alipan-drive-ops`](./skills/soia-pkm-alipan-drive-ops/) | Alibaba Cloud Drive atomic operations layer: login/switch between drives/browse/move/rename/upload/download/quota check, with output parsing and safety rules | ✅ Usable (no scripts needed, drives the `aliyunpan` CLI directly) | `aliyunpan` CLI (installed via brew + QR-code login) |
 | [`soia-pkm-baidu-netdisk-ops`](./skills/soia-pkm-baidu-netdisk-ops/) | Baidu Netdisk atomic operations layer: official `baidu-drive` / `bdpan` by default, with an explicit community `baidupan-cli` mode and read-only JSONL scanning | ✅ Usable (private config selects the provider) | Official `baidu-drive` Skill or `mqhe2007/baidupan-cli` + Open Platform app |
@@ -256,19 +257,30 @@ python3 scripts/validate_artifact_quality.py --article <article.md> --out-dir <o
 
 **Typical output**: an artifact file in the requested format lands in the specified output directory, along with a validation report (page count, coverage, whether it opens/parses correctly).
 
-### soia-pkm-library
+### soia-pkm-library-weread-sync
 
-Maintains an Obsidian book library: syncs your WeChat Reading shelf and highlights, enriches details for individual books, backfills reading records, and regenerates three overview views (library / reading records / genre). All 7 mechanical scripts are idempotent and safe to re-run.
+Syncs the WeChat Reading shelf and highlights, and enriches individual book details through the WeChat Reading API. The 3 mechanical scripts are idempotent and safe to re-run.
 
 ```bash
 python3 sync_weread_to_library.py --vault <vault-path>
 python3 sync_weread_highlights.py --all
-python3 backfill_reading_records.py
-python3 gen_library_md.py
-python3 gen_records_md.py
+python3 enrich_book_details.py <book-title>
 ```
 
-**Typical output**: the terminal reports the number of new book cards, new reading records, and failures, plus a suggested next step (e.g., regenerate the overviews).
+**Typical output**: the terminal reports created/updated book cards, reading records, highlights, or detail sections, plus a suggested next step to generate local overviews with book-catalog.
+
+### soia-pkm-library-book-catalog
+
+A local-only, idempotent catalog workflow that never calls the WeChat Reading API.
+
+```bash
+python3 backfill_reading_records.py --vault <vault-path>
+python3 gen_library_md.py --vault <vault-path>
+python3 gen_records_md.py --vault <vault-path>
+python3 gen_genre_library_md.py --vault <vault-path> --base <book-library-relative-path>
+```
+
+**Typical output**: the terminal reports scan/create/skip/failure counts for the pending records and three overviews; use `--output <preview-path>` to preview instead of overwriting the vault.
 
 ### soia-cwork-feishu-cli
 
@@ -409,7 +421,8 @@ soia-open-skills/
     ├── soia-pkm-publish-x-thread/           ├── soia-pkm-publish-rednote-card/
     ├── soia-pkm-transform/    ├── soia-pkm-bootstrap-vault-base/
     ├── soia-pkm-bootstrap-vault-obsidian/  ├── soia-pkm-bootstrap-vault-ima/
-    ├── soia-pkm-reading-plan/ ├── soia-pkm-library/
+    ├── soia-pkm-reading-plan/ ├── soia-pkm-library-weread-sync/
+    ├── soia-pkm-library-book-catalog/
     ├── soia-pkm-maintain/     ├── soia-pkm-alipan-drive-ops/
     ├── soia-pkm-alipan-curator/
     ├── soia-pkm-translate-article-zh/    ├── soia-pkm-interpret-article-analysis/
@@ -457,7 +470,7 @@ Third-party skills this repo works alongside (this repo only declares the relati
 
 | Third-party skill | Upstream | Relationship to this repo |
 |---|---|---|
-| `weread-skills` | [Tencent/WeChatReading](https://github.com/Tencent/WeChatReading) | **Hard dependency** for `soia-pkm-library`'s WeChat Reading sync scripts; an optional data enhancement for `soia-pkm-reading-plan` |
+| `weread-skills` | [Tencent/WeChatReading](https://github.com/Tencent/WeChatReading) | **Hard dependency** for `soia-pkm-library-weread-sync`'s WeChat Reading sync and detail scripts; an optional data enhancement for `soia-pkm-reading-plan` |
 | `huashu-weread-advisor` | [alchaincyf/huashu-weread](https://github.com/alchaincyf/huashu-weread) | `soia-pkm-reading-plan` optionally reuses its book-selection/recommendation methodology; `soia-pkm-distill-article-opinion` only references its "alchemy" method, with no runtime dependency |
 | `book-to-skill` | [virgiliojr94/book-to-skill](https://github.com/virgiliojr94/book-to-skill) | Not a runtime dependency; a standalone tool for turning books/documents into skills |
 | `find-skills` | [vercel-labs/skills](https://github.com/vercel-labs/skills) | Not a runtime dependency; a helper tool for discovering/installing skills |

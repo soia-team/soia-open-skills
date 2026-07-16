@@ -1,0 +1,4 @@
+interface:
+  display_name: "PKM WeRead Sync"
+  short_description: "同步微信读书已读书目与划线，并通过微信读书 API 补单本书详情；需要 weread-skills 和 WEREAD_API_KEY。"
+  default_prompt: "Use soia-pkm-library-weread-sync: 同步微信读书书架、已读书目或划线，或补一下指定书的详情；执行前检查 weread-skills + WEREAD_API_KEY。"

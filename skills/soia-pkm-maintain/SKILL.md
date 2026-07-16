@@ -179,7 +179,8 @@ bash scripts/session_end_log.sh --vault <path> --agent Codex
 | 未指定 `--vault` 且私有 `config.yml` 中无 `OBSIDIAN_VAULT` | 报错退出（`exit 1`），提示二选一 |
 | lint 四类发现都为空 | 周简报里写"无"，不是省略该小节 |
 | lint 报告里的重复文件名/标签漂移涉及主题归类判断 | 转交 `soia-pkm-organize-article-moc`，本 skill 不做归类决策 |
-| 微信读书同步 / 书库总览生成需求 | 转交 `soia-pkm-library`，本 skill 不碰书库数据线 |
+| 微信读书同步需求 | 转交 `soia-pkm-library-weread-sync`；本 skill 不碰书库数据线 |
+| 书库补建记录 / 总览生成需求 | 转交 `soia-pkm-library-book-catalog`；本 skill 不碰书库数据线 |
 | 会话日志接入需要改 `settings.json` / `config.toml` | 必须先征询用户、拿到同意才写，绝不静默改配置；已有配置要合并不要覆盖 |
 | Codex `notify` 已经接了别的用途（如 computer-use 客户端） | 用 `codex_notify_wrapper.sh` 包装，不覆盖原命令，见 references 文档 |
 | `lint_vault.py` 遇到附件类 wikilink（图片/PDF/office 文档等） | 视为附件引用，跳过死链检查（脚本只维护 `.md` 索引） |
