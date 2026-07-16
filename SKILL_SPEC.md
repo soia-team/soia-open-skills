@@ -122,6 +122,33 @@ Rules:
 - Declare only real install-level dependencies. Pipeline neighbors,
   routing-table references, and prose mentions stay out of `dependencies`.
 
+### Version and timestamps (frontmatter)
+
+Every `SKILL.md` frontmatter should include version and timestamp fields:
+
+```yaml
+---
+name: soia-pkm-transform-obsidian-pdf
+description: ...
+version: 1.0.0
+created_at: 2026-07-16
+updated_at: 2026-07-16
+---
+```
+
+Rules:
+
+- `version`: semver (`MAJOR.MINOR.PATCH`). Bump MAJOR for breaking changes
+  (renamed skill, changed input/output contract), MINOR for new capabilities,
+  PATCH for bug fixes and reference updates.
+- `created_at`: the date the skill was first committed. Never changes.
+- `updated_at`: the date of the most recent substantive change to the skill
+  (SKILL.md, scripts, or references). Update on every commit that touches
+  this skill.
+- All dates use `YYYY-MM-DD` format, no time component.
+- New skills must include all three fields. Existing skills should add them
+  on the next edit.
+
 ### 1. No hardcoded personal paths
 
 Do not hardcode maintainer-specific or vault-specific paths in scripts, `SKILL.md`, examples, or config templates.

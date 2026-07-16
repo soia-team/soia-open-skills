@@ -1,4 +1,0 @@
-interface:
-  display_name: "PKM Transform"
-  short_description: "把 X/公众号/网页/Markdown 文章转换为 PDF、PPT、图片/长图、试卷、脑图、播客、闪卡、报告等产物的公共路由 skill。配置外置，可调用 Obsidian、NotebookLM、Open Design、Codex 文件能力与 publish"
-  default_prompt: "Use soia-pkm-transform: 把 X/公众号/网页/Markdown 文章转换为 PDF、PPT、图片/长图、试卷、脑图、播客、闪卡、报告等产物的公共路由 skill。配置外置，可调用 Obsidian、NotebookLM、Open Design、Codex 文件能力与 publish"
