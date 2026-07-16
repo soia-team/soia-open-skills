@@ -45,7 +45,8 @@ npx skills add soia-team/soia-open-skills
       ↑                                                      ▼
       └─────────  飞轮：发布 → 心得喂回 vault → 更好的输入  ──┘
 
-  支撑：soia-pkm-bootstrap（一句话从零搭 vault + 接入多 AI）
+  支撑：soia-pkm-bootstrap-vault-base（一句话从零搭通用 Markdown vault + 接入多 AI）
+        soia-pkm-bootstrap-vault-obsidian / soia-pkm-bootstrap-vault-ima（Obsidian / ima 消费端特化）
         soia-pkm-transform-obsidian-pdf/slides/visual/notebook（转化线：按输出类型拆分）
         soia-pkm-reading-plan（读书线：把书单排成可执行阅读计划）
         soia-pkm-library（书库线：微信读书同步 + 记录补齐 + 总览生成）
@@ -65,7 +66,7 @@ npx skills add soia-team/soia-open-skills
 
 > **通用能力（所有 skill 共享）**
 > - 🤖 **支持的 AI**：跨 agent 通用——Claude Code、Codex、Cursor、Antigravity、Gemini、Kimi、amp、Warp、Zed 等所有兼容 [skills.sh](https://skills.sh) 标准的 AI。一次写 `SKILL.md`，处处可用。
-> - 📚 **适用知识库**：Obsidian vault（推荐 PARA 结构；没有现成的？用 `bootstrap` 一键搭）。底层是纯 Markdown + YAML frontmatter，不锁定平台。
+> - 📚 **适用知识库**：本地 Markdown vault（推荐 PARA 结构；可按需接入 Obsidian 或腾讯 ima）。底层是纯 Markdown + YAML frontmatter，不锁定平台。
 > - 🔗 **依赖链**：`clip-*` 是入口（独立可用）→ `organize` / `distill` 需 vault 里有内容 → `compose` 需 distill 的观点 → `publish` 需 compose 的草稿。
 > - 🧩 **第三方 skill 口径**：只在本仓库自建 skill 里声明依赖 / 可选增强 / 方法参考，**不改第三方 skill 文件**；具体来源以 `~/.agents/.skill-lock.json` 为准。
 > - **状态图例**：✅ 可直接用 · 🟡 可用但需补脚本 / 配凭据
@@ -123,7 +124,9 @@ npx skills add soia-team/soia-open-skills
 
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
-| [`soia-pkm-bootstrap`](./skills/soia-pkm-bootstrap/) | 从零初始化 AI-native vault（PARA + AGENTS + 模板 + Bases + CSS + 多 AI 接入）| ✅ 可用（`init_vault.py` 跑通）| 无（它是起点）|
+| [`soia-pkm-bootstrap-vault-base`](./skills/soia-pkm-bootstrap-vault-base/) | 初始化知识库中立的 Markdown vault（PARA + AGENTS + 模板 + 多 AI 接入）| ✅ 可用（`init_vault.py` 跑通）| 无（它是起点）|
+| [`soia-pkm-bootstrap-vault-obsidian`](./skills/soia-pkm-bootstrap-vault-obsidian/) | Obsidian 特化：启用 Bases、检查 `.obsidian` 配置与 CSS snippets | ✅ 可用 | `soia-pkm-bootstrap-vault-base` |
+| [`soia-pkm-bootstrap-vault-ima`](./skills/soia-pkm-bootstrap-vault-ima/) | 腾讯 ima 特化：本地 Markdown vault → ima 知识库单向接入与检索验证 | 🟡 需按 ima 客户端实际界面配置 | `soia-pkm-bootstrap-vault-base` |
 | [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | 场景化阅读计划（书单/主题 → 按真实字数排期）| ✅ 可用 | `weread-skills` 可选增强真实字数/评分；`huashu-weread-advisor` 可选复用推荐方法论；无第三方强依赖 |
 | [`soia-pkm-library`](./skills/soia-pkm-library/) | 维护书库：微信读书同步（书目/划线）+ 补书详情 + 补待读记录 + 生成图书馆/阅读记录/分类三份总览 | ✅ 可用（7 个机械脚本，幂等可重复跑）| 同步类脚本强依赖官方 `weread-skills` + `WEREAD_API_KEY`；本地总览脚本只依赖 vault |
 | [`soia-pkm-maintain`](./skills/soia-pkm-maintain/) | vault 周维护、全库地图重生成、AI 会话日志接入 | ✅ 可用（Python stdlib / bash 脚本）| Obsidian vault，`--vault <path>` 或 `OBSIDIAN_VAULT` |
@@ -304,7 +307,9 @@ npx skills add soia-team/soia-open-skills
 | `把这些观点写成一篇` | compose |
 | `转换文章为 PPT` / `把这篇转成脑图` | transform |
 | `把这篇发成公众号` | publish |
-| `从零搭个知识库` | bootstrap |
+| `从零搭个知识库` | soia-pkm-bootstrap-vault-base |
+| `配置 Obsidian` / `启用 Bases` | soia-pkm-bootstrap-vault-obsidian |
+| `接入 ima` / `同步到 ima 知识库` | soia-pkm-bootstrap-vault-ima |
 | `给 README 画一张架构图` / `用 Archify 重画流程图` | soia-dev-archify-diagrams |
 | `查这个 PR checks` / `看最近 GitHub Actions 失败原因` | soia-dev-github-ops |
 | `升级本机 AI CLI` / `dry-run 看 codex/claude 版本` | soia-dev-ai-cli-upgrade |
@@ -407,7 +412,8 @@ soia-open-skills/
     ├── soia-pkm-organize-article-moc/     ├── soia-pkm-distill-article-opinion/
     ├── soia-pkm-compose-article-draft/      ├── soia-pkm-publish-wechat-draft/
     ├── soia-pkm-publish-x-thread/           ├── soia-pkm-publish-rednote-card/
-    ├── soia-pkm-transform/    ├── soia-pkm-bootstrap/
+    ├── soia-pkm-transform/    ├── soia-pkm-bootstrap-vault-base/
+    ├── soia-pkm-bootstrap-vault-obsidian/  ├── soia-pkm-bootstrap-vault-ima/
     ├── soia-pkm-reading-plan/ ├── soia-pkm-library/
     ├── soia-pkm-maintain/     ├── soia-pkm-alipan-drive-ops/
     ├── soia-pkm-baidu-netdisk-ops/      ├── soia-pkm-alipan-curator/

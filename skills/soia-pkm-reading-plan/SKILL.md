@@ -18,7 +18,7 @@ updated_by: claude opus 4.6
 
 # soia-pkm-reading-plan
 
-> 属 SOIA 个人知识管理域（`soia-pkm-*`）的「加工」环节，与 `soia-pkm-forge`（输出）、`soia-pkm-bootstrap`（搭建）同族。
+> 属 SOIA 个人知识管理域（`soia-pkm-*`）的「加工」环节，与 `soia-pkm-forge`（输出）、`soia-pkm-bootstrap-vault-base`（搭建）同族。
 
 把「想读的一批书」变成「排得进日程、读得完」的计划。
 
