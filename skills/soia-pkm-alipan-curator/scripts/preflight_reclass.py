@@ -27,6 +27,11 @@ import preflight_gate
 
 
 RUNNER_ENV = "SOIA_ALIPAN_RUNNER"
+RECLASS_OPS = {"mkdir", "mv", "rename"}
+CLEANUP_OPS = {"delete", "remove", "trash"}
+CLEANUP_ACTION_ERROR = (
+    "删除动作应登记在 cleanup_batches，由原子层在用户授权+空壳验证后执行，不进入重分类恢复/重放"
+)
 
 
 def alipan_runner_path() -> Path | None:
@@ -172,23 +177,42 @@ def load_registered(run_dir: Path, roots: list[str]) -> tuple[dict, list[dict], 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     actions: list[dict] = []
     hashes = {"run.json": sha256_file(manifest_path)}
-    cleanup_relative = preflight_gate.registered_cleanup_evidence(manifest)
-    if cleanup_relative is not None:
-        cleanup_path = preflight_gate.resolve_run_member(
+    # Every executable plan is immutable at preflight, including cleanup plans.
+    # Cleanup result ledgers are intentionally omitted: they are append-only
+    # evidence produced by the executor after this report is issued.
+    for relative in preflight_gate.registered_plan_paths(manifest):
+        plan_path = preflight_gate.resolve_run_member(run_dir, relative, "registered plan")
+        if not plan_path.is_file():
+            raise ValueError(f"registered plan is missing: {relative}")
+        hashes[relative] = sha256_file(plan_path)
+    for index, result in enumerate(preflight_gate.registered_cleanup_result_paths(manifest)):
+        preflight_gate.resolve_run_member(run_dir, result, f"run.cleanup_batches[{index}].result")
+    cleanup_authorizations = preflight_gate.registered_cleanup_authorizations(manifest)
+    if cleanup_authorizations is not None:
+        authorization_path = preflight_gate.resolve_run_member(
             run_dir,
-            cleanup_relative,
+            cleanup_authorizations,
+            "run.files.cleanup_authorizations",
+        )
+        if not authorization_path.is_file():
+            raise ValueError(f"registered cleanup authorizations are missing: {cleanup_authorizations}")
+        hashes[cleanup_authorizations] = sha256_file(authorization_path)
+    cleanup_evidence = preflight_gate.registered_cleanup_evidence(manifest)
+    if cleanup_evidence is not None:
+        evidence_path = preflight_gate.resolve_run_member(
+            run_dir,
+            cleanup_evidence,
             "run.files.empty_cleanup_evidence",
         )
-        if not cleanup_path.is_file():
-            raise ValueError(f"registered empty cleanup evidence is missing: {cleanup_relative}")
-        hashes[cleanup_relative] = sha256_file(cleanup_path)
+        if not evidence_path.is_file():
+            raise ValueError(f"registered empty cleanup evidence is missing: {cleanup_evidence}")
+        hashes[cleanup_evidence] = sha256_file(evidence_path)
     seen_ids: set[str] = set()
     for batch_index, batch in enumerate(manifest.get("batches", []), 1):
         relative = str(batch.get("plan", "")).strip()
         plan_path = (run_dir / relative).resolve()
         if run_dir.resolve() not in plan_path.parents:
             raise ValueError(f"batch {batch_index}: plan escapes run dir")
-        hashes[relative] = sha256_file(plan_path)
         with plan_path.open(encoding="utf-8") as handle:
             for line_number, line in enumerate(handle, 1):
                 if not line.strip():
@@ -199,7 +223,11 @@ def load_registered(run_dir: Path, roots: list[str]) -> tuple[dict, list[dict], 
                 if not action_id or action_id in seen_ids:
                     raise ValueError(f"{relative}:{line_number}: invalid/duplicate action_id")
                 seen_ids.add(action_id)
-                if op not in {"mkdir", "mv", "rename"}:
+                if op in CLEANUP_OPS:
+                    raise ValueError(
+                        f"{CLEANUP_ACTION_ERROR}（{relative}:{line_number} op={op!r}）"
+                    )
+                if op not in RECLASS_OPS:
                     raise ValueError(f"{relative}:{line_number}: invalid op {op}")
                 for field in (("to",) if op == "mkdir" else ("from", "to")):
                     value = str(action.get(field, ""))
@@ -566,7 +594,7 @@ def evaluate_cleanup_superseded(
             violate("cleanup_evidence_decision_missing", row, path=path)
             invalid_paths.add(path)
         status = row.get("status")
-        if not isinstance(status, str) or not status.startswith("removed_to_recycle_bin"):
+        if status != "removed_to_recycle_bin_verified":
             violate("invalid_cleanup_evidence_status", row, path=path, status=status)
             invalid_paths.add(path)
 

@@ -868,6 +868,75 @@ def audit_scan_errors(path: Path | None, *, required: bool = False) -> tuple[int
     }]
 
 
+def scan_row_path(row: dict) -> str:
+    """Return the normalized physical path represented by one scan row."""
+    return normalize_cloud_path(
+        f"{normalize_cloud_path(str(row.get('path', '')))}/{str(row.get('name', '')).strip()}"
+    )
+
+
+def merge_file_level_scans(
+    scans: list[tuple[str, list[dict]]],
+) -> tuple[list[dict], int, list[dict]]:
+    """Merge complete scans by stable file id without hiding conflicting paths.
+
+    Supplemental scans may intentionally overlap the primary scan.  A repeated
+    physical entity at the same path is therefore harmless; the same entity at
+    different paths means the asserted terminal state is ambiguous and must fail.
+    """
+    merged: list[dict] = []
+    indexed: dict[str, dict] = {}
+    deduplicated = 0
+    violations: list[dict] = []
+    requires_physical_identity = len(scans) > 1
+    for scan_name, rows in scans:
+        for line, row in enumerate(rows, 1):
+            path = scan_row_path(row)
+            if "agg_files" in row or "agg_size" in row:
+                violations.append({
+                    "kind": "aggregate_scan_row",
+                    "scan": scan_name,
+                    "line": line,
+                    "path": path,
+                })
+            file_id = str(row.get("id", "")).strip()
+            if not file_id:
+                if requires_physical_identity:
+                    violations.append({
+                        "kind": "scan_row_missing_file_id",
+                        "scan": scan_name,
+                        "line": line,
+                        "path": path,
+                    })
+                else:
+                    merged.append(row)
+                continue
+            previous = indexed.get(file_id)
+            if previous is None:
+                indexed[file_id] = {
+                    "path": path,
+                    "scan": scan_name,
+                    "line": line,
+                    "row": row,
+                }
+                merged.append(row)
+                continue
+            if previous["path"] != path:
+                violations.append({
+                    "kind": "scan_physical_id_path_conflict",
+                    "file_id": file_id,
+                    "scan": scan_name,
+                    "line": line,
+                    "path": path,
+                    "first_scan": previous["scan"],
+                    "first_line": previous["line"],
+                    "first_path": previous["path"],
+                })
+                continue
+            deduplicated += 1
+    return merged, deduplicated, violations
+
+
 def scan_contains_target(rows: list[dict], target: str) -> bool:
     """Return whether a file or directory target exists in a scan."""
     normalized_target = normalize_cloud_path(target)
@@ -931,6 +1000,13 @@ def parse_args() -> argparse.Namespace:
         description="Audit structure contracts against an Aliyun Drive scan JSONL."
     )
     parser.add_argument("--scan", required=True, type=Path, help="scan JSONL")
+    parser.add_argument(
+        "--supplemental-scan",
+        action="append",
+        default=[],
+        type=Path,
+        help="additional complete file-level scan JSONL; repeat with a paired --supplemental-scan-errors",
+    )
     parser.add_argument("--contract", required=True, type=Path, help="audit contract JSON")
     parser.add_argument("--unclear", type=Path, help="optional unclear-item manifest JSONL")
     parser.add_argument(
@@ -944,6 +1020,13 @@ def parse_args() -> argparse.Namespace:
         help="scan error sidecar; explicit paths must exist; --final defaults to <scan>.errors",
     )
     parser.add_argument(
+        "--supplemental-scan-errors",
+        action="append",
+        default=[],
+        type=Path,
+        help="error sidecar paired positionally with each --supplemental-scan",
+    )
+    parser.add_argument(
         "--allow-missing-scan-errors",
         action="store_true",
         help="allow --final without a scan error sidecar after independently verifying scan completeness",
@@ -953,9 +1036,21 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    if len(args.supplemental_scan) != len(args.supplemental_scan_errors):
+        raise ValueError(
+            "--supplemental-scan and --supplemental-scan-errors must be provided in matching pairs"
+        )
     contract = json.loads(args.contract.read_text(encoding="utf-8"))
     validate_contract(contract)
-    rows = read_jsonl(args.scan)
+    primary_rows = read_jsonl(args.scan)
+    supplemental_rows = [read_jsonl(path) for path in args.supplemental_scan]
+    rows, deduplicated_rows, scan_shape = merge_file_level_scans(
+        [("primary", primary_rows)]
+        + [
+            (f"supplemental[{index}]", scan_rows)
+            for index, scan_rows in enumerate(supplemental_rows, 1)
+        ]
+    )
     unclear_rows = read_jsonl(args.unclear) if args.unclear else []
     scan_errors_path = args.scan_errors
     if scan_errors_path is None and args.final:
@@ -988,8 +1083,15 @@ def main() -> int:
     scan_errors_checked, scan_errors = audit_scan_errors(
         scan_errors_path, required=scan_errors_required
     )
+    supplemental_scan_errors_checked = 0
+    supplemental_scan_error_violations: list[dict] = []
+    for errors_path in args.supplemental_scan_errors:
+        checked, violations = audit_scan_errors(errors_path, required=True)
+        supplemental_scan_errors_checked += checked
+        supplemental_scan_error_violations.extend(violations)
     violations = (
-        numbering
+        scan_shape
+        + numbering
         + guides
         + required_guides
         + required_artifacts
@@ -998,10 +1100,13 @@ def main() -> int:
         + discovery
         + unclear
         + scan_errors
+        + supplemental_scan_error_violations
     )
     result = {
         "status": "passed" if not violations else "failed",
         "scan_rows": len(rows),
+        "supplemental_scans": len(args.supplemental_scan),
+        "deduplicated_scan_rows": deduplicated_rows,
         "checked": {
             "numbered_directories": numbered_checked,
             "guide_parents": guides_checked,
@@ -1016,6 +1121,7 @@ def main() -> int:
             "flat_series_violating_parents": discovery_stats["violating_parents"],
             "unclear_items": unclear_checked,
             "scan_errors": scan_errors_checked,
+            "supplemental_scan_errors": supplemental_scan_errors_checked,
         },
         "violations": violations,
     }

@@ -106,6 +106,24 @@ python3 '<skill-dir>/scripts/gen_catalog_xlsx.py' \
 
 运行完成后再用完全相同参数复跑一次。第二次必须进入 unchanged 快路径；否则增量缓存、输出缺失判断或 manifest 提交存在问题。
 
+## 从 verified ledger 物化新增分区
+
+当资源已经通过运行包的普通迁移动作进入一个新分区，但为更新索引没有必要再次全盘扫描时，使用正式离线物化器；不要在 `outputs/` 临时拼 JSONL：
+
+```bash
+python3 '<skill>/scripts/materialize_catalog_snapshot.py' \
+  --run-dir '<xdg-state-run-dir>' \
+  --initial-scan '<complete-base-scan.jsonl>' \
+  --target-root '/<partition>' \
+  --target-root-file-id '<verified-root-file-id>' \
+  --directory-identities '<shallow-terminal-directory-identities.jsonl>' \
+  --out '<xdg-state-run-dir>/catalog-snapshots/<partition>.jsonl'
+```
+
+`--directory-identities` 每行只允许 `{"path":"/<exact-directory>","id":"<verified-file-id>","dir":true}`，来源必须是浅层终态列表或等价原子层证据。它只补足历史 `mkdir` 结果没有记录的新目录 identity，并被写入 provenance SHA-256；不能用于猜测、改写普通移动动作或掩盖 cleanup。物化器只读取 `run.json.batches`，要求每个 plan operation key 都有同 identity 的最新 `verified/completed` result，且会联动父目录移动后的后代路径。provenance 会登记 base scan、run manifest、每份 plan、每份 result ledger 与目录 identity 证据的运行包相对路径和 SHA-256，拒绝把运行包外输入写成不可移植的本机路径。它原子输出逐实体 snapshot、空 `.errors` 与 `.provenance.json`，中间态只留在 XDG state。
+
+把物化出的新分区加入已有总览时，显式使用 `gen_catalog.py --merge-existing ... --allow-new-partition`。没有该参数时缺失分区继续失败；启用后仍会拒绝重复分区、边界不清、roots 不一致或无法安全排序的输入。随后按普通流程增量生成 Excel，并用同参数复跑确认 `unchanged`。
+
 ## 数据口径
 
 “馆藏总文件数”和“Excel 已展开文件明细数”不一定相等：

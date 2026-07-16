@@ -96,11 +96,18 @@ https://www.aliyundrive.com/drive/file/all/backup/<40位file_id>
 
 ```json
 {
+  "selection_mode": "explicit_roots",
+  "resource_roots": [
+    {"path": "/Learning/Language/Complete course", "category": "Courses"}
+  ],
   "exclude_paths": ["/Learning/Language/01_先看这里"],
   "exclude_name_patterns": ["^说明(?:-|_).+$", "^临时"]
 }
 ```
 
+- `selection_mode` 未填写时默认为 `explicit_roots`：必须提供至少一个 `resource_roots`，且只选择这些明确声明的业务资源包根；空数组会失败，不会自动扫描叶目录。
+- `selection_mode: "deepest_leaves"` 是显式 opt-in 的兼容模式：按扫描结果自动选择排除项之外的最深目录。只有在确实要使用这种自动选择时才填写该值；`resource_roots` 在此模式下仍可作为额外的明确资源根。
+- `selection_mode` 只接受 `explicit_roots` 或 `deepest_leaves`；未知值直接失败。
 - `exclude_paths` 是 scope 内的绝对目录路径；该目录及其所有子目录均不作为资源行。
 - `exclude_name_patterns` 是 Python 正则，使用 `search` 匹配目录名；命中的目录及其子目录均不作为资源行。需要精确名称时使用 `^...$`。
 - 每个 guide 默认追加 `^01_先看这里$`，以排除导航 guide 自身；这是通用目录名规则，不包含任何用户私有路径，也不能通过传入空数组关闭。

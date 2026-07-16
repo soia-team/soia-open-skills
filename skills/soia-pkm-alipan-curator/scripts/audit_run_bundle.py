@@ -67,7 +67,14 @@ def read_jsonl_with_lines(path: Path) -> list[tuple[int, dict]]:
     return rows
 
 
-def _plan_location(batch_index: int, batch: dict, plan_path: object, line_number: int) -> dict:
+def _plan_location(
+    batch_index: int,
+    batch: dict,
+    plan_path: object,
+    line_number: int,
+    *,
+    batch_group: str = "batches",
+) -> dict:
     """Return stable manifest/plan coordinates for an action row."""
 
     location = {
@@ -77,6 +84,8 @@ def _plan_location(batch_index: int, batch: dict, plan_path: object, line_number
     }
     if str(batch.get("name", "")).strip():
         location["batch_name"] = str(batch["name"])
+    if batch_group != "batches":
+        location["batch_group"] = batch_group
     return location
 
 
@@ -87,6 +96,8 @@ def _append_plan_action_id_violations(
     batch: dict,
     plan_value: object,
     plan_entries: list[tuple[int, dict]],
+    *,
+    batch_group: str = "batches",
 ) -> list[str]:
     """Validate one registered plan and return its normalized action IDs."""
 
@@ -94,7 +105,13 @@ def _append_plan_action_id_violations(
     for line_number, item in plan_entries:
         action_id = str(item.get("action_id", "")).strip()
         plan_ids.append(action_id)
-        location = _plan_location(batch_index, batch, plan_value, line_number)
+        location = _plan_location(
+            batch_index,
+            batch,
+            plan_value,
+            line_number,
+            batch_group=batch_group,
+        )
         if not action_id:
             # Keep the historical violation kind for missing/empty IDs.
             violations.append({
@@ -181,6 +198,53 @@ def collect_final_scan_rows(
     return rows
 
 
+def batch_groups(manifest: dict) -> list[tuple[str, list[dict]]]:
+    """Return normal batches plus the optional cleanup batch collection."""
+    batches = manifest.get("batches", [])
+    if not isinstance(batches, list):
+        raise ValueError("run.batches must be an array")
+    cleanup_batches = manifest.get("cleanup_batches", [])
+    if not isinstance(cleanup_batches, list):
+        raise ValueError("run.cleanup_batches must be an array")
+    return [("batches", batches), ("cleanup_batches", cleanup_batches)]
+
+
+def strict_authorized_missing_targets(
+    run_dir: Path,
+    manifest: dict,
+    initial_rows: list[dict],
+) -> tuple[set[tuple[str, str]], list[dict]]:
+    """Read current ledgers to decide final-scan missing-target exemptions.
+
+    The passing conservation report is deliberately not an input here: report
+    summaries are derived evidence and cannot grant a destructive exemption.
+    """
+    try:
+        batches = audit_migration_conservation.registered_batches(run_dir, manifest)
+    except (OSError, ValueError):
+        # The ordinary batch validation below will report the malformed or
+        # missing evidence.  It must never become a reason to waive a target.
+        return set(), []
+    initial_paths = audit_migration_conservation.scan_paths_by_file_id(initial_rows)
+    authorization_violations: list[dict] = []
+    authorizations = audit_migration_conservation.load_cleanup_authorizations(
+        run_dir,
+        manifest,
+        authorization_violations,
+    )
+    authorized_ids = audit_migration_conservation.collect_strict_authorized_missing_ids(
+        batches,
+        initial_paths,
+        authorizations,
+        authorization_violations,
+    )
+    return {
+        (file_id, path)
+        for file_id, path in initial_paths.items()
+        if file_id in authorized_ids
+    }, authorization_violations
+
+
 def append_migration_conservation_violations(
     violations: list[dict],
     run_dir: Path,
@@ -219,6 +283,18 @@ def append_migration_conservation_violations(
         violations.append({
             "kind": "migration_conservation_report_not_passed",
             "actual": report.get("status"),
+        })
+    checked = report.get("checked")
+    has_process_debt = (
+        isinstance(configured_files, dict)
+        and configured_files.get("cleanup_process_debt") not in (None, "")
+    )
+    structural_process_debt = checked.get("structural_process_debt") if isinstance(checked, dict) else None
+    if has_process_debt and structural_process_debt != "passed":
+        violations.append({
+            "kind": "cleanup_process_debt_blocks_final_complete",
+            "actual": structural_process_debt,
+            "entries": checked.get("process_debt_entries") if isinstance(checked, dict) else None,
         })
 
     try:
@@ -269,6 +345,11 @@ def audit_bundle(run_dir: Path, *, final: bool, require_preflight: bool | None =
         return {"status": "failed", "checked": {}, "violations": [{"kind": "run_manifest_missing"}]}
     manifest = read_json(manifest_path)
 
+    try:
+        audit_migration_conservation.validate_cleanup_result_paths(manifest)
+    except ValueError as error:
+        violations.append({"kind": "invalid_cleanup_result_path", "detail": str(error)})
+
     preflight_result = None
     if require_preflight:
         preflight_result = preflight_gate.verify_preflight_gate(run_dir)
@@ -317,6 +398,27 @@ def audit_bundle(run_dir: Path, *, final: bool, require_preflight: bool | None =
         violations.append({"kind": "final_scan_empty"})
     if any("agg_files" in row for row in final_rows):
         violations.append({"kind": "final_scan_contains_aggregate_rows"})
+
+    configured_batch_groups = batch_groups(manifest)
+    batches = configured_batch_groups[0][1]
+    cleanup_batches = configured_batch_groups[1][1]
+    prospective_authorizations: dict[tuple[str, str, str, str], tuple[int, dict]] = {}
+    if not final and cleanup_batches:
+        authorization_violations: list[dict] = []
+        prospective_authorizations = audit_migration_conservation.load_cleanup_authorizations(
+            run_dir,
+            manifest,
+            authorization_violations,
+        )
+        violations.extend(authorization_violations)
+    authorized_missing_targets: set[tuple[str, str]] = set()
+    if final:
+        authorized_missing_targets, authorization_violations = strict_authorized_missing_targets(
+            run_dir,
+            manifest,
+            initial_rows,
+        )
+        violations.extend(authorization_violations)
 
     error_keys = ("initial_errors", "final_errors") if final else ("initial_errors",)
     for key in error_keys:
@@ -369,75 +471,126 @@ def audit_bundle(run_dir: Path, *, final: bool, require_preflight: bool | None =
                 record.get("disposition") != "archived" or not str(record.get("target", "")).strip()
             ):
                 violations.append({"kind": "unclear_focus_target_not_archived", "id": target_id})
-        if final and not find_scan_target(final_rows, target_id, target_path):
+        if (
+            final
+            and (target_id, audit_migration_conservation.normalize_path(target_path)) not in authorized_missing_targets
+            and not find_scan_target(final_rows, target_id, target_path)
+        ):
             violations.append({"kind": "focus_target_missing_from_final_scan", "id": target_id, "path": target_path})
 
     planned_actions = 0
     verified_actions = 0
-    batches = manifest.get("batches", [])
-    if not isinstance(batches, list):
-        raise ValueError("run.batches must be an array")
     seen_action_ids: dict[str, dict] = {}
-    for index, batch in enumerate(batches):
-        if not isinstance(batch, dict):
-            violations.append({"kind": "invalid_batch", "index": index})
-            continue
-        try:
-            plan_path = resolve_member(run_dir, batch.get("plan"), f"run.batches[{index}].plan")
-            result_path = resolve_member(run_dir, batch.get("result"), f"run.batches[{index}].result")
-        except ValueError as error:
-            violations.append({"kind": "invalid_batch_path", "index": index, "detail": str(error)})
-            continue
-        if not plan_path.is_file() or (final and not result_path.is_file()):
-            violations.append({"kind": "batch_file_missing", "index": index})
-            continue
-        plan_entries = read_jsonl_with_lines(plan_path)
-        plans = [value for _, value in plan_entries]
-        result_entries = read_jsonl_with_lines(result_path) if result_path.is_file() else []
-        plan_ids = _append_plan_action_id_violations(
-            violations,
-            seen_action_ids,
-            index,
-            batch,
-            batch.get("plan"),
-            plan_entries,
-        )
-        result_by_id = {
-            str(item.get("action_id", "")).strip(): (line, item)
-            for line, item in result_entries
-        }
-        planned_actions += len(plans)
-        if not final:
-            continue
-        for line, action in plan_entries:
-            action_id = str(action.get("action_id", "")).strip()
-            if not action_id:
+    for batch_group, group_batches in configured_batch_groups:
+        for index, batch in enumerate(group_batches):
+            if not isinstance(batch, dict):
+                violation = {"kind": "invalid_batch", "index": index}
+                if batch_group != "batches":
+                    violation["batch_group"] = batch_group
+                violations.append(violation)
                 continue
-            result_entry = result_by_id.get(action_id)
-            if result_entry is None:
-                violations.append({"kind": "action_result_missing", "batch": index, "action_id": action_id})
+            label = f"run.{batch_group}[{index}]"
+            try:
+                plan_path = resolve_member(run_dir, batch.get("plan"), f"{label}.plan")
+                result_path = resolve_member(run_dir, batch.get("result"), f"{label}.result")
+            except ValueError as error:
+                violation = {"kind": "invalid_batch_path", "index": index, "detail": str(error)}
+                if batch_group != "batches":
+                    violation["batch_group"] = batch_group
+                violations.append(violation)
                 continue
-            ledger_line, result = result_entry
-            status = result.get("status")
-            if status == "verified":
-                identity_mismatches = audit_migration_conservation.operation_identity_mismatches(action, result)
-                if identity_mismatches:
-                    violations.append({
-                        "kind": "verified_ledger_operation_identity_mismatch",
+            if not plan_path.is_file() or (final and not result_path.is_file()):
+                violation = {"kind": "batch_file_missing", "index": index}
+                if batch_group != "batches":
+                    violation["batch_group"] = batch_group
+                violations.append(violation)
+                continue
+            plan_entries = read_jsonl_with_lines(plan_path)
+            plans = [value for _, value in plan_entries]
+            result_entries = read_jsonl_with_lines(result_path) if result_path.is_file() else []
+            _append_plan_action_id_violations(
+                violations,
+                seen_action_ids,
+                index,
+                batch,
+                batch.get("plan"),
+                plan_entries,
+                batch_group=batch_group,
+            )
+            result_by_id = audit_migration_conservation.latest_results_by_action_id(result_entries)
+            planned_actions += len(plans)
+            for line, action in plan_entries:
+                action_id = str(action.get("action_id", "")).strip()
+                if not action_id:
+                    continue
+                op = str(action.get("op", "")).strip()
+                operation_violation = audit_migration_conservation.batch_operation_violation_kind(
+                    batch_group,
+                    op,
+                )
+                if operation_violation:
+                    violation = {
+                        "kind": operation_violation,
                         "batch": index,
                         "action_id": action_id,
-                        "plan": str(batch.get("plan")),
-                        "plan_line": line,
-                        "ledger": str(batch.get("result")),
-                        "ledger_line": ledger_line,
-                        "mismatches": identity_mismatches,
-                    })
+                        "op": op,
+                    }
+                    if batch_group != "batches":
+                        violation["batch_group"] = batch_group
+                    violations.append(violation)
+                if batch_group == "cleanup_batches" and not final:
+                    authorization_problems, _ = (
+                        audit_migration_conservation.cleanup_authorization_binding_problems(
+                            action,
+                            prospective_authorizations,
+                        )
+                    )
+                    if authorization_problems:
+                        violations.append({
+                            "kind": "invalid_cleanup_authorization_binding",
+                            "batch": index,
+                            "batch_group": batch_group,
+                            "action_id": action_id,
+                            "plan": str(batch.get("plan")),
+                            "plan_line": line,
+                            "problems": sorted(set(authorization_problems)),
+                        })
+                if not final:
+                    continue
+                result_entry = result_by_id.get(action_id)
+                if result_entry is None:
+                    violation = {"kind": "action_result_missing", "batch": index, "action_id": action_id}
+                    if batch_group != "batches":
+                        violation["batch_group"] = batch_group
+                    violations.append(violation)
+                    continue
+                ledger_line, result = result_entry
+                status = result.get("status")
+                if status == "verified":
+                    identity_mismatches = audit_migration_conservation.operation_identity_mismatches(action, result)
+                    if identity_mismatches:
+                        violation = {
+                            "kind": "verified_ledger_operation_identity_mismatch",
+                            "batch": index,
+                            "action_id": action_id,
+                            "plan": str(batch.get("plan")),
+                            "plan_line": line,
+                            "ledger": str(batch.get("result")),
+                            "ledger_line": ledger_line,
+                            "mismatches": identity_mismatches,
+                        }
+                        if batch_group != "batches":
+                            violation["batch_group"] = batch_group
+                        violations.append(violation)
+                    else:
+                        verified_actions += 1
+                elif status == "skipped" and str(result.get("reason", "")).strip():
+                    pass
                 else:
-                    verified_actions += 1
-            elif status == "skipped" and str(result.get("reason", "")).strip():
-                pass
-            else:
-                violations.append({"kind": "action_not_closed", "batch": index, "action_id": action_id, "status": status})
+                    violation = {"kind": "action_not_closed", "batch": index, "action_id": action_id, "status": status}
+                    if batch_group != "batches":
+                        violation["batch_group"] = batch_group
+                    violations.append(violation)
 
     if final and paths.get("structure_audit", Path()).is_file():
         report = read_json(paths["structure_audit"])
@@ -474,6 +627,7 @@ def audit_bundle(run_dir: Path, *, final: bool, require_preflight: bool | None =
         "focus_targets": len(focus_targets),
         "content_audit_rows": len(audit_rows),
         "batches": len(batches),
+        "cleanup_batches": len(cleanup_batches),
         "planned_actions": planned_actions,
         "verified_actions": verified_actions,
         "preflight_gate": preflight_result["status"] if preflight_result is not None else "not_required",

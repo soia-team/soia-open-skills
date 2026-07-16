@@ -4,7 +4,8 @@
 通用、无私有数据硬编码。用法：
   gen_catalog.py --scan-dir DIR --out FILE [--moves f --deletes f --roots f --title T
                  --search-dir DIR --junk PREFIX --url-prefix URL --catalog-link LINK
-                 --cards-link LINK --classification-link LINK --max-heading-depth N]
+                 --cards-link LINK --classification-link LINK --max-heading-depth N
+                 --merge-existing FILE [--allow-new-partition]
 
 JSONL 每行：{"path","name","id","dir","size"[,"agg_files","agg_size"]}
 渲染：默认把全部目录作为标题，保证任意目录体系都不被隐藏；可用 `--heading-pattern` 提供用户自己的业务目录规则，
@@ -39,12 +40,48 @@ OLD_HEADING_LINK = re.compile(
     re.MULTILINE,
 )
 ROOT_HEADING = re.compile(
-    r'^#\s+(?:\S+\s+)?\[(?P<name>[^\]]+)\]\([^)]+\)\s*$',
+    r'^#\s+(?:\S+\s+)?\[(?P<name>[^\]]+)\]\((?P<url>[^)]+)\)\s*$',
     re.MULTILINE,
 )
 GLOBAL_TOTALS = re.compile(
     r'全盘 \*\*(?P<dirs>[\d,]+) 目录 / (?P<files>[\d,]+) 文件 / (?P<size>[^*]+)\*\*'
 )
+SUMMARY_HEADER = '| 区 | 直达 | 目录 | 文件 | 体量 |'
+H1_HEADING = re.compile(r'^#\s+.+$', re.MULTILINE)
+
+
+def _natural_key(value):
+    """按数字值排序，并对同键名称保持稳定的自然字典序。"""
+    return tuple(
+        (0, int(part)) if part.isdigit() else (1, part.casefold())
+        for part in re.split(r'(\d+)', value)
+    )
+
+
+def _fenced_ranges(markdown):
+    """返回 fenced code block 范围，避免代码里的 Markdown 样例成为边界。"""
+    ranges = []
+    start = None
+    marker_char = None
+    marker_len = 0
+    offset = 0
+    for line in markdown.splitlines(keepends=True):
+        marker = re.match(r'^\s*(`{3,}|~{3,})', line)
+        if marker:
+            token = marker.group(1)
+            if start is None:
+                start, marker_char, marker_len = offset, token[0], len(token)
+            elif token[0] == marker_char and len(token) >= marker_len:
+                ranges.append((start, offset + len(line)))
+                start = None
+        offset += len(line)
+    if start is not None:
+        ranges.append((start, len(markdown)))
+    return ranges
+
+
+def _in_ranges(position, ranges):
+    return any(start <= position < end for start, end in ranges)
 
 
 def linkify_existing_headings(markdown):
@@ -57,47 +94,179 @@ def linkify_existing_headings(markdown):
 
 
 def _partition_row(markdown, partition):
-    pattern=re.compile(
-        rf'^\|[^\n]*\*\*{re.escape(partition)}\*\*[^\n]*\|[ \t]*$',
-        re.MULTILINE,
-    )
-    match=pattern.search(markdown)
-    if not match:
+    table = _summary_table(markdown)
+    rows = [row for row in table['rows'] if row['name'] == partition]
+    if not rows:
         raise ValueError(f'未找到分区统计行：{partition}')
-    cells=[cell.strip() for cell in match.group(0).split('|')[1:-1]]
-    if len(cells)<5:
-        raise ValueError(f'分区统计行列数不足：{partition}')
-    try:
-        dirs=int(cells[2].replace(',',''))
-        files=int(cells[3].replace(',',''))
-    except ValueError as error:
-        raise ValueError(f'分区统计数字无法解析：{partition}') from error
-    return match,dirs,files
+    if len(rows) > 1:
+        raise ValueError(f'总览存在重复分区统计行：{partition}')
+    row = rows[0]
+    return row['match'], row['dirs'], row['files']
 
 
-def merge_partition_catalog(existing, generated, merge_date=None):
+def _summary_table(markdown):
+    """解析唯一的总览分区表，拒绝无法安全定位的表格。"""
+    lines = markdown.splitlines(keepends=True)
+    fence_ranges = _fenced_ranges(markdown)
+    candidates = []
+    offset = 0
+    for index, line in enumerate(lines):
+        if line.rstrip('\r\n') == SUMMARY_HEADER and not _in_ranges(offset, fence_ranges):
+            candidates.append(index)
+        offset += len(line)
+    if len(candidates) != 1:
+        raise ValueError(f'总览必须且只能包含一个分区统计表，实际 {len(candidates)} 个')
+    header_index = candidates[0]
+    if header_index + 1 >= len(lines):
+        raise ValueError('分区统计表缺少分隔行')
+    separator = lines[header_index + 1].rstrip('\r\n')
+    separator_cells = [cell.strip() for cell in separator.split('|')[1:-1]]
+    if len(separator_cells) != 5 or any(
+        not re.fullmatch(r':?-{3,}:?', cell) for cell in separator_cells
+    ):
+        raise ValueError('分区统计表分隔行畸形')
+
+    rows = []
+    index = header_index + 2
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.rstrip('\r\n')
+        if not stripped.strip():
+            break
+        if not stripped.startswith('|') or not stripped.endswith('|'):
+            break
+        cells = [cell.strip() for cell in stripped.split('|')[1:-1]]
+        if len(cells) != 5:
+            raise ValueError(f'分区统计表行列数不足：第 {index + 1} 行')
+        bold_names = re.findall(r'\*\*([^*]+)\*\*', cells[0])
+        if len(bold_names) != 1 or not bold_names[0].strip():
+            raise ValueError(f'分区统计表缺少唯一分区标题：第 {index + 1} 行')
+        try:
+            dirs = int(cells[2].replace(',', ''))
+            files = int(cells[3].replace(',', ''))
+        except ValueError as error:
+            raise ValueError(f'分区统计数字无法解析：{bold_names[0]}') from error
+        rows.append({
+            'name': bold_names[0],
+            'match': re.match(r'.*', line, re.DOTALL),
+            'start': sum(len(item) for item in lines[:index]),
+            'end': sum(len(item) for item in lines[:index + 1]),
+            'text': line,
+            'dirs': dirs,
+            'files': files,
+            'url': _row_url(cells[1]),
+        })
+        index += 1
+    if not rows:
+        raise ValueError('分区统计表没有数据行')
+    table_start = sum(len(item) for item in lines[:header_index])
+    table_end = sum(len(item) for item in lines[:index])
+    names = [row['name'] for row in rows]
+    duplicate_names = sorted({name for name in names if names.count(name) > 1}, key=_natural_key)
+    if duplicate_names:
+        raise ValueError(f'总览存在重复分区标题：{", ".join(duplicate_names)}')
+    return {
+        'header_start': table_start,
+        'data_start': rows[0]['start'],
+        'end': table_end,
+        'rows': rows,
+    }
+
+
+def _row_url(cell):
+    links = re.findall(r'\[[^\]]*\]\((https?://[^)]+)\)', cell)
+    if len(links) > 1:
+        raise ValueError('分区统计行包含多个直达链接')
+    return links[0] if links else None
+
+
+def _root_sections(markdown):
+    fence_ranges = _fenced_ranges(markdown)
+    roots = [
+        root for root in ROOT_HEADING.finditer(markdown)
+        if not _in_ranges(root.start(), fence_ranges)
+    ]
+    if not roots:
+        raise ValueError('总览缺少清晰的一级分区边界')
+    names = [root.group('name') for root in roots]
+    duplicate_names = sorted({name for name in names if names.count(name) > 1}, key=_natural_key)
+    if duplicate_names:
+        raise ValueError(f'总览存在重复分区标题：{", ".join(duplicate_names)}')
+    first_root_start = roots[0].start()
+    for heading in H1_HEADING.finditer(markdown, first_root_start):
+        if _in_ranges(heading.start(), fence_ranges):
+            continue
+        if not any(heading.start() == root.start() for root in roots):
+            raise ValueError('分区正文中存在未归属一级标题，无法安全插入分区')
+    return roots
+
+
+def _validate_catalog_shape(markdown):
+    table = _summary_table(markdown)
+    roots = _root_sections(markdown)
+    table_names = [row['name'] for row in table['rows']]
+    root_names = [root.group('name') for root in roots]
+    if table_names != root_names:
+        raise ValueError('分区统计表与一级分区标题不一致，缺少清晰分区边界')
+    if markdown[table['end']:roots[0].start()].strip():
+        raise ValueError('分区统计表与正文之间存在未归属内容，无法安全插入分区')
+    for row in table['rows']:
+        root = next(root for root in roots if root.group('name') == row['name'])
+        if row['url'] and row['url'] != root.group('url'):
+            raise ValueError(f'分区统计链接与正文链接不一致：{row["name"]}')
+    return table, roots
+
+
+def merge_partition_catalog(
+    existing,
+    generated,
+    merge_date=None,
+    *,
+    allow_new_partition=False,
+    expected_partition=None,
+):
     """把单分区扫描结果合并进现有全盘总览，并同步总计与分区统计行。"""
-    generated_roots=list(ROOT_HEADING.finditer(generated))
-    if len(generated_roots)!=1:
-        raise ValueError(f'增量目录必须且只能包含一个根分区，实际 {len(generated_roots)} 个')
-    root_match=generated_roots[0]
+    generated_matches=list(ROOT_HEADING.finditer(generated))
+    if len(generated_matches)!=1:
+        raise ValueError(f'增量目录必须且只能包含一个根分区，实际 {len(generated_matches)} 个')
+    root_match=generated_matches[0]
     partition=root_match.group('name')
-    new_row,new_dirs,new_files=_partition_row(generated,partition)
-    old_row,old_dirs,old_files=_partition_row(existing,partition)
+    generated_table, _ = _validate_catalog_shape(generated)
+    generated_row = next(row for row in generated_table['rows'] if row['name'] == partition)
+    if len(generated_table['rows']) != 1 or generated_table['rows'][0]['name'] != partition:
+        raise ValueError('增量输入的分区统计表与根分区标题不一致')
+    new_dirs, new_files = generated_row['dirs'], generated_row['files']
+    if expected_partition is not None and partition != expected_partition:
+        raise ValueError(f'增量分区标题与 roots 不一致：{partition} != {expected_partition}')
 
-    old_root=re.search(
-        rf'^#\s+(?:\S+\s+)?\[{re.escape(partition)}\]\([^)]+\)\s*$',
-        existing,
-        re.MULTILINE,
-    )
-    if not old_root:
-        raise ValueError(f'现有总览未找到根分区标题：{partition}')
-    next_root=ROOT_HEADING.search(existing,old_root.end())
-    old_end=next_root.start() if next_root else len(existing)
-    new_section=generated[root_match.start():].rstrip()+"\n\n"
-    merged=existing[:old_root.start()]+new_section+existing[old_end:]
+    existing_table, existing_roots = _validate_catalog_shape(existing)
+    old_rows = {row['name']: row for row in existing_table['rows']}
+    old_roots = {root.group('name'): root for root in existing_roots}
+    old_row = old_rows.get(partition)
+    old_root = old_roots.get(partition)
+    if old_row is None or old_root is None:
+        if not allow_new_partition:
+            raise ValueError(f'现有总览未找到根分区标题：{partition}')
+        old_dirs = old_files = 0
+        new_section = generated[root_match.start():].rstrip()+"\n\n"
+        merged = _insert_new_partition(
+            existing,
+            existing_table,
+            existing_roots,
+            generated_row['text'],
+            partition,
+            new_section,
+        )
+    else:
+        old_dirs, old_files = old_row['dirs'], old_row['files']
+        next_root = old_roots[partition]
+        old_index = existing_roots.index(next_root)
+        old_end = existing_roots[old_index + 1].start() if old_index + 1 < len(existing_roots) else len(existing)
+        new_section=generated[root_match.start():].rstrip()+"\n\n"
+        merged=existing[:old_root.start()]+new_section+existing[old_end:]
+        # 分区表位于正文之前，正文替换不会改变 old_row 的偏移。
+        merged=merged[:old_row['start']]+generated_row['text']+merged[old_row['end']:]
 
-    merged=merged[:old_row.start()]+new_row.group(0)+merged[old_row.end():]
     # 历史版本可能让分区行后的空行进入表格；统一恢复连续的 Markdown 表格行。
     merged=re.sub(r'(?m)(^\|[^\n]*\|\n)(?:[ \t]*\n)+(?=\|)',r'\1',merged)
     totals=GLOBAL_TOTALS.search(merged)
@@ -123,6 +292,29 @@ def merge_partition_catalog(existing, generated, merge_date=None):
         if line_end!=-1:
             merged=merged[:line_end+1]+note+'\n'+merged[line_end+1:]
     return merged,partition,new_dirs,new_files
+
+
+def _insert_new_partition(existing, table, roots, row_text, partition, section):
+    """仅在结构已验证时插入缺失分区，保留其他分区正文原文。"""
+    rows = table['rows']
+    insert_root = next(
+        (root for root in roots if _natural_key(partition) < _natural_key(root.group('name'))),
+        None,
+    )
+    if insert_root is None:
+        body = existing.rstrip() + "\n\n" + section
+    else:
+        root_start = insert_root.start()
+        body = existing[:root_start] + section + existing[root_start:]
+
+    insert_row = next(
+        (row for row in rows if _natural_key(partition) < _natural_key(row['name'])),
+        None,
+    )
+    # 表格位于正文之前，使用原始偏移插入即可；正文插入不会改变表格偏移。
+    if insert_row is None:
+        return body[:rows[-1]['end']] + row_text + body[rows[-1]['end']:]
+    return body[:insert_row['start']] + row_text + body[insert_row['start']:]
 
 def iter_scan_records(scan_dir):
     for fn in sorted(os.listdir(scan_dir)):
@@ -222,6 +414,8 @@ def main():
                     help='只迁移现有总览的标题链接，不重扫数据；可与 --out 指向同一文件')
     ap.add_argument('--moves'); ap.add_argument('--deletes'); ap.add_argument('--roots')
     ap.add_argument('--merge-existing',help='把本次唯一根分区增量合并进现有全盘总览')
+    ap.add_argument('--allow-new-partition', action='store_true',
+                    help='显式允许增量分区不存在时插入总表和正文；默认缺失即失败')
     ap.add_argument('--merge-date',default=date.today().isoformat(),help='增量状态日期 YYYY-MM-DD')
     ap.add_argument('--title',default='云盘馆藏总览'); ap.add_argument('--drive',default='云盘')
     ap.add_argument('--search-dir',help='额外输出:按区分的全文检索索引目录(每文件一行,只搜不看)')
@@ -286,6 +480,13 @@ def main():
         top=max([('🎬视频',v),('🎧音频',au),('📄文档',d),('🖼图片',i)],key=lambda x:x[1])
         return top[0] if top[1]/tot>=0.5 else '📦混合'
     roots=catalog_roots(recs,a.roots)
+    expected_partition = None
+    if a.merge_existing and a.roots:
+        with open(a.roots) as source:
+            declared_roots = [path.rstrip('/') for path in json.load(source)]
+        if len(declared_roots) != 1 or len(roots) != 1 or roots[0] != declared_roots[0]:
+            raise ValueError('--merge-existing 的增量输入必须与 roots 明确绑定为唯一分区')
+        expected_partition = recs[roots[0]]['name']
     raw_by_root=raw_stats_by_root(a.scan_dir,roots) if not a.moves and not a.deletes else {}
     out=[]
     tot_d=tot_f=tot_s=0; rowsum=[]
@@ -380,7 +581,13 @@ def main():
     merged_partition=None
     if a.merge_existing:
         existing=open(a.merge_existing).read()
-        markdown,merged_partition,_,_=merge_partition_catalog(existing,markdown,a.merge_date)
+        markdown,merged_partition,_,_=merge_partition_catalog(
+            existing,
+            markdown,
+            a.merge_date,
+            allow_new_partition=a.allow_new_partition,
+            expected_partition=expected_partition,
+        )
     with open(a.out,'w') as target:
         target.write(markdown)
     suffix=f" · 增量合并 {merged_partition}" if merged_partition else ""

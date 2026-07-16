@@ -5,8 +5,9 @@ The scan is the file-level format emitted by ``soia-pkm-alipan-drive-ops``'s
 ``scan_drive.py``.  A guide describes one navigation workbook and selects
 independently usable directory units beneath its ``scope_root``:
 
-* directory leaves are selected automatically;
-* ``resource_roots`` may select a non-leaf course/resource directory instead.
+* ``explicit_roots`` (the default) selects only the declared
+  ``resource_roots``;
+* ``deepest_leaves`` retains the opt-in automatic leaf selection behavior.
 
 Files, including videos and their sidecars, are evidence for a directory but
 are never emitted as individual family-navigation rows.
@@ -21,6 +22,7 @@ Guide spec shape::
         "summary": "...",
         "generatedAt": "2026-01-01",
         "partition": "Language",
+        "selection_mode": "explicit_roots",
         "guidance": [{"label": "...", "text": "..."}],
         "row_defaults": {
           "category": "Language",
@@ -65,6 +67,8 @@ GUIDE_TEXT_FIELDS = ("id", "title", "summary", "generatedAt", "partition")
 GUIDE_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
 FILE_ID_PATTERN = re.compile(r"[0-9a-f]{40}\Z", re.IGNORECASE)
 DEFAULT_EXCLUDE_NAME_PATTERNS = (r"^01_先看这里$",)
+DEFAULT_SELECTION_MODE = "explicit_roots"
+SELECTION_MODES = ("explicit_roots", "deepest_leaves")
 URL_PREFIX_PATTERN = re.compile(
     r"https://(?:www\.)?(?:alipan|aliyundrive)\.com/drive/file/all/backup/\Z",
     re.IGNORECASE,
@@ -240,6 +244,18 @@ def load_guide_spec(path: Path) -> list[dict[str, Any]]:
         guide_ids.add(normalized["id"])
         normalized["scope_root"] = normalize_cloud_path(normalized.get("scope_root"), f"{label}.scope_root")
 
+        selection_mode = normalized.get("selection_mode", DEFAULT_SELECTION_MODE)
+        if not isinstance(selection_mode, str) or not selection_mode.strip():
+            raise InputError(f"{label}.selection_mode must be a non-empty string")
+        selection_mode = selection_mode.strip()
+        if selection_mode not in SELECTION_MODES:
+            allowed_modes = ", ".join(SELECTION_MODES)
+            raise InputError(
+                f"{label}.selection_mode {selection_mode!r} is unsupported; "
+                f"choose one of: {allowed_modes}"
+            )
+        normalized["selection_mode"] = selection_mode
+
         guidance = normalized.get("guidance")
         if not isinstance(guidance, list):
             raise InputError(f"{label}.guidance must be an array")
@@ -284,6 +300,11 @@ def load_guide_spec(path: Path) -> list[dict[str, Any]]:
                     root[field] = root[field].strip()
             validated_roots.append(root)
         normalized["resource_roots"] = validated_roots
+        if selection_mode == "explicit_roots" and not validated_roots:
+            raise InputError(
+                f"{label}.resource_roots must contain at least one directory when "
+                "selection_mode is 'explicit_roots'"
+            )
 
         exclude_paths = normalized.get("exclude_paths", [])
         if not isinstance(exclude_paths, list):
@@ -473,16 +494,17 @@ def build_guide_input(
     child_directory_parents = {directory["_parent"] for directory in directories.values()}
 
     selected_paths = set(explicit_paths)
-    for path in scoped_paths:
-        if path in excluded_paths:
-            continue
-        if any(path_is_within(path, failed_path) for failed_path in failed_listing_paths):
-            continue
-        if path in child_directory_parents:
-            continue
-        if any(strict_descendant(path, root) for root in explicit_paths):
-            continue
-        selected_paths.add(path)
+    if guide["selection_mode"] == "deepest_leaves":
+        for path in scoped_paths:
+            if path in excluded_paths:
+                continue
+            if any(path_is_within(path, failed_path) for failed_path in failed_listing_paths):
+                continue
+            if path in child_directory_parents:
+                continue
+            if any(strict_descendant(path, root) for root in explicit_paths):
+                continue
+            selected_paths.add(path)
     if not selected_paths:
         raise InputError(
             f"guide {guide['id']!r} has no directory resource units in {scope!r} after exclusions"

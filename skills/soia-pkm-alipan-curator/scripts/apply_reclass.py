@@ -32,6 +32,10 @@ import fcntl
 
 
 OPS = {"mkdir", "mv", "rename"}
+CLEANUP_OPS = {"delete", "remove", "trash"}
+CLEANUP_ACTION_ERROR = (
+    "删除动作应登记在 cleanup_batches，由原子层在用户授权+空壳验证后执行，不进入重分类恢复/重放"
+)
 RUNNER_ENV = "SOIA_ALIPAN_RUNNER"
 
 _PREFLIGHT_GATE_PATH = Path(__file__).with_name("preflight_gate.py")
@@ -183,6 +187,9 @@ def load_plan(path, roots):
                 errors.append(f"第 {line_no} 行必须是 JSON 对象")
                 continue
             op = item.get("op")
+            if op in CLEANUP_OPS:
+                errors.append(f"{CLEANUP_ACTION_ERROR}（第 {line_no} 行 op={op!r}）")
+                continue
             if op not in OPS:
                 errors.append(f"第 {line_no} 行 op={op!r} 不允许，仅支持 mkdir/mv/rename")
                 continue

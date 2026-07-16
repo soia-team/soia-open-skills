@@ -32,6 +32,22 @@ ROWS = [
 ]
 
 
+def write_jsonl(path: Path, rows: list[dict]) -> None:
+    path.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+
+def run_audit_cli(*arguments: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), *arguments],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
 class StructureAuditTests(unittest.TestCase):
     def test_numbering_reports_unprefixed_business_directory(self) -> None:
         checked, violations = audit.audit_numbering(
@@ -717,6 +733,149 @@ class StructureAuditTests(unittest.TestCase):
                 check=False,
             )
         self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+
+    def test_cli_final_merges_supplemental_scan_for_unclear_closure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scan = root / "30-technical.jsonl"
+            supplemental = root / "90-archive.jsonl"
+            contract = root / "contract.json"
+            unclear = root / "unclear.jsonl"
+            write_jsonl(scan, [{
+                "path": "/30_technical", "name": "course.mp4", "id": "technical-1", "dir": False,
+            }])
+            write_jsonl(supplemental, [{
+                "path": "/90_archive/review", "name": "unclear.pdf", "id": "archive-1", "dir": False,
+            }])
+            write_jsonl(unclear, [{
+                "source": "/30_technical/unknown.pdf",
+                "reason": "needs review",
+                "target": "/90_archive/review/unclear.pdf",
+                "status": "verified",
+            }])
+            Path(str(scan) + ".errors").touch()
+            supplemental_errors = root / "90-archive.errors"
+            supplemental_errors.touch()
+            contract.write_text(json.dumps({"review_root": "/90_archive/review"}), encoding="utf-8")
+            process = run_audit_cli(
+                "--scan", str(scan), "--contract", str(contract), "--unclear", str(unclear), "--final",
+                "--supplemental-scan", str(supplemental),
+                "--supplemental-scan-errors", str(supplemental_errors),
+            )
+        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        self.assertIn('"supplemental_scans": 1', process.stdout)
+
+    def test_cli_deduplicates_identical_primary_and_supplemental_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scan = root / "scan.jsonl"
+            supplemental = root / "supplemental.jsonl"
+            contract = root / "contract.json"
+            row = {"path": "/30_technical", "name": "course.mp4", "id": "file-1", "dir": False}
+            write_jsonl(scan, [row])
+            write_jsonl(supplemental, [row])
+            Path(str(scan) + ".errors").touch()
+            supplemental_errors = root / "supplemental.errors"
+            supplemental_errors.touch()
+            contract.write_text("{}", encoding="utf-8")
+            process = run_audit_cli(
+                "--scan", str(scan), "--contract", str(contract), "--final",
+                "--supplemental-scan", str(supplemental),
+                "--supplemental-scan-errors", str(supplemental_errors),
+            )
+        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        self.assertIn('"scan_rows": 1', process.stdout)
+        self.assertIn('"deduplicated_scan_rows": 1', process.stdout)
+
+    def test_cli_rejects_supplemental_file_id_path_conflict(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scan = root / "scan.jsonl"
+            supplemental = root / "supplemental.jsonl"
+            contract = root / "contract.json"
+            write_jsonl(scan, [{"path": "/30_technical", "name": "old.mp4", "id": "file-1", "dir": False}])
+            write_jsonl(supplemental, [{"path": "/90_archive", "name": "new.mp4", "id": "file-1", "dir": False}])
+            Path(str(scan) + ".errors").touch()
+            supplemental_errors = root / "supplemental.errors"
+            supplemental_errors.touch()
+            contract.write_text("{}", encoding="utf-8")
+            process = run_audit_cli(
+                "--scan", str(scan), "--contract", str(contract), "--final",
+                "--supplemental-scan", str(supplemental),
+                "--supplemental-scan-errors", str(supplemental_errors),
+            )
+        self.assertEqual(process.returncode, 1)
+        self.assertIn("scan_physical_id_path_conflict", process.stdout)
+
+    def test_cli_rejects_nonempty_or_missing_supplemental_scan_sidecar(self) -> None:
+        for contents, expected in (("LIST_FAIL /90_archive\n", "scan_errors_present"), (None, "scan_error_sidecar_missing")):
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                scan = root / "scan.jsonl"
+                supplemental = root / "supplemental.jsonl"
+                contract = root / "contract.json"
+                write_jsonl(scan, [{"path": "/30_technical", "name": "course.mp4", "id": "file-1", "dir": False}])
+                write_jsonl(supplemental, [{"path": "/90_archive", "name": "review.pdf", "id": "file-2", "dir": False}])
+                Path(str(scan) + ".errors").touch()
+                supplemental_errors = root / "supplemental.errors"
+                if contents is not None:
+                    supplemental_errors.write_text(contents, encoding="utf-8")
+                contract.write_text("{}", encoding="utf-8")
+                process = run_audit_cli(
+                    "--scan", str(scan), "--contract", str(contract), "--final",
+                    "--supplemental-scan", str(supplemental),
+                    "--supplemental-scan-errors", str(supplemental_errors),
+                )
+            self.assertEqual(process.returncode, 1)
+            self.assertIn(expected, process.stdout)
+
+    def test_cli_rejects_aggregate_rows_in_primary_and_supplemental_scans(self) -> None:
+        for aggregate_in, expected_scan in (("primary", "primary"), ("supplemental", "supplemental[1]")):
+            with self.subTest(aggregate_in=aggregate_in), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                scan = root / "scan.jsonl"
+                supplemental = root / "supplemental.jsonl"
+                contract = root / "contract.json"
+                primary_row = {"path": "/30_technical", "name": "course", "id": "file-1", "dir": True}
+                supplemental_row = {"path": "/90_archive", "name": "review", "id": "file-2", "dir": True}
+                if aggregate_in == "primary":
+                    primary_row["agg_files"] = 1
+                else:
+                    supplemental_row["agg_size"] = 1
+                write_jsonl(scan, [primary_row])
+                write_jsonl(supplemental, [supplemental_row])
+                Path(str(scan) + ".errors").touch()
+                supplemental_errors = root / "supplemental.errors"
+                supplemental_errors.touch()
+                contract.write_text("{}", encoding="utf-8")
+                process = run_audit_cli(
+                    "--scan", str(scan), "--contract", str(contract), "--final",
+                    "--supplemental-scan", str(supplemental),
+                    "--supplemental-scan-errors", str(supplemental_errors),
+                )
+            self.assertEqual(process.returncode, 1)
+            self.assertIn("aggregate_scan_row", process.stdout)
+            self.assertIn(f'"scan": "{expected_scan}"', process.stdout)
+
+    def test_cli_requires_paired_supplemental_scan_arguments(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            scan = root / "scan.jsonl"
+            supplemental = root / "supplemental.jsonl"
+            contract = root / "contract.json"
+            write_jsonl(scan, [{"path": "/30_technical", "name": "course.mp4", "id": "file-1", "dir": False}])
+            write_jsonl(supplemental, [{"path": "/90_archive", "name": "review.pdf", "id": "file-2", "dir": False}])
+            contract.write_text("{}", encoding="utf-8")
+            for arguments in (
+                ("--supplemental-scan", str(supplemental)),
+                ("--supplemental-scan-errors", str(root / "supplemental.errors")),
+            ):
+                with self.subTest(arguments=arguments):
+                    process = run_audit_cli(
+                        "--scan", str(scan), "--contract", str(contract), *arguments,
+                    )
+                    self.assertEqual(process.returncode, 2)
+                    self.assertIn("must be provided in matching pairs", process.stderr)
 
 
 if __name__ == "__main__":

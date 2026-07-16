@@ -38,9 +38,12 @@ class CuratorPublicSafetyTests(unittest.TestCase):
             "40_图书视频馆",
             "50_云盘馆藏",
             "20_云盘地图",
+            "30_技术成长",
+            "60_数字技能与内容创作",
             "SuperSimpleSongs",
             "Fable",
             "sonnet",
+            "CLN-",
         ]
         for marker in forbidden:
             with self.subTest(marker=marker):

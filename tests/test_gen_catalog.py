@@ -46,6 +46,37 @@ def file_record(path: str, size: int = 10) -> dict:
     }
 
 
+def partition_catalog(
+    partitions: list[tuple[str, str, int, int]],
+    *,
+    title: str = "Catalog",
+    total_dirs: int | None = None,
+    total_files: int | None = None,
+) -> str:
+    if total_dirs is None:
+        total_dirs = sum(part[2] for part in partitions)
+    if total_files is None:
+        total_files = sum(part[3] for part in partitions)
+    rows = "\n".join(
+        f"| 📁 **{name}** | [🔗](https://drive.test/{file_id}) | {dirs} | {files} | 1GB |"
+        for name, file_id, dirs, files in partitions
+    )
+    sections = "\n".join(
+        f"# 📁 [{name}](https://drive.test/{file_id})\n## [{name} 内容](https://drive.test/{file_id}/item)"
+        for name, file_id, _, _ in partitions
+    )
+    return f"""# {title}
+> Drive · 全盘 **{total_dirs} 目录 / {total_files} 文件 / 1GB**
+> 分类逻辑见地图。
+
+| 区 | 直达 | 目录 | 文件 | 体量 |
+|---|---|---:|---:|---:|
+{rows}
+
+{sections}
+"""
+
+
 class CatalogRendererTests(unittest.TestCase):
     def run_catalog(self, records: list[dict], *extra_args: str) -> str:
         with tempfile.TemporaryDirectory() as temp:
@@ -289,6 +320,112 @@ type: moc
         self.assertEqual((partition, dirs, files), ("Library", 4, 3))
         self.assertIn("## [New](https://new/item)", merged)
         self.assertNotIn("## [Old]", merged)
+
+    def test_merge_partition_inserts_new_partition_only_when_explicit(self) -> None:
+        existing = partition_catalog(
+            [("10_学习", "old-10", 10, 20), ("30_资料", "old-30", 30, 40)],
+        )
+        generated = partition_catalog(
+            [("20_新增", "new-20", 5, 7)],
+            title="Partial",
+            total_dirs=5,
+            total_files=7,
+        )
+
+        with self.assertRaises(ValueError):
+            gen_catalog.merge_partition_catalog(existing, generated)
+
+        merged, partition, dirs, files = gen_catalog.merge_partition_catalog(
+            existing,
+            generated,
+            "2026-07-16",
+            allow_new_partition=True,
+        )
+
+        self.assertEqual((partition, dirs, files), ("20_新增", 5, 7))
+        self.assertEqual(
+            [merged.index(f"**{name}**") for name in ("10_学习", "20_新增", "30_资料")],
+            sorted(merged.index(f"**{name}**") for name in ("10_学习", "20_新增", "30_资料")),
+        )
+        self.assertEqual(
+            [merged.index(f"# 📁 [{name}]") for name in ("10_学习", "20_新增", "30_资料")],
+            sorted(merged.index(f"# 📁 [{name}]") for name in ("10_学习", "20_新增", "30_资料")),
+        )
+        self.assertIn("全盘 **45 目录 / 67 文件 / 1GB**", merged)
+        self.assertIn("https://drive.test/old-10", merged)
+        self.assertIn("https://drive.test/old-30", merged)
+        self.assertIn("https://drive.test/new-20", merged)
+
+    def test_merge_partition_uses_stable_natural_order(self) -> None:
+        existing = partition_catalog(
+            [("2_短", "old-2", 2, 2), ("10_长", "old-10", 10, 10)],
+            total_dirs=12,
+            total_files=12,
+        )
+        generated = partition_catalog(
+            [("3_中", "new-3", 3, 3)],
+            title="Partial",
+            total_dirs=3,
+            total_files=3,
+        )
+
+        merged, _, _, _ = gen_catalog.merge_partition_catalog(
+            existing, generated, allow_new_partition=True
+        )
+
+        self.assertLess(merged.index("**2_短**"), merged.index("**3_中**"))
+        self.assertLess(merged.index("**3_中**"), merged.index("**10_长**"))
+        self.assertLess(merged.index("# 📁 [2_短]"), merged.index("# 📁 [3_中]"))
+        self.assertLess(merged.index("# 📁 [3_中]"), merged.index("# 📁 [10_长]"))
+
+    def test_merge_partition_rejects_duplicate_or_ambiguous_templates(self) -> None:
+        duplicate = partition_catalog(
+            [("10_重复", "one", 1, 1), ("10_重复", "two", 2, 2)],
+        )
+        generated = partition_catalog(
+            [("20_新增", "new", 1, 1)],
+            title="Partial",
+            total_dirs=1,
+            total_files=1,
+        )
+        with self.assertRaises(ValueError):
+            gen_catalog.merge_partition_catalog(
+                duplicate, generated, allow_new_partition=True
+            )
+
+        ambiguous = partition_catalog([("10_已有", "old", 1, 1)]) + "\n# Footer\n"
+        with self.assertRaises(ValueError):
+            gen_catalog.merge_partition_catalog(
+                ambiguous, generated, allow_new_partition=True
+            )
+
+        with self.assertRaisesRegex(ValueError, "roots"):
+            gen_catalog.merge_partition_catalog(
+                partition_catalog([("10_已有", "old", 1, 1)]),
+                generated,
+                allow_new_partition=True,
+                expected_partition="20_根",
+            )
+
+    def test_merge_partition_new_partition_is_idempotent(self) -> None:
+        existing = partition_catalog([("10_已有", "old", 1, 1)])
+        generated = partition_catalog(
+            [("20_新增", "new", 2, 3)],
+            title="Partial",
+            total_dirs=2,
+            total_files=3,
+        )
+
+        first, _, _, _ = gen_catalog.merge_partition_catalog(
+            existing, generated, "2026-07-16", allow_new_partition=True
+        )
+        second, _, _, _ = gen_catalog.merge_partition_catalog(
+            first, generated, "2026-07-16", allow_new_partition=True
+        )
+
+        self.assertEqual(first, second)
+        self.assertEqual(first.count("**20_新增**"), 1)
+        self.assertEqual(first.count("# 📁 [20_新增]"), 1)
 
     def test_search_index_uses_catalog_root_without_leading_slash(self) -> None:
         records = [

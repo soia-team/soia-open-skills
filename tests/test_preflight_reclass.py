@@ -79,6 +79,38 @@ def make_gate_bundle(root: Path) -> tuple[Path, Path]:
 
 
 class PreflightReclassTests(unittest.TestCase):
+    def test_cleanup_actions_are_rejected_before_any_cloud_runner_call(self) -> None:
+        for op in ("delete", "remove", "trash"):
+            with self.subTest(op=op), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                plan_path = root / "actions/10.plan.jsonl"
+                plan_path.parent.mkdir(parents=True)
+                plan_path.write_text(
+                    json.dumps({
+                        "action_id": "C1",
+                        "op": op,
+                        "from": "/partition/empty-shell",
+                        "to": "/partition/empty-shell",
+                        "file_id": "shell-id",
+                        "reason": "approved cleanup candidate",
+                    }) + "\n",
+                    encoding="utf-8",
+                )
+                write_json(root / "run.json", {
+                    "schema_version": 1,
+                    "files": {},
+                    "batches": [{"plan": "actions/10.plan.jsonl"}],
+                })
+                with mock.patch.object(module, "require_alipan_runner") as require_runner, mock.patch.object(
+                    module, "run_aliyunpan_ll"
+                ) as run_runner:
+                    with self.assertRaises(ValueError) as raised:
+                        module.load_registered(root, ["/partition"])
+
+                self.assertIn(module.CLEANUP_ACTION_ERROR, str(raised.exception))
+                require_runner.assert_not_called()
+                run_runner.assert_not_called()
+
     def test_default_runner_is_resolved_from_adjacent_atomic_skill(self) -> None:
         with mock.patch.dict(module.os.environ, {}, clear=False):
             module.os.environ.pop(module.RUNNER_ENV, None)
@@ -449,6 +481,24 @@ class PreflightReclassTests(unittest.TestCase):
         self.assertIn("invalid_cleanup_evidence_status", kinds)
         self.assertIn("verified_mkdir_terminal_missing", kinds)
 
+    def test_cleanup_evidence_status_prefix_spoof_is_rejected(self) -> None:
+        planned = action("M1", "mkdir", to="/A")
+        evidence = [{
+            **cleanup_row("/A", "dir-a", status="removed_to_recycle_bin_failed"),
+            "_line": 1,
+            "_evidence": "cleanup.jsonl",
+        }]
+        _, violations = module.replay(
+            [planned],
+            [{"path": "/", "state": "exists", "entries": []}],
+            {module.operation_key(planned)},
+            evidence,
+        )
+        self.assertIn(
+            "invalid_cleanup_evidence_status",
+            {item["kind"] for item in violations},
+        )
+
     def test_nonempty_cleanup_evidence_is_rejected(self) -> None:
         planned = action("M1", "mkdir", to="/A")
         evidence = [{
@@ -521,7 +571,72 @@ class PreflightReclassTests(unittest.TestCase):
             {item["kind"] for item in violations},
         )
 
-    def test_cleanup_evidence_tamper_invalidates_preflight_gate(self) -> None:
+    def test_cleanup_authorization_tamper_invalidates_preflight_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            plan_path, report_path = make_gate_bundle(root)
+            cleanup_plan_path = root / "actions/cleanup.plan.jsonl"
+            cleanup_plan = {
+                "action_id": "CLEAN-1",
+                "op": "trash",
+                "from": "/partition/new",
+                "file_id": "dir-new",
+                "allow_missing": True,
+                "reason": "approved empty shell cleanup",
+                "authorization_ref": "approval-2026-07-16",
+            }
+            authorization_path = root / "actions/cleanup.authorizations.jsonl"
+            write_jsonl(cleanup_plan_path, [cleanup_plan])
+            write_jsonl(authorization_path, [{
+                "authorization_ref": cleanup_plan["authorization_ref"],
+                "action_id": cleanup_plan["action_id"],
+                "file_id": cleanup_plan["file_id"],
+                "from": cleanup_plan["from"],
+                "decision": "approved",
+                "authorized_at": "2026-07-16T11:59:00+08:00",
+            }])
+            manifest = json.loads((root / "run.json").read_text(encoding="utf-8"))
+            manifest["files"]["cleanup_authorizations"] = "actions/cleanup.authorizations.jsonl"
+            manifest["cleanup_batches"] = [{
+                "plan": "actions/cleanup.plan.jsonl",
+                "result": "actions/cleanup.result.jsonl",
+            }]
+            write_json(root / "run.json", manifest)
+            write_json(report_path, {
+                "schema_version": 1,
+                "status": "passed",
+                "hashes": {
+                    "run.json": module.preflight_gate.sha256_file(root / "run.json"),
+                    "actions/10.plan.jsonl": module.preflight_gate.sha256_file(plan_path),
+                    "actions/cleanup.plan.jsonl": module.preflight_gate.sha256_file(cleanup_plan_path),
+                    "actions/cleanup.authorizations.jsonl": module.preflight_gate.sha256_file(authorization_path),
+                },
+            })
+            _, _, generated_hashes = module.load_registered(root, ["/partition"])
+            self.assertEqual(
+                generated_hashes["actions/cleanup.authorizations.jsonl"],
+                module.preflight_gate.sha256_file(authorization_path),
+            )
+            self.assertNotIn("actions/cleanup.result.jsonl", generated_hashes)
+            self.assertEqual(module.preflight_gate.verify_preflight_gate(root)["status"], "passed")
+            write_jsonl(
+                authorization_path,
+                [{
+                    "authorization_ref": cleanup_plan["authorization_ref"],
+                    "action_id": cleanup_plan["action_id"],
+                    "file_id": cleanup_plan["file_id"],
+                    "from": cleanup_plan["from"],
+                    "decision": "tampered",
+                    "authorized_at": "2026-07-16T11:59:00+08:00",
+                }],
+            )
+            result = module.preflight_gate.verify_preflight_gate(root)
+        self.assertIn(
+            "preflight_cleanup_authorizations_changed",
+            {item["kind"] for item in result["violations"]},
+        )
+
+    def test_empty_cleanup_evidence_tamper_invalidates_preflight_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             plan_path, report_path = make_gate_bundle(root)
@@ -539,17 +654,16 @@ class PreflightReclassTests(unittest.TestCase):
                     "verification/empty-cleanup.jsonl": module.preflight_gate.sha256_file(evidence_path),
                 },
             })
+
             _, _, generated_hashes = module.load_registered(root, ["/partition"])
             self.assertEqual(
                 generated_hashes["verification/empty-cleanup.jsonl"],
                 module.preflight_gate.sha256_file(evidence_path),
             )
             self.assertEqual(module.preflight_gate.verify_preflight_gate(root)["status"], "passed")
-            write_jsonl(
-                evidence_path,
-                [cleanup_row("/partition/new", "dir-new", decision="tampered")],
-            )
+            write_jsonl(evidence_path, [cleanup_row("/partition/new", "dir-new", decision="tampered")])
             result = module.preflight_gate.verify_preflight_gate(root)
+
         self.assertIn(
             "preflight_cleanup_evidence_changed",
             {item["kind"] for item in result["violations"]},

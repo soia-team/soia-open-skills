@@ -38,6 +38,7 @@ def guide_spec(
     roots: list[dict[str, str]] | None = None,
     exclude_paths: list[str] | None = None,
     exclude_name_patterns: list[str] | None = None,
+    selection_mode: str | None = "deepest_leaves",
 ) -> dict[str, object]:
     guide: dict[str, object] = {
         "guides": [
@@ -60,6 +61,8 @@ def guide_spec(
             }
         ]
     }
+    if selection_mode is not None:
+        guide["guides"][0]["selection_mode"] = selection_mode
     if exclude_paths is not None:
         guide["guides"][0]["exclude_paths"] = exclude_paths
     if exclude_name_patterns is not None:
@@ -138,6 +141,64 @@ class BuildFamilyNavigationInputsTests(unittest.TestCase):
         self.assertEqual(selected["30_完整课程"]["type"], "视频课程包")
         self.assertEqual(selected["数学启蒙课"]["file_id"], identifier(2))
         self.assertEqual(selected["数学启蒙课"]["url"], f"{URL_PREFIX}{identifier(2)}")
+
+    def test_empty_resource_roots_without_selection_mode_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            result = self.run_builder(
+                Path(temporary),
+                [directory("/family", "数学课程", 1)],
+                guide_spec(selection_mode=None),
+            )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("resource_roots must contain at least one directory", result.stderr)
+
+    def test_explicit_resource_roots_select_only_declared_roots(self) -> None:
+        rows = [
+            directory("/family", "数学课程", 1),
+            directory("/family", "英语课程", 2),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            result = self.run_builder(
+                root,
+                rows,
+                guide_spec(
+                    roots=[{"path": "/family/数学课程", "category": "数学"}],
+                    selection_mode="explicit_roots",
+                ),
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            document = json.loads((root / "out" / "family-learning.json").read_text(encoding="utf-8"))
+
+        self.assertEqual([row["name"] for row in document["rows"]], ["数学课程"])
+
+    def test_explicit_deepest_leaves_mode_preserves_automatic_selection(self) -> None:
+        rows = [
+            directory("/family", "数学", 1),
+            directory("/family/数学", "启蒙课", 2),
+            file("/family/数学/启蒙课", "第01集.mp4", 3),
+            directory("/family", "英语", 4),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            result = self.run_builder(
+                root, rows, guide_spec(selection_mode="deepest_leaves")
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            document = json.loads((root / "out" / "family-learning.json").read_text(encoding="utf-8"))
+
+        self.assertEqual([row["name"] for row in document["rows"]], ["启蒙课", "英语"])
+
+    def test_unknown_selection_mode_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            result = self.run_builder(
+                Path(temporary),
+                [directory("/family", "数学课程", 1)],
+                guide_spec(selection_mode="all_directories"),
+            )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("selection_mode", result.stderr)
+        self.assertIn("unsupported", result.stderr)
 
     def test_rejects_duplicate_file_ids(self) -> None:
         rows = [

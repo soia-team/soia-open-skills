@@ -56,6 +56,28 @@ def listing(*names):
 class BulkApplyReclassTests(unittest.TestCase):
     ROOT = "/library"
 
+    def test_cleanup_actions_are_rejected_before_bulk_runner_call(self) -> None:
+        for op in ("delete", "remove", "trash"):
+            with self.subTest(op=op), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                plan = self.write_plan(root, [{
+                    "action_id": "C1",
+                    "op": op,
+                    "from": "/library/empty-shell",
+                    "to": "/library/empty-shell",
+                    "reason": "approved cleanup candidate",
+                    "file_id": "shell-id",
+                }])
+                ledger = root / "ledger.jsonl"
+                with mock.patch.object(bulk, "run_aliyunpan") as run:
+                    with self.assertRaises(ValueError) as raised:
+                        bulk.load_plan(plan, [self.ROOT])
+
+                self.assertIn(bulk._SINGLE.CLEANUP_ACTION_ERROR, str(raised.exception))
+                run.assert_not_called()
+                self.assertFalse(ledger.exists())
+
+
     def write_plan(self, root: Path, records: list[dict]) -> Path:
         records = [
             {

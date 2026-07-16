@@ -56,6 +56,43 @@ def listing(*names):
 class ApplyReclassTests(unittest.TestCase):
     ROOT = "/library"
 
+    def test_spec_loaded_executor_loads_sibling_gate_without_scripts_sys_path(self) -> None:
+        scripts_dir = str((REPO_ROOT / "skills/soia-pkm-alipan-curator/scripts").resolve())
+        original_path = list(sys.path)
+        try:
+            sys.path[:] = [entry for entry in sys.path if Path(entry or ".").resolve() != Path(scripts_dir)]
+            isolated = load_module(
+                "apply_reclass_without_scripts_sys_path",
+                "skills/soia-pkm-alipan-curator/scripts/apply_reclass.py",
+            )
+        finally:
+            sys.path[:] = original_path
+
+        self.assertTrue(hasattr(isolated.preflight_gate, "verify_preflight_gate"))
+        self.assertTrue(hasattr(isolated.preflight_gate.audit_migration_conservation, "validate_cleanup_result_paths"))
+
+    def test_cleanup_actions_are_rejected_before_runner_call(self) -> None:
+        for op in ("delete", "remove", "trash"):
+            with self.subTest(op=op), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                plan = self.write_plan(root, [{
+                    "action_id": "C1",
+                    "op": op,
+                    "from": "/library/empty-shell",
+                    "to": "/library/empty-shell",
+                    "reason": "approved cleanup candidate",
+                    "file_id": "shell-id",
+                }])
+                ledger = root / "ledger.jsonl"
+                with mock.patch.object(apply_reclass, "run_aliyunpan") as run:
+                    with self.assertRaises(ValueError) as raised:
+                        apply_reclass.load_plan(plan, [self.ROOT])
+
+                self.assertIn(apply_reclass.CLEANUP_ACTION_ERROR, str(raised.exception))
+                run.assert_not_called()
+                self.assertFalse(ledger.exists())
+
+
     def write_plan(self, root: Path, records: list[dict]) -> Path:
         records = [
             {
