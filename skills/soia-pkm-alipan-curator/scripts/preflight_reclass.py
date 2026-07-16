@@ -29,6 +29,11 @@ import preflight_gate
 RUNNER_ENV = "SOIA_ALIPAN_RUNNER"
 RECLASS_OPS = {"mkdir", "mv", "rename"}
 CLEANUP_OPS = {"delete", "remove", "trash"}
+CLEANUP_EVIDENCE_VERIFIED_STATUSES = frozenset({
+    "removed_to_recycle_bin_verified",
+    "removed_to_recycle_bin_and_absence_verified",
+    "removed_to_recycle_bin_and_parent_verified_empty",
+})
 CLEANUP_ACTION_ERROR = (
     "删除动作应登记在 cleanup_batches，由原子层在用户授权+空壳验证后执行，不进入重分类恢复/重放"
 )
@@ -594,7 +599,7 @@ def evaluate_cleanup_superseded(
             violate("cleanup_evidence_decision_missing", row, path=path)
             invalid_paths.add(path)
         status = row.get("status")
-        if status != "removed_to_recycle_bin_verified":
+        if status not in CLEANUP_EVIDENCE_VERIFIED_STATUSES:
             violate("invalid_cleanup_evidence_status", row, path=path, status=status)
             invalid_paths.add(path)
 
