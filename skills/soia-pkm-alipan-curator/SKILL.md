@@ -1,13 +1,13 @@
 ---
 name: soia-pkm-alipan-curator
-description: 阿里云盘资源顾问，在 soia-pkm-alipan 原子操作上提供 inventory/organize/catalog/plan 四类工作流：盘点云盘、整理资源、生成 Obsidian 馆藏、分区缓存式增量 Excel 总索引与家庭课程导航、基于本次用户提供的学情生成学习计划。Triggers：「整理云盘」「云盘盘点」「更新云盘索引」「更新Excel总索引」「生成家庭导航Excel」「给云盘建图书馆」「用网盘资源做学习计划」
+description: 阿里云盘资源顾问：提供 inventory/organize/catalog/plan 四类工作流，盘点和整理资源、生成 Obsidian 馆藏与增量 Excel/家庭导航，并按用户提供的学情生成学习计划。Triggers：「整理云盘」「云盘盘点」「更新云盘索引」「更新Excel总索引」「生成家庭导航Excel」「给云盘建图书馆」「用网盘资源做学习计划」
 dependencies:
-  hard: [soia-pkm-alipan]
+  hard: [soia-pkm-alipan-drive-ops]
 version: 1.0.0
 created_at: 2026-07-02 23:02:39
-updated_at: 2026-07-15 18:57:32
+updated_at: 2026-07-16 15:34:25
 created_by: claude opus 4.6
-updated_by: claude opus 4.6
+updated_by: codex 5.6
 ---
 
 # soia-pkm-alipan-curator — 云盘资源顾问
@@ -16,7 +16,7 @@ updated_by: claude opus 4.6
 
 ### 这个技能可以做什么
 
-阿里云盘资源顾问，在 soia-pkm-alipan 原子操作上提供 inventory/organize/catalog/plan 四类工作流：盘点云盘、整理资源、生成 Obsidian 馆藏、增量 Excel 总索引与家庭课程导航、基于本次用户提供的学情生成学习计划
+阿里云盘资源顾问，在 soia-pkm-alipan-drive-ops 原子操作上提供 inventory/organize/catalog/plan 四类工作流：盘点云盘、整理资源、生成 Obsidian 馆藏、增量 Excel 总索引与家庭课程导航、基于本次用户提供的学情生成学习计划
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
@@ -77,14 +77,14 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 
 ## 定位与依赖
 
-本 skill 的分层设计可类比 `huashu-weread-advisor` / `weread-skills` 的“顾问层 / 原子层”关系，但**不依赖也不调用**这两个第三方 skill。实际底层命令全部走 [[soia-pkm-alipan]]，本 skill 只管**方法论和产出**。
+本 skill 的分层设计可类比 `huashu-weread-advisor` / `weread-skills` 的“顾问层 / 原子层”关系，但**不依赖也不调用**这两个第三方 skill。实际底层命令全部走 [[soia-pkm-alipan-drive-ops]]，本 skill 只管**方法论和产出**。
 学习计划的排期方法论继承 soia-pkm-reading-plan：**书按字数排期 → 视频按 集数×单集时长 排期**，不拍脑袋。
 
 依赖关系必须按下面口径说明：
 
 | 依赖/参考 | 对 `soia-pkm-alipan-curator` 的关系 |
 |---|---|
-| `soia-pkm-alipan` | **强依赖**：所有云盘读写、登录、扫描、移动、重命名都走这个原子层 |
+| `soia-pkm-alipan-drive-ops` | **强依赖**：所有云盘读写、登录、扫描、移动、重命名都走这个原子层 |
 | `soia-pkm-reading-plan` | 方法复用：学习计划排期方法沿用其“按真实体量排期”原则；不要求运行它 |
 | `huashu-weread-advisor` | 非依赖：只作为“顾问层/原子层”分工类比，不读取或调用该第三方 skill |
 | `weread-skills` | 非依赖：本 skill 处理阿里云盘资源，不调用微信读书 API |
@@ -102,7 +102,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 递归扫描到资源根或叶级终态；只有用户显式给出深度、敏感目录或聚合阈值时才提前停止。把核对清单写到用户显式指定的 `<vault>/<inventory-relative-path>`：每支记「内容 · 类型 · 建议动作」，用户拍板后交 organize。没有输出参数时先询问，不猜 vault 目录。
 
 ### organize — 整理
-执行规范（每步终态验证，安全守则见 soia-pkm-alipan）：
+执行规范（每步终态验证，安全守则见 soia-pkm-alipan-drive-ops）：
 
 **硬约定（先记录后动手）**：AI 生成并将执行的移动/删除清单——即本 skill `scripts/gen_catalog.py` 的 `--moves` / `--deletes` / `--roots` 输入文件——标准落盘位置为 `${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/moves/<date>-<batch>.jsonl`。执行云盘 `mv`/`rmdir` 前必须先把该清单落盘到此路径，不允许先动手再补记录；事后可凭这份清单追溯操作。
 
@@ -166,7 +166,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 | 编号、导览、云端关键产物、资源地图直达链接、长系列分组与待确认项闭环审计 | `scripts/audit_structure.py` | 从终态 scan JSONL 和本次合同检查实体结构、精确 SHA1/字节及消费端直达链接；失败时返回非零退出码 |
 | 特大模块运行包、焦点目录逐项覆盖、批次账本与 AI 复核闭环 | `scripts/audit_run_bundle.py` | 检查运行包路径安全、初末扫描、用户点名目标内容证据、动作计划/结果、结构审计和 AI 复核；失败时返回非零退出码 |
 
-`preflight_reclass.py` 和两条重分类执行器的每个 `aliyunpan` 调用都经同仓 `soia-pkm-alipan/scripts/run_with_env.py` 启动，以加载该原子 skill 的私有登录态。默认从当前脚本所在的 `skills/` 相对定位；只在调用方显式设置 `SOIA_ALIPAN_RUNNER` 时覆盖 runner。runner 缺失或无法启动会明确失败，绝不回退为裸 `aliyunpan` 或输出私有配置细节。
+`preflight_reclass.py` 和两条重分类执行器的每个 `aliyunpan` 调用都经同仓 `soia-pkm-alipan-drive-ops/scripts/run_with_env.py` 启动，以加载该原子 skill 的私有登录态。默认从当前脚本所在的 `skills/` 相对定位；只在调用方显式设置 `SOIA_ALIPAN_RUNNER` 时覆盖 runner。runner 缺失或无法启动会明确失败，绝不回退为裸 `aliyunpan` 或输出私有配置细节。
 
 不要在 vault、临时目录或会话产物目录另写一次性 builder。全盘索引的参数、依赖、数据口径、云端覆盖与验收见 [references/catalog-excel.md](references/catalog-excel.md)；家庭导航的 JSON 字段、运行命令、上传顺序与验收见 [references/family-navigation-excel.md](references/family-navigation-excel.md)。核心约定：
 

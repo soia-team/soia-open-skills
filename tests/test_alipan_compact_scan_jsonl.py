@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "skills" / "soia-pkm-alipan" / "scripts" / "compact_scan_jsonl.py"
+SCRIPT = ROOT / "skills" / "soia-pkm-alipan-drive-ops" / "scripts" / "compact_scan_jsonl.py"
 
 
 def write_jsonl(path, rows):

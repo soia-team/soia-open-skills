@@ -214,7 +214,7 @@ python3 '<skill-dir>/scripts/apply_reclass_bulk.py' \
 
 `mv`/`rename` 计划必须携带来源 `file_id`。执行器把每次 `ll` 解析为 `name → file_id`：写前拒绝同名但 ID 不同的来源或目标，写后只在目标同名实体仍是计划 ID 时记为 verified；resume key 也包含该 ID，旧账本不能跳过同路径的新实体。
 
-预检和执行器不能依赖外层 `eval` 注入登录态：`preflight_reclass.py` 的只读 `ll` 与执行器的每个 `aliyunpan` 调用都通过相邻原子 skill 的 `soia-pkm-alipan/scripts/run_with_env.py` 运行。默认 runner 路径由当前脚本相对 `skills/` 动态推导；调用方如需替换，只能显式设置 `SOIA_ALIPAN_RUNNER`。runner 不存在或不能启动时立即返回脱敏失败，绝不改用裸 `aliyunpan`。
+预检和执行器不能依赖外层 `eval` 注入登录态：`preflight_reclass.py` 的只读 `ll` 与执行器的每个 `aliyunpan` 调用都通过相邻原子 skill 的 `soia-pkm-alipan-drive-ops/scripts/run_with_env.py` 运行。默认 runner 路径由当前脚本相对 `skills/` 动态推导；调用方如需替换，只能显式设置 `SOIA_ALIPAN_RUNNER`。runner 不存在或不能启动时立即返回脱敏失败，绝不改用裸 `aliyunpan`。
 
 批量执行器在同一 drive 上始终只允许 1 个写入进程，并在 XDG state 中使用跨 workspace 的进程锁。`--max-parallel` 只能传 `1`；不得传 `2`，也不得为了提速复制脚本或改变状态目录绕过限制。若历史执行曾留下 `failed`，先用 `ll` 对账“已移动项在目标、未移动项仍在源”，再沿用原计划和原账本串行 `--resume`，让最新终态覆盖历史失败结论。
 

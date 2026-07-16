@@ -1,4 +1,0 @@
-interface:
-  display_name: "PKM Clip Wechat"
-  short_description: "归档单篇微信公众号文章到 Obsidian vault：抓取静态 HTML，提取标题、作者、正文、发布时间和配图，按 clip 家族规范落地；需要 PDF 时优先用 Obsidian 导出"
-  default_prompt: "Use soia-pkm-clip-wechat: 归档单篇微信公众号文章到 Obsidian vault：抓取静态 HTML，提取标题、作者、正文、发布时间和配图，按 clip 家族规范落地；需要 PDF 时优先用 Obsidian 导出"

@@ -49,7 +49,7 @@ Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, K
            soia-pkm-transform (transform line: article → PDF/PPT/image/quiz/mindmap/podcast/flashcards)
            soia-pkm-reading-plan (reading line: turn a book list into an executable reading schedule)
            soia-pkm-library (library line: WeChat Reading sync + record backfill + overview generation)
-           soia-pkm-alipan (cloud drive line · atomic layer: reliable atomic operations via the aliyunpan CLI)
+           soia-pkm-alipan-drive-ops (cloud drive line · atomic layer: reliable atomic operations via the aliyunpan CLI)
            soia-pkm-alipan-curator (cloud drive line · advisor layer: inventory/organize/catalog/study plans)
            soia-dev-archify-diagrams (doc diagram line: Archify JSON IR → README/docs PNG diagrams)
            soia-dev-github-ops / soia-dev-ai-cli-upgrade (shared dev-tooling line)
@@ -76,11 +76,11 @@ Core value: bring content scattered across platforms into the vault with one com
 | Skill | What it does | Ready now? | Dependencies |
 |-------|------|----------|------|
 | [`soia-pkm-clip-x`](./skills/soia-pkm-clip-x/) | X tweets/threads/long-form → vault | ✅ Fully usable (scripts complete, field-tested repeatedly) | None (Telegram sync optional) |
-| [`soia-pkm-clip-wechat`](./skills/soia-pkm-clip-wechat/) | WeChat Official Account articles → vault | ✅ Ready (stdlib fetch, quality gate, URL dedupe, dry-run, atomic write) | None |
+| [`soia-pkm-clip-wechat-article`](./skills/soia-pkm-clip-wechat-article/) | WeChat Official Account articles → vault | ✅ Ready (stdlib fetch, quality gate, URL dedupe, dry-run, atomic write) | None |
 | [`soia-pkm-clip-web`](./skills/soia-pkm-clip-web/) | Generic web pages/blogs → vault | 🟡 SKILL.md ready, fetch script pending | Python `trafilatura` |
 | [`soia-pkm-clip-drive`](./skills/soia-pkm-clip-drive/) | Cloud-drive PDF/Word → vault | 🟡 SKILL.md ready, import script pending | Python `pypdf`/`python-docx` |
-| [`soia-pkm-clip-repo`](./skills/soia-pkm-clip-repo/) | GitHub open-source repos → vault "open-source project library" index | ✅ Usable (scripts complete: single-repo archiving + bulk refresh) | None (needs one local upstream clone directory) |
-| [`soia-pkm-clip-gzh`](./skills/soia-pkm-clip-gzh/) | Bulk-archive your own WeChat Official Account's published articles → vault | ✅ Usable (official API / logged-in cookie, two paths) | WeChat Official Account dev credentials or a logged-in cookie |
+| [`soia-pkm-clip-github-repo`](./skills/soia-pkm-clip-github-repo/) | GitHub open-source repos → vault "open-source project library" index | ✅ Usable (scripts complete: single-repo archiving + bulk refresh) | None (needs one local upstream clone directory) |
+| [`soia-pkm-clip-wechat-account`](./skills/soia-pkm-clip-wechat-account/) | Bulk-archive your own WeChat Official Account's published articles → vault | ✅ Usable (official API / logged-in cookie, two paths) | WeChat Official Account dev credentials or a logged-in cookie |
 
 ### 🗂️ Organize
 
@@ -88,7 +88,7 @@ Core value: turn a messy pile of saved content into structured, searchable, aggr
 
 | Skill | What it does | Ready now? | Dependencies |
 |-------|------|----------|------|
-| [`soia-pkm-organize`](./skills/soia-pkm-organize/) | Classify / backfill frontmatter / build two-tier MOCs / file by month / add backlinks | ✅ Usable (underlying `rebuild_moc`/`backfill` scripts already in production) | Vault must already have archived content |
+| [`soia-pkm-organize-article-moc`](./skills/soia-pkm-organize-article-moc/) | Classify / backfill frontmatter / build two-tier MOCs / file by month / add backlinks | ✅ Usable (underlying `rebuild_moc`/`backfill` scripts already in production) | Vault must already have archived content |
 
 ### ✍️ Distill → compose → publish
 
@@ -96,10 +96,10 @@ Core value: the real value-conversion stage of the loop — turning someone else
 
 | Skill | What it does | Ready now? | Dependencies |
 |-------|------|----------|------|
-| [`soia-pkm-translate`](./skills/soia-pkm-translate/) | **Foreign-language article → Chinese version**: quick (literal) / normal (analyze style, terminology, and audience first, default) / refined (adds proofreading + polish); long articles are mechanically chunked to keep terminology consistent; output is an independent `-中文版.md`, never overwrites the original | ✅ Usable (all three modes + chunking script complete) | Python 3 (hard dependency, runs the chunking script); PyYAML optional enhancement |
-| [`soia-pkm-interpret`](./skills/soia-pkm-interpret/) | **Saved content → AI reading**: a five-part structure (overview / key points / insights / critique / further reading) that helps you decide whether an article is worth distilling before you invest in `distill`; produces an independent `-AI解读.md`, never touches the original's "My Take" | ✅ Usable (pure LLM reading, no scripts needed) | No hard dependency (the `clip-*` family is a common upstream source) |
-| [`soia-pkm-distill`](./skills/soia-pkm-distill/) | **Saved content → opinion**: read the source → ask one question at a time → you answer → "my take" (the content is yours, AI only writes it down) | ✅ Fully usable (battle-tested) | Articles already in the vault (produced by `clip-*`) |
-| [`soia-pkm-compose`](./skills/soia-pkm-compose/) | **Opinion → article draft** (your opinion as the skeleton, excerpts as supporting material) | ✅ Usable (pure LLM, no scripts needed) | An opinion produced by `distill` |
+| [`soia-pkm-translate-article-zh`](./skills/soia-pkm-translate-article-zh/) | **Foreign-language article → Chinese version**: quick (literal) / normal (analyze style, terminology, and audience first, default) / refined (adds proofreading + polish); long articles are mechanically chunked to keep terminology consistent; output is an independent `-中文版.md`, never overwrites the original | ✅ Usable (all three modes + chunking script complete) | Python 3 (hard dependency, runs the chunking script); PyYAML optional enhancement |
+| [`soia-pkm-interpret-article-analysis`](./skills/soia-pkm-interpret-article-analysis/) | **Saved content → AI reading**: a five-part structure (overview / key points / insights / critique / further reading) that helps you decide whether an article is worth distilling before you invest in `distill`; produces an independent `-AI解读.md`, never touches the original's "My Take" | ✅ Usable (pure LLM reading, no scripts needed) | No hard dependency (the `clip-*` family is a common upstream source) |
+| [`soia-pkm-distill-article-opinion`](./skills/soia-pkm-distill-article-opinion/) | **Saved content → opinion**: read the source → ask one question at a time → you answer → "my take" (the content is yours, AI only writes it down) | ✅ Fully usable (battle-tested) | Articles already in the vault (produced by `clip-*`) |
+| [`soia-pkm-compose-article-draft`](./skills/soia-pkm-compose-article-draft/) | **Opinion → article draft** (your opinion as the skeleton, excerpts as supporting material) | ✅ Usable (pure LLM, no scripts needed) | An opinion produced by `distill` |
 | [`soia-pkm-cover-image`](./skills/soia-pkm-cover-image/) | Generates a cover image for WeChat/X/RedNote articles (five parameters: type/palette/rendering/text/mood); output feeds directly into `publish --cover` | ✅ Usable (backend is codex CLI's built-in image generation; stops and prompts if not installed/logged in — never degrades silently) | codex CLI (`codex exec`, must be logged in) |
 | [`soia-pkm-publish`](./skills/soia-pkm-publish/) | **One draft → multiple platforms**: WeChat formatting + push to drafts / X thread / RedNote (Xiaohongshu) | 🟡 The `render.py` renderer is usable; WeChat push needs a private `config.yml` with credentials | A draft from `compose` + WeChat Official Account API |
 
@@ -121,9 +121,9 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 | [`soia-pkm-reading-plan`](./skills/soia-pkm-reading-plan/) | Scenario-based reading plans (book list/topic → scheduled by real word count) | ✅ Usable | `weread-skills` optionally enhances real word counts/ratings; `huashu-weread-advisor` optionally reuses its recommendation methodology; no hard third-party dependency |
 | [`soia-pkm-library`](./skills/soia-pkm-library/) | Maintain the book library: WeChat Reading sync (catalog/highlights) + enrich book details + backfill reading records + generate three overview views (library/reading records/genre) | ✅ Usable (7 mechanical scripts, idempotent and safe to re-run) | Sync scripts hard-depend on the official `weread-skills` + `WEREAD_API_KEY`; local overview scripts only depend on the vault |
 | [`soia-pkm-maintain`](./skills/soia-pkm-maintain/) | Weekly vault maintenance, full-vault map regeneration, AI session-log ingestion | ✅ Usable (Python stdlib / bash scripts) | An Obsidian vault, via `--vault <path>` or `OBSIDIAN_VAULT` |
-| [`soia-pkm-alipan`](./skills/soia-pkm-alipan/) | Alibaba Cloud Drive atomic operations layer: login/switch between drives/browse/move/rename/upload/download/quota check, with output parsing and safety rules | ✅ Usable (no scripts needed, drives the `aliyunpan` CLI directly) | `aliyunpan` CLI (installed via brew + QR-code login) |
-| [`soia-pkm-baidupan`](./skills/soia-pkm-baidupan/) | Baidu Netdisk atomic operations layer: official `baidu-drive` / `bdpan` by default, with an explicit community `baidupan-cli` mode and read-only JSONL scanning | ✅ Usable (private config selects the provider) | Official `baidu-drive` Skill or `mqhe2007/baidupan-cli` + Open Platform app |
-| [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | Cloud-drive resource advisor: inventory checks / standardized organizing / cataloging into Obsidian / study plans for kids | ✅ Usable (pure methodology layer, all commands routed through alipan) | `soia-pkm-alipan` (atomic layer) |
+| [`soia-pkm-alipan-drive-ops`](./skills/soia-pkm-alipan-drive-ops/) | Alibaba Cloud Drive atomic operations layer: login/switch between drives/browse/move/rename/upload/download/quota check, with output parsing and safety rules | ✅ Usable (no scripts needed, drives the `aliyunpan` CLI directly) | `aliyunpan` CLI (installed via brew + QR-code login) |
+| [`soia-pkm-baidu-netdisk-ops`](./skills/soia-pkm-baidu-netdisk-ops/) | Baidu Netdisk atomic operations layer: official `baidu-drive` / `bdpan` by default, with an explicit community `baidupan-cli` mode and read-only JSONL scanning | ✅ Usable (private config selects the provider) | Official `baidu-drive` Skill or `mqhe2007/baidupan-cli` + Open Platform app |
+| [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | Cloud-drive resource advisor: inventory checks / standardized organizing / cataloging into Obsidian / study plans for kids | ✅ Usable (pure methodology layer, all commands routed through alipan) | `soia-pkm-alipan-drive-ops` (atomic layer) |
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify diagram workflow: architecture / data-flow / workflow / sequence / lifecycle diagrams, maintaining a JSON IR and exporting README/docs PNGs | ✅ Usable (scripts complete; requires a local Archify install) | `ARCHIFY_BIN` or `ARCHIFY_ROOT`, with optional Playwright/Chrome for PNG export |
 | [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub operations workflow: issues / PRs / checks / reviews / run logs / releases, defaulting to structured `gh` queries with safety confirmation gates | ✅ Usable (no scripts; command templates already shared) | `gh` CLI logged in; target repo from `--repo` / the current git remote / `$GITHUB_REPOSITORY` |
 | [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | Bulk inventory and upgrade of AI/dev CLIs: Codex / Claude / Antigravity (`agy`, consumer Google-login successor) / Gemini (enterprise, API Key, and Vertex only) / Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ Usable (scripts complete; supports dry-run and logging) | Node/npm; some tools use an official installer, Homebrew, or their own updater |
@@ -185,7 +185,7 @@ python3 sync_telegram_export.py <telegram-export-json-path> --dry-run   # previe
 
 **Typical output**: a new Markdown file appears under the vault's articles directory, with frontmatter filled in (author, publish date, topic backlinks, language tag) and `## My Take` left blank for you to fill in later.
 
-### soia-pkm-organize
+### soia-pkm-organize-article-moc
 
 Organizes the messy backlog of saved content in a vault — backfilling frontmatter, classifying by topic with backlinks, rebuilding two-tier MOCs, and filing files by month.
 
@@ -196,7 +196,7 @@ python3 scripts/backfill_reading_records.py --vault <vault-path>
 
 **Typical output**: the terminal reports how many articles were processed, which topics were backfilled, the MOC update status, and how many files were refiled.
 
-### soia-pkm-distill
+### soia-pkm-distill-article-opinion
 
 Distills a saved article into your own opinion: AI asks one question at a time, you answer out loud, and AI only organizes your answers into fluent first-person prose — it never makes the judgment call for you.
 
@@ -207,7 +207,7 @@ Distill my overall view on the "Agent development" topic
 
 **Typical output**: the article's `## My Take` section gets filled with a first-person opinion assembled from what you said out loud; in topic-aggregation mode, a synthesis draft is created in the drafts folder instead.
 
-### soia-pkm-compose
+### soia-pkm-compose-article-draft
 
 Turns the opinion distilled by `distill` into a publishable draft, using your opinion as the skeleton and vault excerpts as supporting evidence.
 
@@ -386,16 +386,16 @@ soia-open-skills/
 ├── templates/skill-template/  ← starter template for new skills
 └── skills/                    ← npx skills scans this directory
     ├── README.md              ← skill catalog generated from SKILL.md / agents/openai.yaml
-    ├── soia-pkm-clip-x/       ├── soia-pkm-clip-wechat/
-    ├── soia-pkm-clip-gzh/     ├── soia-pkm-clip-web/
-    ├── soia-pkm-clip-drive/   ├── soia-pkm-clip-repo/
-    ├── soia-pkm-organize/     ├── soia-pkm-distill/
-    ├── soia-pkm-compose/      ├── soia-pkm-publish/
+    ├── soia-pkm-clip-x/       ├── soia-pkm-clip-wechat-article/
+    ├── soia-pkm-clip-wechat-account/     ├── soia-pkm-clip-web/
+    ├── soia-pkm-clip-drive/   ├── soia-pkm-clip-github-repo/
+    ├── soia-pkm-organize-article-moc/     ├── soia-pkm-distill-article-opinion/
+    ├── soia-pkm-compose-article-draft/      ├── soia-pkm-publish/
     ├── soia-pkm-transform/    ├── soia-pkm-bootstrap/
     ├── soia-pkm-reading-plan/ ├── soia-pkm-library/
-    ├── soia-pkm-maintain/     ├── soia-pkm-alipan/
+    ├── soia-pkm-maintain/     ├── soia-pkm-alipan-drive-ops/
     ├── soia-pkm-alipan-curator/
-    ├── soia-pkm-translate/    ├── soia-pkm-interpret/
+    ├── soia-pkm-translate-article-zh/    ├── soia-pkm-interpret-article-analysis/
     ├── soia-pkm-cover-image/
     ├── soia-dev-archify-diagrams/
     ├── soia-dev-github-ops/
@@ -441,7 +441,7 @@ Third-party skills this repo works alongside (this repo only declares the relati
 | Third-party skill | Upstream | Relationship to this repo |
 |---|---|---|
 | `weread-skills` | [Tencent/WeChatReading](https://github.com/Tencent/WeChatReading) | **Hard dependency** for `soia-pkm-library`'s WeChat Reading sync scripts; an optional data enhancement for `soia-pkm-reading-plan` |
-| `huashu-weread-advisor` | [alchaincyf/huashu-weread](https://github.com/alchaincyf/huashu-weread) | `soia-pkm-reading-plan` optionally reuses its book-selection/recommendation methodology; `soia-pkm-distill` only references its "alchemy" method, with no runtime dependency |
+| `huashu-weread-advisor` | [alchaincyf/huashu-weread](https://github.com/alchaincyf/huashu-weread) | `soia-pkm-reading-plan` optionally reuses its book-selection/recommendation methodology; `soia-pkm-distill-article-opinion` only references its "alchemy" method, with no runtime dependency |
 | `book-to-skill` | [virgiliojr94/book-to-skill](https://github.com/virgiliojr94/book-to-skill) | Not a runtime dependency; a standalone tool for turning books/documents into skills |
 | `find-skills` | [vercel-labs/skills](https://github.com/vercel-labs/skills) | Not a runtime dependency; a helper tool for discovering/installing skills |
 

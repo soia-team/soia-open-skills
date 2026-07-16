@@ -1,0 +1,4 @@
+interface:
+  display_name: "PKM Clip GZH"
+  short_description: "批量归档用户自己管理的微信公众号已发文章到 Obsidian vault。支持官方 API、公众号后台接口、登录态 Cookie 三条路线，并按 url 去重"
+  default_prompt: "Use soia-pkm-clip-wechat-account: 批量归档用户自己管理的微信公众号已发文章到 Obsidian vault。支持官方 API、公众号后台接口、登录态 Cookie 三条路线，并按 url 去重"

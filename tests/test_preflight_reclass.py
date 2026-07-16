@@ -84,7 +84,7 @@ class PreflightReclassTests(unittest.TestCase):
             module.os.environ.pop(module.RUNNER_ENV, None)
             expected = (
                 SCRIPT.resolve().parents[2]
-                / "soia-pkm-alipan"
+                / "soia-pkm-alipan-drive-ops"
                 / "scripts"
                 / "run_with_env.py"
             )

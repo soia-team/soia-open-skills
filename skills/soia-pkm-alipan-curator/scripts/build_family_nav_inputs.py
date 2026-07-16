@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build ``gen_family_nav_xlsx.mjs`` inputs from a fresh drive scan JSONL.
 
-The scan is the file-level format emitted by ``soia-pkm-alipan``'s
+The scan is the file-level format emitted by ``soia-pkm-alipan-drive-ops``'s
 ``scan_drive.py``.  A guide describes one navigation workbook and selects
 independently usable directory units beneath its ``scope_root``:
 

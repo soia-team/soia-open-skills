@@ -44,7 +44,7 @@ def alipan_runner_path() -> Path | None:
     """Locate the atomic skill's environment-loading runner without user paths."""
     override = os.environ.get(RUNNER_ENV)
     candidate = Path(override).expanduser() if override else (
-        Path(__file__).resolve().parents[2] / "soia-pkm-alipan" / "scripts" / "run_with_env.py"
+        Path(__file__).resolve().parents[2] / "soia-pkm-alipan-drive-ops" / "scripts" / "run_with_env.py"
     )
     return candidate if candidate.is_file() else None
 
