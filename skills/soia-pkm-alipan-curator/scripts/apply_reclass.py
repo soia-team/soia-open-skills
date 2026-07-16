@@ -23,6 +23,7 @@ import os
 import posixpath
 import subprocess
 import sys
+import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,6 +38,9 @@ CLEANUP_ACTION_ERROR = (
     "删除动作应登记在 cleanup_batches，由原子层在用户授权+空壳验证后执行，不进入重分类恢复/重放"
 )
 RUNNER_ENV = "SOIA_ALIPAN_RUNNER"
+DEFAULT_THROTTLE_MS = 2000
+RATE_LIMIT_PATTERNS = ("429", "too many", "频繁", "rate")
+RATE_LIMIT_BACKOFF_SECONDS = (30, 60, 120)
 
 _PREFLIGHT_GATE_PATH = Path(__file__).with_name("preflight_gate.py")
 _PREFLIGHT_GATE_SPEC = importlib.util.spec_from_file_location(
@@ -108,6 +112,46 @@ def run_aliyunpan(command, drive_id, *paths):
         # Never expose exception text: argv can contain user paths and the
         # runner may load private configuration.
         return subprocess.CompletedProcess(args, 255, "", "RUNNER_EXECUTION_FAILED")
+
+
+def _rate_limit_patterns(result):
+    """Return the configured rate-limit signals present in a CLI result."""
+    output = f"{result.returncode}\n{result.stdout or ''}\n{result.stderr or ''}".lower()
+    return [pattern for pattern in RATE_LIMIT_PATTERNS if pattern.lower() in output]
+
+
+def run_write_with_backoff(command, drive_id, *paths, throttle_ms=DEFAULT_THROTTLE_MS, event_sink=None):
+    """Run a cloud write with post-write throttling and bounded rate-limit retry."""
+    for attempt in range(len(RATE_LIMIT_BACKOFF_SECONDS) + 1):
+        result = run_aliyunpan(command, drive_id, *paths)
+        if throttle_ms:
+            time.sleep(throttle_ms / 1000)
+        patterns = _rate_limit_patterns(result)
+        if not patterns:
+            return result, None
+        if attempt == len(RATE_LIMIT_BACKOFF_SECONDS):
+            return result, {
+                "error": "RATE_LIMIT_RETRY_EXHAUSTED",
+                "returncode": result.returncode,
+                "matched_patterns": patterns,
+                "attempt": attempt + 1,
+            }
+        backoff_seconds = RATE_LIMIT_BACKOFF_SECONDS[attempt]
+        event = {
+            "status": "rate_limit_backoff",
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "attempt": attempt + 1,
+            "backoff_seconds": backoff_seconds,
+            "returncode": result.returncode,
+            "matched_patterns": patterns,
+        }
+        if event_sink is not None:
+            event_sink(event)
+        print(
+            f"[{event['ts']}] 云盘限流，退避第 {event['attempt']} 次：{backoff_seconds}s",
+            file=sys.stderr,
+        )
+        time.sleep(backoff_seconds)
 
 
 def parse_ll(output):
@@ -302,7 +346,7 @@ def verify_rename(item, drive_id):
     return verify["new_present"] and verify["old_absent"], verify
 
 
-def apply_one(item, drive_id):
+def apply_one(item, drive_id, throttle_ms=DEFAULT_THROTTLE_MS, rate_limit_event=None):
     precheck = None
     if item["op"] in {"mv", "rename"}:
         source_parent, source_name = parent_and_name(item["from"])
@@ -372,7 +416,11 @@ def apply_one(item, drive_id):
             }
 
     paths = [item["to"]] if item["op"] == "mkdir" else [item["from"], item["to"]]
-    run_aliyunpan(item["op"], drive_id, *paths)  # 写命令返回码不作为成功证据
+    _, rate_limit_failure = run_write_with_backoff(
+        item["op"], drive_id, *paths, throttle_ms=throttle_ms, event_sink=rate_limit_event
+    )
+    if rate_limit_failure:
+        return "failed", rate_limit_failure
     if item["op"] == "mkdir":
         ok, verify = verify_mkdir(item, drive_id)
     elif item["op"] == "mv":
@@ -398,15 +446,29 @@ def preview(plan):
     )
 
 
-def execute(plan, drive_id, ledger_path, completed):
+def nonnegative_int(value):
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("--throttle-ms 必须是非负整数") from error
+    if number < 0:
+        raise argparse.ArgumentTypeError("--throttle-ms 必须是非负整数")
+    return number
+
+
+def execute(plan, drive_id, ledger_path, completed, throttle_ms=DEFAULT_THROTTLE_MS):
     counts = {"verified": 0, "skipped": 0, "failed": 0, "resumed": 0}
     with open(ledger_path, "a", encoding="utf-8") as ledger:
+        def record_rate_limit(event):
+            ledger.write(json.dumps(event, ensure_ascii=False) + "\n")
+            ledger.flush()
+
         for index, item in enumerate(plan, 1):
             if operation_key(item) in completed:
                 counts["resumed"] += 1
                 print(f"[{index}] 已完成，--resume 跳过：{item['op']} {item.get('from', '-')} → {item['to']}")
                 continue
-            status, verify = apply_one(item, drive_id)
+            status, verify = apply_one(item, drive_id, throttle_ms, record_rate_limit)
             entry = {**item, "status": status, "verify": verify, "ts": datetime.now(timezone.utc).isoformat()}
             ledger.write(json.dumps(entry, ensure_ascii=False) + "\n")
             ledger.flush()
@@ -434,6 +496,10 @@ def main():
     ap.add_argument("--run-dir", help="运行包目录；--execute 时必需，dry-run 提供时同样校验")
     ap.add_argument("--execute", action="store_true", help="真正执行；默认仅 dry-run")
     ap.add_argument("--resume", action="store_true", help="跳过账本中已 verified/completed 的条目，并识别已落盘的歧义写入")
+    ap.add_argument(
+        "--throttle-ms", type=nonnegative_int, default=DEFAULT_THROTTLE_MS,
+        help="每次 mkdir/mv/rename 云盘写调用后的节流毫秒数（默认 2000；0 关闭）",
+    )
     args = ap.parse_args()
 
     try:
@@ -458,7 +524,7 @@ def main():
         completed = load_completed(args.ledger) if args.resume else set()
         with execution_slot(args.driveId):
             require_preflight(args.run_dir, args.plan, args.driveId)
-            returncode = execute(plan, args.driveId, args.ledger, completed)
+            returncode = execute(plan, args.driveId, args.ledger, completed, args.throttle_ms)
     except (OSError, RuntimeError, ValueError) as error:
         ap.error(str(error))
     if returncode:

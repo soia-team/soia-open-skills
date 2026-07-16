@@ -137,10 +137,23 @@ def _single_executor_uses_bulk_cli() -> Iterator[None]:
         _SINGLE.run_aliyunpan = original_runner
 
 
-def apply_single(item: dict, drive_id: str) -> tuple[str, dict]:
+def apply_single(
+    item: dict,
+    drive_id: str,
+    throttle_ms: int = _SINGLE.DEFAULT_THROTTLE_MS,
+    rate_limit_event=None,
+) -> tuple[str, dict]:
     """Use the existing executor for mkdir/rename (and its verification)."""
     with _single_executor_uses_bulk_cli():
-        return _SINGLE.apply_one(item, drive_id)
+        return _SINGLE.apply_one(item, drive_id, throttle_ms, rate_limit_event)
+
+
+def run_write_with_backoff(command: str, drive_id: str, *paths: str, throttle_ms: int, event_sink=None):
+    """Reuse the single executor's canonical write throttle and retry policy."""
+    with _single_executor_uses_bulk_cli():
+        return _SINGLE.run_write_with_backoff(
+            command, drive_id, *paths, throttle_ms=throttle_ms, event_sink=event_sink
+        )
 
 
 def _batch_key(item: dict) -> tuple[str, str]:
@@ -164,7 +177,10 @@ def _failure(reason: str, **evidence: object) -> dict:
 
 
 def apply_move_batch(
-    items: list[dict], drive_id: str
+    items: list[dict],
+    drive_id: str,
+    throttle_ms: int = _SINGLE.DEFAULT_THROTTLE_MS,
+    rate_limit_event=None,
 ) -> tuple[list[tuple[dict, str, dict]], bool]:
     """Apply and verify one compatible move batch.
 
@@ -281,12 +297,17 @@ def apply_move_batch(
     if to_move:
         # Paths are individual argv entries; shell quoting is intentionally
         # not involved, so repeated spaces remain part of the filename.
-        run_aliyunpan(
+        _, rate_limit_failure = run_write_with_backoff(
             "mv",
             drive_id,
             *(item["from"] for item in to_move),
             target_dir,
+            throttle_ms=throttle_ms,
+            event_sink=rate_limit_event,
         )
+        if rate_limit_failure:
+            results = [(item, "failed", rate_limit_failure) for item in items]
+            return results, True
 
         # Exactly one source read and one target read after the write.
         after_source_ok, after_sources, source_after_ev = ll(drive_id, source_parent)
@@ -386,10 +407,15 @@ def execute(
     ledger_path: str | Path,
     completed: set[tuple],
     batch_size: int,
+    throttle_ms: int = _SINGLE.DEFAULT_THROTTLE_MS,
 ) -> int:
     counts = {"verified": 0, "skipped": 0, "failed": 0, "resumed": 0}
     index = 0
     with open(ledger_path, "a", encoding="utf-8") as ledger:
+        def record_rate_limit(event: dict) -> None:
+            ledger.write(json.dumps(event, ensure_ascii=False) + "\n")
+            ledger.flush()
+
         while index < len(plan):
             item = plan[index]
             if operation_key(item) in completed:
@@ -402,7 +428,7 @@ def execute(
                 batch = _compatible_batch(plan, index, completed, batch_size)
                 if not batch:  # defensive: the current item is not completed
                     raise ValueError("无法建立 mv 批次")
-                results, stop = apply_move_batch(batch, drive_id)
+                results, stop = apply_move_batch(batch, drive_id, throttle_ms, record_rate_limit)
                 for result_item, status, verify in results:
                     _append(ledger, result_item, status, verify)
                     counts[status] += 1
@@ -424,7 +450,7 @@ def execute(
                     index += 1
                 continue
 
-            status, verify = apply_single(item, drive_id)
+            status, verify = apply_single(item, drive_id, throttle_ms, record_rate_limit)
             _append(ledger, item, status, verify)
             counts[status] += 1
             print(f"[{index + 1}] {status}: {item['op']} {item.get('from', '-')} → {item['to']}")
@@ -506,6 +532,10 @@ def main() -> None:
         default=1,
         help="固定为 1；云盘写入单写者硬门禁",
     )
+    ap.add_argument(
+        "--throttle-ms", type=_SINGLE.nonnegative_int, default=_SINGLE.DEFAULT_THROTTLE_MS,
+        help="每次 mkdir/mv/rename 云盘写调用后的节流毫秒数（默认 2000；0 关闭）",
+    )
     args = ap.parse_args()
 
     try:
@@ -532,7 +562,9 @@ def main() -> None:
         completed = load_completed(args.ledger) if args.resume else set()
         with execution_slot(args.driveId, args.max_parallel):
             require_preflight(args.run_dir, args.plan, args.driveId)
-            returncode = execute(plan, args.driveId, args.ledger, completed, args.batch_size)
+            returncode = execute(
+                plan, args.driveId, args.ledger, completed, args.batch_size, args.throttle_ms
+            )
     except (OSError, RuntimeError, ValueError) as error:
         ap.error(str(error))
     if returncode:

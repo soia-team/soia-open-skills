@@ -108,6 +108,8 @@ class BulkApplyReclassTests(unittest.TestCase):
         effective_args = list(args)
         if auto_run_dir and "--execute" in effective_args and "--run-dir" not in effective_args:
             effective_args.extend(["--run-dir", "/mock/run"])
+        if "--execute" in effective_args and "--throttle-ms" not in effective_args:
+            effective_args.extend(["--throttle-ms", "0"])
         sys.argv = ["apply_reclass_bulk.py", *effective_args]
         try:
             with mock.patch.object(
@@ -120,6 +122,37 @@ class BulkApplyReclassTests(unittest.TestCase):
         finally:
             sys.argv = old_argv
         return output.getvalue()
+
+    def test_bulk_write_throttle_sleeps_after_batch_cloud_write(self) -> None:
+        with mock.patch.object(bulk, "run_aliyunpan", return_value=result()) as run:
+            with mock.patch.object(bulk._SINGLE.time, "sleep") as sleep:
+                bulk.run_write_with_backoff("mv", "drive-1", "/library/a", "/library/new", throttle_ms=25)
+
+        run.assert_called_once_with("mv", "drive-1", "/library/a", "/library/new")
+        sleep.assert_called_once_with(0.025)
+
+    def test_bulk_rate_limit_retries_with_three_bounded_backoffs(self) -> None:
+        events = []
+        limited = result(429, stderr="too many requests")
+        with mock.patch.object(bulk, "run_aliyunpan", return_value=limited) as run:
+            with mock.patch.object(bulk._SINGLE.time, "sleep") as sleep:
+                _, failure = bulk.run_write_with_backoff(
+                    "mv", "drive-1", "/library/a", "/library/new", throttle_ms=0, event_sink=events.append
+                )
+
+        self.assertEqual(run.call_count, 4)
+        self.assertEqual(sleep.call_args_list, [mock.call(30), mock.call(60), mock.call(120)])
+        self.assertEqual([event["attempt"] for event in events], [1, 2, 3])
+        self.assertEqual(failure["error"], "RATE_LIMIT_RETRY_EXHAUSTED")
+
+    def test_bulk_non_rate_limit_write_failure_does_not_retry(self) -> None:
+        with mock.patch.object(bulk, "run_aliyunpan", return_value=result(1, stderr="permission denied")) as run:
+            with mock.patch.object(bulk._SINGLE.time, "sleep") as sleep:
+                _, failure = bulk.run_write_with_backoff("mv", "drive-1", "/library/a", "/library/new", throttle_ms=0)
+
+        run.assert_called_once()
+        sleep.assert_not_called()
+        self.assertIsNone(failure)
 
     def test_double_spaces_survive_parse_and_batch_argv(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
