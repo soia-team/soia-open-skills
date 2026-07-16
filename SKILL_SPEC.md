@@ -133,8 +133,8 @@ description: ...
 version: 1.0.0
 created_at: 2026-07-16
 updated_at: 2026-07-16
-created_by: zp + claude
-updated_by: zp + claude
+created_by: zp + claude opus 4.6
+updated_by: zp + claude opus 4.6
 ---
 ```
 
@@ -148,8 +148,9 @@ Rules:
   (SKILL.md, scripts, or references). Update on every commit that touches
   this skill.
 - `created_by`: who originally authored the skill. Never changes.
-  Use short identifiers; collaborative work uses `+` (e.g. `zp + claude`,
-  `zp + codex`). Solo work uses a single id (e.g. `zp`, `claude`).
+  Use short identifiers with model version; collaborative work uses `+`
+  (e.g. `zp + claude opus 4.6`, `zp + codex 5.6`).
+  Solo work uses a single id (e.g. `zp`, `claude opus 4.8`).
 - `updated_by`: who made the most recent substantive change. Update together
   with `updated_at`. Same format as `created_by`.
 - All dates use `YYYY-MM-DD` format, no time component.
