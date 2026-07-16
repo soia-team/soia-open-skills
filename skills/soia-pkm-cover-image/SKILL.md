@@ -1,6 +1,11 @@
 ---
 name: soia-pkm-cover-image
 description: 为公众号/X/小红书文章生成封面图。五维参数（type/palette/rendering/text/mood），默认 2.35:1 微信头图比例，产出接 soia-pkm-publish --cover。后端仅用 codex CLI 内置生图，探测不到就询问客户，绝不静默降级、绝不用代码渲染冒充位图。Triggers：「生成封面」「做个封面图」「配一张公众号头图」「做张小红书封面」「cover image」
+version: 1.0.0
+created_at: 2026-07-09 20:56:44
+updated_at: 2026-07-10 09:10:23
+created_by: zp
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-pkm-cover-image

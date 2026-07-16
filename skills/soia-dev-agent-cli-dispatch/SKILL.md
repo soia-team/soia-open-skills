@@ -3,6 +3,11 @@ name: soia-dev-agent-cli-dispatch
 description: 通用外部 AI 模型/CLI 调度器（codex/claude/agy/gemini/kimi/opencode/qwen，非宿主内置子代理），可由任意宿主 AI 用于编码、审查、分析、研究、文档和内容任务：支持显式模型+推理深度或按难度自动选型，并输出 Token/费用、模型完整性、额度与恢复回执。Triggers：「派活给 codex」「让 claude 分析」「调用 agy」「调用外部 AI」「多 CLI 派发」等
 dependencies:
   optional: [soia-dev-sync-skills]
+version: 1.0.0
+created_at: 2026-07-10 11:28:32
+updated_at: 2026-07-15 18:30:25
+created_by: zp
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-dev-agent-cli-dispatch

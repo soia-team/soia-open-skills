@@ -131,10 +131,10 @@ Every `SKILL.md` frontmatter should include version and timestamp fields:
 name: soia-pkm-transform-obsidian-pdf
 description: ...
 version: 1.0.0
-created_at: 2026-07-16
-updated_at: 2026-07-16
-created_by: zp + claude opus 4.6
-updated_by: zp + claude opus 4.6
+created_at: 2026-07-16 10:58:46
+updated_at: 2026-07-16 13:25:56
+created_by: zp / claude opus 4.6
+updated_by: zp / claude opus 4.6
 ---
 ```
 
@@ -143,19 +143,18 @@ Rules:
 - `version`: semver (`MAJOR.MINOR.PATCH`). Bump MAJOR for breaking changes
   (renamed skill, changed input/output contract), MINOR for new capabilities,
   PATCH for bug fixes and reference updates.
-- `created_at`: the date the skill was first committed. Never changes.
-- `updated_at`: the date of the most recent substantive change to the skill
-  (SKILL.md, scripts, or references). Update on every commit that touches
-  this skill.
+- `created_at`: the datetime the skill was first committed. Never changes.
+- `updated_at`: the datetime of the most recent substantive change to the
+  skill (SKILL.md, scripts, or references). Update on every commit that
+  touches this skill.
 - `created_by`: who originally authored the skill. Never changes.
-  Use short identifiers with model version; collaborative work uses `+`
-  (e.g. `zp + claude opus 4.6`, `zp + codex 5.6`).
+  Use short identifiers with model version; collaborative work uses `/`
+  (e.g. `zp / claude opus 4.6`, `zp / codex 5.6`).
   Solo work uses a single id (e.g. `zp`, `claude opus 4.8`).
 - `updated_by`: who made the most recent substantive change. Update together
   with `updated_at`. Same format as `created_by`.
-- All dates use `YYYY-MM-DD` format, no time component.
-- New skills must include all five fields. Existing skills should add them
-  on the next edit.
+- All datetimes use `YYYY-MM-DD HH:mm:ss` format (24-hour, local time).
+- New skills must include all five fields.
 
 ### Naming convention
 

@@ -1,6 +1,10 @@
 ---
 name: soia-cwork-feishu-cli
 description: 通过飞书官方 lark-cli 分开调研飞书知识库/Wiki与云盘/Drive，按应用身份（bot）或用户 OAuth 身份执行最小权限只读操作；先按机器可读权限目录提醒两类身份的 scope、应用数据权限、资源授权和版本发布流程。当用户要求调研飞书知识库、云盘、个人云盘、读取飞书文档或配置飞书 CLI 时使用。
+created_at: 2026-07-14 15:26:13
+updated_at: 2026-07-15 18:28:35
+created_by: zp
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-cwork-feishu-cli

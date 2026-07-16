@@ -6,6 +6,11 @@ dependencies:
     - name: baidu-drive
       required: true
       install: "npx skills add https://github.com/baidu-netdisk/bdpan-storage/skills --skill baidu-drive"
+version: 1.0.0
+created_at: 2026-07-15 18:27:15
+updated_at: 2026-07-15 18:57:32
+created_by: zp
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-pkm-baidupan — 百度网盘原子操作层

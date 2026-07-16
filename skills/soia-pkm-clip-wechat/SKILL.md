@@ -1,6 +1,11 @@
 ---
 name: soia-pkm-clip-wechat
 description: 归档单篇微信公众号文章到 Obsidian vault：抓取静态 HTML，提取标题、作者、正文、发布时间和配图，按 clip 家族规范落地；需要 PDF 时优先用 Obsidian 导出。Triggers：「归档这篇公众号」「clip 这个公众号文章」「存这篇微信文章」
+version: 1.0.0
+created_at: 2026-07-02 17:57:11
+updated_at: 2026-07-11 14:47:32
+created_by: zp
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-pkm-clip-wechat

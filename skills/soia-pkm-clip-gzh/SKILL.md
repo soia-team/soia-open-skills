@@ -1,6 +1,11 @@
 ---
 name: soia-pkm-clip-gzh
 description: 批量归档用户自己管理的微信公众号已发文章到 Obsidian vault。支持官方 API、公众号后台接口、登录态 Cookie 三条路线，并按 url 去重。Triggers：「同步我的公众号」「批量拉取我公众号历史文章」「批量归档我的公众号」「导入公众号已发文章」「clip 我的公众号」
+version: 1.0.0
+created_at: 2026-07-08 14:30:37
+updated_at: 2026-07-15 18:27:15
+created_by: zp
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-pkm-clip-gzh

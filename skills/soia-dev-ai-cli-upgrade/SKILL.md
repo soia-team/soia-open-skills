@@ -1,6 +1,11 @@
 ---
 name: soia-dev-ai-cli-upgrade
 description: Audit and upgrade AI CLIs with dry-run logs; use agy for consumer Google login and keep gemini opt-in for enterprise/API Key/Vertex. Triggers：「升级 AI CLI」「更新 agy/gemini」「检查 CLI 版本」
+version: 1.0.0
+created_at: 2026-07-09 07:45:34
+updated_at: 2026-07-15 14:21:31
+created_by: zp
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-dev-ai-cli-upgrade

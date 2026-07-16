@@ -1,6 +1,11 @@
 ---
 name: soia-dev-prompt-clarity
 description: 通用提示词技能——「写提示词」默认命中本技能。模式：A 从零七要素、B 六维诊断优化、C 防误伤改写、D 模糊需求扩展成可验证规格。默认只产出；明说「执行」由本会话执行，点名才外派 codex/agy/gemini。信息不足先澄清。提案 task 拆分走 soia-dev-task-prompt。Triggers：「调用提示词技能」「帮我写个提示词」「优化这个提示词」「这句话被误报了」「扩展成规格」「写完就执行」「然后再执行」
+version: 1.0.0
+created_at: 2026-07-09 19:52:22
+updated_at: 2026-07-14 23:43:33
+created_by: zp
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-dev-prompt-clarity
