@@ -4,8 +4,8 @@ description: 用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF
 version: 1.0.0
 created_at: 2026-07-16
 updated_at: 2026-07-16
-created_by: zp
-updated_by: zp
+created_by: zp + claude
+updated_by: zp + claude
 ---
 
 # soia-pkm-transform-obsidian-pdf
