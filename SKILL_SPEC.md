@@ -157,6 +157,37 @@ Rules:
 - New skills must include all five fields. Existing skills should add them
   on the next edit.
 
+### Naming convention
+
+Skill names use 4–5 kebab-case segments. Each segment has a fixed role:
+
+```
+soia-pkm-<action>-<object>[-<qualifier>]
+```
+
+| Segment | Role | Examples |
+|---------|------|----------|
+| `soia-pkm` | Org + domain prefix (fixed) | — |
+| `<action>` | Pipeline stage: `clip`, `organize`, `distill`, `transform`, `compose`, `publish`, or support verbs (`maintain`, `bootstrap`) | `clip`, `transform` |
+| `<object>` | What the skill operates on, or where it operates | `x`, `web`, `wechat`, `article`, `obsidian` |
+| `<qualifier>` | (Optional) Output type or platform that disambiguates siblings | `pdf`, `slides`, `visual`, `notebooklm` |
+
+How to pick `<object>` vs `<qualifier>`:
+
+- **Input/source** goes in `<object>`: `clip-x` (source is X), `clip-web` (source
+  is web).
+- **Output type** goes in `<qualifier>` when there are multiple output-type
+  siblings: `transform-article-slides`, `transform-article-visual`.
+- **Platform/tool** goes in `<object>` or `<qualifier>` when the platform IS
+  the defining trait: `transform-obsidian-pdf` (Obsidian is the knowledge base,
+  PDF is the output), `transform-article-notebooklm` (NotebookLM is the
+  platform).
+- A 3-segment name (`soia-pkm-transform`) is too vague for Claude Code to
+  disambiguate. **Minimum 4 segments for new skills.**
+
+When naming, ask: "If a user says one sentence, which segment makes the match
+unambiguous?" That segment must be in the name.
+
 ### 1. No hardcoded personal paths
 
 Do not hardcode maintainer-specific or vault-specific paths in scripts, `SKILL.md`, examples, or config templates.
