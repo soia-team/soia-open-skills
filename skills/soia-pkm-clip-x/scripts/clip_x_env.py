@@ -5,18 +5,26 @@ import os
 import re
 import shlex
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
 OVERRIDE_CONFIG_NAME = "SOIA_PKM_CLIP_X_CONFIG_FILE"
 OVERRIDE_ENV_NAME = "SOIA_PKM_CLIP_X_ENV_FILE"
-DEFAULT_CONFIG_FILE = "~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-clip-x/config.yml"
 
 KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 PATH_LIKE_KEYS = {
     "OBSIDIAN_VAULT",
     "OBSIDIAN_ARTICLES",
 }
+
+
+def default_config_file() -> Path:
+    if os.name == "nt":
+        base = Path(os.environ.get("APPDATA") or (Path.home() / "AppData" / "Roaming"))
+    else:
+        base = Path.home() / ".config"
+    return base / "soia-skills" / "soia-open-skills" / "soia-pkm" / "soia-pkm-clip-x" / "config.yml"
 
 
 def _candidate_paths() -> list[Path]:
@@ -27,7 +35,7 @@ def _candidate_paths() -> list[Path]:
     configured = os.environ.get(OVERRIDE_ENV_NAME)
     if configured:
         paths.append(Path(configured).expanduser())
-    paths.append(Path(DEFAULT_CONFIG_FILE).expanduser())
+    paths.append(default_config_file())
     return paths
 
 
@@ -88,19 +96,19 @@ def load_private_env(required: bool = False) -> Path | None:
 
 
 def env_source_hint() -> str:
-    return f"{OVERRIDE_CONFIG_NAME}, {OVERRIDE_ENV_NAME}, or {DEFAULT_CONFIG_FILE}"
+    return f"{OVERRIDE_CONFIG_NAME}, {OVERRIDE_ENV_NAME}, or {default_config_file()}"
 
 
 def write_failure_log(failures: list[dict[str, object]], prefix: str = "telegram_sync_failures") -> Path:
-    """Persist a batch-sync failure list to a TMPDIR scratch dir and return its path.
+    """Persist a batch-sync failure list to the platform temp dir and return its path.
 
     Failure lists are use-once-then-discard run reports, not an audit trail, so
-    they belong under ${TMPDIR:-/tmp}/soia-pkm-clip-x/ instead of the caller's cwd
+    they belong under the platform's temporary directory /soia-pkm-clip-x/ instead of the caller's cwd
     (which may be the vault root, a read-only dir, or anything else at call time).
     Shared by sync_telegram_export.py and sync_telegram_saved.py so both behave
     the same way.
     """
-    base_dir = Path(os.environ.get("TMPDIR", "/tmp")) / "soia-pkm-clip-x"
+    base_dir = Path(tempfile.gettempdir()) / "soia-pkm-clip-x"
     base_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     fail_log = base_dir / f"{prefix}-{timestamp}.json"

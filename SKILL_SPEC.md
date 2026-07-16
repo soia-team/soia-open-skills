@@ -301,6 +301,19 @@ flowchart LR
 
 Before a skill script writes any file to disk, classify it first — never default to a hardcoded cwd-relative path.
 
+硬规则：脚本禁止硬编码 Unix-only 路径。必须使用语言内置的跨平台 API：Python 使用 `tempfile.gettempdir()` / `Path.home()`，Node 使用 `os.tmpdir()` / `os.homedir()`；路径拼接一律使用 `pathlib` / `path.join`。不得手写 `~` 展开、`/tmp`、XDG 路径或 Windows 反斜杠来代替这些 API。
+
+三平台等价关系：
+
+| 类别 | linux/macOS | Windows |
+|---|---|---|
+| A 临时 | `$TMPDIR` 或 `/tmp` | `%TEMP%`（由 `os.tmpdir()` / `tempfile` 自动处理） |
+| B 审计 | `${XDG_STATE_HOME:-~/.local/state}/<skill>/` | `%LOCALAPPDATA%/<skill>/state/` |
+| 私有 config | `~/.config/soia-skills/...` | `%APPDATA%/soia-skills/...` |
+| C 交付物默认 | `~/Downloads/<skill>/` 或用户指定 | 同左（Downloads 三平台皆有） |
+
+兼容说明：现有 skill 中的 Unix 写法逐步迁移；新脚本必须跨平台，不能新增 Unix-only 路径。
+
 | Category | Nature | Destination |
 |---|---|---|
 | A. Disposable run output | Run reports / temporary intermediates, useful only right after this run | `${TMPDIR:-/tmp}/<skill-name>/`; consider `LOG_KEEP`-style rotation |

@@ -22,7 +22,7 @@
 | 只刷新发生变化的分区 | `gen_catalog_xlsx.py`，普通运行，不加 `--force` |
 | 给家长看一个学习分区怎么用、点击进入具体课程 | `gen_family_nav_xlsx.mjs` |
 
-禁止在 vault、`/tmp` 或对话产物目录另写一次性 Excel builder。生成规则只维护在 skill 内，用户目录只放输入与交付物。
+禁止在 vault、平台临时目录或对话产物目录另写一次性 Excel builder。生成规则只维护在 skill 内，用户目录只放输入与交付物。
 
 ## 输入与输出
 
@@ -31,7 +31,7 @@
 1. `00_馆藏总览.md`：目录浏览、分区统计与目录云盘链接。
 2. `_全文检索/*.md`：每个分区一份，提供逐文件明细。
 
-假设 `--output` 是 `<output-dir>/00_阿里云盘馆藏总索引.xlsx`，输出为：
+`--output-dir` 可显式指定 `<absolute-output-dir>`；未指定时脚本按 `ALIPAN_CURATOR_OUTPUT_DIR`、私有 `config.yml`、`<用户家目录>/Downloads/soia-pkm-alipan-curator/` 三级优先级选择绝对输出目录，并在其中写入 `00_阿里云盘馆藏总索引.xlsx`，输出为：
 
 ```text
 <output-dir>/
@@ -52,7 +52,7 @@
 ## 增量原理
 
 1. 对每份 `_全文检索/*.md` 计算 SHA-256。
-2. 按数据源指纹缓存解析结果到 `${XDG_CACHE_HOME:-$HOME/.cache}/soia-pkm-alipan-curator/catalog-xlsx/`。
+2. 按数据源指纹缓存解析结果到平台用户缓存目录（Linux/macOS 读取 `$XDG_CACHE_HOME` 或 `Path.home() / '.cache'`；Windows 使用 `%LOCALAPPDATA%`）。
 3. 普通运行只重建源 SHA-256 已变化或输出缺失的分区工作簿。
 4. 任一分区或 `00_馆藏总览.md` 变化时，额外重建轻量总入口。
 5. 分区改名或删除时，只有在新工作簿成功生成并提交 manifest 后，才清理已从 `_全文检索` 消失的旧分区工作簿与缓存，避免新旧名称并存。
@@ -89,7 +89,7 @@ ln -s '<loader-node-modules>' "$RUNTIME_DIR/node_modules"
 python3 '<skill-dir>/scripts/gen_catalog_xlsx.py' \
   --catalog '<vault>/path/to/00_馆藏总览.md' \
   --search-dir '<vault>/path/to/_全文检索' \
-  --output '<output-dir>/00_阿里云盘馆藏总索引.xlsx' \
+  --output-dir '<absolute-output-dir>' \
   --node '<loader-node>' \
   --artifact-runtime "$RUNTIME_DIR" \
   --soffice '<loader-soffice>' \

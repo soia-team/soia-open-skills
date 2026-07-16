@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import sys
+import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / "skills" / "soia-pkm-alipan-curator" / "scripts"
+SCRIPT = SCRIPTS / "gen_catalog_xlsx.py"
 sys.path.insert(0, str(SCRIPTS))
 
 from catalog_xlsx.cache import (  # noqa: E402
@@ -58,6 +61,27 @@ def catalog_markdown() -> str:
 
 
 class IncrementalCatalogTests(unittest.TestCase):
+    @staticmethod
+    def fake_node(root: Path) -> Path:
+        node = root / "fake-node"
+        node.write_text(
+            """#!/usr/bin/env python3
+import json
+import sys
+from pathlib import Path
+
+plan = json.loads(Path(sys.argv[sys.argv.index('--plan') + 1]).read_text(encoding='utf-8'))
+outputs = [plan['outputPath']] + [item['output'] for item in plan.get('partitions', [])]
+for output in outputs:
+    path = Path(output)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('fake xlsx', encoding='utf-8')
+""",
+            encoding="utf-8",
+        )
+        node.chmod(0o755)
+        return node
+
     def test_cleanup_inspection_sidecars_keeps_workbooks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workbook = Path(temporary) / "catalog.xlsx"
@@ -78,6 +102,88 @@ class IncrementalCatalogTests(unittest.TestCase):
             source.write_text(source.read_text(encoding="utf-8").replace("共 1 个", "共 2 个"), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "与头部声明"):
                 parse_search_markdown(source)
+
+    def test_missing_output_dir_uses_home_downloads_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            search_dir = root / "search"
+            search_dir.mkdir()
+            catalog = root / "00_馆藏总览.md"
+            catalog.write_text(catalog_markdown(), encoding="utf-8")
+            (search_dir / "10_孩子.md").write_text(
+                search_markdown("10_孩子", "10_孩子/10_英语", [("a.mp4", "1MB")]),
+                encoding="utf-8",
+            )
+            runtime = root / "runtime"
+            (runtime / "node_modules" / "@oai" / "artifact-tool").mkdir(parents=True)
+            node = self.fake_node(root)
+            home = root / "home"
+            output_dir = home / "Downloads" / "soia-pkm-alipan-curator"
+            env = {**os.environ, "HOME": str(home)}
+            for name in ("ALIPAN_CURATOR_OUTPUT_DIR", "SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE"):
+                env.pop(name, None)
+            result = subprocess.run(
+                [
+                    "python3",
+                    str(SCRIPT),
+                    "--catalog", str(catalog),
+                    "--search-dir", str(search_dir),
+                    "--node", str(node),
+                    "--artifact-runtime", str(runtime),
+                    "--cache-dir", str(root / "cache"),
+                    "--json",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((output_dir / "00_阿里云盘馆藏总索引.xlsx").is_file())
+            self.assertIn(
+                f"输出到默认目录 {output_dir}（可用 --output-dir 或 config ALIPAN_CURATOR_OUTPUT_DIR 覆盖）",
+                result.stderr,
+            )
+
+    def test_environment_output_dir_overrides_home_downloads_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            search_dir = root / "search"
+            search_dir.mkdir()
+            catalog = root / "00_馆藏总览.md"
+            catalog.write_text(catalog_markdown(), encoding="utf-8")
+            (search_dir / "10_孩子.md").write_text(
+                search_markdown("10_孩子", "10_孩子/10_英语", [("a.mp4", "1MB")]),
+                encoding="utf-8",
+            )
+            runtime = root / "runtime"
+            (runtime / "node_modules" / "@oai" / "artifact-tool").mkdir(parents=True)
+            node = self.fake_node(root)
+            output_dir = root / "configured-output"
+            env = {
+                **os.environ,
+                "HOME": str(root / "home"),
+                "ALIPAN_CURATOR_OUTPUT_DIR": str(output_dir),
+            }
+            env.pop("SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE", None)
+            result = subprocess.run(
+                [
+                    "python3", str(SCRIPT),
+                    "--catalog", str(catalog),
+                    "--search-dir", str(search_dir),
+                    "--node", str(node),
+                    "--artifact-runtime", str(runtime),
+                    "--cache-dir", str(root / "cache"),
+                    "--json",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((output_dir / "00_阿里云盘馆藏总索引.xlsx").is_file())
+            self.assertNotIn("输出到默认目录", result.stderr)
 
     def test_parser_preserves_all_classification_levels(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
