@@ -3,11 +3,11 @@ name: soia-pkm-alipan-curator
 description: 阿里云盘资源顾问：提供 inventory/organize/catalog/plan 四类工作流，盘点和整理资源、生成 Obsidian 馆藏与增量 Excel/家庭导航，并按用户提供的学情生成学习计划。Triggers：「整理云盘」「云盘盘点」「更新云盘索引」「更新Excel总索引」「生成家庭导航Excel」「给云盘建图书馆」「用网盘资源做学习计划」
 dependencies:
   hard: [soia-pkm-alipan-drive-ops]
-version: 1.2.0
+version: 1.2.1
 created_at: 2026-07-02 23:02:39
-updated_at: 2026-07-16 19:20:58
+updated_at: 2026-07-16 20:59:37
 created_by: claude opus 4.6
-updated_by: gpt-5.6-sol
+updated_by: gpt-5.6-terra
 ---
 
 # soia-pkm-alipan-curator — 云盘资源顾问
@@ -124,7 +124,7 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 
 重分类计划和恢复型执行器只接受 `mkdir`、`mv`、`rename`。若计划出现 `delete`、`remove` 或 `trash`，会在解析阶段拒绝并输出：“删除动作应登记在 cleanup_batches，由原子层在用户授权+空壳验证后执行，不进入重分类恢复/重放”；此时不调用云盘 runner。删除动作必须按 [references/run-bundle.md](references/run-bundle.md) 的 `cleanup_batches` 合同单独执行。
 
-预检支持断点运行包：逐批读取 `result` ledger 中同一 operation key（`action_id/op/from/to/file_id`）的最新记录，只把最新状态为 `verified` / `completed` 且当前云端能以同一 `file_id` 证明计划终态的连续链前缀计为 `already_verified`。`mv → rename` 等链先验证最终落点，再按全局计划逆序回卷后重放；账本单方面声称成功、错误 ID、未登记 operation key 或中间断链都必须产生 violation。若已 verified 的空 `mkdir` 后续经用户批准送入回收站，只能通过 `run.files.empty_cleanup_evidence` 登记的 JSONL 证据转为 `superseded`；证据必须与缺失目标精确匹配、`files=0`、`status` 严格等于 `removed_to_recycle_bin_verified` 且子目录先于父目录。报告 `checked` 分开输出 `ready_actions`、`already_verified_actions` 与 `superseded_actions`；preflight 的 SHA-256 绑定覆盖当前 `run.json`、全部登记计划、cleanup authorizations 与已登记 empty-cleanup evidence。cleanup result ledger 是执行期可追加证据，不能写入 preflight hash；但 final migration conservation 必须 hash 完整 ledger 历史，截断或篡改即阻断收官。
+预检支持断点运行包：逐批读取 `result` ledger 中同一 operation key（`action_id/op/from/to/file_id`）的最新记录，只把最新状态为 `verified` / `completed` 且当前云端能以同一 `file_id` 证明计划终态的连续链前缀计为 `already_verified`。`mv → rename` 等链先验证最终落点，再按全局计划逆序回卷后重放；账本单方面声称成功、错误 ID、未登记 operation key 或中间断链都必须产生 violation。若已 verified 的空 `mkdir` 后续经用户批准送入回收站，只能通过 `run.files.empty_cleanup_evidence` 登记的 JSONL 证据转为 `superseded`；证据必须与缺失目标精确匹配、`files=0`，且 `status` 必须精确属于 `removed_to_recycle_bin_verified`、`removed_to_recycle_bin_and_absence_verified` 或 `removed_to_recycle_bin_and_parent_verified_empty`，并且子目录先于父目录。报告 `checked` 分开输出 `ready_actions`、`already_verified_actions` 与 `superseded_actions`；preflight 的 SHA-256 绑定覆盖当前 `run.json`、全部登记计划、cleanup authorizations 与已登记 empty-cleanup evidence。cleanup result ledger 是执行期可追加证据，不能写入 preflight hash；但 final migration conservation 必须 hash 完整 ledger 历史，截断或篡改即阻断收官。
 
 **历史 debt 不得洗白**：已经发生、但缺少删除前用户授权原件的 cleanup 不是 `cleanup_batches` 的合规输入，也绝不可补造或事后倒填 `authorized_at`。它必须以 `run.files.cleanup_process_debt` 在 XDG state 内的运行包单独登记，分类只能是 `legacy_process_debt` 或 `authorization_unproven_execution`，并保留原始 plan/result 做终态缺席/ID 守恒对账。报告会分别给出 `payload_conservation` 与 `structural_process_debt`：前者可显示 payload 已对账，后者仍会阻断 final `completed`，且绝不授予 `authorized_missing`。正式 cleanup authorizations 只适用于尚未执行的未来删除。Obsidian 只保留冻结审计和短回执，不能把运行期 debt ledger 或其历史复制进 vault/outputs；细则见 [references/run-bundle.md](references/run-bundle.md)。
 

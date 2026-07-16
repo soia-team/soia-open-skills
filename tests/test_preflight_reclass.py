@@ -464,6 +464,29 @@ class PreflightReclassTests(unittest.TestCase):
             "superseded_actions": 3,
         })
 
+    def test_all_verified_cleanup_evidence_status_enums_are_accepted(self) -> None:
+        statuses = (
+            "removed_to_recycle_bin_verified",
+            "removed_to_recycle_bin_and_absence_verified",
+            "removed_to_recycle_bin_and_parent_verified_empty",
+        )
+        for status in statuses:
+            with self.subTest(status=status):
+                planned = action("M1", "mkdir", to="/A")
+                evidence = [{
+                    **cleanup_row("/A", "dir-a", status=status),
+                    "_line": 1,
+                    "_evidence": "cleanup.jsonl",
+                }]
+                replay_statuses, violations = module.replay(
+                    [planned],
+                    [{"path": "/", "state": "exists", "entries": []}],
+                    {module.operation_key(planned)},
+                    evidence,
+                )
+                self.assertEqual(violations, [])
+                self.assertEqual(replay_statuses[0]["status"], "superseded")
+
     def test_forged_cleanup_evidence_status_is_rejected(self) -> None:
         planned = action("M1", "mkdir", to="/A")
         evidence = [{
@@ -484,7 +507,7 @@ class PreflightReclassTests(unittest.TestCase):
     def test_cleanup_evidence_status_prefix_spoof_is_rejected(self) -> None:
         planned = action("M1", "mkdir", to="/A")
         evidence = [{
-            **cleanup_row("/A", "dir-a", status="removed_to_recycle_bin_failed"),
+            **cleanup_row("/A", "dir-a", status="removed_to_recycle_bin_verified_fake"),
             "_line": 1,
             "_evidence": "cleanup.jsonl",
         }]
