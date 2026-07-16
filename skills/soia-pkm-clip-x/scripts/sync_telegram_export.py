@@ -48,6 +48,10 @@ X_URL_RE = re.compile(
 )
 
 DEFAULT_ARTICLES_DIR = "Articles"
+FALLBACK_ARTICLES_WARNING = (
+    "WARN: 未找到 articles 目录配置（--articles-dir / OBSIDIAN_ARTICLES / config.yml），"
+    "已落默认 Articles/——该目录不是本 vault 的正式归档位，请确认或配置"
+)
 
 
 def looks_like_vault(path: Path) -> bool:
@@ -86,6 +90,7 @@ def resolve_article_root(vault: Path, cli_articles_dir: str | None = None) -> Pa
     sub = cli_articles_dir or os.environ.get("OBSIDIAN_ARTICLES")
     if sub:
         return vault / sub
+    print(FALLBACK_ARTICLES_WARNING, file=sys.stderr)
     return vault / DEFAULT_ARTICLES_DIR
 
 

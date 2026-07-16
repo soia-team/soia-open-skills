@@ -111,7 +111,7 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
         return runtime
 
     def run_generator(
-        self, source: Path, output: Path, runtime: Path, env: dict[str, str], *extra_args: str
+        self, source: Path, output_dir: Path, runtime: Path, env: dict[str, str], *extra_args: str
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
@@ -119,8 +119,8 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
                 str(SCRIPT),
                 "--input",
                 str(source),
-                "--output",
-                str(output),
+                "--output-dir",
+                str(output_dir),
                 "--artifact-runtime",
                 str(runtime),
                 *extra_args,
@@ -135,9 +135,11 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "navigation.json"
-            output = root / "out.xlsx"
+            output_dir = root / "deliverables"
+            output = output_dir / "01_家庭学习导航.xlsx"
             runtime = self.prepare_runtime(root)
             source.write_text(json.dumps(self.payload(), ensure_ascii=False), encoding="utf-8")
+            output_dir.mkdir()
             output.write_text("known-good xlsx", encoding="utf-8")
             lifecycle_log = root / "artifact-lifecycle.log"
             soffice_log = root / "soffice.json"
@@ -146,7 +148,7 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
             soffice.chmod(0o755)
             result = self.run_generator(
                 source,
-                output,
+                output_dir,
                 runtime,
                 {
                     **os.environ,
@@ -165,7 +167,7 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
             self.assertEqual(lifecycle[0], "export")
             self.assertEqual(temporary_output.parent, output.parent)
             self.assertNotEqual(temporary_output, output)
-            self.assertTrue(temporary_output.name.startswith(".out.tmp-"))
+            self.assertTrue(temporary_output.name.startswith(".01_家庭学习导航.tmp-"))
             self.assertEqual(lifecycle[2], f"load:{temporary_output}")
             self.assertEqual(lifecycle[3], "import:known-good xlsx")
             self.assertEqual(lifecycle[4], "inspect")
@@ -179,14 +181,16 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "navigation.json"
-            output = root / "out.xlsx"
+            output_dir = root / "deliverables"
+            output = output_dir / "01_家庭学习导航.xlsx"
             runtime = self.prepare_runtime(root)
             source.write_text(json.dumps(self.payload(), ensure_ascii=False), encoding="utf-8")
+            output_dir.mkdir()
             output.write_text("known-good xlsx", encoding="utf-8")
             lifecycle_log = root / "artifact-lifecycle.log"
             result = self.run_generator(
                 source,
-                output,
+                output_dir,
                 runtime,
                 {
                     **os.environ,
@@ -198,7 +202,7 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("公式错误", result.stderr)
             self.assertEqual(output.read_text(encoding="utf-8"), "known-good xlsx")
-            self.assertFalse(list(root.glob(".out.tmp-*.xlsx")))
+            self.assertFalse(list(output_dir.glob(".01_家庭学习导航.tmp-*.xlsx")))
             self.assertEqual(
                 lifecycle_log.read_text(encoding="utf-8").splitlines()[2:],
                 ["load:" + lifecycle_log.read_text(encoding="utf-8").splitlines()[1][5:], "import:known-good xlsx", "inspect"],
@@ -224,7 +228,8 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
             text=True,
         )
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("--help", result.stderr)
+        self.assertIn("--output-dir", result.stderr)
+        self.assertIn("ALIPAN_CURATOR_OUTPUT_DIR", result.stderr)
 
     def test_invalid_drive_url_fails_before_loading_artifact_tool(self) -> None:
         payload = {
@@ -256,8 +261,8 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
                     str(SCRIPT),
                     "--input",
                     str(source),
-                    "--output",
-                    str(root / "out.xlsx"),
+                    "--output-dir",
+                    str(root),
                     "--artifact-runtime",
                     str(root),
                 ],

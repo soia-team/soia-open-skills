@@ -3,9 +3,9 @@ name: soia-pkm-alipan-curator
 description: 阿里云盘资源顾问：提供 inventory/organize/catalog/plan 四类工作流，盘点和整理资源、生成 Obsidian 馆藏与增量 Excel/家庭导航，并按用户提供的学情生成学习计划。Triggers：「整理云盘」「云盘盘点」「更新云盘索引」「更新Excel总索引」「生成家庭导航Excel」「给云盘建图书馆」「用网盘资源做学习计划」
 dependencies:
   hard: [soia-pkm-alipan-drive-ops]
-version: 1.0.0
+version: 1.1.0
 created_at: 2026-07-02 23:02:39
-updated_at: 2026-07-16 15:34:25
+updated_at: 2026-07-16 17:03:24
 created_by: claude opus 4.6
 updated_by: gpt-5.6-luna
 ---
@@ -148,6 +148,18 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 - **杂包必拆**：含糊命名的合集目录逐项盘点→可独立使用的高价值资源提升到合适业务类→剩余按同一主轴分类→删壳前对账总数吻合
 - **SHA1 级查重**：同名/疑似重复资源先做文件级哈希比对再决定删哪份，不凭文件名/大小相似猜
 - **广告清理特征清单**：几千T资源/扫码进群/十万度V信/XH1080 尾巴/超低价网盘会员/可疑 exe——文字类见即删，可疑 exe 先列清单等确认
+
+### 产物输出路径（C 类用户交付物）
+
+Excel 总索引、家庭导航和学习计划是用户交付物，落盘目录必须按以下优先级确定：
+
+1. 用户明确说出的路径。
+2. 私有 `config.yml` 中的 `ALIPAN_CURATOR_OUTPUT_DIR`。
+3. 两者都没有时，**先问用户**；不得静默选择默认目录。
+
+明确禁止把这些产物写入 vault 根 `outputs/`、任何 `<session-uuid>` 命名目录或 cwd 相对路径。两个 Excel 入口都必须显式传绝对路径 `--output-dir <用户交付目录>`；缺少参数时应报错并提示上述优先级。`navigation.json`、QA 图片和增量缓存属于运行中间物，分别放运行临时目录或用户缓存目录，不进入 vault 交付目录。
+
+Obsidian 馆藏 Markdown（inventory/catalog 的 md 产物）是 D 类——产品特性即落 vault——例外，继续按馆藏区约定路径写入；此例外不适用于 Excel、家庭导航或学习计划。
 
 ### catalog — 索引落 OB
 **调用本 skill 的 `scripts/gen_catalog.py`** 从全盘扫描数据生成 `00_馆藏总览`（浏览）+ `_全文检索/`（检索），不手写、不把脚本写进 vault。整理/移动后**必须**重跑刷新（尤其跨盘导致 file_id 全换时），否则索引腐烂。

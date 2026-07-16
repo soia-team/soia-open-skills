@@ -1,9 +1,9 @@
 ---
 name: soia-pkm-clip-wechat-article
 description: 归档单篇微信公众号文章到 Obsidian vault：抓取静态 HTML，提取标题、作者、正文、发布时间和配图，按 clip 家族规范落地；需要 PDF 时优先用 Obsidian 导出。Triggers：「归档这篇公众号」「clip 这个公众号文章」「存这篇微信文章」
-version: 2.0.0
+version: 2.1.0
 created_at: 2026-07-02 17:57:11
-updated_at: 2026-07-16 15:34:25
+updated_at: 2026-07-16 17:03:24
 created_by: claude opus 4.6
 updated_by: gpt-5.6-luna
 ---
@@ -48,6 +48,7 @@ OBSIDIAN_ARTICLES=<vault-relative-articles-dir>
 ```
 
 - CLI `--vault` / `--articles-dir` 优先于环境变量；都未提供时，仅从当前目录向上寻找真实 `.obsidian/` 标志。
+- 若 `--articles-dir`、`OBSIDIAN_ARTICLES` 都缺失，脚本仍保留 `Articles/` 兜底以兼容既有流程，但会向 stderr 打印明确警告；回执必须包含实际落盘目录，并在走兜底时建议配置正式 articles 目录后归位。
 - 当前 stdlib 脚本不解析 YAML `config.yml`，也不需要 API key、cookie 或其他凭据；不要创建一个不会生效的配置文件。
 - 强依赖、可选依赖和第三方 skill 关系必须以本 `SKILL.md` 后续的“依赖 / 前置 / 资源 / 边界”说明为准；没有写清楚时，先补说明或询问客户，不要猜。
 - 第三方 skill 只能声明依赖和安装方式，不直接修改第三方 skill 文件。
@@ -97,6 +98,7 @@ python3 scripts/archive_wechat.py <url> \
 - frontmatter：`tags:[文章摘抄]`、`source: 公众号`、`url`、`author`、`publisher`、`published_at`、`captured_at`、`topics:[]`、`content_complete`
 - 正文段：`## 摘要`（AI 补）、`## 原文`、`## 我的看法`（留空）、`## 关联`
 - 归档后 AI 补摘要 + topics；脚本已按发布月份归位。
+- 回执必须包含实际落盘目录；若未配置 `--articles-dir` 或 `OBSIDIAN_ARTICLES` 而走了 `Articles/` 兜底，必须显式标注警告，并建议配置正式 articles 目录后归位。
 
 ## 验证
 

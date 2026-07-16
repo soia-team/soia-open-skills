@@ -31,7 +31,7 @@
 1. `00_馆藏总览.md`：目录浏览、分区统计与目录云盘链接。
 2. `_全文检索/*.md`：每个分区一份，提供逐文件明细。
 
-假设 `--output` 是 `<output-dir>/00_阿里云盘馆藏总索引.xlsx`，输出为：
+假设 `--output-dir` 是用户明确指定的 `<absolute-output-dir>`，脚本会在其中写入 `00_阿里云盘馆藏总索引.xlsx`，输出为：
 
 ```text
 <output-dir>/
@@ -89,7 +89,7 @@ ln -s '<loader-node-modules>' "$RUNTIME_DIR/node_modules"
 python3 '<skill-dir>/scripts/gen_catalog_xlsx.py' \
   --catalog '<vault>/path/to/00_馆藏总览.md' \
   --search-dir '<vault>/path/to/_全文检索' \
-  --output '<output-dir>/00_阿里云盘馆藏总索引.xlsx' \
+  --output-dir '<absolute-output-dir>' \
   --node '<loader-node>' \
   --artifact-runtime "$RUNTIME_DIR" \
   --soffice '<loader-soffice>' \

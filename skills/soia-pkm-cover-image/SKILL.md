@@ -1,11 +1,11 @@
 ---
 name: soia-pkm-cover-image
 description: 为公众号/X/小红书文章生成封面图，支持五维参数与多种比例；公众号产出接 soia-pkm-publish-wechat-draft --cover。仅用 codex CLI 内置生图，缺失时停止并提示，不静默降级。Triggers：「生成封面」「做个封面图」「配一张公众号头图」「做张小红书封面」「cover image」
-version: 1.0.0
+version: 1.1.0
 created_at: 2026-07-09 20:56:44
-updated_at: 2026-07-10 09:10:23
+updated_at: 2026-07-16 17:03:24
 created_by: claude opus 4.6
-updated_by: claude opus 4.6
+updated_by: gpt-5.6-luna
 ---
 
 # soia-pkm-cover-image
@@ -78,6 +78,15 @@ SOIA_PKM_COVER_IMAGE_CONFIG_FILE=<custom-config-path>
 - <后端缺失 / 标题与原文不一致需要客户核对 / 建议公众号场景下一步把 cover.png 交给 soia-pkm-publish-wechat-draft；没有则写"无，可直接使用产出">
 ```
 
+## 产物路径（C 类用户交付物）
+
+- 用户明确指定的输出路径优先。
+- 未指定时，默认把封面和 prompt 放在**草稿文章的同一目录**，使 `cover.png` 能直接衔接 `soia-pkm-publish-wechat-draft --cover`；执行前必须已经拿到草稿文章的确切路径。
+- 既没有用户指定路径，也没有草稿文章路径时，先询问用户，不得静默选择 cwd 或其他默认目录。
+- 明确禁止写入 vault 根 `outputs/`，也不得创建 `outputs/cover-image/<name>/` 作为默认落点。
+
+内部结构仍为 `prompts/NN-cover-<slug>.md` 与 `cover.png`；若用户指定的是目录，按该目录组织这两个产物。重生成继续使用 `cover-v2.png` 等递增文件名并保留旧版本。
+
 ## 五维参数（精选，非上游全集）
 
 | 维度 | 可选值 | 默认 | 一句话说明 |
@@ -141,14 +150,14 @@ python3 scripts/publish.py --article <文章md> --cover <output-dir>/cover.png
 ## 输出目录结构
 
 ```
-outputs/cover-image/<topic-slug>/
+<draft-article-dir>/
 ├── prompts/
 │   └── 01-cover-<topic-slug>.md
 └── cover.png
 ```
 
 - `<topic-slug>` 与 `prompts/` 里的 `slug` 保持一致，方便对应查找。
-- 客户指定了别的输出目录（如某个 vault 内的文章同级目录）时，以客户指定为准，只是仍然遵守"`prompts/` 子目录 + `cover.png`"这套内部结构。
+- 客户指定了别的输出目录时，以客户指定为准，只是仍然遵守"`prompts/` 子目录 + `cover.png`"这套内部结构。
 - 文字纠错重生成：新版本用 `cover-v2.png`（依次递增）+ 对应编号更高的 prompt 文件，旧版本不删除，直到客户确认可以清理。
 
 ## 边界与限制

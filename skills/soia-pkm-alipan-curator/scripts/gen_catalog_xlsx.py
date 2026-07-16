@@ -18,6 +18,15 @@ from catalog_xlsx.cache import commit_manifest, default_cache_dir, prepare_incre
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 BUILDER = SCRIPT_DIR / "catalog_xlsx" / "build_workbooks.mjs"
+MASTER_FILENAME = "00_阿里云盘馆藏总索引.xlsx"
+
+
+def missing_output_dir_error() -> str:
+    return (
+        "缺少 --output-dir：Excel 是 C 类用户交付物，输出目录必须按以下优先级确定："
+        "①用户明说的路径 ②私有 config.yml 的 ALIPAN_CURATOR_OUTPUT_DIR "
+        "③都没有时先问用户；不得静默选择默认目录、cwd 相对路径或 vault 根 outputs/。"
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -26,7 +35,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--catalog", type=Path, required=True, help="馆藏总览 Markdown 文件")
     parser.add_argument("--search-dir", type=Path, required=True, help="分区全文检索 Markdown 目录")
-    parser.add_argument("--output", type=Path, required=True, help="总索引 xlsx 输出路径")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help="用户交付物目录（必须显式提供绝对路径；不提供时不写任何默认目录）",
+    )
     parser.add_argument("--cache-dir", type=Path, help="增量缓存目录；默认按数据源路径生成用户级缓存")
     parser.add_argument("--node", default=os.environ.get("SOIA_ARTIFACT_NODE", "node"), help="Node.js 可执行文件")
     parser.add_argument(
@@ -47,6 +60,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def validate_inputs(args: argparse.Namespace) -> None:
+    if args.output_dir is None:
+        raise SystemExit(missing_output_dir_error())
+    if not args.output_dir.is_absolute():
+        raise SystemExit("--output-dir 必须是绝对路径；不要使用 cwd 相对路径。")
+    args.output_dir = args.output_dir.resolve()
+    args.output = args.output_dir / MASTER_FILENAME
     if not args.catalog.is_file():
         raise SystemExit(f"catalog 不存在：{args.catalog}")
     if not args.search_dir.is_dir():

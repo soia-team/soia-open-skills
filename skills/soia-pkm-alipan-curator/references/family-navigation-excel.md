@@ -131,7 +131,7 @@ node '<skill-dir>/scripts/gen_family_nav_xlsx.mjs' --help
 ```bash
 node '<skill-dir>/scripts/gen_family_nav_xlsx.mjs' \
   --input '<run-dir>/navigation.json' \
-  --output '<output-dir>/01_家庭学习导航.xlsx' \
+  --output-dir '<absolute-output-dir>' \
   --artifact-runtime '<runtime-with-node_modules>' \
   --qa-dir '<cache-or-run-dir>/qa' \
   --soffice '<soffice-path>'
