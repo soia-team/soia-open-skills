@@ -4,8 +4,8 @@ description: 阿里云盘原子操作层：安装/登录 aliyunpan、显式 driv
 version: 1.0.0
 created_at: 2026-07-02 23:02:39
 updated_at: 2026-07-15 19:11:19
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-pkm-alipan — 阿里云盘原子操作层

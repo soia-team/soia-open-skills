@@ -4,8 +4,8 @@ description: 为公众号/X/小红书文章生成封面图。五维参数（type
 version: 1.0.0
 created_at: 2026-07-09 20:56:44
 updated_at: 2026-07-10 09:10:23
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-pkm-cover-image

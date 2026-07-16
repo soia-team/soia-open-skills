@@ -4,8 +4,8 @@ description: 归档 X/Twitter 推文、thread、Article 到 Obsidian vault。基
 version: 1.0.0
 created_at: 2026-07-02 03:51:43
 updated_at: 2026-07-15 18:27:15
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-pkm-clip-x

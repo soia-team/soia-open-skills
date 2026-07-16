@@ -4,8 +4,8 @@ description: 把云盘/本地的存量资料（PDF/Word/文档）批量导入 Ob
 version: 1.0.0
 created_at: 2026-07-02 17:57:11
 updated_at: 2026-07-12 00:04:44
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-pkm-clip-drive

@@ -4,8 +4,8 @@ description: 把任意网页/博客文章一键归档到 Obsidian vault。用正
 version: 1.0.0
 created_at: 2026-07-02 17:57:11
 updated_at: 2026-07-12 00:04:44
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-pkm-clip-web

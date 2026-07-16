@@ -4,8 +4,8 @@ description: AGENTS.md / CLAUDE.md / GEMINI.md 及 .claude 配置设计顾问,�
 version: 1.0.0
 created_at: 2026-07-10 09:10:23
 updated_at: 2026-07-10 09:10:23
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-dev-agent-md-advisor

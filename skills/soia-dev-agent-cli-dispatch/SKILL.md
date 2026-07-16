@@ -6,8 +6,8 @@ dependencies:
 version: 1.0.0
 created_at: 2026-07-10 11:28:32
 updated_at: 2026-07-15 18:30:25
-created_by: zp
-updated_by: zp / claude opus 4.6
+created_by: claude opus 4.6
+updated_by: claude opus 4.6
 ---
 
 # soia-dev-agent-cli-dispatch
