@@ -19,14 +19,73 @@ from catalog_xlsx.cache import commit_manifest, default_cache_dir, prepare_incre
 SCRIPT_DIR = Path(__file__).resolve().parent
 BUILDER = SCRIPT_DIR / "catalog_xlsx" / "build_workbooks.mjs"
 MASTER_FILENAME = "00_阿里云盘馆藏总索引.xlsx"
+OUTPUT_ENV_NAME = "ALIPAN_CURATOR_OUTPUT_DIR"
+CONFIG_FILE_ENV_NAME = "SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE"
 
 
-def missing_output_dir_error() -> str:
-    return (
-        "缺少 --output-dir：Excel 是 C 类用户交付物，输出目录必须按以下优先级确定："
-        "①用户明说的路径 ②私有 config.yml 的 ALIPAN_CURATOR_OUTPUT_DIR "
-        "③都没有时先问用户；不得静默选择默认目录、cwd 相对路径或 vault 根 outputs/。"
-    )
+def default_config_file() -> Path:
+    if os.name == "nt":
+        base = Path(os.environ.get("APPDATA") or (Path.home() / "AppData" / "Roaming"))
+    else:
+        base = Path.home() / ".config"
+    return base / "soia-skills" / "soia-open-skills" / "soia-pkm" / "soia-pkm-alipan-curator" / "config.yml"
+
+
+def parse_config_scalar(value: str) -> str:
+    value = value.strip()
+    if not value or value in {"null", "~"}:
+        return ""
+    if value[0] in {"'", '"'} and value[-1:] == value[0]:
+        return value[1:-1]
+    return value.split(" #", 1)[0].strip()
+
+
+def configured_output_dir() -> str | None:
+    config_path = Path(os.environ[CONFIG_FILE_ENV_NAME]).expanduser() if os.environ.get(CONFIG_FILE_ENV_NAME) else default_config_file()
+    if not config_path.is_file():
+        return None
+    try:
+        in_env = False
+        for raw_line in config_path.read_text(encoding="utf-8").splitlines():
+            stripped = raw_line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            indent = len(raw_line) - len(raw_line.lstrip(" "))
+            if indent == 0:
+                in_env = stripped == "env:"
+                continue
+            if not in_env or indent < 2 or ":" not in stripped:
+                continue
+            key, value = stripped.split(":", 1)
+            if key.strip() == OUTPUT_ENV_NAME:
+                return parse_config_scalar(value)
+    except OSError as error:
+        print(f"⚠️ 无法读取私有 config.yml {config_path}: {error}", file=sys.stderr)
+    return None
+
+
+def resolve_output_dir(cli_output_dir: Path | None) -> tuple[Path, str]:
+    value: str | Path | None = cli_output_dir
+    source = "cli"
+    if value is None:
+        value = os.environ.get(OUTPUT_ENV_NAME)
+        source = "environment"
+    if not value:
+        value = configured_output_dir()
+        source = "config"
+    if not value:
+        value = Path.home() / "Downloads" / "soia-pkm-alipan-curator"
+        source = "default"
+        print(
+            f"输出到默认目录 {value}（可用 --output-dir 或 config ALIPAN_CURATOR_OUTPUT_DIR 覆盖）",
+            file=sys.stderr,
+        )
+    resolved = Path(os.path.expandvars(str(value))).expanduser()
+    if not resolved.is_absolute():
+        raise SystemExit("输出目录必须是绝对路径；不要使用 cwd 相对路径。")
+    resolved = resolved.resolve()
+    resolved.mkdir(parents=True, exist_ok=True)
+    return resolved, source
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,7 +97,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        help="用户交付物目录（必须显式提供绝对路径；不提供时不写任何默认目录）",
+        help="用户交付物目录；未提供时按环境变量、私有 config.yml、默认 Downloads 目录回退",
     )
     parser.add_argument("--cache-dir", type=Path, help="增量缓存目录；默认按数据源路径生成用户级缓存")
     parser.add_argument("--node", default=os.environ.get("SOIA_ARTIFACT_NODE", "node"), help="Node.js 可执行文件")
@@ -60,11 +119,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def validate_inputs(args: argparse.Namespace) -> None:
-    if args.output_dir is None:
-        raise SystemExit(missing_output_dir_error())
-    if not args.output_dir.is_absolute():
-        raise SystemExit("--output-dir 必须是绝对路径；不要使用 cwd 相对路径。")
-    args.output_dir = args.output_dir.resolve()
+    args.output_dir, _ = resolve_output_dir(args.output_dir)
     args.output = args.output_dir / MASTER_FILENAME
     if not args.catalog.is_file():
         raise SystemExit(f"catalog 不存在：{args.catalog}")

@@ -7,6 +7,11 @@
 
 version: 1
 
+env:
+  # 可选：覆盖未指定用户输出路径时的“草稿文章同目录”默认值。
+  # 请使用绝对路径，不要指向 vault 根 outputs/。
+  COVER_IMAGE_OUTPUT_DIR: "<optional-absolute-output-directory>"
+
 defaults:
   preferred_type: auto        # hero | conceptual | typography | metaphor | scene | minimal | auto
   preferred_palette: auto     # warm | elegant | cool | dark | vivid | mono | auto

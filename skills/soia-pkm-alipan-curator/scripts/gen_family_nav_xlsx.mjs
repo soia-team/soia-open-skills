@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -20,6 +21,81 @@ import {
 } from "./catalog_xlsx/workbook_style.mjs";
 
 const OUTPUT_FILENAME = "01_家庭学习导航.xlsx";
+const OUTPUT_ENV_NAME = "ALIPAN_CURATOR_OUTPUT_DIR";
+const CONFIG_FILE_ENV_NAME = "SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE";
+
+function expandHome(value) {
+  if (value === "~") return os.homedir();
+  if (value.startsWith("~/") || value.startsWith("~\\")) return path.join(os.homedir(), value.slice(2));
+  return value;
+}
+
+function defaultConfigFile() {
+  const base = process.platform === "win32"
+    ? (process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming"))
+    : path.join(os.homedir(), ".config");
+  return path.join(base, "soia-skills", "soia-open-skills", "soia-pkm", "soia-pkm-alipan-curator", "config.yml");
+}
+
+function parseConfigScalar(value) {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "null" || trimmed === "~") return "";
+  if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed.split(" #", 1)[0].trim();
+}
+
+function configuredOutputDir() {
+  const configPath = expandHome(process.env[CONFIG_FILE_ENV_NAME] || defaultConfigFile());
+  try {
+    if (!fsSync.statSync(configPath).isFile()) return "";
+    let inEnv = false;
+    for (const rawLine of fsSync.readFileSync(configPath, "utf8").split(/\r?\n/)) {
+      const trimmed = rawLine.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const indent = rawLine.length - rawLine.trimStart().length;
+      if (indent === 0) {
+        inEnv = trimmed === "env:";
+        continue;
+      }
+      if (!inEnv || indent < 2 || !trimmed.includes(":")) continue;
+      const separator = trimmed.indexOf(":");
+      if (trimmed.slice(0, separator).trim() === OUTPUT_ENV_NAME) {
+        return parseConfigScalar(trimmed.slice(separator + 1));
+      }
+    }
+  } catch (error) {
+    console.error(`⚠️ 无法读取私有 config.yml ${configPath}: ${error.message}`);
+  }
+  return "";
+}
+
+function resolveOutputDir(cliOutputDir) {
+  let value = cliOutputDir;
+  let source = "cli";
+  if (!value) {
+    value = process.env[OUTPUT_ENV_NAME];
+    source = "environment";
+  }
+  if (!value) {
+    value = configuredOutputDir();
+    source = "config";
+  }
+  if (!value) {
+    value = path.join(os.homedir(), "Downloads", "soia-pkm-alipan-curator");
+    source = "default";
+  }
+  const expanded = expandHome(value);
+  if (!path.isAbsolute(expanded)) {
+    throw new Error("输出目录必须是绝对路径；不要使用 cwd 相对路径。");
+  }
+  const resolved = path.normalize(expanded);
+  if (source === "default") {
+    console.error(`输出到默认目录 ${resolved}（可用 --output-dir 或 config ALIPAN_CURATOR_OUTPUT_DIR 覆盖）`);
+  }
+  return { path: resolved, source };
+}
 
 function parseArgs(argv) {
   const args = {};
@@ -34,15 +110,8 @@ function parseArgs(argv) {
     else if (value !== "--help" && value !== "-h") throw new Error(`未知参数：${value}`);
   }
   if (args.help) return args;
-  if (!args.outputDir) {
-    throw new Error(
-      "缺少 --output-dir：Excel 是 C 类用户交付物，输出目录优先级为："
-      + "①用户明说的路径 ②私有 config.yml 的 ALIPAN_CURATOR_OUTPUT_DIR "
-      + "③都没有时先问用户；不得静默选择默认目录、cwd 相对路径或 vault 根 outputs/。"
-    );
-  }
   if (!args.input || !args.artifactRuntime) {
-    throw new Error("缺少必填参数。运行 --help 查看用法。");
+    throw new Error("缺少必填参数：--input 和 --artifact-runtime。运行 --help 查看用法。");
   }
   return args;
 }
@@ -52,7 +121,7 @@ function usageText() {
   return `用法：
   gen_family_nav_xlsx.mjs \\
     --input <navigation.json> \\
-    --output-dir <absolute-output-dir> \\
+  [--output-dir <absolute-output-dir>] \\
     --artifact-runtime <含 node_modules/@oai/artifact-tool 的目录> \\
     [--qa-dir <预览图片目录>] \\
     [--soffice <LibreOffice/soffice 可执行文件>]
@@ -69,7 +138,7 @@ function usageText() {
   资源名称和“打开云盘”都会链接到 row.url。
   row.url 必须是 https://www.alipan.com/drive/file/all/backup/<40位file_id>。
   建议提供 --qa-dir 和 --soffice 完成交付验收。
-  --output-dir 必须显式提供绝对路径；不要使用 cwd 相对路径、vault 根 outputs/ 或会话临时目录。
+  --output-dir 未提供时依次读取 ALIPAN_CURATOR_OUTPUT_DIR、私有 config.yml，最后使用 <用户家目录>/Downloads/soia-pkm-alipan-curator/；不要使用 cwd 相对路径、vault 根 outputs/ 或会话临时目录。
   完整规范见 references/family-navigation-excel.md。`;
 }
 
@@ -379,9 +448,8 @@ async function run() {
     console.log(usageText());
     return;
   }
-  if (!path.isAbsolute(args.outputDir)) {
-    throw new Error("--output-dir 必须是绝对路径；不要使用 cwd 相对路径。");
-  }
+  args.outputDir = resolveOutputDir(args.outputDir).path;
+  await fs.mkdir(args.outputDir, { recursive: true });
   const input = JSON.parse(await fs.readFile(args.input, "utf8"));
   validateInput(input);
   const { Workbook, SpreadsheetFile, FileBlob } = await loadArtifactTool(args.artifactRuntime);

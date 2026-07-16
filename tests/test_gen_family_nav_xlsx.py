@@ -111,20 +111,14 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
         return runtime
 
     def run_generator(
-        self, source: Path, output_dir: Path, runtime: Path, env: dict[str, str], *extra_args: str
+        self, source: Path, output_dir: Path | None, runtime: Path, env: dict[str, str], *extra_args: str
     ) -> subprocess.CompletedProcess[str]:
+        command = ["node", str(SCRIPT), "--input", str(source)]
+        if output_dir is not None:
+            command.extend(["--output-dir", str(output_dir)])
+        command.extend(["--artifact-runtime", str(runtime), *extra_args])
         return subprocess.run(
-            [
-                "node",
-                str(SCRIPT),
-                "--input",
-                str(source),
-                "--output-dir",
-                str(output_dir),
-                "--artifact-runtime",
-                str(runtime),
-                *extra_args,
-            ],
+            command,
             check=False,
             capture_output=True,
             text=True,
@@ -220,6 +214,54 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
         self.assertIn("family-navigation-excel.md", result.stdout)
         self.assertIn("file/all/backup", result.stdout)
 
+    def test_missing_output_dir_uses_home_downloads_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "navigation.json"
+            runtime = self.prepare_runtime(root)
+            source.write_text(json.dumps(self.payload(), ensure_ascii=False), encoding="utf-8")
+            home = root / "home"
+            output = home / "Downloads" / "soia-pkm-alipan-curator" / "01_家庭学习导航.xlsx"
+            reference = root / "reference.xlsx"
+            reference.write_text("known-good xlsx", encoding="utf-8")
+            env = {**os.environ, "HOME": str(home), "FINAL_OUTPUT": str(reference)}
+            for name in ("ALIPAN_CURATOR_OUTPUT_DIR", "SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE"):
+                env.pop(name, None)
+            result = self.run_generator(source, None, runtime, env)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(output.is_file())
+            self.assertIn(
+                f"输出到默认目录 {output.parent}（可用 --output-dir 或 config ALIPAN_CURATOR_OUTPUT_DIR 覆盖）",
+                result.stderr,
+            )
+
+    def test_config_output_dir_overrides_home_downloads_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "navigation.json"
+            runtime = self.prepare_runtime(root)
+            source.write_text(json.dumps(self.payload(), ensure_ascii=False), encoding="utf-8")
+            configured = root / "configured-output"
+            config = root / "config.yml"
+            config.write_text(
+                "env:\n  ALIPAN_CURATOR_OUTPUT_DIR: " + str(configured) + "\n",
+                encoding="utf-8",
+            )
+            output = configured / "01_家庭学习导航.xlsx"
+            reference = root / "reference.xlsx"
+            reference.write_text("known-good xlsx", encoding="utf-8")
+            env = {
+                **os.environ,
+                "HOME": str(root / "home"),
+                "SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE": str(config),
+                "FINAL_OUTPUT": str(reference),
+            }
+            env.pop("ALIPAN_CURATOR_OUTPUT_DIR", None)
+            result = self.run_generator(source, None, runtime, env)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(output.is_file())
+            self.assertNotIn("输出到默认目录", result.stderr)
+
     def test_missing_required_args_points_to_help(self) -> None:
         result = subprocess.run(
             ["node", str(SCRIPT), "--input", "missing.json"],
@@ -228,8 +270,7 @@ Path(os.environ['FAKE_SOFFICE_LOG']).write_text(
             text=True,
         )
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("--output-dir", result.stderr)
-        self.assertIn("ALIPAN_CURATOR_OUTPUT_DIR", result.stderr)
+        self.assertIn("--artifact-runtime", result.stderr)
 
     def test_invalid_drive_url_fails_before_loading_artifact_tool(self) -> None:
         payload = {

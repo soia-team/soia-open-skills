@@ -5,7 +5,7 @@ dependencies:
   hard: [soia-pkm-alipan-drive-ops]
 version: 1.1.0
 created_at: 2026-07-02 23:02:39
-updated_at: 2026-07-16 17:03:24
+updated_at: 2026-07-16 17:22:50
 created_by: claude opus 4.6
 updated_by: gpt-5.6-luna
 ---
@@ -151,13 +151,13 @@ SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE=<custom-config-path>
 
 ### 产物输出路径（C 类用户交付物）
 
-Excel 总索引、家庭导航和学习计划是用户交付物，落盘目录必须按以下优先级确定：
+Excel 总索引、家庭导航和学习计划是用户交付物，落盘目录按以下三级优先级确定：
 
 1. 用户明确说出的路径。
-2. 私有 `config.yml` 中的 `ALIPAN_CURATOR_OUTPUT_DIR`。
-3. 两者都没有时，**先问用户**；不得静默选择默认目录。
+2. 进程环境变量或私有 `config.yml` 中的 `ALIPAN_CURATOR_OUTPUT_DIR`。
+3. 两者都没有时，默认使用 `<用户家目录>/Downloads/soia-pkm-alipan-curator/`（Node 使用 `path.join(os.homedir(), 'Downloads', 'soia-pkm-alipan-curator')`，Python 使用 `Path.home() / 'Downloads' / 'soia-pkm-alipan-curator'`）。
 
-明确禁止把这些产物写入 vault 根 `outputs/`、任何 `<session-uuid>` 命名目录或 cwd 相对路径。两个 Excel 入口都必须显式传绝对路径 `--output-dir <用户交付目录>`；缺少参数时应报错并提示上述优先级。`navigation.json`、QA 图片和增量缓存属于运行中间物，分别放运行临时目录或用户缓存目录，不进入 vault 交付目录。
+两个 Excel 入口都会递归创建最终输出目录；使用第三级默认值时向 stderr 提示：`输出到默认目录 <路径>（可用 --output-dir 或 config ALIPAN_CURATOR_OUTPUT_DIR 覆盖）`。明确禁止把这些产物写入 vault 根 `outputs/`、任何 `<session-uuid>` 命名目录或 cwd 相对路径；用户或配置提供的输出路径必须是绝对路径。`navigation.json`、QA 图片和增量缓存属于运行中间物，分别放运行临时目录或用户缓存目录，不进入 vault 交付目录。
 
 Obsidian 馆藏 Markdown（inventory/catalog 的 md 产物）是 D 类——产品特性即落 vault——例外，继续按馆藏区约定路径写入；此例外不适用于 Excel、家庭导航或学习计划。
 
