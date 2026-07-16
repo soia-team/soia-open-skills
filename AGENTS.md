@@ -198,35 +198,105 @@ symlinks in `~/.claude/skills/` and `~/.agents/skills/`. Future updates via
 `npx skills add` does not auto-remove old names. When renaming, splitting, or
 deleting a skill, manually clean up old installs.
 
-### Rename or split
+### When to split
 
-1. Create the new skill(s) in the repo (follow "New Skill Lifecycle" above).
-2. Remove the old skill directory from the repo: `git rm -r skills/<old-name>`.
-3. After merge, clean up old local installs:
+A skill should be split when it has **multiple distinct output types or tool
+bindings** and a 3-segment name can't tell Claude Code which sub-workflow to
+trigger. Symptoms:
+
+- Users have to say "用 X 方式做" to disambiguate within one skill.
+- The SKILL.md has grown past 500 lines with unrelated provider sections.
+- Different sub-workflows have incompatible dependencies (e.g. Obsidian vs
+  NotebookLM).
+
+Don't split prematurely: if the skill has one clear output type and one
+primary tool, a 4-segment name is enough.
+
+### How to split (full playbook)
+
+**Phase 1 — Design names before touching code**
+
+1. List the distinct output types or tool bindings in the current skill.
+2. For each, pick a name following `SKILL_SPEC.md` naming convention (4–5
+   segments). Ask: "Does the name alone tell Claude Code what to trigger?"
+3. Verify no name collisions with existing skills:
+   `ls skills/ | grep <action>`.
+4. Get user confirmation on names before creating directories.
+
+**Phase 2 — Create sub-skills**
+
+5. For each sub-skill:
+   - `cp -R skills/<old-name> skills/<new-name>`
+   - Edit `SKILL.md`: update `name`, `description`, triggers, workflow to
+     cover only this sub-skill's scope.
+   - **Copy the full `references/` set** into every sub-skill (see "Reference
+     links" below).
+   - Add `version`, `created_at`, `updated_at`, `created_by`, `updated_by`
+     to frontmatter.
+
+6. Delete the old skill: `git rm -r skills/<old-name>`.
+7. Regenerate catalog: `python3 scripts/generate_skill_catalog.py`.
+8. Update `README.md` transform/relevant section: replace old row with new
+   rows, remove any "deprecated" markers for the old name.
+9. Run `python3 scripts/audit_skills.py --strict` — fix until zero findings.
+
+**Phase 3 — Merge and install**
+
+10. Branch → PR → CI passes → squash merge.
+11. Clean up old local installs:
 
 ```bash
 rm -rf ~/.agents/skills/<old-name>
 rm -f  ~/.claude/skills/<old-name>
 ```
 
-4. Install the new skill(s) from remote:
+12. Install new skills from remote:
 
 ```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s <new-name> -y
+npx skills add soia-team/soia-open-skills -g -a '*' -s <new-name-1> -s <new-name-2> -y
 ```
+
+**Phase 4 — Update downstream docs**
+
+13. Update vault Skill架构与真身清单.md: skill count, listing, update log.
+14. Grep for old name across both repos and the vault — zero hits before
+    declaring done.
+
+### Rename (no split)
+
+Same as split Phase 2–4, but with one new name replacing one old name.
 
 ### Delete (no replacement)
 
-Same as above, skip step 4.
+Same as split Phase 3 step 11 only (clean up old installs). Skip step 12.
 
-### Avoiding broken reference links during split
+### Reference links during split
 
-When splitting a monolithic skill into multiple sub-skills, each sub-skill
-inherits reference files that cross-link each other. The audit script checks
-relative links — a missing target fails CI.
+When splitting, each sub-skill inherits reference files that cross-link each
+other. The audit script checks relative links — a missing target fails CI.
 
 Rule: **copy the full `references/` set into every sub-skill**, even if a
 sub-skill doesn't directly use all references. The cost is disk duplication;
 the benefit is zero broken links and independent installability. Do not try to
 share references across skills via symlinks or relative paths outside the
 skill directory — `npx skills add` copies each skill as an isolated unit.
+
+### Lessons from `soia-pkm-transform` split (2026-07-16)
+
+Mistakes made and fixed — read before your next split:
+
+1. **Name accuracy matters more than speed.** We renamed twice
+   (`article-notebook` → `article-learning` → `article-notebooklm`) because
+   the first two names didn't reflect the actual tool binding. Pick names by
+   asking "what is the defining trait: the output type, or the platform?"
+2. **Delete the old skill from the repo.** Leaving it as "fallback" creates
+   confusion — two skills answering the same trigger.
+3. **`git rm -rf` the old directory.** After rename, the old directory may
+   linger in the git index even though the files have been moved. Explicitly
+   `git rm -rf skills/<old-name>` before committing.
+4. **Regenerate `skills/README.md` every time.** The catalog is generated, not
+   hand-edited. Forgetting this fails CI.
+5. **Check `README.md` (root) too.** The hand-maintained root README has a
+   skills table — update it manually and remove deprecated rows.
+6. **Grep for the old name across everything.** Old names hide in SKILL.md
+   body text, install commands, vault docs, and update logs.
