@@ -139,3 +139,56 @@ npx skills add /absolute/local/path/to/soia-open-skills -g -a '*' -s <skill-name
 
 If validating SOIA AI consumption, sync from `~/.agents/skills` into
 `~/.soia/skills` with `soia-dev-sync-skills`; do not copy directories manually.
+
+## New Skill Lifecycle: Branch → Main → Install
+
+When creating new skills, follow this sequence exactly. Do not skip steps or
+shortcut with manual symlinks.
+
+### 1. Create on a branch
+
+```bash
+cd ~/owen/code/gitrepo/jiuan/server/v7/soia-open-skills
+git checkout -b feat/<topic>
+# create skills/<new-skill-name>/SKILL.md, references/, scripts/ etc.
+git add skills/<new-skill-name>/
+git commit -m "feat(pkm): add <new-skill-name>"
+git push -u origin feat/<topic>
+```
+
+### 2. (Optional) Local debug install for testing
+
+While the skill is still on a branch and not yet in main:
+
+```bash
+npx skills add "$PWD" -l --full-depth
+```
+
+This is a **temporary debug install**. Do not treat it as the final install.
+Do not manually `ln -s` from the git checkout into `~/.agents/skills/` or
+`~/.claude/skills/` — manual symlinks bypass `.skill-lock.json` registration
+and will not be tracked by `npx skills check`.
+
+### 3. Merge to main
+
+Open a PR (if branch protection requires it) or merge directly. The skill
+becomes available from the remote package only after it lands on main.
+
+### 4. Install from remote (the only correct final install)
+
+```bash
+npx skills add soia-team/soia-open-skills -g -a '*' -s <new-skill-name> -y
+```
+
+This registers the skill in `~/.agents/.skill-lock.json` and creates proper
+symlinks in `~/.claude/skills/` and `~/.agents/skills/`. Future updates via
+`npx skills check` will track it.
+
+### Why not manual symlinks?
+
+- Manual `ln -s` skips `.skill-lock.json` — the skill becomes invisible to
+  `npx skills check` and `npx skills update`.
+- Manual symlinks pointing at a feature branch break when the branch is
+  deleted after merge.
+- Other agents (Codex, Gemini CLI) that read `.skill-lock.json` will not
+  discover manually linked skills.
