@@ -1,6 +1,11 @@
 ---
 name: soia-pkm-compose
 description: 把 distill 提炼出的观点写成成文草稿。以用户观点为骨、vault 摘抄为料，生成可继续交给 publish 的文章。可指定公众号/知乎/随笔风格。Triggers：「把这些观点写成一篇」「把 X 主题写成文章」「compose 这篇」「写成草稿」「起草这篇」
+version: 1.0.0
+created_at: 2026-07-02 17:57:11
+updated_at: 2026-07-09 20:41:34
+created_by: zp
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-pkm-compose

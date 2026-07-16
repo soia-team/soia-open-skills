@@ -2,10 +2,10 @@
 name: soia-pkm-transform-obsidian-pdf
 description: 用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint。Triggers：「转成PDF」「导出PDF」「归档并转PDF」「生成PDF」「export PDF」
 version: 1.0.0
-created_at: 2026-07-16
-updated_at: 2026-07-16
-created_by: zp + claude opus 4.6
-updated_by: zp + claude opus 4.6
+created_at: 2026-07-16 10:58:46
+updated_at: 2026-07-16 13:25:56
+created_by: zp / claude opus 4.6
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-pkm-transform-obsidian-pdf

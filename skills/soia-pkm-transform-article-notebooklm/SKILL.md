@@ -2,10 +2,10 @@
 name: soia-pkm-transform-article-notebooklm
 description: 用 NotebookLM 把文章转换为试卷、闪卡、脑图、播客、学习笔记等学习类产物，降级为本地 Markdown。Triggers：「生成试卷」「做成闪卡」「生成脑图」「做播客」「NotebookLM」「generate quiz」「make flashcards」「mindmap」「podcast」
 version: 1.0.0
-created_at: 2026-07-16
-updated_at: 2026-07-16
-created_by: zp + claude opus 4.6
-updated_by: zp + claude opus 4.6
+created_at: 2026-07-16 11:30:32
+updated_at: 2026-07-16 13:25:56
+created_by: zp / claude opus 4.6
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-pkm-transform-article-notebooklm

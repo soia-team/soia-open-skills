@@ -1,6 +1,11 @@
 ---
 name: soia-pkm-publish
 description: 把写好的文章草稿适配并发布到多平台——公众号（排版 + 推草稿箱）、X thread、小红书卡片。核心是公众号：按强调密度模型渲染成遵守"微信平台红线"的内联样式 HTML，机械校验通过后调微信 draft/add API 推到草稿箱（只建草稿、绝不自动群发）。Triggers：「发布这篇」「把这篇发成公众号」「一稿多发」「把草稿适配成三个平台」「排版这篇公众号」「publish 这篇」
+version: 1.0.0
+created_at: 2026-07-02 17:49:40
+updated_at: 2026-07-15 18:27:15
+created_by: zp
+updated_by: zp / claude opus 4.6
 ---
 
 # soia-pkm-publish
