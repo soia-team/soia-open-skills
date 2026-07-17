@@ -43,6 +43,7 @@ class FeishuDocSyncTests(unittest.TestCase):
             dry_run=False,
             skip_content=False,
             download_assets=False,
+            sync_sheets=False,
             refresh_asset_urls=False,
             skip_assets=False,
             retry_failed=False,
@@ -147,6 +148,136 @@ class FeishuDocSyncTests(unittest.TestCase):
         }
         with mock.patch.object(sync, "run_cli", return_value=payload):
             self.assertEqual(sync.fetch_doc({}, "obj-1"), ("# 内容", "42"))
+
+    def test_sheet_sync_requires_an_explicit_bounded_selection(self) -> None:
+        with self.assertRaises(SystemExit):
+            sync.configured_sheet_selections({"sync": {"sheets": {}}}, True)
+        with self.assertRaises(SystemExit):
+            sync.configured_sheet_selections(
+                {
+                    "sync": {
+                        "sheets": {
+                            "selections": [
+                                {"node_token": "node-sheet", "sheet_id": "sheet-1", "range": "A:A"}
+                            ]
+                        }
+                    }
+                },
+                True,
+            )
+        selections = sync.configured_sheet_selections(
+            {
+                "sync": {
+                    "sheets": {
+                        "max_cells": 12,
+                        "selections": [
+                            {"node_token": "node-sheet", "sheet_id": "sheet-1", "range": "A1:C4"}
+                        ],
+                    }
+                }
+            },
+            True,
+        )
+        self.assertEqual(selections["node-sheet"][0]["range"], "A1:C4")
+
+    def test_fetch_sheet_markdown_reads_only_the_selected_grid_range(self) -> None:
+        calls = []
+
+        def fake_run_cli(_config, *args):
+            calls.append(args)
+            if args[:2] == ("sheets", "+workbook-info"):
+                return {
+                    "data": {
+                        "sheets": [
+                            {"sheet_id": "sheet-1", "title": "人员", "resource_type": "sheet"}
+                        ]
+                    }
+                }
+            if args[:2] == ("sheets", "+csv-get"):
+                return {"data": {"annotated_csv": "姓名,岗位\n张三,后端\n", "has_more": False}}
+            raise AssertionError(args)
+
+        with mock.patch.object(sync, "run_cli", side_effect=fake_run_cli):
+            content, revision_id = sync.fetch_sheet_markdown(
+                {},
+                "spreadsheet-1",
+                "九安人员名单",
+                [{"sheet_id": "sheet-1", "range": "A1:B20", "max_chars": 2000, "skip_hidden": False}],
+            )
+
+        self.assertEqual(revision_id, "")
+        self.assertIn("## 人员", content)
+        self.assertIn("| 姓名 | 岗位 |", content)
+        self.assertIn("| 张三 | 后端 |", content)
+        csv_call = next(call for call in calls if call[:2] == ("sheets", "+csv-get"))
+        self.assertIn("A1:B20", csv_call)
+        self.assertIn("--sheet-id", csv_call)
+
+    def test_enabled_sheet_node_is_mirrored_as_a_markdown_table(self) -> None:
+        nodes = [
+            {
+                "node_token": "node-sheet",
+                "obj_token": "spreadsheet-1",
+                "obj_type": "sheet",
+                "title": "人员名单",
+                "parent_node_token": "",
+                "depth": 0,
+                "has_child": False,
+            }
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "docs"
+            config = root / "config.yml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "version: 1",
+                        "provider:",
+                        "  cli: lark-cli",
+                        "space:",
+                        '  id: "space-1"',
+                        '  source_url_template: "https://example.test/wiki/{node_token}"',
+                        "paths:",
+                        f'  output_dir: "{output}"',
+                        '  generated_dir: "10_knowledge-base"',
+                        "sync:",
+                        "  mode: mirror",
+                        "  workers: 1",
+                        "  metadata_workers: 1",
+                        "  sheets:",
+                        "    enabled: true",
+                        "    selections:",
+                        '      - node_token: "node-sheet"',
+                        '        sheet_id: "sheet-1"',
+                        '        range: "A1:B20"',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            def fake_run_cli(_config, *args):
+                if args[:2] == ("wiki", "+node-get"):
+                    return {"data": {"obj_edit_time": "1", "updated_at": "1970-01-01T00:00:01Z"}}
+                if args[:2] == ("sheets", "+workbook-info"):
+                    return {"data": {"sheets": [{"sheet_id": "sheet-1", "title": "成员", "resource_type": "sheet"}]}}
+                if args[:2] == ("sheets", "+csv-get"):
+                    return {"data": {"annotated_csv": "姓名,岗位\n张三,后端\n", "has_more": False}}
+                raise AssertionError(args)
+
+            with mock.patch.object(sync, "walk_nodes", return_value=nodes), mock.patch.object(
+                sync, "run_cli", side_effect=fake_run_cli
+            ):
+                result = sync.sync(self.sync_args(config))
+
+            manifest = json.loads((output / "90_同步元数据" / "manifest.json").read_text(encoding="utf-8"))
+            generated = (output / "10_knowledge-base" / "人员名单.md").read_text(encoding="utf-8")
+
+        self.assertEqual(result, 0)
+        self.assertEqual(manifest["nodes"][0]["sync_status"], "ok")
+        self.assertEqual(manifest["stats"]["sheets_mirrored"], 1)
+        self.assertIn("| 姓名 | 岗位 |", generated)
 
     def test_parse_cli_json_skips_human_preamble_with_brackets(self) -> None:
         payload = sync.parse_cli_json("notice [not-json-yet]\n{" + '"ok": true, "data": {}}')

@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import difflib
 import hashlib
 from html import escape as html_escape
+import io
 import json
 import mimetypes
 import os
@@ -78,6 +80,9 @@ BARE_FEISHU_DOCUMENT_URL_PATTERN = re.compile(
 )
 DEFAULT_CHANGE_LEDGER_DIR = "change-reports"
 DEFAULT_CHANGE_LEDGER_MAX_DIFF_LINES = 400
+DEFAULT_SHEET_MAX_CELLS = 10_000
+DEFAULT_SHEET_MAX_CHARS = 100_000
+SHEET_RANGE_PATTERN = re.compile(r"^([A-Z]+)([1-9][0-9]*):([A-Z]+)([1-9][0-9]*)$")
 
 
 class CliCommandError(RuntimeError):
@@ -163,6 +168,11 @@ def parse_args() -> argparse.Namespace:
         "--download-assets",
         action="store_true",
         help="download remote Feishu images into the local mirror and rewrite Markdown links",
+    )
+    parser.add_argument(
+        "--sync-sheets",
+        action="store_true",
+        help="mirror explicitly configured Feishu Sheet ranges as Markdown tables",
     )
     parser.add_argument(
         "--refresh-asset-urls",
@@ -497,6 +507,176 @@ def fetch_doc(config: dict[str, Any], obj_token: str) -> tuple[str, str]:
         raise RuntimeError("docs +fetch payload has no data.document.content string")
     revision_id = document.get("revision_id", "")
     return content, str(revision_id) if revision_id is not None else ""
+
+
+def a1_column_number(label: str) -> int:
+    """Return the one-based number for an A1 column label."""
+    value = 0
+    for character in label.upper():
+        if not "A" <= character <= "Z":
+            raise ValueError("invalid A1 column")
+        value = value * 26 + ord(character) - ord("A") + 1
+    return value
+
+
+def configured_sheet_selections(config: dict[str, Any], enabled: bool) -> dict[str, list[dict[str, Any]]]:
+    """Return explicitly authorised, bounded Sheet ranges grouped by Wiki node token."""
+    if not enabled:
+        return {}
+    settings = nested(config, "sync", "sheets", default={})
+    if not isinstance(settings, dict):
+        raise SystemExit("sync.sheets must be a mapping")
+    raw_selections = settings.get("selections", [])
+    if not isinstance(raw_selections, list) or not raw_selections:
+        raise SystemExit("sync.sheets.selections is required when Sheet mirroring is enabled")
+    try:
+        max_cells = max(1, min(int(settings.get("max_cells", DEFAULT_SHEET_MAX_CELLS)), 100_000))
+    except (TypeError, ValueError):
+        max_cells = DEFAULT_SHEET_MAX_CELLS
+    try:
+        max_chars = max(1_024, min(int(settings.get("max_chars", DEFAULT_SHEET_MAX_CHARS)), 500_000))
+    except (TypeError, ValueError):
+        max_chars = DEFAULT_SHEET_MAX_CHARS
+    skip_hidden = bool(settings.get("skip_hidden", False))
+    selections: dict[str, list[dict[str, Any]]] = {}
+    seen: set[tuple[str, str, str]] = set()
+    for raw in raw_selections:
+        if not isinstance(raw, dict):
+            raise SystemExit("each sync.sheets.selections item must be a mapping")
+        node_token = str(raw.get("node_token", "")).strip()
+        sheet_id = str(raw.get("sheet_id", "")).strip()
+        cell_range = str(raw.get("range", "")).strip().upper()
+        if not node_token or not sheet_id or not cell_range:
+            raise SystemExit("each Sheet selection requires node_token, sheet_id, and range")
+        match = SHEET_RANGE_PATTERN.fullmatch(cell_range)
+        if not match:
+            raise SystemExit("each Sheet selection range must use a bounded A1 range such as A1:F200")
+        start_column, start_row, end_column, end_row = match.groups()
+        width = a1_column_number(end_column) - a1_column_number(start_column) + 1
+        height = int(end_row) - int(start_row) + 1
+        if width <= 0 or height <= 0 or width * height > max_cells:
+            raise SystemExit(f"Sheet selection range exceeds sync.sheets.max_cells={max_cells}")
+        key = (node_token, sheet_id, cell_range)
+        if key in seen:
+            raise SystemExit("sync.sheets.selections contains a duplicate node_token, sheet_id, and range")
+        seen.add(key)
+        selections.setdefault(node_token, []).append(
+            {
+                "sheet_id": sheet_id,
+                "range": cell_range,
+                "max_chars": max_chars,
+                "skip_hidden": skip_hidden,
+            }
+        )
+    return selections
+
+
+def trim_sheet_rows(rows: list[list[str]]) -> list[list[str]]:
+    """Keep meaningful Sheet cells while preserving internal blank rows and columns."""
+    normalized = [[str(value) for value in row] for row in rows]
+    while normalized and not any(cell.strip() for cell in normalized[-1]):
+        normalized.pop()
+    if not normalized:
+        return []
+    width = max(len(row) for row in normalized)
+    for row in normalized:
+        row.extend("" for _ in range(width - len(row)))
+    while width and not any(row[width - 1].strip() for row in normalized):
+        width -= 1
+    return [row[:width] for row in normalized]
+
+
+def markdown_table_from_csv(value: str) -> str:
+    """Convert a bounded CSV value snapshot into portable Markdown table syntax."""
+    rows = trim_sheet_rows(list(csv.reader(io.StringIO(value))))
+    if not rows or not rows[0]:
+        return "（所选工作表范围没有可同步的单元格。）"
+    header = [cell.strip() or f"列 {index}" for index, cell in enumerate(rows[0], start=1)]
+
+    def cell(value: str) -> str:
+        return value.replace("\\r\\n", "<br>").replace("\\n", "<br>").replace("\\r", "<br>").replace("|", "\\\\|")
+
+    lines = [
+        "| " + " | ".join(cell(value) for value in header) + " |",
+        "| " + " | ".join("---" for _ in header) + " |",
+    ]
+    lines.extend("| " + " | ".join(cell(value) for value in row) + " |" for row in rows[1:])
+    return "\n".join(lines)
+
+
+def fetch_sheet_markdown(
+    config: dict[str, Any],
+    obj_token: str,
+    title: str,
+    selections: list[dict[str, Any]],
+) -> tuple[str, str]:
+    """Read explicitly selected Sheet ranges through lark-cli and render Markdown tables."""
+    workbook_payload = run_cli(
+        config,
+        "sheets",
+        "+workbook-info",
+        "--as",
+        "bot",
+        "--spreadsheet-token",
+        obj_token,
+        "--format",
+        "json",
+    )
+    workbook_sheets = nested(workbook_payload, "data", "sheets", default=[])
+    if not isinstance(workbook_sheets, list):
+        raise RuntimeError("sheets +workbook-info payload has no data.sheets list")
+    sheets_by_id = {
+        str(item.get("sheet_id", "")): item
+        for item in workbook_sheets
+        if isinstance(item, dict) and item.get("sheet_id")
+    }
+    sections = [f"# {title}", "", "> 已按私有配置读取指定飞书电子表格范围。"]
+    for selection in selections:
+        sheet_id = str(selection["sheet_id"])
+        sheet = sheets_by_id.get(sheet_id)
+        if sheet is None:
+            raise RuntimeError("configured Sheet selection was not found in workbook metadata")
+        if str(sheet.get("resource_type", "sheet")) != "sheet":
+            raise RuntimeError("configured Sheet selection is not a grid worksheet")
+        payload = run_cli(
+            config,
+            "sheets",
+            "+csv-get",
+            "--as",
+            "bot",
+            "--spreadsheet-token",
+            obj_token,
+            "--sheet-id",
+            sheet_id,
+            "--range",
+            str(selection["range"]),
+            "--include-row-prefix=false",
+            "--skip-hidden=true" if selection["skip_hidden"] else "--skip-hidden=false",
+            "--max-chars",
+            str(selection["max_chars"]),
+            "--format",
+            "json",
+        )
+        data = nested(payload, "data", default={})
+        if not isinstance(data, dict):
+            raise RuntimeError("sheets +csv-get payload has no data object")
+        if data.get("has_more"):
+            raise RuntimeError("configured Sheet range was truncated; reduce the range or increase max_chars")
+        csv_value = data.get("annotated_csv", data.get("csv", ""))
+        if not isinstance(csv_value, str):
+            raise RuntimeError("sheets +csv-get payload has no CSV value")
+        sheet_title = str(sheet.get("title") or sheet.get("sheet_name") or sheet_id).strip()
+        sections.extend(
+            [
+                "",
+                f"## {sheet_title}",
+                "",
+                f"范围：`{selection['range']}`",
+                "",
+                markdown_table_from_csv(csv_value),
+            ]
+        )
+    return "\n".join(sections).rstrip() + "\n", ""
 
 
 def clean_title(title: Any, fallback: str) -> str:
@@ -1758,6 +1938,29 @@ def sync(args: argparse.Namespace) -> int:
         planned_paths[token] = path_for(node)
         path_by_token[token] = planned_paths[token]
 
+    sheet_sync_enabled = bool(
+        getattr(args, "sync_sheets", False)
+        or nested(config, "sync", "sheets", "enabled", default=False)
+    )
+    sheet_selections = configured_sheet_selections(config, sheet_sync_enabled)
+    configured_sheet_nodes = set(sheet_selections)
+    available_sheet_nodes = {
+        str(node.get("node_token"))
+        for node in ordered
+        if str(node.get("obj_type", "")) == "sheet"
+    }
+    missing_sheet_nodes = configured_sheet_nodes - available_sheet_nodes
+    if missing_sheet_nodes:
+        raise SystemExit("sync.sheets.selections references a node that is not a Sheet in this Wiki")
+
+    def reads_sync_content(node: dict[str, Any]) -> bool:
+        obj_type = str(node.get("obj_type", ""))
+        return obj_type in {"docx", "doc"} or (
+            obj_type == "sheet" and str(node.get("node_token")) in sheet_selections
+        )
+
+    content_nodes = [node for node in ordered if reads_sync_content(node)]
+
     localize_document_links = bool(
         nested(config, "sync", "localize_internal_links", default=False)
     )
@@ -1825,6 +2028,8 @@ def sync(args: argparse.Namespace) -> int:
         "moved_deleted": 0,
         "content_fetched": 0,
         "content_reused": 0,
+        "sheets_mirrored": 0,
+        "sheet_tabs_mirrored": 0,
         "error_categories": {},
     }
     fetched: dict[str, tuple[str, str, str, str]] = {}
@@ -1832,9 +2037,7 @@ def sync(args: argparse.Namespace) -> int:
     remote_metadata: dict[str, dict[str, Any]] = {}
     metadata_probe_errors: dict[str, str] = {}
     if probe_remote_metadata:
-        metadata_nodes = [
-            node for node in ordered if str(node.get("obj_type", "")) in {"docx", "doc"}
-        ]
+        metadata_nodes = content_nodes
         metadata_workers_value = nested(
             config,
             "sync",
@@ -1879,19 +2082,21 @@ def sync(args: argparse.Namespace) -> int:
     if not args.skip_content and not args.refresh_tree_only and (
         not args.rebuild_tree_only or only_node_tokens
     ):
-        all_doc_nodes = [node for node in ordered if str(node.get("obj_type", "")) in {"docx", "doc"}]
+        all_content_nodes = content_nodes
         if only_node_tokens:
-            missing_only_nodes = only_node_tokens - {str(node["node_token"]) for node in all_doc_nodes}
+            missing_only_nodes = only_node_tokens - {str(node["node_token"]) for node in all_content_nodes}
             if missing_only_nodes:
                 raise SystemExit(
                     "--only-node-token not found in the current manifest/tree: "
                     + ",".join(sorted(missing_only_nodes))
                 )
-            doc_nodes = [node for node in all_doc_nodes if str(node["node_token"]) in only_node_tokens]
+            content_nodes_to_fetch = [
+                node for node in all_content_nodes if str(node["node_token"]) in only_node_tokens
+            ]
         elif args.retry_failed:
             retry_candidates = [
                 node
-                for node in all_doc_nodes
+                for node in all_content_nodes
                 if (
                     not isinstance(old_nodes.get(str(node["node_token"])), dict)
                     or old_nodes[str(node["node_token"])].get("sync_status") != "ok"
@@ -1903,18 +2108,18 @@ def sync(args: argparse.Namespace) -> int:
             if args.retry_batch_size is not None:
                 if args.retry_batch_size <= 0:
                     raise SystemExit("--retry-batch-size must be greater than zero")
-                doc_nodes = retry_candidates[: args.retry_batch_size]
+                content_nodes_to_fetch = retry_candidates[: args.retry_batch_size]
                 print(
-                    f"retry_batch selected={len(doc_nodes)} candidates={len(retry_candidates)}",
+                    f"retry_batch selected={len(content_nodes_to_fetch)} candidates={len(retry_candidates)}",
                     flush=True,
                 )
             else:
-                doc_nodes = retry_candidates
+                content_nodes_to_fetch = retry_candidates
         elif args.full_content or not incremental:
-            doc_nodes = all_doc_nodes
+            content_nodes_to_fetch = all_content_nodes
         else:
-            doc_nodes = []
-            for node in all_doc_nodes:
+            content_nodes_to_fetch = []
+            for node in all_content_nodes:
                 token = str(node["node_token"])
                 old = old_nodes.get(token, {}) if isinstance(old_nodes, dict) else {}
                 old_status = str(old.get("sync_status", "")) if isinstance(old, dict) else ""
@@ -1943,10 +2148,10 @@ def sync(args: argparse.Namespace) -> int:
                     or missing_baseline
                     or probe_failed
                 ):
-                    doc_nodes.append(node)
+                    content_nodes_to_fetch.append(node)
             print(
-                f"incremental_selection candidates={len(all_doc_nodes)} fetch={len(doc_nodes)} "
-                f"reuse={len(all_doc_nodes) - len(doc_nodes)}",
+                f"incremental_selection candidates={len(all_content_nodes)} fetch={len(content_nodes_to_fetch)} "
+                f"reuse={len(all_content_nodes) - len(content_nodes_to_fetch)}",
                 flush=True,
             )
         workers_value = nested(
@@ -1976,6 +2181,8 @@ def sync(args: argparse.Namespace) -> int:
             raw = existing.read_text(encoding="utf-8")
             parts = raw.split("---", 2)
             body = parts[2].lstrip("\n") if len(parts) == 3 else raw
+            if str(node.get("obj_type", "")) == "sheet":
+                return body.rstrip("\n"), str(old.get("revision_id", ""))
             return (
                 normalize_content(
                     body.rstrip("\n"),
@@ -1998,14 +2205,22 @@ def sync(args: argparse.Namespace) -> int:
                     delay = 0.0
                 if delay:
                     time.sleep(delay)
-                raw_content, revision_id = fetch_doc(config, str(node.get("obj_token", "")))
-                content = normalize_content(
-                    raw_content,
-                    title,
-                    document_links_for(token),
-                    render_sub_page_navigation=render_sub_page_navigation,
-                    localize_document_links=localize_document_links,
-                )
+                if str(node.get("obj_type", "")) == "sheet":
+                    content, revision_id = fetch_sheet_markdown(
+                        config,
+                        str(node.get("obj_token", "")),
+                        title,
+                        sheet_selections[token],
+                    )
+                else:
+                    raw_content, revision_id = fetch_doc(config, str(node.get("obj_token", "")))
+                    content = normalize_content(
+                        raw_content,
+                        title,
+                        document_links_for(token),
+                        render_sub_page_navigation=render_sub_page_navigation,
+                        localize_document_links=localize_document_links,
+                    )
                 return token, "ok", content, "", revision_id
             except Exception as exc:  # keep inventory even when one document is unavailable
                 details = error_info(exc)
@@ -2024,14 +2239,16 @@ def sync(args: argparse.Namespace) -> int:
                 return token, "failed", content, category, ""
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = [executor.submit(fetch_one, node) for node in doc_nodes]
+            futures = [executor.submit(fetch_one, node) for node in content_nodes_to_fetch]
             for completed, future in enumerate(as_completed(futures), start=1):
                 token, status, content, error, revision_id = future.result()
                 fetched[token] = (status, content, error, revision_id)
                 if completed == 1 or completed % 100 == 0 or completed == len(futures):
                     print(f"content_fetch progress={completed}/{len(futures)}", flush=True)
-        counts["content_fetched"] = len(doc_nodes)
-        print(f"content_fetch completed={len(fetched)} fetched_now={len(doc_nodes)} workers={workers}")
+        counts["content_fetched"] = len(content_nodes_to_fetch)
+        print(
+            f"content_fetch completed={len(fetched)} fetched_now={len(content_nodes_to_fetch)} workers={workers}"
+        )
 
     def reuse_existing(node: dict[str, Any]) -> bool:
         token = str(node["node_token"])
@@ -2045,13 +2262,14 @@ def sync(args: argparse.Namespace) -> int:
         raw = existing.read_text(encoding="utf-8")
         parts = raw.split("---", 2)
         body = parts[2].lstrip("\n") if len(parts) == 3 else raw
-        body = normalize_content(
-            body.rstrip("\n"),
-            clean_title(node.get("title"), token),
-            document_links_for(token),
-            render_sub_page_navigation=render_sub_page_navigation,
-            localize_document_links=localize_document_links,
-        )
+        if str(node.get("obj_type", "")) != "sheet":
+            body = normalize_content(
+                body.rstrip("\n"),
+                clean_title(node.get("title"), token),
+                document_links_for(token),
+                render_sub_page_navigation=render_sub_page_navigation,
+                localize_document_links=localize_document_links,
+            )
         fetched[token] = (
             str(old.get("sync_status", "ok")),
             body.rstrip("\n"),
@@ -2061,10 +2279,7 @@ def sync(args: argparse.Namespace) -> int:
         return True
 
     if incremental or args.retry_failed or args.refresh_tree_only:
-        doc_nodes_for_reuse = [
-            node for node in ordered if str(node.get("obj_type", "")) in {"docx", "doc"}
-        ]
-        for node in doc_nodes_for_reuse:
+        for node in content_nodes:
             token = str(node["node_token"])
             if token in fetched:
                 continue
@@ -2199,7 +2414,7 @@ def sync(args: argparse.Namespace) -> int:
         if args.skip_content:
             status = "metadata_only"
             content = f"# {title}\n\n（本次运行使用了 --skip-content，未读取正文。）"
-        elif obj_type in {"docx", "doc"}:
+        elif reads_sync_content(node):
             status, content, error, revision_id = fetched.get(
                 token,
                 (
@@ -2216,6 +2431,9 @@ def sync(args: argparse.Namespace) -> int:
                 if error:
                     categories = counts["error_categories"]
                     categories[error] = categories.get(error, 0) + 1
+            elif obj_type == "sheet":
+                counts["sheets_mirrored"] += 1
+                counts["sheet_tabs_mirrored"] += len(sheet_selections.get(token, []))
         else:
             status = "metadata_stub"
             counts["stub"] += 1
@@ -2413,7 +2631,8 @@ def sync(args: argparse.Namespace) -> int:
         "completed "
         f"created={counts['created']} updated={counts['updated']} failed={counts['failed']} "
         f"stale={counts['stale']} stubs={counts['stub']} unchanged={counts['unchanged']} moved_deleted={counts['moved_deleted']} "
-        f"deleted_marked={len(deleted)} remote_images={counts['remote_images']}"
+        f"deleted_marked={len(deleted)} remote_images={counts['remote_images']} "
+        f"sheets_mirrored={counts['sheets_mirrored']} sheet_tabs={counts['sheet_tabs_mirrored']}"
     )
     print_validation(validation)
     result = 0 if counts["failed"] == 0 and validation["ok"] else 2

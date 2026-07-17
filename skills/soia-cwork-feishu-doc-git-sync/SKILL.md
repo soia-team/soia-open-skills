@@ -3,11 +3,11 @@ name: soia-cwork-feishu-doc-git-sync
 description: 将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。
 dependencies:
   hard: [soia-cwork-feishu-cli]
-version: 1.1.0
+version: 1.2.0
 created_at: 2026-07-14 23:24:26
-updated_at: 2026-07-17 13:47:33
+updated_at: 2026-07-17 14:26:52
 created_by: claude opus 4.6
-updated_by: gpt-5.6-terra
+updated_by: gpt-5.6-sol
 ---
 
 # soia-cwork-feishu-doc-git-sync
@@ -25,6 +25,7 @@ updated_by: gpt-5.6-terra
 | 用 Obsidian 查看 | 在独立 vault 中保存规则、镜像和本地补录 | 可直接用 Obsidian 打开的 vault |
 | 用 VitePress 展示 | 生成站点侧边栏并构建静态站点 | 本地开发服务或构建产物 |
 | 检查表格/多维表格导出能力 | 解析真实资源类型、权限和可用导出格式 | 只读探查结果；不会默认生成 Excel 文件 |
+| 同步指定 Sheet 范围 | 用 `lark-cli sheets` 读取已明确配置的工作表和 A1 范围，并生成 Markdown 表格 | 范围受限的表格值镜像；默认不读取任何 Sheet 单元格 |
 | 本地化资源与导航 | 经确认后下载图片/附件、去重，并把内部链接和子页面列表改为本地导航 | 本地资源、相对链接和可选子页面导航 |
 | 查看同步变更 | 经配置后生成新增、修改、移动和远端删除的本地变更台账与受限 diff | 本次同步的统计、变更清单和差异详情 |
 | 规划双向同步 | 区分只读镜像、托管文档和本地补录 | 冲突/权限风险说明，不自动覆盖飞书 |
@@ -38,8 +39,9 @@ updated_by: gpt-5.6-terra
 5. 同步写入后会自动校验 manifest、文件存在性、frontmatter、失败占位、侧边栏覆盖范围和资源引用；发现 `failed`/`stale` 时返回非零结果，不能把旧正文当作最新成功。
 6. 如需检查表格导出，先做 `drive +inspect`/帮助/schema 探查；能力探查不等于授权导出。
 7. 只有客户明确确认导出范围、格式、文件数和本地目录后，才调用 `drive +export` 或 `drive +export-download`。
-8. 如需离线资源、文档间本地跳转、子页面导航或变更台账，先在私有配置中逐项启用 `download_assets`、`localize_internal_links`、`render_sub_page_navigation`、`change_ledger`；它们默认关闭以兼容已有镜像。
-9. 同步完成后再运行 Git diff、站点构建和必要的人工抽查。
+8. 如需镜像 Sheet 单元格，先在私有配置的 `sync.sheets.selections` 中逐项指定 `node_token`、稳定 `sheet_id` 与有界 A1 `range`，再启用 `sync.sheets.enabled` 或传入 `--sync-sheets`。未列入清单的 Sheet 仍只生成元数据占位。
+9. 如需离线资源、文档间本地跳转、子页面导航或变更台账，先在私有配置中逐项启用 `download_assets`、`localize_internal_links`、`render_sub_page_navigation`、`change_ledger`；它们默认关闭以兼容已有镜像。
+10. 同步完成后再运行 Git diff、站点构建和必要的人工抽查。
 
 推荐命令：
 
@@ -72,6 +74,9 @@ python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental 
 # 下载图片到本地镜像并把正文中的远程 URL 改成相对路径
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental \
   --download-assets
+# 将私有配置中明确选择的 Sheet 范围渲染为 Markdown 表格
+python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental \
+  --sync-sheets
 # 只校验最近一次同步生成的本地镜像，不访问飞书
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --validate-only
 ```
@@ -133,7 +138,7 @@ sync:
   prune: false
 ```
 
-权限建议：首轮只申请知识库、文档只读权限。图片和附件下载是可选增强，涉及云盘/导出权限时单独申请；双向写入权限永不作为默认权限。
+权限建议：首轮只申请知识库、文档与 Sheet 只读权限。图片和附件下载是可选增强，涉及云盘/导出权限时单独申请；双向写入权限永不作为默认权限。
 
 ## 同步规则
 
@@ -166,8 +171,10 @@ sync:
 - 下载资源时，优先按飞书媒体 token 去重；同一附件或图片即使带有不同的短期签名 URL，也只保留一份本地资源。无 token 的资源仍按 URL 内容寻址。
 - `sync.localize_internal_links: true` 时，已同步的 Wiki/文档引用会改为相对本地 Markdown 链接；`sync.render_sub_page_navigation: true` 时，飞书导出的 `<sub-page-list>` 会改为本地 Markdown 子页面导航。两项均默认关闭，不影响已有外链行为。
 - `sync.change_ledger: true` 时，会在同步元数据下按运行生成新增、修改、移动和远端删除的变更台账；修改项只保留受 `change_ledger_max_diff_lines` 限制的 diff，不复制文档全文，也不改变生成镜像或本地补录目录。
+- `sheet` 默认只生成元数据 stub。设置 `sync.sheets.enabled: true` 后，仍必须在 `sync.sheets.selections` 中逐项声明 Wiki `node_token`、由 `sheets +workbook-info` 确认的 `sheet_id`、以及有界 A1 `range`；同步器再用 `sheets +csv-get` 读取显示值并生成 Markdown 表格。范围、最大单元格数和最大返回字符数的完整契约见 [references/sheet-mirroring.yml](references/sheet-mirroring.yml)。
+- Sheet 镜像不调用 `drive +export`，不生成 xlsx/csv 文件；不会同步公式、样式、批注、图表、透视表或单元格图片。需要这些保真能力、附件下载或工作簿文件导出时，必须另行遵循 [references/export-policy.yml](references/export-policy.yml) 的确认流程。
 - 图片/附件本地化是显式 opt-in 的本地数据下载；不能因为用户只要求“检查图片”就下载全部素材。持久化配置中的 `sync.download_assets: true` 只能视为用户此前对该资源范围的明确授权，不得扩展为表格或多维表格导出授权。
-- `sheet` 与 `bitable` 默认只生成元数据 stub，不读取表内数据。导出为 `xlsx`、`csv` 或 `base` 属于敏感数据导出，必须遵循 [references/export-policy.yml](references/export-policy.yml)：先解析和 dry-run，再展示范围并等待明确确认；不得自动写入生成镜像目录、提交 Git 或上传回飞书。
+- `bitable` 与未明确选择的 `sheet` 默认只生成元数据 stub，不读取表内数据。导出为 `xlsx`、`csv` 或 `base` 属于敏感数据导出，必须遵循 [references/export-policy.yml](references/export-policy.yml)：先解析和 dry-run，再展示范围并等待明确确认；不得自动写入生成镜像目录、提交 Git 或上传回飞书。
 - 飞书 Markdown 导出的图片 URL 可能是短期鉴权地址；启用本地化时，默认只重新读取仍含远程图片的文档来刷新 URL，不会无条件重拉所有正文。可用 `--refresh-asset-urls` 显式打开该行为。
 - 图片下载使用 URL 内容寻址文件名，重复同步会复用已有资源；可通过 `asset_workers`、`asset_timeout_seconds`、`max_asset_bytes` 限制并发、超时和单文件大小。下载失败只保留原 URL，并在 manifest 的 `assets_failed` 计数中报告，不把鉴权 URL 写入日志或清单。
 - `<source token="...">` 或无 URL 的 `<img token="...">` 会调用官方 `docs +media-download`；远程 URL 不可直接读取时，需要按权限清单补充 `docs:document.media:download` 或 `drive:file:download`，并在私有配置中启用本地资源下载。没有下载权限时不得猜测本地资源已经完整。
@@ -178,6 +185,7 @@ sync:
 - 终端日志、进度回执和最终回复不得输出本地绝对路径、具体本地文件名、操作系统用户名、用户名、密码、App Secret、access token 或私有下载 URL；统一使用脱敏占位符，只报告状态、数量和错误类别。详见 [references/output-redaction.yml](references/output-redaction.yml)。
 - 不默认调用飞书创建、更新、删除接口。
 - `drive +export`、`drive +export-download`、`docs +media-download` 和附件下载均属于数据导出/下载动作；用户说“看下能否导出”时只做 inspect、help、schema 或 dry-run，不得直接创建本地文件。
+- Sheet 值镜像也属于敏感数据落盘：只有用户明确确认需要将选定范围同步到本地 Git 工作区，并在私有配置中写入有界 `sync.sheets.selections` 后才可启用；该确认不授权任何 xlsx/csv 导出、图片/附件下载或自动 Git 提交。
 - 真实导出前必须明确回执来源、类型、格式、预计文件数、输出目录和 Git 追踪策略；“检查能力”不等于“授权导出”。
 - 导出文件默认放在临时目录或用户明确指定的目录；不得自动落入 `10_knowledge-base/`、自动提交 Git、自动推送远程或写回飞书。
 - bot 无权访问的个人云盘或私有资源必须报告为不可见，不得切换 user OAuth 代为读取。
@@ -203,6 +211,7 @@ sync:
 - 事件订阅与增量目标：[references/events.yml](references/events.yml)
 - 同步策略：[references/sync-policy.yml](references/sync-policy.yml)
 - 文档格式转换：[references/block-mapping.yml](references/block-mapping.yml)
+- Sheet 范围镜像：[references/sheet-mirroring.yml](references/sheet-mirroring.yml)
 - 表格/多维表格导出安全策略：[references/export-policy.yml](references/export-policy.yml)
 - 日志与回复脱敏策略：[references/output-redaction.yml](references/output-redaction.yml)
 - Git 与 VitePress 接入：[references/git-vitepress.yml](references/git-vitepress.yml)

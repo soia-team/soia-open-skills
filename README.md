@@ -156,7 +156,7 @@ Open Design 配置：复制 [`config.example.yml`](./skills/soia-dev-open-design
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | 通过官方 `lark-cli` 以应用凭证（bot）只读盘点飞书云盘、云文档、知识库、评论、权限和元数据 | ✅ 可用（需配置飞书应用凭据并授予目标资源权限） | 飞书官方 `lark-cli`；应用凭证；目标文档/知识库需对应用可见 |
-| [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | 将飞书知识库按 `node_token` 保留树形结构并增量镜像为 Markdown，接入 Git、Obsidian 与 VitePress；可接收事件目标但不默认写回飞书 | ✅ 可用（先执行 dry-run，再建立基线；需按目标空间授予文档只读权限） | `soia-cwork-feishu-cli`；`lark-cli`；Python 3.10+；PyYAML；Git/VitePress/Obsidian 可选 |
+| [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | 将飞书知识库按 `node_token` 保留树形结构并增量镜像为 Markdown，接入 Git、Obsidian 与 VitePress；可将明确配置的 Sheet 范围转为 Markdown 表格，不默认写回飞书 | ✅ 可用（先执行 dry-run，再建立基线；Sheet 需额外授予只读权限并明确范围） | `soia-cwork-feishu-cli`；`lark-cli`；Python 3.10+；PyYAML；Git/VitePress/Obsidian 可选 |
 
 #### 飞书技能最小上手
 
@@ -175,14 +175,14 @@ npx skills add larksuite/cli -g -y
 
 ### soia-cwork-feishu-doc-git-sync
 
-把飞书知识库同步为本地 Markdown，并让同一份内容同时服务 Git 备份、Obsidian 和 VitePress。默认只读方向是“飞书 → 本地”；`10_knowledge-base/` 由同步程序维护，`20_本地补录/` 保留本地新增内容。
+把飞书知识库同步为本地 Markdown，并让同一份内容同时服务 Git 备份、Obsidian 和 VitePress。默认只读方向是“飞书 → 本地”；`10_knowledge-base/` 由同步程序维护，`20_本地补录/` 保留本地新增内容。明确配置 `node_token + sheet_id + A1 范围` 后，也可将对应 Sheet 的显示值镜像为 Markdown 表格。
 
 ```text
 同步飞书知识库到 Git，并生成 VitePress/Obsidian 可查看的本地镜像
 先 dry-run，确认节点数、权限和输出目录，再执行同步
 ```
 
-配置模板、权限分层、按 ID 增量同步和事件边界见 [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/)。双向同步需要另行确定文档归属、冲突策略和飞书写权限，不能把只读镜像当作双向同步。
+配置模板、权限分层、按 ID 增量同步、Sheet 范围镜像和事件边界见 [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/)。Sheet 默认不读取；工作簿/附件导出仍需另行确认。双向同步需要另行确定文档归属、冲突策略和飞书写权限，不能把只读镜像当作双向同步。
 
 ---
 

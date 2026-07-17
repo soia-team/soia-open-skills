@@ -1,0 +1,35 @@
+version: 1
+
+default:
+  enabled: false
+  fallback: metadata_stub
+
+provider:
+  identity: bot
+  workbook_metadata: "lark-cli sheets +workbook-info"
+  value_read: "lark-cli sheets +csv-get"
+
+selection:
+  required_fields:
+    - node_token
+    - sheet_id
+    - range
+  range_format: "bounded A1 range, for example A1:F200"
+  sheet_id_source: "workbook-info data.sheets[].sheet_id"
+  max_cells_default: 10000
+  max_cells_hard_limit: 100000
+  max_chars_default: 100000
+  partial_response_policy: fail_without_writing_partial_table
+
+rendering:
+  format: markdown_table
+  value_semantics: formatted_display_values
+  supported: [plain_cell_values]
+  unsupported: [formulas, styles, comments, charts, pivot_tables, cell_images, attachments]
+
+safety:
+  explicit_user_approval: required_before_local_mirror_write
+  private_config_opt_in: sync.sheets.enabled
+  no_file_export: true
+  no_media_download: true
+  no_auto_git_commit_or_push: true

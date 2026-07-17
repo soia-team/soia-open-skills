@@ -7,6 +7,20 @@ source:
     - docx
     - doc
 
+sheet_mirror:
+  api:
+    - "lark-cli sheets +workbook-info"
+    - "lark-cli sheets +csv-get"
+  opt_in: "sync.sheets.enabled=true with explicit sync.sheets.selections"
+  rendering: "bounded CSV display values become Markdown tables"
+  unsupported_in_markdown_mirror:
+    - formulas
+    - styles
+    - comments
+    - charts
+    - pivot_tables
+    - cell_images
+
 normalization:
   remove_title_tag: true
   remove_dynamic_tags:
@@ -36,10 +50,8 @@ sub_page_navigation:
 unsupported:
   behavior: create_metadata_stub
   examples:
-    - sheet
     - bitable
     - mindnote
     - file
   special_routes:
-    sheet: "只读盘点使用 drive +inspect；实际 xlsx/csv 导出必须遵循 references/export-policy.yml"
     bitable: "只读盘点使用 drive +inspect；实际 xlsx/csv/base 导出必须遵循 references/export-policy.yml"

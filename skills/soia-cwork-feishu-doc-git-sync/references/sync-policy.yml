@@ -31,6 +31,18 @@ state:
   state_file: 90_同步元数据/sync-state.json
   preserve_deleted_files_when_prune_false: true
 
+sheets:
+  default: metadata_stub
+  opt_in_config: sync.sheets.enabled
+  selection_contract: "node_token + sheet_id + bounded A1 range"
+  read_flow:
+    - "sheets +workbook-info validates selected sheet_id and resource_type"
+    - "sheets +csv-get reads only the configured range"
+    - "has_more=true is a failure; do not write a partial table"
+  rendering: "display values only, Markdown table"
+  no_file_export: true
+  no_auto_download: true
+
 change_ledger:
   default: disabled
   opt_in_config: sync.change_ledger

@@ -10,6 +10,19 @@ defaults:
   inspect_without_confirmation: true
   dry_run_before_export: true
 
+sheet_markdown_mirror:
+  classification: sensitive_data_mirror
+  default: disabled
+  provider_commands:
+    - "sheets +workbook-info"
+    - "sheets +csv-get"
+  explicit_scope: "sync.sheets.selections requires node_token, sheet_id, and bounded A1 range"
+  output: "generated Markdown mirror only after explicit user approval and private-config opt-in"
+  not_authorized:
+    - workbook_file_export
+    - attachment_or_cell_image_download
+    - automatic_git_commit_or_push
+
 supported_routes:
   sheet:
     source: "drive +export"

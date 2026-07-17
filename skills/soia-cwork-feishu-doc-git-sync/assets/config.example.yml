@@ -38,6 +38,21 @@ sync:
   # example; enable it in the private config after granting media/download
   # permissions or when the signed image URL is directly readable.
   download_assets: false
+  # Sheet cells are sensitive data. Keep this disabled unless the user has
+  # explicitly authorised a bounded range to be mirrored into Markdown.
+  sheets:
+    enabled: false
+    # Maximum cells across one configured A1 range; hard-capped at 100000.
+    max_cells: 10000
+    # Stop instead of accepting a truncated lark-cli CSV response.
+    max_chars: 100000
+    skip_hidden: false
+    # Each item must name one Wiki Sheet node, its stable sheet_id obtained
+    # from `lark-cli sheets +workbook-info`, and a bounded A1 range.
+    selections: []
+    # - node_token: "<wiki-sheet-node-token>"
+    #   sheet_id: "<sheet-id>"
+    #   range: "A1:F200"
   # Keep existing Feishu links by default. Enable only when the local mirror
   # should be self-contained and document references should point to local files.
   localize_internal_links: false
