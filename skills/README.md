@@ -50,7 +50,7 @@
 | Skill | Description | Default Prompt |
 |---|---|---|
 | [`soia-cwork-feishu-cli`](./soia-cwork-feishu-cli/) | 分开核对知识库/Wiki与云盘/Drive权限，再用官方 lark-cli 只读调研。 | 用 soia-cwork-feishu-cli 先区分飞书知识库和云盘，再分别核对应用身份 Bot 与用户 OAuth 的最小只读权限，最后只读调研，不要修改远端内容。 |
-| [`soia-cwork-feishu-doc-git-sync`](./soia-cwork-feishu-doc-git-sync/) | 同步飞书知识库、指定 Sheet 与多维表格到 Markdown 和保真快照 | 使用 soia-cwork-feishu-doc-git-sync，以只读镜像模式同步指定飞书知识库；只读取私有配置中明确选择的 Sheet 范围与多维表格，并按需保留样式、图表、附件和公式快照。 |
+| [`soia-cwork-feishu-doc-git-sync`](./soia-cwork-feishu-doc-git-sync/) | 同步飞书知识库、指定 Sheet 与多维表格到 Markdown 和保真快照 | 使用 soia-cwork-feishu-doc-git-sync，先用 --pilot-node-token 在独立目录验证指定飞书节点，再以只读镜像模式批量同步；只读取私有配置中明确选择的 Sheet 范围与多维表格，并按需保留样式、图表、附件和公式快照。 |
 
 ## Development
 

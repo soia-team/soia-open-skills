@@ -3,9 +3,9 @@ name: soia-cwork-feishu-doc-git-sync
 description: 将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。
 dependencies:
   hard: [soia-cwork-feishu-cli]
-version: 1.3.0
+version: 1.4.0
 created_at: 2026-07-14 23:24:26
-updated_at: 2026-07-17 17:37:00
+updated_at: 2026-07-17 18:00:16
 created_by: claude opus 4.6
 updated_by: gpt-5.6-sol
 ---
@@ -37,19 +37,23 @@ updated_by: gpt-5.6-sol
 1. 确认 `soia-cwork-feishu-cli` 已完成飞书应用凭证登录，并且机器人可以读取目标知识空间。
 2. 在本机私有配置中填写知识空间 ID、输出目录和来源 URL 模板；不要把 App Secret、token 或企业私有路径提交到公开技能仓库。
 3. 首次使用先执行 dry-run，核对空间、节点数量和目标目录。
-4. 执行镜像同步。默认只写本地文件和同步元数据，不修改飞书内容，也不删除本地历史文件。
-5. 同步写入后会自动校验 manifest、文件存在性、frontmatter、失败占位、侧边栏覆盖范围和资源引用；发现 `failed`/`stale` 时返回非零结果，不能把旧正文当作最新成功。
-6. 如需检查表格导出，先做 `drive +inspect`/帮助/schema 探查；能力探查不等于授权导出。
-7. 只有客户明确确认导出范围、格式、文件数和本地目录后，才调用 `drive +export` 或 `drive +export-download`。
-8. 如需镜像 Sheet 单元格，先在私有配置的 `sync.sheets.selections` 中逐项指定 `node_token`、稳定 `sheet_id` 与有界 A1 `range`，再启用 `sync.sheets.enabled` 或传入 `--sync-sheets`。若需要公式、样式、批注、布局或图表元数据，再单独开启 `sync.sheets.preserve.enabled`。
-9. 如需镜像多维表格，逐项指定 `sync.bitables.selections` 的 `node_token`、`table_id` 和 `max_records`，再开启 `sync.bitables.enabled` 或传入 `--sync-bitables`；附件二进制还需要单独开启 `download_attachments`。
-10. 如需离线资源、文档间本地跳转、子页面导航或变更台账，先在私有配置中逐项启用 `download_assets`、`localize_internal_links`、`render_sub_page_navigation`、`change_ledger`；它们默认关闭以兼容已有镜像。
-11. 批量初始化前先以一份代表性范围试点，确认资源数量、失败类别和本地渲染；同步完成后再运行 Git diff、站点构建和必要的人工抽查。
+4. 先用单节点隔离试点核对表格、资源和样式快照；`--pilot-node-token` 只写明确选择的节点到单独试点目录，不会给空目录补齐其他节点占位文件。
+5. 执行镜像同步。默认只写本地文件和同步元数据，不修改飞书内容，也不删除本地历史文件。
+6. 同步写入后会自动校验 manifest、文件存在性、frontmatter、失败占位、侧边栏覆盖范围和资源引用；发现 `failed`/`stale` 时返回非零结果，不能把旧正文当作最新成功。
+7. 如需检查表格导出，先做 `drive +inspect`/帮助/schema 探查；能力探查不等于授权导出。
+8. 只有客户明确确认导出范围、格式、文件数和本地目录后，才调用 `drive +export` 或 `drive +export-download`。
+9. 如需镜像 Sheet 单元格，先在私有配置的 `sync.sheets.selections` 中逐项指定 `node_token`、稳定 `sheet_id` 与有界 A1 `range`，再启用 `sync.sheets.enabled` 或传入 `--sync-sheets`。若需要公式、样式、批注、布局或图表元数据，再单独开启 `sync.sheets.preserve.enabled`。
+10. 如需镜像多维表格，逐项指定 `sync.bitables.selections` 的 `node_token`、`table_id` 和 `max_records`，再开启 `sync.bitables.enabled` 或传入 `--sync-bitables`；附件二进制还需要单独开启 `download_attachments`。
+11. 如需离线资源、文档间本地跳转、子页面导航或变更台账，先在私有配置中逐项启用 `download_assets`、`localize_internal_links`、`render_sub_page_navigation`、`change_ledger`；它们默认关闭以兼容已有镜像。
+12. 批量初始化前先以一份代表性范围试点，确认资源数量、失败类别和本地渲染；同步完成后再运行 Git diff、站点构建和必要的人工抽查。
 
 推荐命令：
 
 ```bash
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --dry-run
+# 试点只写所选节点到独立目录；仍会核验它是否属于当前知识库
+python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --output-dir <pilot-output-dir> \
+  --pilot-node-token <node_token> --incremental
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental
 # 没有事件订阅时，按 wiki +node-get 的远端更新时间判断正文是否变化
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental --probe-remote-metadata

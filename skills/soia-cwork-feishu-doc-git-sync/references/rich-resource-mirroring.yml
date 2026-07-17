@@ -62,6 +62,7 @@ safety:
     - "approved source nodes/tables/ranges and private configuration"
     - "record limits for Base and bounded A1 ranges for Sheet"
     - "explicit attachment download opt-in when binaries are needed"
+  isolated_pilot: "--pilot-node-token writes only the selected node(s) to the configured pilot output directory after verifying they exist in the current Wiki tree"
   never_automatic:
     - "whole-workbook or whole-Base export"
     - "automatic Git commit or push"

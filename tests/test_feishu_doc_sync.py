@@ -58,6 +58,7 @@ class FeishuDocSyncTests(unittest.TestCase):
             probe_remote_metadata=True,
             changed_node_token=[],
             only_node_token=[],
+            pilot_node_token=[],
             changed_obj_token=[],
             event_file=None,
             max_nodes=None,
@@ -72,6 +73,23 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertEqual(
             sync.unique_path("叶子", Path("10_knowledge-base/规范"), used, "node-2", False).as_posix(),
             "10_knowledge-base/规范/叶子.md",
+        )
+
+    def test_sidebar_treats_an_isolated_pilot_node_as_a_root_item(self) -> None:
+        sidebar = sync.build_sidebar(
+            [
+                {
+                    "node_token": "pilot-node",
+                    "parent_node_token": "unselected-parent",
+                    "title": "试点",
+                    "relative_path": "10_knowledge-base/试点.md",
+                }
+            ]
+        )
+
+        self.assertIn(
+            sync.sidebar_path("10_knowledge-base/试点.md"),
+            sync.sidebar_links(sidebar),
         )
 
     def test_missing_generated_dir_reuses_the_single_existing_generated_root(self) -> None:
@@ -444,6 +462,81 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertEqual(manifest["stats"]["bitables_mirrored"], 1)
         self.assertEqual(manifest["stats"]["bitable_tables_mirrored"], 1)
         self.assertIn("| 姓名 |", generated)
+
+    def test_pilot_node_scope_writes_only_the_selected_node(self) -> None:
+        nodes = [
+            {
+                "node_token": "node-pilot",
+                "obj_token": "doc-pilot",
+                "obj_type": "docx",
+                "title": "试点文档",
+                "parent_node_token": "",
+                "depth": 0,
+                "has_child": False,
+            },
+            {
+                "node_token": "node-other",
+                "obj_token": "doc-other",
+                "obj_type": "docx",
+                "title": "非试点文档",
+                "parent_node_token": "",
+                "depth": 0,
+                "has_child": False,
+            },
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "pilot-output"
+            config = root / "config.yml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "version: 1",
+                        "provider:",
+                        "  cli: lark-cli",
+                        "space:",
+                        '  id: "space-1"',
+                        '  source_url_template: "https://example.test/wiki/{node_token}"',
+                        "paths:",
+                        f'  output_dir: "{output}"',
+                        '  generated_dir: "10_knowledge-base"',
+                        "sync:",
+                        "  workers: 1",
+                        "  metadata_workers: 1",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = self.sync_args(config)
+            args.pilot_node_token = ["node-pilot"]
+
+            def fake_run_cli(_config, *call):
+                if call[:2] == ("wiki", "+node-get"):
+                    return {
+                        "data": {
+                            **nodes[0],
+                            "obj_edit_time": "1",
+                            "updated_at": "1970-01-01T00:00:01Z",
+                        }
+                    }
+                if call[:2] == ("docs", "+fetch"):
+                    self.assertIn("doc-pilot", call)
+                    return {"data": {"document": {"content": "# 试点正文", "revision_id": "1"}}}
+                raise AssertionError(call)
+
+            with mock.patch.object(sync, "walk_nodes") as walk, mock.patch.object(
+                sync, "run_cli", side_effect=fake_run_cli
+            ):
+                result = sync.sync(args)
+            walk.assert_not_called()
+
+            manifest = json.loads((output / "90_同步元数据" / "manifest.json").read_text(encoding="utf-8"))
+            files = sorted((output / "10_knowledge-base").glob("*.md"))
+
+        self.assertEqual(result, 0)
+        self.assertEqual([item["node_token"] for item in manifest["nodes"]], ["node-pilot"])
+        self.assertEqual(len(files), 1)
 
     def test_parse_cli_json_skips_human_preamble_with_brackets(self) -> None:
         payload = sync.parse_cli_json("notice [not-json-yet]\n{" + '"ok": true, "data": {}}')

@@ -1,4 +1,4 @@
 interface:
   display_name: "飞书知识库 Git 同步"
   short_description: "同步飞书知识库、指定 Sheet 与多维表格到 Markdown 和保真快照"
-  default_prompt: "使用 soia-cwork-feishu-doc-git-sync，以只读镜像模式同步指定飞书知识库；只读取私有配置中明确选择的 Sheet 范围与多维表格，并按需保留样式、图表、附件和公式快照。"
+  default_prompt: "使用 soia-cwork-feishu-doc-git-sync，先用 --pilot-node-token 在独立目录验证指定飞书节点，再以只读镜像模式批量同步；只读取私有配置中明确选择的 Sheet 范围与多维表格，并按需保留样式、图表、附件和公式快照。"

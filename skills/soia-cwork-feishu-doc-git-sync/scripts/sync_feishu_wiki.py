@@ -249,6 +249,12 @@ def parse_args() -> argparse.Namespace:
         help="fetch only these wiki nodes; repeat for multiple IDs and reuse all other local content",
     )
     parser.add_argument(
+        "--pilot-node-token",
+        action="append",
+        default=[],
+        help="write an isolated pilot mirror containing only these nodes; repeat for multiple IDs",
+    )
+    parser.add_argument(
         "--changed-obj-token",
         action="append",
         default=[],
@@ -1706,13 +1712,15 @@ def sidebar_path(path: str) -> str:
 
 def build_sidebar(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     by_parent: dict[str | None, list[dict[str, Any]]] = {}
+    node_tokens = {str(node.get("node_token")) for node in nodes if node.get("node_token")}
     for node in nodes:
-        by_parent.setdefault(node.get("parent_node_token"), []).append(node)
+        parent = node.get("parent_node_token")
+        by_parent.setdefault(parent if parent in node_tokens else None, []).append(node)
 
     def build(parent: str | None) -> list[dict[str, Any]]:
         entries = []
         candidates = by_parent.get(parent, [])
-        if parent is None:
+        if parent is None and "" in by_parent:
             candidates += by_parent.get("", [])
         for node in candidates:
             item: dict[str, Any] = {
@@ -2131,7 +2139,20 @@ def sync(args: argparse.Namespace) -> int:
     sync_started = utc_now()
     print("started space_id=<configured-space> identity=bot config=<private-config> output=<private-location>")
     previous_manifest = load_json(output_dir / METADATA_DIR / MANIFEST_FILE, {})
-    if (args.retry_failed or args.rebuild_tree_only) and isinstance(previous_manifest, dict) and isinstance(previous_manifest.get("nodes"), list):
+    pilot_node_tokens = {str(token).strip() for token in args.pilot_node_token if str(token).strip()}
+    if pilot_node_tokens:
+        if args.retry_failed or args.rebuild_tree_only or args.refresh_tree_only:
+            raise SystemExit("--pilot-node-token cannot be combined with retry or tree-rebuild modes")
+        nodes = []
+        for token in sorted(pilot_node_tokens):
+            node = node_get(config, token, space_id)
+            node["node_token"] = str(node.get("node_token") or token)
+            node.setdefault("parent_node_token", "")
+            node.setdefault("depth", 0)
+            node.setdefault("has_child", False)
+            nodes.append(node)
+        print(f"pilot_scope selected_nodes={len(nodes)} source=wiki_node_get", flush=True)
+    elif (args.retry_failed or args.rebuild_tree_only) and isinstance(previous_manifest, dict) and isinstance(previous_manifest.get("nodes"), list):
         nodes = [node for node in previous_manifest["nodes"] if isinstance(node, dict)]
         mode = "retry_failed" if args.retry_failed else "tree_rebuild"
         print(f"structure source=previous_manifest mode={mode}", flush=True)
@@ -2140,7 +2161,10 @@ def sync(args: argparse.Namespace) -> int:
     print(f"processed nodes_discovered={len(nodes)}")
     if args.dry_run:
         for node in nodes[:10]:
-            print(f"node title={clean_title(node.get('title'), node['node_token'])} token={node['node_token']}")
+            print(
+                f"node title={clean_title(node.get('title'), node['node_token'])} "
+                f"type={str(node.get('obj_type', 'unknown'))}"
+            )
         if len(nodes) > 10:
             print(f"node ... and {len(nodes) - 10} more")
         print("completed dry_run=true files_written=0")
@@ -2184,7 +2208,9 @@ def sync(args: argparse.Namespace) -> int:
         if node.get("obj_token") and node.get("node_token")
     }
     changed_node_tokens.update(node_by_obj[obj] for obj in changed_obj_tokens if obj in node_by_obj)
-    event_driven = bool(event_file or explicit_node_targets or explicit_obj_targets or only_node_tokens)
+    event_driven = bool(
+        event_file or explicit_node_targets or explicit_obj_targets or only_node_tokens or pilot_node_tokens
+    )
     probe_remote_metadata = bool(
         incremental
         and not args.rebuild_tree_only
