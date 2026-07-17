@@ -4,4 +4,5 @@
 env:
   ARCHIFY_BIN: "<path-to-archify.mjs>"
   ARCHIFY_ROOT: "<path-to-archify-root>"
+  ARCHIFY_OUTPUT_DIR: "<optional-user-deliverable-directory>"
   CHROME_PATH: "<path-to-chrome>"

@@ -1,11 +1,11 @@
 ---
 name: soia-dev-archify-diagrams
 description: Draw, improve, validate, or publish Archify architecture / data-flow / sequence / lifecycle diagrams with JSON IR and PNG previews. Triggers：「画架构图」「画时序图/流程图」「给 README 配图」「用 Archify 画」
-version: 1.0.0
+version: 1.1.0
 created_at: 2026-07-09 07:45:34
-updated_at: 2026-07-11 11:06:04
+updated_at: 2026-07-17 15:00:00
 created_by: claude opus 4.6
-updated_by: claude opus 4.6
+updated_by: gpt-5
 ---
 
 # soia-dev-archify-diagrams
@@ -66,6 +66,24 @@ SOIA_DEV_ARCHIFY_DIAGRAMS_CONFIG_FILE=<custom-config-path>
 - 强依赖、可选依赖和第三方 skill 关系必须以本 `SKILL.md` 后续的“依赖 / 前置 / 资源 / 边界”说明为准；没有写清楚时，先补说明或询问客户，不要猜。
 - 第三方 skill 只能声明依赖和安装方式，不直接修改第三方 skill 文件。
 
+### 输出目录契约
+
+输出目录按以下优先级解析：
+
+1. 命令行 `--output-dir <path>`；
+2. 进程环境变量或私有配置中的 `ARCHIFY_OUTPUT_DIR`；
+3. 安全默认值 `~/Downloads/soia-dev-archify-diagrams/`。
+
+`--output-dir` 可以是绝对路径或相对当前工作目录的路径。技能不会把用户交付物默认写入当前目录，也不会把 `~/.soia/workspaces/` 当作通用输出目录。
+
+按交付场景显式指定目录：
+
+- 仓库 README / 文档：`--output-dir assets/diagrams`；
+- 已明确确认的 SOIA proposal：`--output-dir <workspace>/proposals/<proposal-id>/design/diagrams`；
+- 普通临时预览或未指定项目目录：使用上述 `~/Downloads/soia-dev-archify-diagrams/` 默认值。
+
+使用 `--png-only` 时，HTML 只作为输出目录内的临时中间文件，PNG 导出成功后会删除 HTML；不使用 `--png-only` 时保留 HTML，便于浏览器预览和排错。
+
 ### 日志与完成回执
 
 每次执行都要让客户看见过程和结果。最低回执格式：
@@ -104,7 +122,7 @@ If a rough Mermaid flowchart mixes components and process, choose one story and 
 ## Diagram Rules
 
 1. Keep JSON IR as the source of truth.
-2. Generate HTML only as a temporary render/check intermediate.
+2. Generate HTML as a render/check intermediate; with `--png-only`, delete it after PNG export succeeds.
 3. Commit PNG previews for README-visible diagrams.
 4. Do not commit generated HTML unless the user explicitly asks for interactive diagrams.
 5. Make the main path left-to-right.
@@ -122,19 +140,13 @@ assets/diagrams/
 └── <slug>.png
 ```
 
-For SOIA proposal diagrams, resolve the workspace root from SOIA config first. If no config value is available, use the default workspace root:
+For an explicitly confirmed SOIA proposal, write diagrams under:
 
 ```text
-~/.soia/workspaces
+<workspace>/proposals/<proposal-id>/design/diagrams/
 ```
 
-Then write proposal diagrams under:
-
-```text
-<soia-workspaces-root>/<workspace>/proposals/<proposal-id>/design/diagrams/
-```
-
-Do not hardcode a maintainer-specific workspace path in SKILL.md, JSON examples, README files, or scripts.
+Do not infer a proposal workspace from the current directory, and do not hardcode a maintainer-specific workspace path in SKILL.md, JSON examples, README files, or scripts. If the caller has not supplied a project destination, use the output-directory contract above.
 
 ## Setup
 
@@ -165,6 +177,7 @@ Render all diagrams in a directory and keep only JSON + PNG:
 ```bash
 node skills/soia-dev-archify-diagrams/scripts/render-archify-diagrams.mjs \
   --dir assets/diagrams \
+  --output-dir assets/diagrams \
   --png-only \
   --theme light \
   --width 1400 \
@@ -177,6 +190,7 @@ Render one diagram:
 ```bash
 node skills/soia-dev-archify-diagrams/scripts/render-archify-diagrams.mjs \
   --file assets/diagrams/system.architecture.json \
+  --output-dir assets/diagrams \
   --png-only
 ```
 
@@ -186,7 +200,9 @@ The helper:
 - Runs `archify validate`
 - Runs `archify render`
 - Runs `archify check`
-- With `--png-only`, exports PNG previews and deletes temporary HTML files
+- Writes HTML previews to the resolved output directory
+- With `--png-only`, exports PNG previews to the same directory and deletes temporary HTML files
+- Without `--output-dir`, uses `ARCHIFY_OUTPUT_DIR` and then `~/Downloads/soia-dev-archify-diagrams/`
 
 ## README Preview Workflow
 
@@ -203,6 +219,7 @@ Use the bundled exporter when HTML already exists:
 ```bash
 node skills/soia-dev-archify-diagrams/scripts/export-archify-previews.mjs \
   --dir assets/diagrams \
+  --output-dir assets/diagrams \
   --theme light \
   --width 1400 \
   --height 1000 \
@@ -253,4 +270,5 @@ Before final response:
 - README PNG exists if the diagram should be visible on GitHub.
 - README-visible diagram HTML was deleted unless explicitly requested.
 - Markdown links/images resolve locally.
+- Report the resolved output directory and whether it came from `--output-dir`, `ARCHIFY_OUTPUT_DIR`, or the safe default.
 - Report which scripts were used and which checks passed.
