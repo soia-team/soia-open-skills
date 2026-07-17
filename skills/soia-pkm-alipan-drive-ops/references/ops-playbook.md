@@ -44,7 +44,30 @@ python3 scripts/run_with_env.py -- aliyunpan login
 - **伪终端（pty）**：用 `script`/`expect`/Python `pty.spawn` 包一层伪终端运行 `aliyunpan login`，让 CLI 以为自己在交互终端里，从而正常吐出二维码链接文本
 - **交互进程读 stdout**：把 `aliyunpan login` 作为长驻子进程启动，持续读取其 stdout 流（而不是等它退出再读），二维码链接一出现就截取，转给用户点击或扫码
 
-两种方式本质都是让 CLI 输出可供授权用户使用的链接；核心是不要用一次性 `subprocess.run` 等待退出码——那样会拿不到中间打印的二维码。只发送链接，不发送 token 或凭据；用户确认后保持登录进程存活，并每 60 秒用 `python3 scripts/run_with_env.py -- aliyunpan who` 轮询，返回 UID 后再从 ledger/断点续跑继续长任务。
+两种方式本质都是让 CLI 输出可供授权用户使用的链接；核心是不要用一次性 `subprocess.run` 等待退出码——那样会拿不到中间打印的二维码。
+
+**2026-07-17 早晨第二次恢复的实测方案（stdin 保活 + pty）**：不能把 login 的 stdin 接到 `</dev/null`；该 CLI 在“按 Enter 继续”处会读到 EOF 并直接失败。先建立一个只用于确认键的临时文件，再将持续输出的 `tail -f` 管道接入 `script` 的伪终端：
+
+```bash
+: > /tmp/login-keys && nohup sh -c 'tail -f /tmp/login-keys | script -q /tmp/login-out python3 scripts/run_with_env.py -- aliyunpan login' &
+```
+
+`/tmp/login-out` 保存 pty 输出以供读取；不要等待该后台进程退出。授权链接的 `scope` 含 `:` 和 `,`（例如 `user:base,file:all:read,...`），因此字符白名单正则会截断并损坏链接。按“从授权 URL 到下一个空格”为边界完整抓取：
+
+```bash
+grep -o "https://openapi.alipan.com/oauth/authorize?[^ ]*" /tmp/login-out
+```
+
+**两步授权编排**：
+
+1. 启动上述 login 命令并抓取完整链接。
+2. 只将该链接发给本任务的授权用户本人，并说明链接仅 **5 分钟**有效；过期时重新生成并发送新链接，绝不让用户重试旧链接。
+3. 用户在浏览器完成授权和扫码两步，并向协作者确认完成。
+4. 收到确认后才喂确认键，让仍在运行的 CLI 继续：`echo "" >> /tmp/login-keys`。
+5. 执行 `python3 scripts/run_with_env.py -- aliyunpan who`；返回 UID 才算恢复成功。
+6. 恢复后停止并清理本次启动的 `tail -f` 辅助进程（先按命令行与启动记录核对其 PID，避免误杀无关进程），再按 ledger/progress/断点续跑。
+
+只发送链接，不发送 token 或凭据。两次 token 失效都发生在高密度并发 listing（`workers 3`、1,190 paths）期间；这是观察到的关联，尚不能单独证明因果。恢复后续扫要先降低 workers，并遵守 [§2.5 的批量 listing 至少 300 ms/次节流](#25-api-限流与-429-纪律2026-07-17-调研及本-run-校准)，不要立即以原并发度重试。
 
 ### 1.5 `--driveId` 显式传参铁律
 **绝不使用 `aliyunpan drive <id>` 切换全局当前盘**——该命令会修改 CLI 的**全局状态**（写配置文件）。如果同时有多个代理/多个脚本会话在跑，一个会话切盘会污染其他所有并发会话的当前盘上下文，造成"明明在操作备份盘却影响到资源库"的诡异错误。

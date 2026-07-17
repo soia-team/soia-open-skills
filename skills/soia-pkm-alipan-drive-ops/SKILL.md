@@ -3,7 +3,7 @@ name: soia-pkm-alipan-drive-ops
 description: 阿里云盘原子操作层：安装/登录 aliyunpan、显式 driveId 双盘操作、目录浏览、移动/重命名/删除、下载上传、容量查询、全盘 JSONL 扫描。作为 curator 的底层依赖。Triggers：「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」「云盘登录过期了」「全盘扫描云盘」
 version: 2.1.0
 created_at: 2026-07-02 23:02:39
-updated_at: 2026-07-17 07:06:52
+updated_at: 2026-07-17 09:11:21
 created_by: claude opus 4.6
 updated_by: gpt-5.6-terra
 ---
@@ -110,10 +110,11 @@ python3 scripts/run_with_env.py -- aliyunpan quota
 
 当云盘命令返回「尝试登录失败，请使用 login 命令进行重新登录」，即判定登录态失效；这不是要求用户到 agent 所在终端扫码的硬阻塞。按以下流程远程恢复：
 
-1. 在非交互环境启动 `python3 scripts/run_with_env.py -- aliyunpan login`，以伪终端（pty）或长驻进程持续读取 stdout 的方式抓取授权二维码链接；不要等待命令退出。具体做法见 [ops-playbook §1.4](references/ops-playbook.md#14-非交互环境取登录链接标准恢复流程)。
-2. 仅把授权链接推送给本任务的授权用户本人，绝不打印 token、cookie、session 或其他凭据。用户可在手机上点击链接或扫码并确认授权。
-3. 保持登录进程存活，并每 60 秒轮询一次 `python3 scripts/run_with_env.py -- aliyunpan who`；命令返回 UID 即表示恢复成功，可以继续云盘操作。
-4. 长任务以已有 ledger、progress 或断点续跑机制衔接；等待授权期间优先推进不依赖云盘的工作，不要空等或从头重跑。
+1. 在非交互环境以 pty 启动 `python3 scripts/run_with_env.py -- aliyunpan login`，并保持其 stdin 可读；**不得**将 stdin 重定向为 `</dev/null`，否则登录程序在“按 Enter 继续”处读到 EOF 而失败。用已验证的 `tail -f` 保活方案与完整命令见 [ops-playbook §1.4](references/ops-playbook.md#14-非交互环境取登录链接标准恢复流程)。
+2. 从 pty 输出按“到空格为止”完整抓取授权链接，不能用字符白名单正则截取：`scope` 参数含 `:`、`,`。仅把完整链接推送给本任务的授权用户本人，绝不打印 token、cookie、session 或其他凭据。
+3. 明确告知链接仅 **5 分钟**有效；过期后重新启动登录并发送**新链接**，不要让用户重试旧链接。用户在浏览器完成授权与扫码两步后，确认已完成。
+4. 收到用户确认后才向保活 stdin 喂一个 Enter，使登录进程继续；随后用 `python3 scripts/run_with_env.py -- aliyunpan who` 验证返回 UID，并清理对应的 `tail -f` 辅助进程。
+5. 长任务以已有 ledger、progress 或断点续跑机制衔接；等待授权期间优先推进不依赖云盘的工作，不要空等或从头重跑。若失效发生在高密度并发 listing，续扫须降低 workers，并遵守批量 listing 至少 300 ms 的节流；详见 [ops-playbook「API 限流与 429 纪律」](references/ops-playbook.md#25-api-限流与-429-纪律2026-07-17-调研及本-run-校准)。
 
 纪律：绝不尝试读取、复制或转发登录凭据文件；授权链接只可发给该任务的授权用户本人。
 
