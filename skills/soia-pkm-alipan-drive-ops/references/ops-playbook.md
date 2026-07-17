@@ -36,15 +36,38 @@ python3 scripts/run_with_env.py -- aliyunpan login
 登录**必须由用户本人操作**——代理不能替用户扫码，只能引导用户完成这一步。
 
 ### 1.3 登录态约 3 天过期
-**症状**：任意命令（`ls`/`quota`/`who`）报错或返回异常，常见提示词含「未登录账号」类字样。
-**处理**：不要反复重试或换参数——这是过期而非命令写错，直接告知用户「登录态过期了，需要重新扫码」，优先引导跑 `python3 scripts/run_with_env.py -- aliyunpan login`；未配置私有目录时也可运行 `aliyunpan login`。实战中一周整理战役期间发生过 1 次过期（傍晚时段），当场重登即恢复，不影响已完成的操作结果。
+**症状**：命令返回「尝试登录失败，请使用 login 命令进行重新登录」即为登录态失效；其他「未登录账号」类错误也应优先按此路径排查。
+**处理**：不要反复重试或换参数。远程协作时，这不是要求用户到 agent 终端扫码的硬阻塞：按本节的标准恢复流程取授权链接，发给任务的授权用户本人用手机确认，然后轮询 `aliyunpan who` 至返回 UID。完整的协作纪律、轮询与长任务衔接见 [SKILL.md 的「登录失效的远程协作恢复」](../SKILL.md#登录失效的远程协作恢复)。
 
-### 1.4 非交互环境取登录链接的技巧
-纯脚本/后台代理环境里没有真 TTY，包装器调用的 `aliyunpan login` 可能拿不到可扫的二维码输出。两个可行技巧：
+### 1.4 非交互环境取登录链接（标准恢复流程第一步）
+登录态失效后，先在非交互环境启动 `python3 scripts/run_with_env.py -- aliyunpan login`，并从 stdout 抓取授权二维码链接；不要等用户到 agent 终端操作，也不要等 login 命令退出。纯脚本/后台代理环境里没有真 TTY，包装器调用的 `aliyunpan login` 可能拿不到可扫的二维码输出。使用以下任一方式：
 - **伪终端（pty）**：用 `script`/`expect`/Python `pty.spawn` 包一层伪终端运行 `aliyunpan login`，让 CLI 以为自己在交互终端里，从而正常吐出二维码链接文本
 - **交互进程读 stdout**：把 `aliyunpan login` 作为长驻子进程启动，持续读取其 stdout 流（而不是等它退出再读），二维码链接一出现就截取，转给用户点击或扫码
 
-两种技巧本质都是"让 CLI 相信自己在被人类使用"，核心是不要用一次性 `subprocess.run` 等待退出码——那样会拿不到中间打印的二维码。
+两种方式本质都是让 CLI 输出可供授权用户使用的链接；核心是不要用一次性 `subprocess.run` 等待退出码——那样会拿不到中间打印的二维码。
+
+**2026-07-17 早晨第二次恢复的实测方案（stdin 保活 + pty）**：不能把 login 的 stdin 接到 `</dev/null`；该 CLI 在“按 Enter 继续”处会读到 EOF 并直接失败。先建立一个只用于确认键的临时文件，再将持续输出的 `tail -f` 管道接入 `script` 的伪终端：
+
+```bash
+: > /tmp/login-keys && nohup sh -c 'tail -f /tmp/login-keys | script -q /tmp/login-out python3 scripts/run_with_env.py -- aliyunpan login' &
+```
+
+`/tmp/login-out` 保存 pty 输出以供读取；不要等待该后台进程退出。授权链接的 `scope` 含 `:` 和 `,`（例如 `user:base,file:all:read,...`），因此字符白名单正则会截断并损坏链接。按“从授权 URL 到下一个空格”为边界完整抓取：
+
+```bash
+grep -o "https://openapi.alipan.com/oauth/authorize?[^ ]*" /tmp/login-out
+```
+
+**两步授权编排**：
+
+1. 启动上述 login 命令并抓取完整链接。
+2. 只将该链接发给本任务的授权用户本人，并说明链接仅 **5 分钟**有效；过期时重新生成并发送新链接，绝不让用户重试旧链接。
+3. 用户在浏览器完成授权和扫码两步，并向协作者确认完成。
+4. 收到确认后才喂确认键，让仍在运行的 CLI 继续：`echo "" >> /tmp/login-keys`。
+5. 执行 `python3 scripts/run_with_env.py -- aliyunpan who`；返回 UID 才算恢复成功。
+6. 恢复后停止并清理本次启动的 `tail -f` 辅助进程（先按命令行与启动记录核对其 PID，避免误杀无关进程），再按 ledger/progress/断点续跑。
+
+只发送链接，不发送 token 或凭据。两次 token 失效都发生在高密度并发 listing（`workers 3`、1,190 paths）期间；这是观察到的关联，尚不能单独证明因果。恢复后续扫要先降低 workers，并遵守 [§2.5 的批量 listing 至少 300 ms/次节流](#25-api-限流与-429-纪律2026-07-17-调研及本-run-校准)，不要立即以原并发度重试。
 
 ### 1.5 `--driveId` 显式传参铁律
 **绝不使用 `aliyunpan drive <id>` 切换全局当前盘**——该命令会修改 CLI 的**全局状态**（写配置文件）。如果同时有多个代理/多个脚本会话在跑，一个会话切盘会污染其他所有并发会话的当前盘上下文，造成"明明在操作备份盘却影响到资源库"的诡异错误。
@@ -81,6 +104,16 @@ https://www.alipan.com/drive/file/all/backup/<file_id>
 
 ### 2.4 删除进回收站 30 天；回收站清空才释放配额
 `aliyunpan rm` 不是物理删除，进回收站，30 天内用户可在 App 里恢复。**配额不会因为 rm 而立即释放**——即使已经清理出一批文件，配额数字也要等用户在 App 里手动清空回收站后才真正下降。告知用户这一点，避免"删了但配额没变"的困惑。
+
+### 2.5 API 限流与 429 纪律（2026-07-17 调研及本 run 校准）
+
+**官方基线**：OpenAPI 的“其他 API”桶（包括 `mkdir`、`mv`）是单用户 **10 秒 150 次**，即约 **15 QPS**；超出会返回 429，下一 10 秒窗口恢复。仅 `get_by_path`、`list`、`getDownloadUrl` 三个接口另有更严限制，官方未公开具体阈值。来源：[阿里云盘开放平台 FAQ](https://www.yuque.com/aliyundrive/zpfszx/zscu11) 与 [最佳实践](https://www.yuque.com/aliyundrive/zpfszx/rgg2p1qnsfdux61r)。
+
+**保守校准**：AList 的社区 limiter 将 other/list/link 分别校准为 **14.9 / 3.9 / 0.9 QPS**；这是社区实现的安全参考，不是官方承诺。故批量 `list`/`ll`/下载链接请求不要按 15 QPS 推算容量。
+
+**429 是等待信号，不是重试信号**：读取响应 `x-retry-after`（毫秒）并完整等待后再试。无等待的连续重试会被官方按 DoS 处理，风险是用户级 OpenAPI 封禁；出现连续 429 时停止扩张批次、保留 ledger，确认节流和恢复时间后再续跑。
+
+**本 run 的实测起点**：2026-07-17，写操作以 **200–300 ms** 节流稳定运行，7 次限流均在退避后恢复；批量 listing 取 **至少 300 ms/次**。这是本 run 实测，不等同于跨账号或 web 侧的保证。批处理仍须保持 10 秒窗口总调用低于 100 次，并以实际响应为准；若服务端给出更长的 `x-retry-after`，它优先。
 
 ## 三、全盘 JSONL 爬虫方法论
 

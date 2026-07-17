@@ -1,11 +1,11 @@
 ---
 name: soia-pkm-alipan-drive-ops
 description: 阿里云盘原子操作层：安装/登录 aliyunpan、显式 driveId 双盘操作、目录浏览、移动/重命名/删除、下载上传、容量查询、全盘 JSONL 扫描。作为 curator 的底层依赖。Triggers：「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」「云盘登录过期了」「全盘扫描云盘」
-version: 2.0.0
+version: 2.1.0
 created_at: 2026-07-02 23:02:39
-updated_at: 2026-07-16 15:34:25
+updated_at: 2026-07-17 09:11:21
 created_by: claude opus 4.6
-updated_by: gpt-5.6-luna
+updated_by: gpt-5.6-terra
 ---
 
 # soia-pkm-alipan-drive-ops — 阿里云盘原子操作层
@@ -106,6 +106,18 @@ python3 scripts/run_with_env.py -- aliyunpan quota
 
 如果尚未配置私有 `ALIYUNPAN_CONFIG_DIR`，上述登录和验证命令也可以直接写成 `aliyunpan login`、`aliyunpan who` 和 `aliyunpan quota`。
 
+## 登录失效的远程协作恢复
+
+当云盘命令返回「尝试登录失败，请使用 login 命令进行重新登录」，即判定登录态失效；这不是要求用户到 agent 所在终端扫码的硬阻塞。按以下流程远程恢复：
+
+1. 在非交互环境以 pty 启动 `python3 scripts/run_with_env.py -- aliyunpan login`，并保持其 stdin 可读；**不得**将 stdin 重定向为 `</dev/null`，否则登录程序在“按 Enter 继续”处读到 EOF 而失败。用已验证的 `tail -f` 保活方案与完整命令见 [ops-playbook §1.4](references/ops-playbook.md#14-非交互环境取登录链接标准恢复流程)。
+2. 从 pty 输出按“到空格为止”完整抓取授权链接，不能用字符白名单正则截取：`scope` 参数含 `:`、`,`。仅把完整链接推送给本任务的授权用户本人，绝不打印 token、cookie、session 或其他凭据。
+3. 明确告知链接仅 **5 分钟**有效；过期后重新启动登录并发送**新链接**，不要让用户重试旧链接。用户在浏览器完成授权与扫码两步后，确认已完成。
+4. 收到用户确认后才向保活 stdin 喂一个 Enter，使登录进程继续；随后用 `python3 scripts/run_with_env.py -- aliyunpan who` 验证返回 UID，并清理对应的 `tail -f` 辅助进程。
+5. 长任务以已有 ledger、progress 或断点续跑机制衔接；等待授权期间优先推进不依赖云盘的工作，不要空等或从头重跑。若失效发生在高密度并发 listing，续扫须降低 workers，并遵守批量 listing 至少 300 ms 的节流；详见 [ops-playbook「API 限流与 429 纪律」](references/ops-playbook.md#25-api-限流与-429-纪律2026-07-17-调研及本-run-校准)。
+
+纪律：绝不尝试读取、复制或转发登录凭据文件；授权链接只可发给该任务的授权用户本人。
+
 ## 双盘模型（关键概念）
 
 一个账号两个盘，**共享同一容量配额**（用 `aliyunpan quota` 看总量）：
@@ -149,12 +161,13 @@ aliyunpan ls "$DIR" </dev/null 2>/dev/null | \
    运行命令优先使用 `python3 scripts/run_with_env.py -- aliyunpan <command>` 加载该 override；任何日志、诊断输出和最终回执都不得打印 token 或 env 值。
 5. **删除/移动/重命名前先确认**：命中路径、显式技能调用、任何默认配置都只是推荐输入，不构成跳过确认的理由；唯一跳过条件是客户当前这句话明确说"直接删/不用确认"，跳过后要在回执里说明本次沿用的范围假设。
 6. **批量前先小样本探测**：批量 `mv`/`rm`/`rename` 前，先用最小样本（如 1 条）跑一遍并汇报预计总量，客户确认规模无误后再放开全量执行，不要对着未知规模的目录直接下手。
+7. **限流先服从再恢复**：批量写操作按每次 200–300 ms 节流，批量 listing 不低于每次 300 ms；收到 429 时读取 `x-retry-after` 并等待，绝不连续重试。详见 ops-playbook 的「API 限流与 429 纪律」。
 
 ## 深入实战手册
 
 以下场景遇到时先读 `references/ops-playbook.md`（2026-07 云盘整理战役实战沉淀），不要重新试错：
-- 安装/登录细节：两步授权+扫码流程、登录态约 3 天过期的症状与处理、非交互环境（无真 TTY）取二维码链接的技巧（伪终端 pty / 长驻进程读 stdout）
+- 安装/登录细节：两步授权+扫码流程、登录态约 3 天过期的症状与处理，以及非交互环境标准远程恢复的第一步（伪终端 pty / 长驻进程读 stdout）；完整恢复流程见上文「登录失效的远程协作恢复」
 - `--driveId` 显式传参铁律：为什么绝不能用 `aliyunpan drive <id>` 切全局盘（多代理并发会互相污染当前盘上下文）
-- 批量操作实战坑：批量 rename 的 cd 依赖坑与恢复方法、`ll` 输出里的 FILE ID 与直达链接拼法、移动改名不改 file_id 但跨盘移动会换 file_id、删除进回收站 30 天且回收站清空才真正释放配额
+- 批量操作实战坑与限流纪律：批量 rename 的 cd 依赖坑、API 桶与 429 等待、`ll` 输出里的 FILE ID 与直达链接拼法、移动改名不改 file_id 但跨盘移动会换 file_id、删除进回收站 30 天且回收站清空才真正释放配额
 - 全盘 JSONL 爬虫：**已脚本化为 `scripts/scan_drive.py`**（参数化 DFS + 线程池 + 重试 + 断点续扫 + 聚合剪枝 + 敏感目录不下钻）；输出保留目录名原始连续空格，并记录 file_id、大小与 SHA-1。用法见 ops-playbook §三。**完整图书馆流水线** = `scan_drive.py`（实盘→JSONL）→ alipan-curator 的 `gen_catalog.py`（JSONL→折叠树总览+全文检索）。登录瞬断、历史解析器折叠特殊空格两坑的处理见 ops-playbook。`scan_drive.py` 产出的 `.errors`/`.progress`/`.done` sidecar 刻意与 `--out` 主产出同目录、同生命周期——断点续扫（`--resume`）靠 sidecar 定位进度（`.done` 逐行记录已完整列出的目录，是续扫的权威断点）、质量核对要和主产出对得上，这是设计而非遗漏，不要挪去临时目录
 - 防代理卡死纪律：长内容一律脚本落文件、对话回复限 15 行
