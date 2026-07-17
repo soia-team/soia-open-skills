@@ -53,6 +53,30 @@ sync:
     # - node_token: "<wiki-sheet-node-token>"
     #   sheet_id: "<sheet-id>"
     #   range: "A1:F200"
+    # Preserve formula/style/comment/layout/chart metadata in a JSON snapshot
+    # next to the Markdown mirror. This is bounded by each selected range.
+    preserve:
+      enabled: false
+      formulas: true
+      styles: true
+      comments: true
+      layout: true
+      charts: true
+      floating_images: true
+  # Base/bitable data is also sensitive. Select individual tables and a
+  # record limit; Markdown is accompanied by a schema-and-record JSON snapshot.
+  bitables:
+    enabled: false
+    max_records: 1000
+    # Attachments are separate local downloads. Keep this false unless their
+    # selected tables and destination are explicitly approved.
+    download_attachments: false
+    selections: []
+    # - node_token: "<wiki-bitable-node-token>"
+    #   table_id: "<table-id>"
+    #   max_records: 200
+    #   include_views: false
+    #   download_attachments: false
   # Keep existing Feishu links by default. Enable only when the local mirror
   # should be self-contained and document references should point to local files.
   localize_internal_links: false

@@ -7,19 +7,40 @@ source:
     - docx
     - doc
 
+document_blocks:
+  ordered_and_unordered_lists:
+    rendering: "preserve portable Markdown list syntax and allowed ul/ol/li HTML when present"
+  tables:
+    rendering: "preserve Markdown tables and allowed table HTML; do not flatten rows into plain text"
+
 sheet_mirror:
   api:
     - "lark-cli sheets +workbook-info"
     - "lark-cli sheets +csv-get"
   opt_in: "sync.sheets.enabled=true with explicit sync.sheets.selections"
   rendering: "bounded CSV display values become Markdown tables"
-  unsupported_in_markdown_mirror:
-    - formulas
-    - styles
-    - comments
-    - charts
-    - pivot_tables
-    - cell_images
+  preservation_snapshot:
+    opt_in: "sync.sheets.preserve.enabled=true"
+    api:
+      - "lark-cli sheets +cells-get --include value,formula,style,comment"
+      - "lark-cli sheets +sheet-info"
+      - "lark-cli sheets +chart-list"
+      - "lark-cli sheets +float-image-list"
+    output: "private JSON snapshot beside the generated Markdown"
+  unsupported_as_native_markdown:
+    - chart_rendering
+    - formula_recalculation
+    - pivot_table_recreation
+    - cell_image_binary_download
+
+bitable_mirror:
+  opt_in: "sync.bitables.enabled=true with explicit node_token and table_id"
+  api:
+    - "lark-cli base +field-list"
+    - "lark-cli base +record-list"
+    - "lark-cli base +view-list when configured"
+  output: "bounded Markdown table plus private schema-and-record JSON snapshot"
+  attachment_download: "sync.bitables.download_attachments=true uses base +record-download-attachment"
 
 normalization:
   remove_title_tag: true
@@ -54,4 +75,4 @@ unsupported:
     - mindnote
     - file
   special_routes:
-    bitable: "只读盘点使用 drive +inspect；实际 xlsx/csv/base 导出必须遵循 references/export-policy.yml"
+    bitable: "未配置时只生成元数据 stub；工作簿/xlsx/csv/base 文件导出必须遵循 references/export-policy.yml"

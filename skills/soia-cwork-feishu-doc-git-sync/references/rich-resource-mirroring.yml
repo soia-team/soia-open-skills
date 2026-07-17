@@ -1,0 +1,68 @@
+version: 1
+
+default:
+  direction: "Feishu -> local, read-only"
+  local_data_write: "requires private-config opt-in and explicit source scope"
+  git_publish: "never automatic"
+
+resources:
+  document:
+    lists:
+      status: supported
+      route: "docs +fetch Markdown normalization"
+      local_form: "Markdown ordered/unordered lists"
+    tables:
+      status: supported
+      route: "docs +fetch Markdown/HTML table normalization"
+      local_form: "portable Markdown or retained HTML table"
+    images_and_attachments:
+      status: supported_when_opted_in
+      route: "docs +media-download or authenticated remote media download"
+      config: "sync.download_assets: true"
+      local_form: "deduplicated files in the generated mirror asset directory and rewritten relative links"
+
+  sheet:
+    display_table:
+      status: supported_when_selected
+      route: "sheets +workbook-info, sheets +csv-get"
+      config: "sync.sheets.enabled with node_token + sheet_id + bounded A1 range"
+      local_form: "Markdown table"
+    fidelity_snapshot:
+      status: supported_when_opted_in
+      route:
+        - "sheets +cells-get include value,formula,style,comment"
+        - "sheets +sheet-info for layout"
+        - "sheets +chart-list"
+        - "sheets +float-image-list"
+      config: "sync.sheets.preserve.enabled: true"
+      local_form: "JSON snapshot beside the Markdown mirror"
+    limitations:
+      - "Chart and floating-image metadata are captured per selected worksheet; they are not rendered as native Markdown charts."
+      - "Formula results are captured but not recalculated locally."
+      - "Cell-image binary download, pivot-table recreation, and a native workbook file remain separate confirmed export work."
+
+  bitable:
+    table_snapshot:
+      status: supported_when_selected
+      route:
+        - "base +field-list"
+        - "base +record-list"
+        - "base +view-list when configured"
+      config: "sync.bitables.enabled with node_token + table_id + max_records"
+      local_form: "Markdown table plus schema-and-record JSON snapshot"
+    attachments:
+      status: supported_when_opted_in
+      route: "base +record-download-attachment"
+      config: "sync.bitables.download_attachments: true, optionally overridden per selection"
+      local_form: "local files with relative paths recorded in the private table snapshot"
+      limits: "sync.max_asset_bytes applies to every downloaded attachment"
+
+safety:
+  required_before_local_data_write:
+    - "approved source nodes/tables/ranges and private configuration"
+    - "record limits for Base and bounded A1 ranges for Sheet"
+    - "explicit attachment download opt-in when binaries are needed"
+  never_automatic:
+    - "whole-workbook or whole-Base export"
+    - "automatic Git commit or push"
+    - "Feishu write-back"

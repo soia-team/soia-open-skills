@@ -16,12 +16,24 @@ sheet_markdown_mirror:
   provider_commands:
     - "sheets +workbook-info"
     - "sheets +csv-get"
+    - "sheets +cells-get when preservation is explicitly enabled"
   explicit_scope: "sync.sheets.selections requires node_token, sheet_id, and bounded A1 range"
   output: "generated Markdown mirror only after explicit user approval and private-config opt-in"
   not_authorized:
     - workbook_file_export
-    - attachment_or_cell_image_download
+    - cell_image_binary_download
     - automatic_git_commit_or_push
+
+bitable_markdown_mirror:
+  classification: sensitive_data_mirror
+  default: disabled
+  provider_commands:
+    - "base +field-list"
+    - "base +record-list"
+    - "base +view-list when selected"
+  explicit_scope: "sync.bitables.selections requires node_token, table_id, and a bounded max_records"
+  output: "generated Markdown plus a private JSON snapshot after explicit user approval and private-config opt-in"
+  attachment_download: "base +record-download-attachment requires sync.bitables.download_attachments=true and explicit attachment-download approval"
 
 supported_routes:
   sheet:

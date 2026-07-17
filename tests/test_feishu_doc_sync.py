@@ -44,6 +44,7 @@ class FeishuDocSyncTests(unittest.TestCase):
             skip_content=False,
             download_assets=False,
             sync_sheets=False,
+            sync_bitables=False,
             refresh_asset_urls=False,
             skip_assets=False,
             retry_failed=False,
@@ -180,6 +181,24 @@ class FeishuDocSyncTests(unittest.TestCase):
         )
         self.assertEqual(selections["node-sheet"][0]["range"], "A1:C4")
 
+    def test_bitable_sync_requires_explicit_tables_and_keeps_attachment_opt_in(self) -> None:
+        with self.assertRaises(SystemExit):
+            sync.configured_bitable_selections({"sync": {"bitables": {}}}, True)
+        selections = sync.configured_bitable_selections(
+            {
+                "sync": {
+                    "bitables": {
+                        "max_records": 20,
+                        "download_attachments": True,
+                        "selections": [{"node_token": "node-base", "table_id": "tbl-1"}],
+                    }
+                }
+            },
+            True,
+        )
+        self.assertEqual(selections["node-base"][0]["max_records"], 20)
+        self.assertTrue(selections["node-base"][0]["download_attachments"])
+
     def test_fetch_sheet_markdown_reads_only_the_selected_grid_range(self) -> None:
         calls = []
 
@@ -212,6 +231,77 @@ class FeishuDocSyncTests(unittest.TestCase):
         csv_call = next(call for call in calls if call[:2] == ("sheets", "+csv-get"))
         self.assertIn("A1:B20", csv_call)
         self.assertIn("--sheet-id", csv_call)
+
+    def test_sheet_preservation_writes_a_bounded_local_snapshot(self) -> None:
+        def fake_run_cli(_config, *args):
+            if args[:2] == ("sheets", "+workbook-info"):
+                return {"data": {"sheets": [{"sheet_id": "sheet-1", "title": "人员", "resource_type": "sheet"}]}}
+            if args[:2] == ("sheets", "+csv-get"):
+                return {"data": {"annotated_csv": "姓名,岗位\n张三,后端\n", "has_more": False}}
+            if args[:2] == ("sheets", "+cells-get"):
+                return {"data": {"ranges": [{"cells": [[{"value": "张三", "formula": "", "comment": "备注"}]]}]}}
+            if args[:2] == ("sheets", "+sheet-info"):
+                return {"data": {"merged_cells": []}}
+            if args[:2] in {("sheets", "+chart-list"), ("sheets", "+float-image-list")}:
+                return {"data": {"items": []}}
+            raise AssertionError(args)
+
+        with tempfile.TemporaryDirectory() as temp, mock.patch.object(sync, "run_cli", side_effect=fake_run_cli):
+            content, _ = sync.fetch_sheet_markdown(
+                {}, "spreadsheet-1", "人员名单",
+                [{"sheet_id": "sheet-1", "range": "A1:B20", "max_chars": 2000, "skip_hidden": False,
+                  "preserve": True, "preserve_options": {"formulas": True, "styles": True, "comments": True,
+                  "layout": True, "charts": True, "floating_images": True}}],
+                snapshot_root=Path(temp), node_token="node-sheet",
+            )
+            snapshots = list(Path(temp).glob("*.sheet.json"))
+            payload = json.loads(snapshots[0].read_text(encoding="utf-8"))
+
+        self.assertIn("保真快照", content)
+        self.assertEqual(len(snapshots), 1)
+        self.assertEqual(payload["cells"]["ranges"][0]["cells"][0][0]["comment"], "备注")
+
+    def test_bitable_snapshot_renders_schema_and_records(self) -> None:
+        def fake_run_cli(_config, *args):
+            if args[:2] == ("base", "+field-list"):
+                return {"data": {"items": [{"field_id": "fld-name", "field_name": "姓名"}, {"field_id": "fld-file", "field_name": "附件"}]}}
+            if args[:2] == ("base", "+record-list"):
+                return {"data": {"items": [{"record_id": "rec-1", "fields": {"fld-name": "张三", "fld-file": [{"name": "证件.png", "file_token": "file-1"}]}}], "has_more": False}}
+            raise AssertionError(args)
+
+        with tempfile.TemporaryDirectory() as temp, mock.patch.object(sync, "run_cli", side_effect=fake_run_cli):
+            content, _ = sync.fetch_bitable_markdown(
+                {}, "base-1", "人员库", [{"table_id": "tbl-1", "view_id": "", "max_records": 10, "include_views": False}],
+                snapshot_root=Path(temp), node_token="node-base",
+            )
+            snapshot = json.loads(next(Path(temp).glob("*.bitable.json")).read_text(encoding="utf-8"))
+
+        self.assertIn("| 姓名 | 附件 |", content)
+        self.assertIn("证件.png", content)
+        self.assertEqual(snapshot["records"][0]["record_id"], "rec-1")
+
+    def test_bitable_attachment_download_uses_a_hashed_local_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            mirror = Path(temp)
+
+            def fake_run(command, **kwargs):
+                self.assertIn("+record-download-attachment", command)
+                output = Path(command[command.index("--output") + 1])
+                (kwargs["cwd"] / output / "attachment.bin").write_bytes(b"fixture")
+                return mock.Mock(returncode=0, stdout='{"ok": true}', stderr="")
+
+            with mock.patch.object(sync.subprocess, "run", side_effect=fake_run):
+                files = sync.download_bitable_record_attachments(
+                    {"provider": {"cli": "lark-cli"}},
+                    base_token="base-1",
+                    table_id="tbl-1",
+                    record_id="rec-1",
+                    file_tokens=["file-1"],
+                    mirror_dir=mirror,
+                )
+
+        self.assertEqual(len(files), 1)
+        self.assertTrue(files[0].startswith("_assets/bitables/"))
 
     def test_enabled_sheet_node_is_mirrored_as_a_markdown_table(self) -> None:
         nodes = [
@@ -270,14 +360,90 @@ class FeishuDocSyncTests(unittest.TestCase):
                 sync, "run_cli", side_effect=fake_run_cli
             ):
                 result = sync.sync(self.sync_args(config))
+            with mock.patch.object(sync, "walk_nodes", return_value=nodes), mock.patch.object(
+                sync, "run_cli", side_effect=fake_run_cli
+            ):
+                incremental_result = sync.sync(self.sync_args(config))
 
             manifest = json.loads((output / "90_同步元数据" / "manifest.json").read_text(encoding="utf-8"))
             generated = (output / "10_knowledge-base" / "人员名单.md").read_text(encoding="utf-8")
 
         self.assertEqual(result, 0)
+        self.assertEqual(incremental_result, 0)
         self.assertEqual(manifest["nodes"][0]["sync_status"], "ok")
         self.assertEqual(manifest["stats"]["sheets_mirrored"], 1)
         self.assertIn("| 姓名 | 岗位 |", generated)
+
+    def test_enabled_bitable_node_is_mirrored_as_a_markdown_table(self) -> None:
+        nodes = [
+            {
+                "node_token": "node-base",
+                "obj_token": "base-1",
+                "obj_type": "bitable",
+                "title": "人员库",
+                "parent_node_token": "",
+                "depth": 0,
+                "has_child": False,
+            }
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "docs"
+            config = root / "config.yml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "version: 1",
+                        "provider:",
+                        "  cli: lark-cli",
+                        "space:",
+                        '  id: "space-1"',
+                        '  source_url_template: "https://example.test/wiki/{node_token}"',
+                        "paths:",
+                        f'  output_dir: "{output}"',
+                        '  generated_dir: "10_knowledge-base"',
+                        "sync:",
+                        "  mode: mirror",
+                        "  workers: 1",
+                        "  metadata_workers: 1",
+                        "  bitables:",
+                        "    enabled: true",
+                        "    selections:",
+                        '      - node_token: "node-base"',
+                        '        table_id: "tbl-1"',
+                        "        max_records: 20",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            def fake_run_cli(_config, *args):
+                if args[:2] == ("wiki", "+node-get"):
+                    return {"data": {"obj_edit_time": "1", "updated_at": "1970-01-01T00:00:01Z"}}
+                if args[:2] == ("base", "+field-list"):
+                    return {"data": {"items": [{"field_id": "fld-name", "field_name": "姓名"}]}}
+                if args[:2] == ("base", "+record-list"):
+                    return {"data": {"items": [{"record_id": "rec-1", "fields": {"fld-name": "张三"}}], "has_more": False}}
+                raise AssertionError(args)
+
+            with mock.patch.object(sync, "walk_nodes", return_value=nodes), mock.patch.object(
+                sync, "run_cli", side_effect=fake_run_cli
+            ):
+                result = sync.sync(self.sync_args(config))
+            with mock.patch.object(sync, "walk_nodes", return_value=nodes), mock.patch.object(
+                sync, "run_cli", side_effect=fake_run_cli
+            ):
+                incremental_result = sync.sync(self.sync_args(config))
+
+            manifest = json.loads((output / "90_同步元数据" / "manifest.json").read_text(encoding="utf-8"))
+            generated = (output / "10_knowledge-base" / "人员库.md").read_text(encoding="utf-8")
+
+        self.assertEqual(result, 0)
+        self.assertEqual(incremental_result, 0)
+        self.assertEqual(manifest["stats"]["bitables_mirrored"], 1)
+        self.assertEqual(manifest["stats"]["bitable_tables_mirrored"], 1)
+        self.assertIn("| 姓名 |", generated)
 
     def test_parse_cli_json_skips_human_preamble_with_brackets(self) -> None:
         payload = sync.parse_cli_json("notice [not-json-yet]\n{" + '"ok": true, "data": {}}')

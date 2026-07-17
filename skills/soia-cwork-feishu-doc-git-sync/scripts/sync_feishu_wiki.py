@@ -82,6 +82,8 @@ DEFAULT_CHANGE_LEDGER_DIR = "change-reports"
 DEFAULT_CHANGE_LEDGER_MAX_DIFF_LINES = 400
 DEFAULT_SHEET_MAX_CELLS = 10_000
 DEFAULT_SHEET_MAX_CHARS = 100_000
+DEFAULT_SHEET_SNAPSHOT_DIR = "_snapshots"
+DEFAULT_BITABLE_MAX_RECORDS = 1_000
 SHEET_RANGE_PATTERN = re.compile(r"^([A-Z]+)([1-9][0-9]*):([A-Z]+)([1-9][0-9]*)$")
 
 
@@ -173,6 +175,11 @@ def parse_args() -> argparse.Namespace:
         "--sync-sheets",
         action="store_true",
         help="mirror explicitly configured Feishu Sheet ranges as Markdown tables",
+    )
+    parser.add_argument(
+        "--sync-bitables",
+        action="store_true",
+        help="mirror explicitly configured Feishu Base tables as bounded Markdown snapshots",
     )
     parser.add_argument(
         "--refresh-asset-urls",
@@ -538,6 +545,20 @@ def configured_sheet_selections(config: dict[str, Any], enabled: bool) -> dict[s
     except (TypeError, ValueError):
         max_chars = DEFAULT_SHEET_MAX_CHARS
     skip_hidden = bool(settings.get("skip_hidden", False))
+    preserve = settings.get("preserve", {})
+    if preserve is True:
+        preserve = {"enabled": True}
+    if not isinstance(preserve, dict):
+        raise SystemExit("sync.sheets.preserve must be a mapping when provided")
+    preserve_enabled = bool(preserve.get("enabled", False))
+    preserve_options = {
+        "formulas": bool(preserve.get("formulas", True)),
+        "styles": bool(preserve.get("styles", True)),
+        "comments": bool(preserve.get("comments", True)),
+        "layout": bool(preserve.get("layout", True)),
+        "charts": bool(preserve.get("charts", True)),
+        "floating_images": bool(preserve.get("floating_images", True)),
+    }
     selections: dict[str, list[dict[str, Any]]] = {}
     seen: set[tuple[str, str, str]] = set()
     for raw in raw_selections:
@@ -566,6 +587,8 @@ def configured_sheet_selections(config: dict[str, Any], enabled: bool) -> dict[s
                 "range": cell_range,
                 "max_chars": max_chars,
                 "skip_hidden": skip_hidden,
+                "preserve": bool(raw.get("preserve", preserve_enabled)),
+                "preserve_options": preserve_options,
             }
         )
     return selections
@@ -609,6 +632,9 @@ def fetch_sheet_markdown(
     obj_token: str,
     title: str,
     selections: list[dict[str, Any]],
+    *,
+    snapshot_root: Path | None = None,
+    node_token: str = "",
 ) -> tuple[str, str]:
     """Read explicitly selected Sheet ranges through lark-cli and render Markdown tables."""
     workbook_payload = run_cli(
@@ -666,15 +692,352 @@ def fetch_sheet_markdown(
         if not isinstance(csv_value, str):
             raise RuntimeError("sheets +csv-get payload has no CSV value")
         sheet_title = str(sheet.get("title") or sheet.get("sheet_name") or sheet_id).strip()
+        preservation_note = ""
+        if selection.get("preserve"):
+            if snapshot_root is None:
+                raise RuntimeError("Sheet preservation requires a local snapshot directory")
+            options = selection.get("preserve_options", {})
+            if not isinstance(options, dict):
+                raise RuntimeError("Sheet preservation options must be a mapping")
+            cells_payload = run_cli(
+                config,
+                "sheets",
+                "+cells-get",
+                "--as",
+                "bot",
+                "--spreadsheet-token",
+                obj_token,
+                "--sheet-id",
+                sheet_id,
+                "--range",
+                str(selection["range"]),
+                "--include",
+                ",".join(
+                    item
+                    for item, enabled in (
+                        ("value", True),
+                        ("formula", bool(options.get("formulas"))),
+                        ("style", bool(options.get("styles"))),
+                        ("comment", bool(options.get("comments"))),
+                    )
+                    if enabled
+                ),
+                "--skip-hidden=true" if selection["skip_hidden"] else "--skip-hidden=false",
+                "--max-chars",
+                str(selection["max_chars"]),
+                "--format",
+                "json",
+            )
+            cells_data = nested(cells_payload, "data", default={})
+            if not isinstance(cells_data, dict) or cells_data.get("has_more") or cells_data.get("truncated"):
+                raise RuntimeError("configured Sheet preservation range was truncated")
+            snapshot: dict[str, Any] = {
+                "schema_version": 1,
+                "kind": "feishu_sheet_snapshot",
+                "sheet_id": sheet_id,
+                "sheet_title": sheet_title,
+                "range": selection["range"],
+                "cells": cells_data,
+            }
+            if options.get("layout"):
+                snapshot["layout"] = nested(
+                    run_cli(config, "sheets", "+sheet-info", "--as", "bot", "--spreadsheet-token", obj_token,
+                            "--sheet-id", sheet_id, "--range", str(selection["range"]),
+                            "--include", "merges,row_heights,col_widths,hidden_rows,hidden_cols,groups,frozen",
+                            "--format", "json"),
+                    "data", default={},
+                )
+            if options.get("charts"):
+                snapshot["charts"] = nested(
+                    run_cli(config, "sheets", "+chart-list", "--as", "bot", "--spreadsheet-token", obj_token,
+                            "--sheet-id", sheet_id, "--format", "json"),
+                    "data", default={},
+                )
+            if options.get("floating_images"):
+                snapshot["floating_images"] = nested(
+                    run_cli(config, "sheets", "+float-image-list", "--as", "bot", "--spreadsheet-token", obj_token,
+                            "--sheet-id", sheet_id, "--format", "json"),
+                    "data", default={},
+                )
+            snapshot_root.mkdir(parents=True, exist_ok=True)
+            filename = f"{(node_token or obj_token)[:16]}--{sheet_id[:16]}.sheet.json"
+            write_text(snapshot_root / filename, json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n")
+            labels = {
+                "formulas": "公式",
+                "styles": "样式",
+                "comments": "批注",
+                "layout": "布局",
+                "charts": "图表",
+                "floating_images": "浮动图片",
+            }
+            preserved = "、".join(label for key, label in labels.items() if options.get(key))
+            preservation_note = f"已保存{preserved or '单元格'}的本地保真快照。"
         sections.extend(
             [
                 "",
                 f"## {sheet_title}",
                 "",
                 f"范围：`{selection['range']}`",
+                *(["", preservation_note] if preservation_note else []),
                 "",
                 markdown_table_from_csv(csv_value),
             ]
+        )
+    return "\n".join(sections).rstrip() + "\n", ""
+
+
+def configured_bitable_selections(config: dict[str, Any], enabled: bool) -> dict[str, list[dict[str, Any]]]:
+    """Return explicitly authorised, record-bounded Base table selections."""
+    if not enabled:
+        return {}
+    settings = nested(config, "sync", "bitables", default={})
+    if not isinstance(settings, dict):
+        raise SystemExit("sync.bitables must be a mapping")
+    raw_selections = settings.get("selections", [])
+    if not isinstance(raw_selections, list) or not raw_selections:
+        raise SystemExit("sync.bitables.selections is required when Base mirroring is enabled")
+    try:
+        default_max_records = max(1, min(int(settings.get("max_records", DEFAULT_BITABLE_MAX_RECORDS)), 5_000))
+    except (TypeError, ValueError):
+        default_max_records = DEFAULT_BITABLE_MAX_RECORDS
+    download_attachments = bool(settings.get("download_attachments", False))
+    selections: dict[str, list[dict[str, Any]]] = {}
+    seen: set[tuple[str, str]] = set()
+    for raw in raw_selections:
+        if not isinstance(raw, dict):
+            raise SystemExit("each sync.bitables.selections item must be a mapping")
+        node_token = str(raw.get("node_token", "")).strip()
+        table_id = str(raw.get("table_id", "")).strip()
+        if not node_token or not table_id:
+            raise SystemExit("each Base selection requires node_token and table_id")
+        try:
+            max_records = max(1, min(int(raw.get("max_records", default_max_records)), 5_000))
+        except (TypeError, ValueError):
+            raise SystemExit("each Base selection max_records must be an integer")
+        key = (node_token, table_id)
+        if key in seen:
+            raise SystemExit("sync.bitables.selections contains a duplicate node_token and table_id")
+        seen.add(key)
+        selections.setdefault(node_token, []).append(
+            {
+                "table_id": table_id,
+                "view_id": str(raw.get("view_id", "")).strip(),
+                "max_records": max_records,
+                "include_views": bool(raw.get("include_views", False)),
+                "download_attachments": bool(raw.get("download_attachments", download_attachments)),
+            }
+        )
+    return selections
+
+
+def markdown_table_from_rows(rows: list[list[Any]]) -> str:
+    stream = io.StringIO()
+    csv.writer(stream).writerows([["" if value is None else str(value) for value in row] for row in rows])
+    return markdown_table_from_csv(stream.getvalue())
+
+
+def bitable_cell_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        names = [str(item.get("name", "")) for item in value if isinstance(item, dict) and item.get("name")]
+        if names:
+            return ", ".join(names)
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value)
+
+
+def bitable_attachment_tokens(value: Any) -> list[str]:
+    """Find Base attachment file tokens without exposing them in rendered Markdown."""
+    tokens: list[str] = []
+    if isinstance(value, dict):
+        token = value.get("file_token")
+        if isinstance(token, str) and token:
+            tokens.append(token)
+        for child in value.values():
+            tokens.extend(bitable_attachment_tokens(child))
+    elif isinstance(value, list):
+        for child in value:
+            tokens.extend(bitable_attachment_tokens(child))
+    return list(dict.fromkeys(tokens))
+
+
+def download_bitable_record_attachments(
+    config: dict[str, Any],
+    *,
+    base_token: str,
+    table_id: str,
+    record_id: str,
+    file_tokens: list[str],
+    mirror_dir: Path,
+) -> list[str]:
+    """Download explicitly selected Base attachments into a hashed local asset folder."""
+    asset_dir = str(nested(config, "sync", "asset_dir", default=DEFAULT_ASSET_DIR)).strip("/\\")
+    if not asset_dir or Path(asset_dir).is_absolute() or ".." in Path(asset_dir).parts:
+        raise SystemExit("sync.asset_dir must be a relative directory without '..'")
+    try:
+        max_bytes = max(1, int(nested(config, "sync", "max_asset_bytes", default=DEFAULT_MAX_ASSET_BYTES)))
+    except (TypeError, ValueError):
+        max_bytes = DEFAULT_MAX_ASSET_BYTES
+    bucket = hashlib.sha256(f"{base_token}\0{table_id}\0{record_id}".encode("utf-8")).hexdigest()[:24]
+    relative_dir = Path(asset_dir) / "bitables" / bucket
+    destination = mirror_dir / relative_dir
+    destination.mkdir(parents=True, exist_ok=True)
+    for token in file_tokens:
+        command = cli_command(
+            config,
+            "base",
+            "+record-download-attachment",
+            "--as",
+            "bot",
+            "--base-token",
+            base_token,
+            "--table-id",
+            table_id,
+            "--record-id",
+            record_id,
+            "--file-token",
+            token,
+            "--output",
+            relative_dir.as_posix(),
+            "--format",
+            "json",
+        )
+        REQUEST_LIMITER.acquire()
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=mirror_dir,
+            env=command_env(config),
+        )
+        if result.returncode != 0:
+            detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+            info = cli_error_info(detail)
+            raise CliCommandError(
+                f"lark-cli Base attachment request failed category={info['category']}",
+                category=str(info["category"]),
+                code=str(info["code"]),
+                retryable=bool(info["retryable"]),
+            )
+    files: list[str] = []
+    for candidate in sorted(destination.rglob("*")):
+        if not candidate.is_file():
+            continue
+        if candidate.stat().st_size > max_bytes:
+            candidate.unlink()
+            raise RuntimeError(f"Base attachment exceeds max_asset_bytes={max_bytes}")
+        files.append(candidate.relative_to(mirror_dir).as_posix())
+    if file_tokens and not files:
+        raise RuntimeError("base +record-download-attachment returned no local file")
+    return files
+
+
+def fetch_bitable_markdown(
+    config: dict[str, Any],
+    obj_token: str,
+    title: str,
+    selections: list[dict[str, Any]],
+    *,
+    snapshot_root: Path,
+    node_token: str,
+    mirror_dir: Path | None = None,
+) -> tuple[str, str]:
+    """Mirror selected Base tables, schemas, records and optional view metadata."""
+    sections = [f"# {title}", "", "> 已按私有配置读取指定多维表格。"]
+    snapshot_root.mkdir(parents=True, exist_ok=True)
+    for selection in selections:
+        table_id = str(selection["table_id"])
+        fields_payload = run_cli(
+            config, "base", "+field-list", "--as", "bot", "--base-token", obj_token,
+            "--table-id", table_id, "--limit", "200", "--format", "json",
+        )
+        fields_data = nested(fields_payload, "data", default={})
+        fields = fields_data.get("items", fields_data.get("fields", [])) if isinstance(fields_data, dict) else []
+        if not isinstance(fields, list):
+            raise RuntimeError("base +field-list payload has no fields list")
+        name_by_id = {
+            str(field.get("field_id", "")): str(field.get("field_name") or field.get("name") or field.get("field_id"))
+            for field in fields if isinstance(field, dict) and field.get("field_id")
+        }
+        rows: list[dict[str, Any]] = []
+        offset = 0
+        while len(rows) < int(selection["max_records"]):
+            limit = min(200, int(selection["max_records"]) - len(rows))
+            command = [
+                "base", "+record-list", "--as", "bot", "--base-token", obj_token,
+                "--table-id", table_id, "--limit", str(limit), "--offset", str(offset), "--format", "json",
+            ]
+            if selection.get("view_id"):
+                command.extend(["--view-id", str(selection["view_id"])])
+            payload = run_cli(config, *command)
+            data = nested(payload, "data", default={})
+            items = data.get("items", data.get("records", [])) if isinstance(data, dict) else []
+            if not isinstance(items, list):
+                raise RuntimeError("base +record-list payload has no records list")
+            rows.extend(item for item in items if isinstance(item, dict))
+            if not items or not isinstance(data, dict) or not data.get("has_more"):
+                break
+            offset += len(items)
+        columns = [name_by_id.get(str(field.get("field_id", "")), "字段") for field in fields if isinstance(field, dict)]
+        rendered_rows = [columns]
+        for record in rows:
+            values = record.get("fields", {})
+            values = values if isinstance(values, dict) else {}
+            rendered_rows.append([
+                bitable_cell_text(values.get(field_id, values.get(name, "")))
+                for field_id, name in name_by_id.items()
+            ])
+        snapshot: dict[str, Any] = {
+            "schema_version": 1,
+            "kind": "feishu_bitable_snapshot",
+            "base_token": obj_token,
+            "table_id": table_id,
+            "fields": fields,
+            "records": rows,
+        }
+        attachment_errors: dict[str, str] = {}
+        attachment_files: dict[str, list[str]] = {}
+        if selection.get("download_attachments"):
+            if mirror_dir is None:
+                raise RuntimeError("Base attachment download requires the local mirror directory")
+            for record in rows:
+                record_id = str(record.get("record_id", "")).strip()
+                fields_value = record.get("fields", {})
+                tokens = bitable_attachment_tokens(fields_value)
+                if not record_id or not tokens:
+                    continue
+                try:
+                    attachment_files[record_id] = download_bitable_record_attachments(
+                        config,
+                        base_token=obj_token,
+                        table_id=table_id,
+                        record_id=record_id,
+                        file_tokens=tokens,
+                        mirror_dir=mirror_dir,
+                    )
+                except Exception as exc:
+                    attachment_errors[record_id] = safe_error_category(exc)
+        if attachment_files:
+            snapshot["local_attachment_paths"] = attachment_files
+        if attachment_errors:
+            snapshot["attachment_errors"] = attachment_errors
+        if selection.get("include_views"):
+            snapshot["views"] = nested(
+                run_cli(config, "base", "+view-list", "--as", "bot", "--base-token", obj_token,
+                        "--table-id", table_id, "--limit", "200", "--format", "json"),
+                "data", default={},
+            )
+        write_text(snapshot_root / f"{node_token[:16]}--{table_id[:16]}.bitable.json", json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n")
+        attachment_note = ""
+        if attachment_files:
+            attachment_note = "已按显式配置下载该表记录中的附件；本地路径写入保真快照。"
+        elif attachment_errors:
+            attachment_note = "部分附件未能下载；失败类别已写入保真快照。"
+        sections.extend(
+            ["", f"## {table_id}", *(["", attachment_note] if attachment_note else []), "", markdown_table_from_rows(rendered_rows)]
         )
     return "\n".join(sections).rstrip() + "\n", ""
 
@@ -1943,6 +2306,11 @@ def sync(args: argparse.Namespace) -> int:
         or nested(config, "sync", "sheets", "enabled", default=False)
     )
     sheet_selections = configured_sheet_selections(config, sheet_sync_enabled)
+    bitable_sync_enabled = bool(
+        getattr(args, "sync_bitables", False)
+        or nested(config, "sync", "bitables", "enabled", default=False)
+    )
+    bitable_selections = configured_bitable_selections(config, bitable_sync_enabled)
     configured_sheet_nodes = set(sheet_selections)
     available_sheet_nodes = {
         str(node.get("node_token"))
@@ -1952,12 +2320,17 @@ def sync(args: argparse.Namespace) -> int:
     missing_sheet_nodes = configured_sheet_nodes - available_sheet_nodes
     if missing_sheet_nodes:
         raise SystemExit("sync.sheets.selections references a node that is not a Sheet in this Wiki")
+    available_bitable_nodes = {
+        str(node.get("node_token")) for node in ordered if str(node.get("obj_type", "")) == "bitable"
+    }
+    if set(bitable_selections) - available_bitable_nodes:
+        raise SystemExit("sync.bitables.selections references a node that is not a Base in this Wiki")
 
     def reads_sync_content(node: dict[str, Any]) -> bool:
         obj_type = str(node.get("obj_type", ""))
         return obj_type in {"docx", "doc"} or (
             obj_type == "sheet" and str(node.get("node_token")) in sheet_selections
-        )
+        ) or (obj_type == "bitable" and str(node.get("node_token")) in bitable_selections)
 
     content_nodes = [node for node in ordered if reads_sync_content(node)]
 
@@ -2030,6 +2403,8 @@ def sync(args: argparse.Namespace) -> int:
         "content_reused": 0,
         "sheets_mirrored": 0,
         "sheet_tabs_mirrored": 0,
+        "bitables_mirrored": 0,
+        "bitable_tables_mirrored": 0,
         "error_categories": {},
     }
     fetched: dict[str, tuple[str, str, str, str]] = {}
@@ -2181,7 +2556,7 @@ def sync(args: argparse.Namespace) -> int:
             raw = existing.read_text(encoding="utf-8")
             parts = raw.split("---", 2)
             body = parts[2].lstrip("\n") if len(parts) == 3 else raw
-            if str(node.get("obj_type", "")) == "sheet":
+            if str(node.get("obj_type", "")) in {"sheet", "bitable"}:
                 return body.rstrip("\n"), str(old.get("revision_id", ""))
             return (
                 normalize_content(
@@ -2211,6 +2586,18 @@ def sync(args: argparse.Namespace) -> int:
                         str(node.get("obj_token", "")),
                         title,
                         sheet_selections[token],
+                        snapshot_root=mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR,
+                        node_token=token,
+                    )
+                elif str(node.get("obj_type", "")) == "bitable":
+                    content, revision_id = fetch_bitable_markdown(
+                        config,
+                        str(node.get("obj_token", "")),
+                        title,
+                        bitable_selections[token],
+                        snapshot_root=mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR,
+                        node_token=token,
+                        mirror_dir=mirror_dir,
                     )
                 else:
                     raw_content, revision_id = fetch_doc(config, str(node.get("obj_token", "")))
@@ -2262,7 +2649,7 @@ def sync(args: argparse.Namespace) -> int:
         raw = existing.read_text(encoding="utf-8")
         parts = raw.split("---", 2)
         body = parts[2].lstrip("\n") if len(parts) == 3 else raw
-        if str(node.get("obj_type", "")) != "sheet":
+        if str(node.get("obj_type", "")) not in {"sheet", "bitable"}:
             body = normalize_content(
                 body.rstrip("\n"),
                 clean_title(node.get("title"), token),
@@ -2434,6 +2821,9 @@ def sync(args: argparse.Namespace) -> int:
             elif obj_type == "sheet":
                 counts["sheets_mirrored"] += 1
                 counts["sheet_tabs_mirrored"] += len(sheet_selections.get(token, []))
+            elif obj_type == "bitable":
+                counts["bitables_mirrored"] += 1
+                counts["bitable_tables_mirrored"] += len(bitable_selections.get(token, []))
         else:
             status = "metadata_stub"
             counts["stub"] += 1
@@ -2632,7 +3022,8 @@ def sync(args: argparse.Namespace) -> int:
         f"created={counts['created']} updated={counts['updated']} failed={counts['failed']} "
         f"stale={counts['stale']} stubs={counts['stub']} unchanged={counts['unchanged']} moved_deleted={counts['moved_deleted']} "
         f"deleted_marked={len(deleted)} remote_images={counts['remote_images']} "
-        f"sheets_mirrored={counts['sheets_mirrored']} sheet_tabs={counts['sheet_tabs_mirrored']}"
+        f"sheets_mirrored={counts['sheets_mirrored']} sheet_tabs={counts['sheet_tabs_mirrored']} "
+        f"bitables_mirrored={counts['bitables_mirrored']} bitable_tables={counts['bitable_tables_mirrored']}"
     )
     print_validation(validation)
     result = 0 if counts["failed"] == 0 and validation["ok"] else 2
