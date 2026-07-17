@@ -145,6 +145,22 @@ def registered_cleanup_authorizations(manifest: Mapping[str, object]) -> str | N
     return _relative_member(value, "run.files.cleanup_authorizations")
 
 
+def registered_directory_identity_paths(manifest: Mapping[str, object]) -> list[str]:
+    """Return immutable legacy-mkdir evidence registered in ``run.files``."""
+
+    files = manifest.get("files")
+    if not isinstance(files, Mapping):
+        raise ValueError("run.files must be an object")
+    paths = [
+        _relative_member(value, f"run.files.{label}")
+        for label, value in files.items()
+        if isinstance(label, str) and label.startswith("directory_identities")
+    ]
+    if len(set(paths)) != len(paths):
+        raise ValueError("directory identity evidence paths must be unique")
+    return paths
+
+
 def validate_preflight_gate(
     *,
     manifest: Mapping[str, object],
@@ -216,11 +232,17 @@ def validate_preflight_gate(
     except ValueError as error:
         violations.append({"kind": "preflight_manifest_invalid", "detail": str(error)})
         cleanup_evidence = None
+    try:
+        directory_identity_paths = registered_directory_identity_paths(manifest)
+    except ValueError as error:
+        violations.append({"kind": "preflight_manifest_invalid", "detail": str(error)})
+        directory_identity_paths = []
     expected_keys = {"run.json", *plans}
     if cleanup_authorizations is not None:
         expected_keys.add(cleanup_authorizations)
     if cleanup_evidence is not None:
         expected_keys.add(cleanup_evidence)
+    expected_keys.update(directory_identity_paths)
     report_hashes = report.get("hashes")
     if not isinstance(report_hashes, Mapping):
         report_hashes = {}
@@ -487,6 +509,15 @@ def verify_preflight_gate(
             if not evidence_path.is_file():
                 return _failed("preflight_cleanup_evidence_missing", path=cleanup_evidence)
             current_hashes[cleanup_evidence] = sha256_file(evidence_path)
+        for relative in registered_directory_identity_paths(manifest):
+            identity_path = resolve_run_member(
+                run_dir,
+                relative,
+                "registered directory identities",
+            )
+            if not identity_path.is_file():
+                raise ValueError(f"registered directory identities are missing: {relative}")
+            current_hashes[relative] = sha256_file(identity_path)
     except (OSError, ValueError) as error:
         return _failed("preflight_manifest_invalid", detail=str(error))
     if plan_path is not None and executor_plan_member is None:

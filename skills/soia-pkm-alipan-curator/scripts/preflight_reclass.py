@@ -212,6 +212,15 @@ def load_registered(run_dir: Path, roots: list[str]) -> tuple[dict, list[dict], 
         if not evidence_path.is_file():
             raise ValueError(f"registered empty cleanup evidence is missing: {cleanup_evidence}")
         hashes[cleanup_evidence] = sha256_file(evidence_path)
+    for relative in preflight_gate.registered_directory_identity_paths(manifest):
+        identity_path = preflight_gate.resolve_run_member(
+            run_dir,
+            relative,
+            "registered directory identities",
+        )
+        if not identity_path.is_file():
+            raise ValueError(f"registered directory identities are missing: {relative}")
+        hashes[relative] = sha256_file(identity_path)
     seen_ids: set[str] = set()
     for batch_index, batch in enumerate(manifest.get("batches", []), 1):
         relative = str(batch.get("plan", "")).strip()
@@ -252,9 +261,57 @@ def operation_key(item: dict) -> tuple:
     return item.get("action_id"), item.get("op"), item.get("from"), item.get("to"), item.get("file_id")
 
 
-def load_resume_state(run_dir: Path, manifest: dict, actions: list[dict]) -> tuple[set[tuple], list[dict]]:
+def load_directory_identities(run_dir: Path, manifest: dict) -> dict[tuple[str, str], str]:
+    """Load registered legacy-mkdir evidence, bound exactly to action and path.
+
+    The evidence is deliberately not a path-only lookup: a directory at a
+    plausible path cannot prove which historical ``mkdir`` action created it.
+    """
+
+    identities: dict[tuple[str, str], str] = {}
+    for relative in preflight_gate.registered_directory_identity_paths(manifest):
+        path = preflight_gate.resolve_run_member(run_dir, relative, "registered directory identities")
+        if not path.is_file():
+            raise ValueError(f"registered directory identities are missing: {relative}")
+        with path.open(encoding="utf-8") as handle:
+            for line_number, raw in enumerate(handle, 1):
+                if not raw.strip():
+                    continue
+                row = json.loads(raw)
+                if not isinstance(row, dict):
+                    raise ValueError(f"{relative}:{line_number}: directory identity must be an object")
+                if row.get("status") == "missing":
+                    continue
+                action_id, target, directory_id = row.get("action_id"), row.get("path"), row.get("id")
+                if (
+                    not isinstance(action_id, str)
+                    or not action_id.strip()
+                    or not isinstance(target, str)
+                    or not target.startswith("/")
+                    or normalize(target) != target.rstrip("/")
+                    or not isinstance(directory_id, str)
+                    or not directory_id.strip()
+                ):
+                    raise ValueError(f"{relative}:{line_number}: invalid directory identity")
+                key = action_id, normalize(target)
+                previous = identities.get(key)
+                if previous is not None and previous != directory_id:
+                    raise ValueError(
+                        f"{relative}:{line_number}: conflicting directory identity for action_id/path"
+                    )
+                identities[key] = directory_id
+    return identities
+
+
+def load_resume_state(
+    run_dir: Path,
+    manifest: dict,
+    actions: list[dict],
+    directory_identities: dict[tuple[str, str], str] | None = None,
+) -> tuple[set[tuple], list[dict]]:
     """Load each batch ledger's latest rows without trusting their claims."""
 
+    directory_identities = directory_identities or {}
     registered_by_batch: dict[int, set[tuple]] = {}
     for action in actions:
         registered_by_batch.setdefault(int(action["_batch"]), set()).add(operation_key(action))
@@ -286,6 +343,33 @@ def load_resume_state(run_dir: Path, manifest: dict, actions: list[dict]) -> tup
         for key, (line_number, row) in latest.items():
             if row.get("status") not in {"verified", "completed"}:
                 continue
+            # Legacy mkdir ledger rows did not record the directory file_id.
+            # They can be resumed only with separately registered evidence that
+            # binds this exact action_id to this exact destination path.
+            if row.get("op") == "mkdir" and not str(row.get("file_id", "")).strip():
+                candidates = [
+                    action for action in actions
+                    if int(action["_batch"]) == batch_index
+                    and action.get("op") == "mkdir"
+                    and action.get("action_id") == row.get("action_id")
+                    and action.get("from") == row.get("from")
+                    and action.get("to") == row.get("to")
+                ]
+                if len(candidates) == 1:
+                    candidate = candidates[0]
+                    identity_key = str(candidate["action_id"]), normalize(candidate["to"])
+                    if identity_key in directory_identities:
+                        verified.add(operation_key(candidate))
+                        continue
+                    violations.append({
+                        "kind": "verified_legacy_mkdir_directory_identity_not_registered",
+                        "batch": batch_index,
+                        "result": str(relative),
+                        "line": line_number,
+                        "action_id": row.get("action_id"),
+                        "path": row.get("to"),
+                    })
+                    continue
             if key not in registered:
                 violations.append({
                     "kind": "verified_ledger_operation_not_registered",
@@ -831,7 +915,10 @@ def main() -> int:
         if run_audit.get("status") != "passed":
             raise ValueError("non-final run-bundle audit failed")
         manifest, actions, hashes = load_registered(args.run_dir, roots)
-        verified_keys, ledger_violations = load_resume_state(args.run_dir, manifest, actions)
+        directory_identities = load_directory_identities(args.run_dir, manifest)
+        verified_keys, ledger_violations = load_resume_state(
+            args.run_dir, manifest, actions, directory_identities
+        )
         _, cleanup_evidence = load_cleanup_evidence(args.run_dir, manifest)
         registered_report = preflight_gate.registered_preflight_report_path(args.run_dir, manifest)
         if args.report.resolve() != registered_report:

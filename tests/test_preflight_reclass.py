@@ -416,6 +416,84 @@ class PreflightReclassTests(unittest.TestCase):
             {item["kind"] for item in violations},
         )
 
+    def test_legacy_mkdir_ledger_uses_registered_action_and_path_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            planned = action("M1", "mkdir", to="/A")
+            planned["_batch"] = 1
+            manifest = {
+                "files": {"directory_identities_801": "verification/directories.jsonl"},
+                "batches": [{"result": "actions/10.result.jsonl"}],
+            }
+            write_jsonl(root / "actions/10.result.jsonl", [ledger_row(planned)])
+            write_jsonl(root / "verification/directories.jsonl", [
+                {"action_id": "M1", "path": "/A", "id": "directory-id"},
+            ])
+            identities = module.load_directory_identities(root, manifest)
+            verified, violations = module.load_resume_state(root, manifest, [planned], identities)
+
+        self.assertEqual(verified, {module.operation_key(planned)})
+        self.assertEqual(violations, [])
+
+    def test_legacy_mkdir_ledger_blocks_when_registered_identities_omit_action(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            planned = action("M1", "mkdir", to="/A")
+            planned["_batch"] = 1
+            manifest = {
+                "files": {"directory_identities_801": "verification/directories.jsonl"},
+                "batches": [{"result": "actions/10.result.jsonl"}],
+            }
+            write_jsonl(root / "actions/10.result.jsonl", [ledger_row(planned)])
+            write_jsonl(root / "verification/directories.jsonl", [
+                {"action_id": "OTHER", "path": "/A", "id": "directory-id"},
+            ])
+            identities = module.load_directory_identities(root, manifest)
+            verified, violations = module.load_resume_state(root, manifest, [planned], identities)
+
+        self.assertEqual(verified, set())
+        self.assertIn(
+            "verified_legacy_mkdir_directory_identity_not_registered",
+            {item["kind"] for item in violations},
+        )
+
+    def test_legacy_mkdir_ledger_blocks_when_identities_are_not_registered(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            planned = action("M1", "mkdir", to="/A")
+            planned["_batch"] = 1
+            manifest = {"files": {}, "batches": [{"result": "actions/10.result.jsonl"}]}
+            write_jsonl(root / "actions/10.result.jsonl", [ledger_row(planned)])
+            verified, violations = module.load_resume_state(root, manifest, [planned])
+
+        self.assertEqual(verified, set())
+        self.assertIn(
+            "verified_legacy_mkdir_directory_identity_not_registered",
+            {item["kind"] for item in violations},
+        )
+
+    def test_legacy_mkdir_ledger_blocks_forged_path_even_with_identity_for_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            planned = action("M1", "mkdir", to="/A")
+            planned["_batch"] = 1
+            manifest = {
+                "files": {"directory_identities_801": "verification/directories.jsonl"},
+                "batches": [{"result": "actions/10.result.jsonl"}],
+            }
+            write_jsonl(root / "actions/10.result.jsonl", [ledger_row(planned, to="/forged")])
+            write_jsonl(root / "verification/directories.jsonl", [
+                {"action_id": "M1", "path": "/A", "id": "directory-id"},
+            ])
+            identities = module.load_directory_identities(root, manifest)
+            verified, violations = module.load_resume_state(root, manifest, [planned], identities)
+
+        self.assertEqual(verified, set())
+        self.assertIn(
+            "verified_ledger_operation_not_registered",
+            {item["kind"] for item in violations},
+        )
+
     def test_latest_ledger_record_overrides_older_verified_status(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
