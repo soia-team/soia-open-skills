@@ -2,7 +2,7 @@
 
 > Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.
 > Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.
-> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 37 skills.
+> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 39 skills.
 
 ## Source Fields
 
@@ -62,6 +62,13 @@
 | [`soia-dev-archify-diagrams`](./soia-dev-archify-diagrams/) | Create architecture and workflow diagrams with Archify. | Use soia-dev-archify-diagrams to create or update technical diagrams with JSON IR, validated HTML, and README PNG previews. |
 | [`soia-dev-github-ops`](./soia-dev-github-ops/) | Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates. | Use soia-dev-github-ops: Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates. |
 | [`soia-dev-prompt-clarity`](./soia-dev-prompt-clarity/) | 通用提示词技能：从零按七要素写结构化提示词、按六维诊断优化已有提示词、防误伤改写被安全分类器误判的正当请求、把模糊复杂需求编译成需求覆盖账本+可验证工程规格；信息不足先澄清再产出。 | Use soia-dev-prompt-clarity: 帮我处理这个提示词需求——先判定是新写、优化、防误伤改写，还是要编译成可验证规格；信息不足先给我一份一次问全的澄清清单，再产出可直接使用的提示词和逐条说明。 |
+| [`soia-dev-terminal-ops`](./soia-dev-terminal-ops/) | Monitor long-running POSIX jobs and recover stalled processes safely | Use $soia-dev-terminal-ops to monitor this long-running command, diagnose progress with multiple signals, and apply the TERM-to-KILL confirmation gates if recovery is needed. |
+
+## Design
+
+| Skill | Description | Default Prompt |
+|---|---|---|
+| [`soia-design-explorer`](./soia-design-explorer/) | Create and verify hi-fi prototypes, decks, animations, and design reviews | Use $soia-design-explorer with an explicit huashu-design path, user-provided brand inputs, a classified output destination, and verifiable delivery evidence. |
 
 ## Registry Export
 
