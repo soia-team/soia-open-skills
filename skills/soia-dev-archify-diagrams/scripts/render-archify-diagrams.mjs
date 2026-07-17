@@ -3,17 +3,17 @@
  * @created_by  unknown
  * @created_at  unknown
  * @modified_by openai/gpt-5
- * @modified_at 2026-07-11 00:15:52
- * @version     0.1.0
+ * @modified_at 2026-07-17 14:20:00
+ * @version     0.2.0
  * @description Resolve Archify and render validated diagram assets.
- * @changelog   Discover Archify from Antigravity global and workspace skill roots.
+ * @changelog   Add explicit output-directory resolution with a Downloads fallback.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { loadPrivateConfigEnv } from './soia-config.mjs';
+import { loadPrivateConfigEnv, resolveOutputDir } from './soia-config.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 loadPrivateConfigEnv();
@@ -28,12 +28,16 @@ const suffixToType = new Map([
 
 function usage() {
   return `Usage:
-  render-archify-diagrams.mjs --dir <diagram-dir> [--archify-root <path>] [--png-only] [--theme light|dark] [--width 1400] [--height 1000] [--scale 2] [--dry-run]
-  render-archify-diagrams.mjs --file <diagram.json> [--archify-root <path>] [--png-only] [--theme light|dark] [--width 1400] [--height 1000] [--scale 2] [--dry-run]
+  render-archify-diagrams.mjs --dir <diagram-dir> [--output-dir <path>] [--archify-root <path>] [--png-only] [--theme light|dark] [--width 1400] [--height 1000] [--scale 2] [--dry-run]
+  render-archify-diagrams.mjs --file <diagram.json> [--output-dir <path>] [--archify-root <path>] [--png-only] [--theme light|dark] [--width 1400] [--height 1000] [--scale 2] [--dry-run]
 
 Environment:
   ARCHIFY_ROOT=/path/to/archify/archify
   ARCHIFY_BIN=/path/to/archify.mjs
+  ARCHIFY_OUTPUT_DIR=/path/to/deliverables
+
+Default output directory:
+  ~/Downloads/soia-dev-archify-diagrams/
 `;
 }
 
@@ -48,6 +52,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === '--dir') args.dir = argv[++i];
     else if (arg === '--file') args.file = argv[++i];
+    else if (arg === '--output-dir') args.outputDir = argv[++i];
     else if (arg === '--archify-root') args.archifyRoot = argv[++i];
     else if (arg === '--png-only') args.pngOnly = true;
     else if (arg === '--theme') args.theme = argv[++i];
@@ -111,8 +116,8 @@ function inferType(file) {
   return null;
 }
 
-function outputFor(file, suffix) {
-  return file.slice(0, -suffix.length) + '.html';
+function outputFor(file, suffix, outputDir) {
+  return path.join(outputDir, `${path.basename(file, suffix)}.html`);
 }
 
 function collectFiles(args) {
@@ -142,17 +147,20 @@ function run(cmd, args, dryRun) {
 const args = parseArgs(process.argv.slice(2));
 const archifyBin = findArchifyBin(args);
 const files = collectFiles(args);
-
 if (files.length === 0) {
   fail('No Archify JSON files found.');
 }
+const outputDir = resolveOutputDir(args.outputDir);
+
+if (!args.dryRun) fs.mkdirSync(outputDir, { recursive: true });
 
 console.log(`Archify: ${archifyBin}`);
 console.log(`Files: ${files.length}`);
+console.log(`Output: ${outputDir}`);
 
 for (const file of files) {
   const inferred = inferType(file);
-  const output = outputFor(file, inferred.suffix);
+  const output = outputFor(file, inferred.suffix, outputDir);
   run(process.execPath, [archifyBin, 'validate', inferred.type, file, '--json'], args.dryRun);
   run(process.execPath, [archifyBin, 'render', inferred.type, file, output], args.dryRun);
   run(process.execPath, [archifyBin, 'check', output], args.dryRun);
@@ -162,11 +170,13 @@ if (args.pngOnly) {
   const exporter = path.join(scriptDir, 'export-archify-previews.mjs');
   if (args.file) {
     const inferred = inferType(path.resolve(args.file));
-    const output = outputFor(path.resolve(args.file), inferred.suffix);
+    const output = outputFor(path.resolve(args.file), inferred.suffix, outputDir);
     run(process.execPath, [
       exporter,
       '--file',
       output,
+      '--output-dir',
+      outputDir,
       '--theme',
       args.theme,
       '--width',
@@ -178,24 +188,25 @@ if (args.pngOnly) {
     ], args.dryRun);
     if (!args.dryRun) fs.unlinkSync(output);
   } else {
-    run(process.execPath, [
-      exporter,
-      '--dir',
-      path.resolve(args.dir),
-      '--theme',
-      args.theme,
-      '--width',
-      String(args.width),
-      '--height',
-      String(args.height),
-      '--scale',
-      String(args.scale),
-    ], args.dryRun);
-    if (!args.dryRun) {
-      for (const file of files) {
-        const inferred = inferType(file);
-        fs.unlinkSync(outputFor(file, inferred.suffix));
-      }
+    for (const file of files) {
+      const inferred = inferType(file);
+      const output = outputFor(file, inferred.suffix, outputDir);
+      run(process.execPath, [
+        exporter,
+        '--file',
+        output,
+        '--output-dir',
+        outputDir,
+        '--theme',
+        args.theme,
+        '--width',
+        String(args.width),
+        '--height',
+        String(args.height),
+        '--scale',
+        String(args.scale),
+      ], args.dryRun);
+      if (!args.dryRun) fs.unlinkSync(output);
     }
   }
 }

@@ -2,16 +2,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { loadPrivateConfigEnv } from './soia-config.mjs';
+import { loadPrivateConfigEnv, resolveOutputDir } from './soia-config.mjs';
 
 loadPrivateConfigEnv();
 
 function usage() {
   return `Usage:
-  export-archify-previews.mjs --dir <diagram-dir> [--theme light|dark] [--width 1400] [--height 1000] [--scale 2] [--chrome <path>]
-  export-archify-previews.mjs --file <diagram.html> [--theme light|dark] [--width 1400] [--height 1000] [--scale 2] [--chrome <path>]
+  export-archify-previews.mjs --dir <html-dir> [--output-dir <path>] [--theme light|dark] [--width 1400] [--height 1000] [--scale 2] [--chrome <path>]
+  export-archify-previews.mjs --file <diagram.html> [--output-dir <path>] [--theme light|dark] [--width 1400] [--height 1000] [--scale 2] [--chrome <path>]
 
-Writes one PNG next to each HTML file.
+Writes one PNG per HTML file to the output directory.
 `;
 }
 
@@ -32,6 +32,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === '--dir') args.dir = argv[++i];
     else if (arg === '--file') args.file = argv[++i];
+    else if (arg === '--output-dir') args.outputDir = argv[++i];
     else if (arg === '--theme') args.theme = argv[++i];
     else if (arg === '--width') args.width = Number(argv[++i]);
     else if (arg === '--height') args.height = Number(argv[++i]);
@@ -66,8 +67,8 @@ function collectFiles(args) {
     .sort();
 }
 
-function outputFor(file) {
-  return file.slice(0, -'.html'.length) + '.png';
+function outputFor(file, outputDir) {
+  return path.join(outputDir, `${path.basename(file, '.html')}.png`);
 }
 
 async function loadPlaywright() {
@@ -81,6 +82,8 @@ async function loadPlaywright() {
 const args = parseArgs(process.argv.slice(2));
 const files = collectFiles(args);
 if (files.length === 0) fail('No HTML files found.');
+const outputDir = resolveOutputDir(args.outputDir);
+fs.mkdirSync(outputDir, { recursive: true });
 
 const playwright = await loadPlaywright();
 
@@ -99,7 +102,7 @@ if (playwright) {
     });
 
     for (const file of files) {
-      const output = outputFor(file);
+      const output = outputFor(file, outputDir);
       console.log(`${file} -> ${output}`);
       await page.goto(`file://${file}`, { waitUntil: 'networkidle' });
       await page.evaluate((theme) => {
@@ -116,7 +119,7 @@ if (playwright) {
   }
 
   for (const file of files) {
-    const output = outputFor(file);
+    const output = outputFor(file, outputDir);
     const url = `file://${file}?theme=${encodeURIComponent(args.theme)}`;
     console.log(`${file} -> ${output}`);
     const result = spawnSync(args.chrome, [

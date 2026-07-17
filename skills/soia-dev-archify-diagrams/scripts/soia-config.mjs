@@ -6,7 +6,7 @@ const overrideConfigName = 'SOIA_DEV_ARCHIFY_DIAGRAMS_CONFIG_FILE';
 const overrideEnvName = 'SOIA_DEV_ARCHIFY_DIAGRAMS_ENV_FILE';
 const defaultConfigFile = '~/.config/soia-skills/soia-open-skills/soia-dev/soia-dev-archify-diagrams/config.yml';
 const keyPattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const pathLikeKeys = new Set(['ARCHIFY_BIN', 'ARCHIFY_ROOT', 'CHROME_PATH']);
+const pathLikeKeys = new Set(['ARCHIFY_BIN', 'ARCHIFY_ROOT', 'ARCHIFY_OUTPUT_DIR', 'CHROME_PATH']);
 
 function expandHome(value) {
   if (!value) return value;
@@ -63,4 +63,10 @@ export function loadPrivateConfigEnv() {
     if (process.env[key] === undefined) process.env[key] = value;
   }
   return found;
+}
+
+export function resolveOutputDir(cliValue) {
+  const value = cliValue || process.env.ARCHIFY_OUTPUT_DIR;
+  if (value) return path.resolve(expandHome(value));
+  return path.join(os.homedir(), 'Downloads', 'soia-dev-archify-diagrams');
 }
