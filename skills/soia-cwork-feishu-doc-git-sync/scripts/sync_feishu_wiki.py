@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
+from html import escape as html_escape
 import json
 import mimetypes
 import os
@@ -66,6 +68,16 @@ SENSITIVE_FLAG_PATTERN = re.compile(
     r"(--(?:app-secret|secret|password|passwd|access-token|token|doc|node-token|parent-node-token|obj-token|file-token|folder-token|space-id|config|output|output-dir))\s+([^\s]+)",
     re.IGNORECASE,
 )
+SUB_PAGE_LIST_PATTERN = re.compile(r"<sub-page-list\b[^>]*>.*?</sub-page-list>", re.IGNORECASE | re.DOTALL)
+SUB_PAGE_PATTERN = re.compile(r"<sub-page(?!-list)\b([^>]*)/?>", re.IGNORECASE | re.DOTALL)
+HTML_ATTRIBUTE_PATTERN = re.compile(r"([\w:-]+)=([\"'])(.*?)\2", re.DOTALL)
+MARKDOWN_LINK_PATTERN = re.compile(r"\[([^\]]*)\]\((\s*https?://[^)\s]+\s*)\)")
+BARE_FEISHU_DOCUMENT_URL_PATTERN = re.compile(
+    r"https?://[^\s)\]]*(?:feishu|larksuite)[^\s)\]]*/(?:wiki|docx|doc)/[^\s?#/)]+[^\s)]*",
+    re.IGNORECASE,
+)
+DEFAULT_CHANGE_LEDGER_DIR = "change-reports"
+DEFAULT_CHANGE_LEDGER_MAX_DIFF_LINES = 400
 
 
 class CliCommandError(RuntimeError):
@@ -535,25 +547,107 @@ def unique_path(
     return candidate
 
 
-def normalize_content(content: str, title: str, cite_links: dict[str, str] | None = None) -> str:
+def html_attributes(value: str) -> dict[str, str]:
+    """Parse the small quoted-attribute subset emitted by Feishu Markdown exports."""
+    return {key.lower(): item for key, _quote, item in HTML_ATTRIBUTE_PATTERN.findall(value)}
+
+
+def markdown_link(label: str, target: str) -> str:
+    """Render a portable Markdown link while preserving local paths with spaces."""
+    visible = (label or target).replace("[", "\\[").replace("]", "\\]")
+    if not target:
+        return visible
+    if target.startswith(("http://", "https://", "feishu-media://")):
+        return f"[{visible}]({target})"
+    return f"[{visible}](<{target}>)"
+
+
+def document_target_for_url(url: str, document_links: dict[str, str]) -> str:
+    """Resolve a Feishu Wiki/doc URL to a configured local or remote document target."""
+    lowered = url.lower()
+    if "feishu" not in lowered and "larksuite" not in lowered:
+        return ""
+    for identifier in sorted(document_links, key=len, reverse=True):
+        if identifier and identifier in url:
+            return document_links[identifier]
+    return ""
+
+
+def rewrite_feishu_document_urls(content: str, document_links: dict[str, str]) -> str:
+    """Replace known Feishu document URLs without touching media or unrelated web links."""
+    def replace_markdown_link(match: re.Match[str]) -> str:
+        label = match.group(1)
+        url = match.group(2).strip()
+        target = document_target_for_url(url, document_links)
+        return markdown_link(label or url, target) if target else match.group(0)
+
+    value = MARKDOWN_LINK_PATTERN.sub(replace_markdown_link, content)
+
+    def replace_bare_url(match: re.Match[str]) -> str:
+        url = match.group(0)
+        target = document_target_for_url(url, document_links)
+        return markdown_link(url, target) if target else url
+
+    return BARE_FEISHU_DOCUMENT_URL_PATTERN.sub(replace_bare_url, value)
+
+
+def normalize_content(
+    content: str,
+    title: str,
+    cite_links: dict[str, str] | None = None,
+    *,
+    render_sub_page_navigation: bool = False,
+    localize_document_links: bool = False,
+) -> str:
     value = content.replace("\r\n", "\n").replace("\r", "\n")
     value = re.sub(r"^\s*<title>.*?</title>\s*", "", value, count=1, flags=re.IGNORECASE | re.DOTALL)
     value = value.replace("<wiki_recent_update></wiki_recent_update>", "")
 
     def replace_attachment_source(match: re.Match[str]) -> str:
-        attrs = match.group(1)
-        href_match = re.search(r'\bhref="([^"]+)"', attrs, flags=re.IGNORECASE)
-        token_match = re.search(r'\btoken="([^"]+)"', attrs, flags=re.IGNORECASE)
-        if href_match:
-            return f"[飞书附件]({href_match.group(1)})"
-        if token_match:
-            return f"[飞书附件](feishu-media://{token_match.group(1)})"
+        attrs = html_attributes(match.group(1))
+        href = attrs.get("href", "")
+        token = attrs.get("token", "")
+        mime = attrs.get("mime", "")
+        if mime.lower().startswith("image/"):
+            source = href or (f"feishu-media://{token}" if token else "")
+            if source:
+                token_attr = f' data-feishu-token="{html_escape(token, quote=True)}"' if token else ""
+                return f'<img src="{html_escape(source, quote=True)}" alt="飞书图片"{token_attr}>'
+        if href and token:
+            return (
+                f'<a href="{html_escape(href, quote=True)}" data-feishu-attachment="true" '
+                f'data-feishu-token="{html_escape(token, quote=True)}" '
+                f'data-feishu-mime="{html_escape(mime, quote=True)}">飞书附件</a>'
+            )
+        if href:
+            return f"[飞书附件]({href})"
+        if token:
+            return f"[飞书附件](feishu-media://{token})"
         return "（飞书附件）"
 
     # Feishu exports custom figure/grid/source tags. VitePress' Vue parser
     # treats these as components and can reject otherwise valid Markdown; keep
     # the attachment URL while removing the non-standard wrapper tags.
     value = re.sub(r"<source\b([^>]*)/?>", replace_attachment_source, value, flags=re.IGNORECASE)
+
+    if render_sub_page_navigation:
+        def render_sub_page_list(match: re.Match[str]) -> str:
+            pages: list[str] = []
+            for page in SUB_PAGE_PATTERN.finditer(match.group(0)):
+                attrs = html_attributes(page.group(1))
+                page_title = attrs.get("title", "").strip() or "未命名子页面"
+                identifier = (
+                    attrs.get("doc-id", "").strip()
+                    or attrs.get("wiki-token", "").strip()
+                    or attrs.get("node-token", "").strip()
+                )
+                target = cite_links.get(identifier, "") if identifier and cite_links else ""
+                pages.append(f"- {markdown_link(page_title, target)}")
+            if not pages:
+                return ""
+            return "## 子页面导航\n\n" + "\n".join(pages)
+
+        value = SUB_PAGE_LIST_PATTERN.sub(render_sub_page_list, value)
     value = re.sub(
         r"</?(?:figure|grid|column|callout|sub-page-list|sub-page|sheet|readonly-block)\b[^>]*>",
         "",
@@ -562,24 +656,25 @@ def normalize_content(content: str, title: str, cite_links: dict[str, str] | Non
     )
 
     def replace_feishu_image(match: re.Match[str]) -> str:
-        attrs = match.group(1)
-        href_match = re.search(r'\bhref="([^"]+)"', attrs, flags=re.IGNORECASE)
-        src_match = re.search(r'\bsrc="([^"]+)"', attrs, flags=re.IGNORECASE)
-        token_match = re.search(r'\btoken="([^"]+)"', attrs, flags=re.IGNORECASE)
-        alt_match = re.search(r'\balt="([^"]*)"', attrs, flags=re.IGNORECASE)
+        attrs = html_attributes(match.group(1))
+        href = attrs.get("href", "")
+        src = attrs.get("src", "")
+        token = attrs.get("token", "")
+        alt_value = attrs.get("alt", "")
         image_url = (
-            href_match.group(1)
-            if href_match
-            else src_match.group(1)
-            if src_match
-            else f"feishu-media://{token_match.group(1)}"
-            if token_match
+            href
+            if href
+            else src
+            if src
+            else f"feishu-media://{token}"
+            if token
             else ""
         )
         if not image_url:
             return "（飞书图片）"
-        alt = (alt_match.group(1) if alt_match else "飞书图片").replace('"', "'")
-        return f'<img src="{image_url}" alt="{alt}">'
+        alt = (alt_value or "飞书图片").replace('"', "'")
+        token_attr = f' data-feishu-token="{html_escape(token, quote=True)}"' if token else ""
+        return f'<img src="{html_escape(image_url, quote=True)}" alt="{html_escape(alt, quote=True)}"{token_attr}>'
 
     # The Feishu exporter sometimes puts an opaque media token in img[src] and
     # the authenticated URL in img[href]. VitePress would treat the token as a
@@ -603,12 +698,14 @@ def normalize_content(content: str, title: str, cite_links: dict[str, str] | Non
             return f"@{user_label}" if user_label else "@飞书用户"
         label = (title_match.group(1) if title_match else "飞书文档").strip() or "飞书文档"
         target = cite_links.get(doc_match.group(1), "") if doc_match and cite_links else ""
-        return f"[{label}]({target})" if target else label
+        return markdown_link(label, target) if target else label
 
     # Resolve citations before generic XML escaping; cite is a Feishu export
     # construct, not an HTML tag that should be shown literally.
     value = re.sub(r"<cite\s+([^>]*)></cite>", replace_cite, value, flags=re.IGNORECASE)
     value = re.sub(r"<cite\s+([^>]*)/>", replace_cite, value, flags=re.IGNORECASE)
+    if localize_document_links and cite_links:
+        value = rewrite_feishu_document_urls(value, cite_links)
 
     # Some Feishu image descriptions contain copied HTML such as
     # ``<a href=...``. If it remains in the Markdown image label, the Vue
@@ -643,6 +740,10 @@ def normalize_content(content: str, title: str, cite_links: dict[str, str] | Non
 
     def escape_unknown_html(match: re.Match[str]) -> str:
         tag_name = match.group(1).lower()
+        if match.string[max(0, match.start() - 2) : match.start()] == "](":
+            # Markdown permits angle-wrapped local destinations so paths with
+            # spaces, parentheses, or non-ASCII characters remain portable.
+            return match.group(0)
         return match.group(0) if tag_name in known_html_tags else match.group(0).replace("<", "&lt;").replace(">", "&gt;")
 
     # Raw XML/code snippets such as #include <iostream> and Maven XML are
@@ -691,6 +792,22 @@ def extract_media_tokens(content: str) -> list[str]:
     return sorted(set(re.findall(r"feishu-media://([A-Za-z0-9_-]+)", content)))
 
 
+def asset_identities(content: str) -> dict[str, str]:
+    """Prefer stable Feishu media tokens over short-lived signed URLs for deduplication."""
+    identities: dict[str, str] = {}
+    for match in re.finditer(r"<(?:img|a)\b([^>]*)>", content, flags=re.IGNORECASE):
+        attrs = html_attributes(match.group(1))
+        token = attrs.get("data-feishu-token", "").strip()
+        reference = attrs.get("src", "").strip()
+        if not reference and attrs.get("data-feishu-attachment", "").lower() == "true":
+            reference = attrs.get("href", "").strip()
+        if reference and token:
+            identities[reference] = f"feishu-token:{token}"
+    for token in extract_media_tokens(content):
+        identities[f"feishu-media://{token}"] = f"feishu-token:{token}"
+    return identities
+
+
 def extract_asset_references(content: str) -> list[str]:
     """Return image URLs, attachment URLs, and token-backed media references."""
     return sorted(
@@ -733,9 +850,10 @@ def download_one_asset(
     timeout_seconds: float,
     max_bytes: int,
     require_image: bool = True,
+    identity: str | None = None,
 ) -> tuple[str, str, str]:
     """Download one remote asset into a content-addressed local asset path."""
-    digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:24]
+    digest = hashlib.sha256((identity or url).encode("utf-8")).hexdigest()[:24]
     existing = next(iter(sorted(asset_root.glob(f"{digest}.*"))), None)
     if existing and existing.is_file() and existing.stat().st_size:
         return url, existing.name, "reused"
@@ -822,7 +940,7 @@ def materialize_assets(
     mirror_dir: Path,
     config: dict[str, Any],
 ) -> tuple[dict[str, str], dict[str, str], int, int]:
-    """Download all remote images once and return URL->mirror-relative asset paths."""
+    """Download assets once per stable media token or URL and return local paths."""
     references = sorted({ref for content in contents for ref in extract_asset_references(content)})
     if not references:
         return {}, {}, 0, 0
@@ -846,6 +964,14 @@ def materialize_assets(
     except (TypeError, ValueError):
         max_bytes = DEFAULT_MAX_ASSET_BYTES
 
+    identity_by_reference: dict[str, str] = {}
+    for content in contents:
+        identity_by_reference.update(asset_identities(content))
+    grouped_references: dict[str, list[str]] = {}
+    for reference in references:
+        identity = identity_by_reference.get(reference, reference)
+        grouped_references.setdefault(identity, []).append(reference)
+
     asset_map: dict[str, str] = {}
     errors: dict[str, str] = {}
     downloaded = 0
@@ -853,36 +979,45 @@ def materialize_assets(
 
     image_references = {url for content in contents for url in extract_image_urls(content)}
 
-    def download(reference: str) -> tuple[str, str, str, str]:
-        try:
-            if reference.startswith("feishu-media://"):
-                source, filename, status = download_one_media(
-                    config,
-                    reference.removeprefix("feishu-media://"),
-                    mirror_dir,
-                    asset_dir,
-                    max_bytes,
-                )
-            else:
-                source, filename, status = download_one_asset(
-                    reference,
-                    asset_root,
-                    timeout_seconds,
-                    max_bytes,
-                    require_image=reference in image_references,
-                )
-            return source, filename, status, ""
-        except Exception as exc:  # keep the original URL when one image fails
-            return reference, "", "failed", str(exc)
+    def download(identity: str, candidates: list[str]) -> tuple[list[str], str, str, str]:
+        last_error = ""
+        for reference in candidates:
+            try:
+                if reference.startswith("feishu-media://"):
+                    _source, filename, status = download_one_media(
+                        config,
+                        reference.removeprefix("feishu-media://"),
+                        mirror_dir,
+                        asset_dir,
+                        max_bytes,
+                    )
+                else:
+                    _source, filename, status = download_one_asset(
+                        reference,
+                        asset_root,
+                        timeout_seconds,
+                        max_bytes,
+                        require_image=reference in image_references,
+                        identity=identity,
+                    )
+                return candidates, filename, status, ""
+            except Exception as exc:  # try a refreshed signed URL for the same media token
+                last_error = str(exc)
+        return candidates, "", "failed", last_error
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(download, reference) for reference in references]
+        futures = [
+            executor.submit(download, identity, candidates)
+            for identity, candidates in grouped_references.items()
+        ]
         for future in as_completed(futures):
-            url, filename, status, error = future.result()
+            sources, filename, status, error = future.result()
             if status == "failed":
-                errors[url] = error
+                for source in sources:
+                    errors[source] = error
                 continue
-            asset_map[url] = (Path(asset_dir) / filename).as_posix()
+            for source in sources:
+                asset_map[source] = (Path(asset_dir) / filename).as_posix()
             if status == "downloaded":
                 downloaded += 1
             else:
@@ -1060,6 +1195,146 @@ def build_sidebar(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def document_body(raw: str) -> str:
+    """Exclude generated frontmatter from change details so diffs show document content."""
+    if raw.startswith("---\n"):
+        end = raw.find("\n---", 4)
+        if end >= 0:
+            return raw[end + 4 :].lstrip("\n")
+    return raw
+
+
+def relative_markdown_link(from_path: Path, target: Path, label: str) -> str:
+    relative = Path(os.path.relpath(target, from_path.parent)).as_posix()
+    return markdown_link(label, relative)
+
+
+def classify_changes(
+    old_nodes: dict[str, Any],
+    records: list[dict[str, Any]],
+    deleted: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Classify the current run without treating unchanged files as report entries."""
+    changes = {"added": [], "modified": [], "moved": [], "deleted": list(deleted)}
+    for record in records:
+        token = str(record.get("node_token", ""))
+        old = old_nodes.get(token, {}) if isinstance(old_nodes.get(token), dict) else {}
+        if not old:
+            changes["added"].append(record)
+            continue
+        moved = old.get("relative_path") != record.get("relative_path")
+        content_changed = (
+            old.get("content_hash") != record.get("content_hash")
+            or old.get("sync_status") != record.get("sync_status")
+        )
+        if moved:
+            changes["moved"].append(dict(record, previous_relative_path=old.get("relative_path", ""), content_changed=content_changed))
+        elif content_changed:
+            changes["modified"].append(record)
+    return changes
+
+
+def write_change_ledger(
+    output_dir: Path,
+    metadata_dir: Path,
+    ledger_dir: str,
+    changes: dict[str, list[dict[str, Any]]],
+    previous_bodies: dict[str, str],
+    sync_started: str,
+    max_diff_lines: int,
+) -> Path:
+    """Write a private run ledger and bounded Markdown diffs without changing the mirror tree."""
+    run_date = sync_started[:10] or "unknown-date"
+    run_time = re.sub(r"[^0-9]", "", sync_started[11:19]) or "run"
+    base = metadata_dir / ledger_dir / run_date
+    report_dir = base / run_time
+    suffix = 2
+    while report_dir.exists():
+        report_dir = base / f"{run_time}-{suffix}"
+        suffix += 1
+    details_dir = report_dir / "details"
+    summary_path = report_dir / "summary.md"
+    lines = [
+        "# Feishu mirror change ledger",
+        "",
+        f"- Synced at: {sync_started}",
+        f"- Added: **{len(changes['added'])}**",
+        f"- Modified: **{len(changes['modified'])}**",
+        f"- Moved or renamed: **{len(changes['moved'])}**",
+        f"- Deleted remotely: **{len(changes['deleted'])}**",
+        "",
+    ]
+
+    def entry_link(record: dict[str, Any]) -> str:
+        target = output_dir / str(record.get("relative_path", ""))
+        title = str(record.get("title", "document"))
+        return relative_markdown_link(summary_path, target, title) if target.is_file() else title
+
+    def append_entries(heading: str, entries: list[dict[str, Any]]) -> None:
+        if not entries:
+            return
+        lines.extend([f"## {heading}", ""])
+        for record in entries:
+            lines.append(f"- {entry_link(record)}")
+        lines.append("")
+
+    append_entries("Added", changes["added"])
+    if changes["modified"]:
+        lines.extend(["## Modified", ""])
+        for index, record in enumerate(changes["modified"], start=1):
+            token = str(record.get("node_token", ""))
+            before = previous_bodies.get(token, "")
+            target = output_dir / str(record.get("relative_path", ""))
+            after = document_body(target.read_text(encoding="utf-8")) if target.is_file() else ""
+            detail_link = ""
+            if before and after:
+                diff = list(
+                    difflib.unified_diff(
+                        document_body(before).splitlines(),
+                        after.splitlines(),
+                        fromfile="before",
+                        tofile="after",
+                        lineterm="",
+                        n=3,
+                    )
+                )
+                if diff:
+                    if len(diff) > max_diff_lines:
+                        diff = diff[:max_diff_lines] + ["... diff truncated ..."]
+                    detail_path = details_dir / f"change-{index:03d}.md"
+                    write_text(
+                        detail_path,
+                        "\n".join(
+                            [
+                                "# Document change detail",
+                                "",
+                                f"- Document: {record.get('title', 'document')}",
+                                "",
+                                "```diff",
+                                *diff,
+                                "```",
+                                "",
+                            ]
+                        ),
+                    )
+                    detail_link = " · " + relative_markdown_link(summary_path, detail_path, "diff")
+            lines.append(f"- {entry_link(record)}{detail_link}")
+        lines.append("")
+    if changes["moved"]:
+        lines.extend(["## Moved or renamed", ""])
+        for record in changes["moved"]:
+            content_note = " (content also changed)" if record.get("content_changed") else ""
+            lines.append(f"- {entry_link(record)}{content_note}")
+        lines.append("")
+    if changes["deleted"]:
+        lines.extend(["## Deleted remotely", ""])
+        for record in changes["deleted"]:
+            lines.append(f"- {record.get('title', 'document')} (preserved locally; marked deleted in the manifest)")
+        lines.append("")
+    write_text(summary_path, "\n".join(lines))
+    return summary_path
 
 
 def frontmatter_fields(raw: str) -> dict[str, str]:
@@ -1389,6 +1664,8 @@ def sync(args: argparse.Namespace) -> int:
             f"tree_event={tree_event}",
             flush=True,
         )
+    # Keep the remote node order stable while planning local paths and links.
+    ordered = list(nodes)
     used_paths: set[str] = set()
     path_by_token: dict[str, Path] = {}
     children_by_parent: dict[str, list[dict[str, Any]]] = {}
@@ -1422,13 +1699,6 @@ def sync(args: argparse.Namespace) -> int:
                     counter += 1
             used_directory_names.add(directory)
             expandable_directory_by_token[token] = directory
-    cite_links: dict[str, str] = {}
-    for node in nodes:
-        target = source_url(config, str(node.get("node_token")))
-        for identifier in (node.get("node_token"), node.get("obj_token")):
-            if identifier:
-                cite_links[str(identifier)] = target
-
     def path_for(node: dict[str, Any]) -> Path:
         node_key = node["node_token"]
         old = old_nodes.get(node_key, {}) if isinstance(old_nodes, dict) else {}
@@ -1482,6 +1752,62 @@ def sync(args: argparse.Namespace) -> int:
             file_stem=file_stem,
         )
 
+    planned_paths: dict[str, Path] = {}
+    for node in ordered:
+        token = str(node["node_token"])
+        planned_paths[token] = path_for(node)
+        path_by_token[token] = planned_paths[token]
+
+    localize_document_links = bool(
+        nested(config, "sync", "localize_internal_links", default=False)
+    )
+    render_sub_page_navigation = bool(
+        nested(config, "sync", "render_sub_page_navigation", default=False)
+    )
+    change_ledger_enabled = bool(nested(config, "sync", "change_ledger", default=False))
+    change_ledger_dir = str(
+        nested(config, "sync", "change_ledger_dir", default=DEFAULT_CHANGE_LEDGER_DIR)
+    ).strip("/\\")
+    if (
+        not change_ledger_dir
+        or Path(change_ledger_dir).is_absolute()
+        or ".." in Path(change_ledger_dir).parts
+    ):
+        raise SystemExit("sync.change_ledger_dir must be a relative directory without '..'")
+    try:
+        change_ledger_max_diff_lines = max(
+            20,
+            int(
+                nested(
+                    config,
+                    "sync",
+                    "change_ledger_max_diff_lines",
+                    default=DEFAULT_CHANGE_LEDGER_MAX_DIFF_LINES,
+                )
+            ),
+        )
+    except (TypeError, ValueError):
+        change_ledger_max_diff_lines = DEFAULT_CHANGE_LEDGER_MAX_DIFF_LINES
+
+    def document_links_for(node_token: str) -> dict[str, str]:
+        links: dict[str, str] = {}
+        current_path = mirror_dir / planned_paths[node_token]
+        for candidate in ordered:
+            candidate_token = str(candidate["node_token"])
+            if localize_document_links:
+                target = Path(
+                    os.path.relpath(
+                        mirror_dir / planned_paths[candidate_token],
+                        current_path.parent,
+                    )
+                ).as_posix()
+            else:
+                target = source_url(config, candidate_token)
+            for identifier in (candidate.get("node_token"), candidate.get("obj_token")):
+                if identifier:
+                    links[str(identifier)] = target
+        return links
+
     records: list[dict[str, Any]] = []
     counts = {
         "created": 0,
@@ -1501,13 +1827,8 @@ def sync(args: argparse.Namespace) -> int:
         "content_reused": 0,
         "error_categories": {},
     }
-    # `wiki +node-list` returns siblings in the order configured in Feishu.
-    # Keep that order all the way through records and sidebar generation.  A
-    # title sort makes the local tree look tidy but silently changes the
-    # knowledge owner's information architecture.
-    ordered = list(nodes)
-
     fetched: dict[str, tuple[str, str, str, str]] = {}
+    previous_bodies: dict[str, str] = {}
     remote_metadata: dict[str, dict[str, Any]] = {}
     metadata_probe_errors: dict[str, str] = {}
     if probe_remote_metadata:
@@ -1656,7 +1977,13 @@ def sync(args: argparse.Namespace) -> int:
             parts = raw.split("---", 2)
             body = parts[2].lstrip("\n") if len(parts) == 3 else raw
             return (
-                normalize_content(body.rstrip("\n"), clean_title(node.get("title"), token), cite_links),
+                normalize_content(
+                    body.rstrip("\n"),
+                    clean_title(node.get("title"), token),
+                    document_links_for(token),
+                    render_sub_page_navigation=render_sub_page_navigation,
+                    localize_document_links=localize_document_links,
+                ),
                 str(old.get("revision_id", "")),
             )
 
@@ -1672,7 +1999,13 @@ def sync(args: argparse.Namespace) -> int:
                 if delay:
                     time.sleep(delay)
                 raw_content, revision_id = fetch_doc(config, str(node.get("obj_token", "")))
-                content = normalize_content(raw_content, title, cite_links)
+                content = normalize_content(
+                    raw_content,
+                    title,
+                    document_links_for(token),
+                    render_sub_page_navigation=render_sub_page_navigation,
+                    localize_document_links=localize_document_links,
+                )
                 return token, "ok", content, "", revision_id
             except Exception as exc:  # keep inventory even when one document is unavailable
                 details = error_info(exc)
@@ -1712,7 +2045,13 @@ def sync(args: argparse.Namespace) -> int:
         raw = existing.read_text(encoding="utf-8")
         parts = raw.split("---", 2)
         body = parts[2].lstrip("\n") if len(parts) == 3 else raw
-        body = normalize_content(body.rstrip("\n"), clean_title(node.get("title"), token), cite_links)
+        body = normalize_content(
+            body.rstrip("\n"),
+            clean_title(node.get("title"), token),
+            document_links_for(token),
+            render_sub_page_navigation=render_sub_page_navigation,
+            localize_document_links=localize_document_links,
+        )
         fetched[token] = (
             str(old.get("sync_status", "ok")),
             body.rstrip("\n"),
@@ -1800,7 +2139,19 @@ def sync(args: argparse.Namespace) -> int:
                 if delay:
                     time.sleep(delay)
                 raw_content, revision_id = fetch_doc(config, str(node.get("obj_token", "")))
-                return token, "ok", normalize_content(raw_content, title, cite_links), "", revision_id
+                return (
+                    token,
+                    "ok",
+                    normalize_content(
+                        raw_content,
+                        title,
+                        document_links_for(token),
+                        render_sub_page_navigation=render_sub_page_navigation,
+                        localize_document_links=localize_document_links,
+                    ),
+                    "",
+                    revision_id,
+                )
             except Exception as exc:
                 return token, "failed", "", str(exc), ""
 
@@ -1838,8 +2189,7 @@ def sync(args: argparse.Namespace) -> int:
 
     for node in ordered:
         token = str(node["node_token"])
-        relative = path_for(node)
-        path_by_token[token] = relative
+        relative = planned_paths[token]
         title = clean_title(node.get("title"), token)
         obj_type = str(node.get("obj_type", ""))
         status = "ok"
@@ -1938,6 +2288,8 @@ def sync(args: argparse.Namespace) -> int:
             counts.setdefault("unchanged", 0)
             counts["unchanged"] += 1
         else:
+            if before_exists:
+                previous_bodies[token] = target.read_text(encoding="utf-8")
             write_text(target, frontmatter(metadata, sync_started, content_hash) + content + "\n")
             counts["updated" if before_exists else "created"] += 1
 
@@ -1947,6 +2299,8 @@ def sync(args: argparse.Namespace) -> int:
         deleted = [dict(value, deleted_at=sync_started) for key, value in old_nodes.items() if key not in current_tokens]
     for record in deleted:
         record["sync_status"] = "deleted"
+    changes = classify_changes(old_nodes, records, deleted)
+    change_stats = {name: len(entries) for name, entries in changes.items()}
     manifest = {
         "version": 2,
         "space_id": space_id,
@@ -1965,6 +2319,8 @@ def sync(args: argparse.Namespace) -> int:
         "event_names": event_names,
         "source_url_template": nested(config, "space", "source_url_template", default=""),
         "stats": {**counts, "deleted": len(deleted), "total": len(records)},
+        "changes": change_stats,
+        "change_ledger": {"enabled": change_ledger_enabled},
         "nodes": records,
         "deleted_nodes": deleted,
     }
@@ -2013,6 +2369,22 @@ def sync(args: argparse.Namespace) -> int:
     write_text(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     write_text(state_path, json.dumps(state, ensure_ascii=False, indent=2) + "\n")
     write_text(sidebar_path_file, json.dumps(sidebar, ensure_ascii=False, indent=2) + "\n")
+    if change_ledger_enabled:
+        write_change_ledger(
+            output_dir,
+            metadata_dir,
+            change_ledger_dir,
+            changes,
+            previous_bodies,
+            sync_started,
+            change_ledger_max_diff_lines,
+        )
+        print(
+            "change_ledger "
+            f"added={change_stats['added']} modified={change_stats['modified']} "
+            f"moved={change_stats['moved']} deleted={change_stats['deleted']}",
+            flush=True,
+        )
     readme = output_dir / "00_同步说明.md"
     if not readme.exists():
         write_text(

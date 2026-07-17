@@ -524,6 +524,75 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertIn("@张志伟", normalized)
         self.assertNotIn("`基础组件`", normalized)
 
+    def test_local_navigation_rewrites_document_links_and_sub_page_lists(self) -> None:
+        content = (
+            '<cite doc-id="node-child" title="子页面"></cite>\n\n'
+            '[另一个页面](https://example.feishu.cn/wiki/node-other)\n\n'
+            '<sub-page-list><sub-page doc-id="node-child" title="子页面"/>'
+            '<sub-page wiki-token="node-other" title="另一个页面"/></sub-page-list>'
+        )
+        normalized = sync.normalize_content(
+            content,
+            "父页面",
+            {"node-child": "child.md", "node-other": "../other.md"},
+            render_sub_page_navigation=True,
+            localize_document_links=True,
+        )
+
+        self.assertIn("[子页面](<child.md>)", normalized)
+        self.assertIn("[另一个页面](<../other.md>)", normalized)
+        self.assertIn("## 子页面导航", normalized)
+        self.assertNotIn("<sub-page-list", normalized)
+
+    def test_asset_identities_prefer_stable_media_tokens_over_signed_urls(self) -> None:
+        first = "https://internal-api-drive-stream.feishu.cn/authcode?code=old"
+        second = "https://internal-api-drive-stream.feishu.cn/authcode?code=new"
+        content = (
+            f'<img src="{first}" data-feishu-token="media-1">\n'
+            f'<a href="{second}" data-feishu-attachment="true" data-feishu-token="media-1">飞书附件</a>'
+        )
+
+        identities = sync.asset_identities(content)
+
+        self.assertEqual(identities[first], "feishu-token:media-1")
+        self.assertEqual(identities[second], "feishu-token:media-1")
+
+    def test_change_ledger_writes_bounded_diff_without_touching_the_mirror(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "docs"
+            target = output / "10_knowledge-base" / "文档.md"
+            target.parent.mkdir(parents=True)
+            target.write_text("---\nnode_token: node-1\n---\n\n新正文\n", encoding="utf-8")
+            changes = {
+                "added": [],
+                "modified": [
+                    {
+                        "node_token": "node-1",
+                        "title": "文档",
+                        "relative_path": "10_knowledge-base/文档.md",
+                    }
+                ],
+                "moved": [],
+                "deleted": [],
+            }
+            summary = sync.write_change_ledger(
+                output,
+                output / "90_同步元数据",
+                "change-reports",
+                changes,
+                {"node-1": "---\nnode_token: node-1\n---\n\n旧正文\n"},
+                "2026-07-17T13:47:33+00:00",
+                20,
+            )
+            summary_text = summary.read_text(encoding="utf-8")
+            detail_files = list(summary.parent.joinpath("details").glob("*.md"))
+            detail_text = detail_files[0].read_text(encoding="utf-8")
+
+        self.assertIn("Modified", summary_text)
+        self.assertEqual(len(detail_files), 1)
+        self.assertIn("-旧正文", detail_text)
+        self.assertIn("+新正文", detail_text)
+
     def test_export_policy_requires_explicit_confirmation_and_disables_auto_export(self) -> None:
         import yaml
 

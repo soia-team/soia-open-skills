@@ -3,10 +3,11 @@ name: soia-cwork-feishu-doc-git-sync
 description: 将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。
 dependencies:
   hard: [soia-cwork-feishu-cli]
+version: 1.1.0
 created_at: 2026-07-14 23:24:26
-updated_at: 2026-07-15 17:26:36
+updated_at: 2026-07-17 13:47:33
 created_by: claude opus 4.6
-updated_by: claude opus 4.6
+updated_by: gpt-5.6-terra
 ---
 
 # soia-cwork-feishu-doc-git-sync
@@ -24,6 +25,8 @@ updated_by: claude opus 4.6
 | 用 Obsidian 查看 | 在独立 vault 中保存规则、镜像和本地补录 | 可直接用 Obsidian 打开的 vault |
 | 用 VitePress 展示 | 生成站点侧边栏并构建静态站点 | 本地开发服务或构建产物 |
 | 检查表格/多维表格导出能力 | 解析真实资源类型、权限和可用导出格式 | 只读探查结果；不会默认生成 Excel 文件 |
+| 本地化资源与导航 | 经确认后下载图片/附件、去重，并把内部链接和子页面列表改为本地导航 | 本地资源、相对链接和可选子页面导航 |
+| 查看同步变更 | 经配置后生成新增、修改、移动和远端删除的本地变更台账与受限 diff | 本次同步的统计、变更清单和差异详情 |
 | 规划双向同步 | 区分只读镜像、托管文档和本地补录 | 冲突/权限风险说明，不自动覆盖飞书 |
 
 ### 客户如何使用
@@ -35,7 +38,8 @@ updated_by: claude opus 4.6
 5. 同步写入后会自动校验 manifest、文件存在性、frontmatter、失败占位、侧边栏覆盖范围和资源引用；发现 `failed`/`stale` 时返回非零结果，不能把旧正文当作最新成功。
 6. 如需检查表格导出，先做 `drive +inspect`/帮助/schema 探查；能力探查不等于授权导出。
 7. 只有客户明确确认导出范围、格式、文件数和本地目录后，才调用 `drive +export` 或 `drive +export-download`。
-8. 同步完成后再运行 Git diff、站点构建和必要的人工抽查。
+8. 如需离线资源、文档间本地跳转、子页面导航或变更台账，先在私有配置中逐项启用 `download_assets`、`localize_internal_links`、`render_sub_page_navigation`、`change_ledger`；它们默认关闭以兼容已有镜像。
+9. 同步完成后再运行 Git diff、站点构建和必要的人工抽查。
 
 推荐命令：
 
@@ -159,6 +163,9 @@ sync:
 - `--refresh-tree-only` 会重新读取飞书节点树和兄弟顺序，按最新 `parent_node_token` 重建本地目录和侧边栏，但复用已有本地正文；启用资源本地化时，会额外刷新仍含未本地化资源的文档；必须与 `--rebuild-tree` 一起使用。
 - `manifest.json`/`sync-state.json` 的 `tree_order: feishu_node_list` 表示目录顺序来源于飞书节点列表，不是标题排序。
 - 图片默认保留远程 URL；设置 `sync.download_assets: true` 或传入 `--download-assets` 后，技能会把正文中的远程图片及 `<source token="...">` 媒体块下载到 `paths.generated_dir/_assets/`，并把 Markdown/HTML/附件引用改写为相对路径，VitePress 和 Obsidian 可直接读取本地文件。
+- 下载资源时，优先按飞书媒体 token 去重；同一附件或图片即使带有不同的短期签名 URL，也只保留一份本地资源。无 token 的资源仍按 URL 内容寻址。
+- `sync.localize_internal_links: true` 时，已同步的 Wiki/文档引用会改为相对本地 Markdown 链接；`sync.render_sub_page_navigation: true` 时，飞书导出的 `<sub-page-list>` 会改为本地 Markdown 子页面导航。两项均默认关闭，不影响已有外链行为。
+- `sync.change_ledger: true` 时，会在同步元数据下按运行生成新增、修改、移动和远端删除的变更台账；修改项只保留受 `change_ledger_max_diff_lines` 限制的 diff，不复制文档全文，也不改变生成镜像或本地补录目录。
 - 图片/附件本地化是显式 opt-in 的本地数据下载；不能因为用户只要求“检查图片”就下载全部素材。持久化配置中的 `sync.download_assets: true` 只能视为用户此前对该资源范围的明确授权，不得扩展为表格或多维表格导出授权。
 - `sheet` 与 `bitable` 默认只生成元数据 stub，不读取表内数据。导出为 `xlsx`、`csv` 或 `base` 属于敏感数据导出，必须遵循 [references/export-policy.yml](references/export-policy.yml)：先解析和 dry-run，再展示范围并等待明确确认；不得自动写入生成镜像目录、提交 Git 或上传回飞书。
 - 飞书 Markdown 导出的图片 URL 可能是短期鉴权地址；启用本地化时，默认只重新读取仍含远程图片的文档来刷新 URL，不会无条件重拉所有正文。可用 `--refresh-asset-urls` 显式打开该行为。

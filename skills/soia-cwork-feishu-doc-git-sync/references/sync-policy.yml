@@ -31,6 +31,18 @@ state:
   state_file: 90_同步元数据/sync-state.json
   preserve_deleted_files_when_prune_false: true
 
+change_ledger:
+  default: disabled
+  opt_in_config: sync.change_ledger
+  location: "90_同步元数据/<change_ledger_dir>/<date>/<run>/summary.md"
+  categories:
+    - added
+    - modified
+    - moved
+    - deleted_remotely
+  modified_detail: "bounded unified diff only; never duplicate complete document bodies"
+  mirror_effect: "does not overwrite generated content, local additions, or deletion policy"
+
 validation:
   post_sync_gate: true
   standalone_flag: --validate-only
