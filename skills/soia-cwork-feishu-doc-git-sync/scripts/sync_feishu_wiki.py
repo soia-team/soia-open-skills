@@ -1606,6 +1606,22 @@ def merge_asset_results(
     return merged_map, retained_errors
 
 
+def nodes_requiring_asset_refresh(
+    nodes: list[dict[str, Any]],
+    fetched: dict[str, tuple[str, str, str, str]],
+    asset_errors: dict[str, str],
+) -> list[dict[str, Any]]:
+    """Refresh only documents that still carry a failed resource reference."""
+    failed_references = set(asset_errors)
+    return [
+        node
+        for node in nodes
+        if str(node.get("obj_type", "")) in {"docx", "doc"}
+        and str(node.get("node_token")) in fetched
+        and any(reference in fetched[str(node["node_token"])][1] for reference in failed_references)
+    ]
+
+
 def source_url(config: dict[str, Any], node_token: str) -> str:
     template = str(nested(config, "space", "source_url_template", default=""))
     if not template or template.startswith("<"):
@@ -2755,13 +2771,7 @@ def sync(args: argparse.Namespace) -> int:
     # documents that still contain unresolved assets, then download fresh URLs
     # or token-backed media through the official CLI.
     if download_assets_enabled and asset_errors and refresh_asset_urls_enabled:
-        asset_nodes = [
-            node
-            for node in ordered
-            if str(node.get("obj_type", "")) in {"docx", "doc"}
-            and str(node.get("node_token")) in fetched
-            and extract_asset_references(fetched[str(node["node_token"])][1])
-        ]
+        asset_nodes = nodes_requiring_asset_refresh(ordered, fetched, asset_errors)
         refresh_workers_value = nested(
             config,
             "sync",

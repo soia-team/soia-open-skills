@@ -221,6 +221,26 @@ class FeishuDocSyncTests(unittest.TestCase):
         )
         self.assertEqual(errors, {"https://old.example/failed.png": "permission_denied"})
 
+    def test_asset_refresh_targets_only_documents_with_failed_references(self) -> None:
+        nodes = [
+            {"node_token": "doc-failed", "obj_type": "docx"},
+            {"node_token": "doc-localized", "obj_type": "docx"},
+            {"node_token": "sheet", "obj_type": "sheet"},
+        ]
+        fetched = {
+            "doc-failed": ("ok", "![missing](https://asset.example/missing.png)", "", ""),
+            "doc-localized": ("ok", "![ready](_assets/ready.png)", "", ""),
+            "sheet": ("ok", "| value |", "", ""),
+        }
+
+        selected = sync.nodes_requiring_asset_refresh(
+            nodes,
+            fetched,
+            {"https://asset.example/missing.png": "temporary_network"},
+        )
+
+        self.assertEqual([node["node_token"] for node in selected], ["doc-failed"])
+
     def test_bitable_sync_requires_explicit_tables_and_keeps_attachment_opt_in(self) -> None:
         with self.assertRaises(SystemExit):
             sync.configured_bitable_selections({"sync": {"bitables": {}}}, True)
