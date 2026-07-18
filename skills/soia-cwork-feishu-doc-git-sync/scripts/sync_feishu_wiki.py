@@ -1588,6 +1588,24 @@ def rewrite_asset_urls(
     return content
 
 
+def merge_asset_results(
+    previous_map: dict[str, str],
+    previous_errors: dict[str, str],
+    refreshed_map: dict[str, str],
+    refreshed_errors: dict[str, str],
+    final_contents: list[str],
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Keep successful first-pass mappings when only some documents refresh."""
+    merged_map = {**previous_map, **refreshed_map}
+    all_errors = {**previous_errors, **refreshed_errors}
+    retained_errors = {
+        reference: error
+        for reference, error in all_errors.items()
+        if any(reference in content for content in final_contents)
+    }
+    return merged_map, retained_errors
+
+
 def source_url(config: dict[str, Any], node_token: str) -> str:
     template = str(nested(config, "space", "source_url_template", default=""))
     if not template or template.startswith("<"):
@@ -2801,13 +2819,23 @@ def sync(args: argparse.Namespace) -> int:
             flush=True,
         )
         if refreshed_contents:
-            asset_map, asset_errors, assets_downloaded, assets_reused = materialize_assets(
+            refreshed_map, refreshed_errors, assets_downloaded, assets_reused = materialize_assets(
                 refreshed_contents,
                 mirror_dir,
                 config,
             )
-            counts["assets_downloaded"] = assets_downloaded
-            counts["assets_reused"] = assets_reused
+            final_contents = [
+                value[1] for value in fetched.values() if isinstance(value, tuple) and len(value) > 1
+            ]
+            asset_map, asset_errors = merge_asset_results(
+                asset_map,
+                asset_errors,
+                refreshed_map,
+                refreshed_errors,
+                final_contents,
+            )
+            counts["assets_downloaded"] += assets_downloaded
+            counts["assets_reused"] += assets_reused
             counts["assets_failed"] = len(asset_errors)
             print(
                 f"asset_download refreshed={len(asset_map)} downloaded={assets_downloaded} "

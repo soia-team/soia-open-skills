@@ -199,6 +199,28 @@ class FeishuDocSyncTests(unittest.TestCase):
         )
         self.assertEqual(selections["node-sheet"][0]["range"], "A1:C4")
 
+    def test_asset_refresh_keeps_first_pass_mappings_for_unrefreshed_documents(self) -> None:
+        asset_map, errors = sync.merge_asset_results(
+            {"https://old.example/image.png": "_assets/old.png"},
+            {"https://old.example/failed.png": "permission_denied"},
+            {"https://new.example/image.png": "_assets/new.png"},
+            {"https://new.example/failed.png": "temporary_network"},
+            [
+                "![old](https://old.example/image.png)",
+                "![old-failed](https://old.example/failed.png)",
+                "![new](https://new.example/image.png)",
+            ],
+        )
+
+        self.assertEqual(
+            asset_map,
+            {
+                "https://old.example/image.png": "_assets/old.png",
+                "https://new.example/image.png": "_assets/new.png",
+            },
+        )
+        self.assertEqual(errors, {"https://old.example/failed.png": "permission_denied"})
+
     def test_bitable_sync_requires_explicit_tables_and_keeps_attachment_opt_in(self) -> None:
         with self.assertRaises(SystemExit):
             sync.configured_bitable_selections({"sync": {"bitables": {}}}, True)
