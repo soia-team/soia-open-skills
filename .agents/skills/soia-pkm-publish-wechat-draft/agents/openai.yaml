@@ -1,0 +1,4 @@
+interface:
+  display_name: "PKM Publish WeChat Draft"
+  short_description: "把文章排版成符合微信公众号限制的 HTML，校验后推入草稿箱；只建草稿，绝不自动群发。"
+  default_prompt: "Use soia-pkm-publish-wechat-draft: 把这篇文章排版成公众号文章，校验后推到草稿箱。"

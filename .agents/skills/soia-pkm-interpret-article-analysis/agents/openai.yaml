@@ -1,0 +1,4 @@
+interface:
+  display_name: "PKM Interpret"
+  short_description: "对 vault 里 clip 进来的长文/论文，AI 给出内容总览/核心要点/关键启发/批判视角/延伸阅读五段式解读，帮你判断值不值得深挖；产出独立 <原文件名>-AI解读.md，不碰原文，不代替 distill 表态。"
+  default_prompt: "Use soia-pkm-interpret-article-analysis：对这篇文章给出 AI 的五段式解读（内容总览/核心要点/关键启发/批判视角/延伸阅读），默认快读，说「精读」升级为逐节展开+论证链核查。落成独立的 <原文件名>-AI解读.md，双链回原文，不改动原文，也不写入 `## 我的看法`（那是 soia-pkm-distill-article-opinion 的职责）。"

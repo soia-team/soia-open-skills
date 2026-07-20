@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "description": "Default AI-native Markdown knowledge-base scaffold. Copy this JSON and customize directories/files for your own workflow.",
+  "directories": [
+    "00_Obsidian系统/scripts",
+    "10_Workbench/00_Inbox",
+    "20_资料库",
+    "30_日志与思考/10_日常所思",
+    "30_日志与思考/20_Agent工作日志",
+    "30_日志与思考/30_对话纪要与决策",
+    "30_日志与思考/40_周维护简报",
+    "40_阅读与资料/10_文章摘抄/_模板",
+    "40_阅读与资料/10_文章摘抄/_MOC",
+    "50_Writing/10_Drafts",
+    "50_写作与发布/20_发布",
+    "90_系统归档",
+    ".claudian/opencode",
+    ".workbuddy/memory",
+    ".obsidian/snippets"
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "content": [
+        "# AGENTS.md · Vault 全局规则",
+        "",
+        "> AI 工作时必读。这是一个按 PARA 组织、AI-native 的个人知识库。",
+        "",
+        "## 结构（PARA）",
+        "",
+        "- `00_Obsidian系统/` 配置与元信息",
+        "- `10_工作台/` 进行中的工作 + Inbox",
+        "- `20_资料库/` 长期参考资料（Resource）",
+        "- `30_日志与思考/` 日记 / 对话纪要 / AI 协作日志",
+        "- `40_阅读与资料/` 读书、文章、资料（Resource 专项）",
+        "- `50_写作与发布/` 原创草稿与发布",
+        "- `90_系统归档/` 不再活跃的历史（Archive）",
+        "",
+        "## 约定",
+        "",
+        "- 目录 / 文件名可按使用者语言与习惯调整；frontmatter 是结构化元数据的数据源",
+        "- 链接优先短 wikilink `[[文件名]]`",
+        "- 平台配置目录（如 `.obsidian/`）属于消费端，不是 Markdown 正文的真源",
+        "- 不在 vault 或 skill 仓库写入密码、密钥、token、cookie 或个人敏感信息",
+        "",
+        "## PKM 闭环（soia-pkm-* 技能）",
+        "",
+        "`收(clip-*)` → `整理(organize)` → `点(distill)` → `写(compose)` → `发(publish)`",
+        "",
+        "## 多 AI 接入",
+        "",
+        "`AGENTS.md` 是唯一规则源；`CLAUDE.md` / `GEMINI.md` / `OPENCODE.md` / `WORKBUDDY.md` 只是适配层。",
+        "",
+        "默认不要读取私有数据、账号、密钥、凭据类文件，除非用户明确要求。"
+      ]
+    },
+    {
+      "path": "CLAUDE.md",
+      "content": [
+        "# CLAUDE.md",
+        "",
+        "Claude Code adapter. Canonical rules live in `AGENTS.md`.",
+        "",
+        "1. Read `AGENTS.md` first.",
+        "2. Read zone-level `AGENTS.md` before editing a zone.",
+        "3. Do not read private data or credential files unless the user explicitly asks.",
+        "4. Use `soia-pkm-*` skills for `clip -> organize -> distill -> compose -> publish`."
+      ]
+    },
+    {
+      "path": "GEMINI.md",
+      "content": [
+        "# GEMINI.md",
+        "",
+        "Gemini CLI / Antigravity CLI adapter. Canonical rules live in `AGENTS.md`.",
+        "",
+        "1. Read `AGENTS.md` first.",
+        "2. Read zone-level `AGENTS.md` before editing a zone.",
+        "3. Do not read private data or credential files unless the user explicitly asks.",
+        "4. Prefer Markdown, YAML frontmatter, wikilinks, and MOC."
+      ]
+    },
+    {
+      "path": "OPENCODE.md",
+      "content": [
+        "# OPENCODE.md",
+        "",
+        "opencode adapter. Canonical rules live in `AGENTS.md`.",
+        "",
+        "opencode prompts should route back to `AGENTS.md` and zone-level `AGENTS.md`.",
+        "Do not read private data or credential files unless the user explicitly asks."
+      ]
+    },
+    {
+      "path": "WORKBUDDY.md",
+      "content": [
+        "# WORKBUDDY.md",
+        "",
+        "workbuddy adapter. Canonical rules live in `AGENTS.md`.",
+        "",
+        "`.workbuddy/memory/` is auxiliary memory, not the source of truth. Vault notes, frontmatter, MOC, git history, and explicit user instructions are authoritative."
+      ]
+    },
+    {
+      "path": "30_日志与思考/AGENTS.md",
+      "content": [
+        "# 30_日志与思考 · AGENTS.md",
+        "",
+        "> 按时间线展开的笔记；先读根 `AGENTS.md`，再看本区规则。",
+        "",
+        "## 子目录",
+        "",
+        "- `10_日常所思/<年>/` 日记、随笔",
+        "- `20_Agent工作日志/` AI Agent 协作过程记录；可由会话日志 hook 自动追加改动快照",
+        "- `30_对话纪要与决策/<年>/` 重要对话纪要、决策记录",
+        "- `40_周维护简报/` 每周「vault 周维护」产出的简报"
+      ]
+    },
+    {
+      "path": "40_阅读与资料/AGENTS.md",
+      "content": [
+        "# 40_阅读与资料 · AGENTS.md",
+        "",
+        "> 文章摘抄默认放 `10_文章摘抄/<年>/`；路径可在 clip/organize 类技能中通过参数或环境变量覆盖。",
+        "> frontmatter 建议包含：`tags:[文章摘抄]`、`source`、`url`、`author`、`topics:[]`、`captured_at`。",
+        "> 主题用 `topics` 双链 + `_MOC/` 聚合。用户观点段留给用户，AI 不代替用户立场。"
+      ]
+    },
+    {
+      "path": "40_阅读与资料/10_文章摘抄/_模板/文章模板.md",
+      "content": [
+        "---",
+        "tags: [文章摘抄]",
+        "source:",
+        "url:",
+        "author:",
+        "published_at:",
+        "captured_at:",
+        "topics: []",
+        "time_sensitive: false",
+        "review_after:",
+        "---",
+        "",
+        "# <标题>",
+        "",
+        "## 摘要",
+        "",
+        "## 原文",
+        "",
+        "## 我的看法",
+        "",
+        "<!-- 留空给用户后续手写 -->",
+        "",
+        "## 关联",
+        "",
+        "- 相关文章：",
+        "- 主题 MOC："
+      ]
+    },
+    {
+      "path": ".obsidian/snippets/wide-page.css",
+      "content": [
+        "/* wide-page: 所有笔记撑满编辑器宽度 */",
+        "body {",
+        "  --file-line-width: 100% !important;",
+        "  --max-width: 100% !important;",
+        "  --line-width: 100% !important;",
+        "}",
+        ".markdown-preview-view table, .markdown-rendered table { width: 100% !important; }"
+      ]
+    },
+    {
+      "path": ".claudian/opencode/system.md",
+      "content": [
+        "## Vault Canonical Rules",
+        "",
+        "This Markdown knowledge base uses `AGENTS.md` as the canonical rule source. Before changing vault content, read `AGENTS.md`; when editing a zone, read that zone's `AGENTS.md` too.",
+        "",
+        "Do not read private data or credential files unless the user explicitly asks."
+      ]
+    },
+    {
+      "path": "00_Obsidian系统/使用手册.md",
+      "content": [
+        "# 使用手册",
+        "",
+        "这是 `soia-pkm-bootstrap-vault-base` 生成的 AI-native Markdown 知识库骨架。",
+        "",
+        "## 多 AI 接入",
+        "",
+        "| AI | 入口 |",
+        "|----|------|",
+        "| Codex | `AGENTS.md` |",
+        "| Claude Code | `CLAUDE.md` |",
+        "| Gemini CLI | `GEMINI.md` |",
+        "| Antigravity CLI | `AGENTS.md` / `GEMINI.md` |",
+        "| opencode | `OPENCODE.md` / `.claudian/opencode/system.md` |",
+        "| workbuddy | `WORKBUDDY.md` / `.workbuddy/memory/` |",
+        "",
+        "Antigravity CLI 的全局技能目录是 `~/.gemini/antigravity-cli/skills/`，workspace 技能目录是 `.agents/skills/`。",
+        "",
+        "## PKM 闭环技能",
+        "",
+        "| 环节 | 技能 | 一句话 |",
+        "|------|------|--------|",
+        "| 收 | `soia-pkm-clip-*` | 把 X / 公众号 / 网页 / 云盘内容归档进来 |",
+        "| 整理 | `soia-pkm-organize-article-moc` | 分类 / 建 MOC / 补双链 |",
+        "| 点 | `soia-pkm-distill-article-opinion` | 把收藏炼成你的观点 |",
+        "| 写 | `soia-pkm-compose-article-draft` | 把观点写成文章草稿 |",
+        "| 发 | `publish-*` 家族 | 按公众号、X thread、小红书平台适配内容 |",
+        "",
+        "## 自定义初始化",
+        "",
+        "目录和种子文件来自 `init_vault.py --config <json或yaml>`。复制默认配置后再改，不要修改开源脚本来写死个人需求。"
+      ]
+    },
+    {
+      "path": "00_Obsidian系统/AI-native Obsidian 从零到发布流程.md",
+      "content": [
+        "# AI-native Markdown 从零到发布流程",
+        "",
+        "```",
+        "clip-*(收集) → organize(清洗/归类/MOC) → distill(用户观点) → compose(草稿) → publish(平台适配/发布留底) → vault 周维护",
+        "```",
+        "",
+        "## 万能提示词模板",
+        "",
+        "你现在是我的 Markdown Knowledge Base Architect（知识库架构师）兼系统管理员。",
+        "",
+        "目标：从零开始搭建或重整一套 AI-native Markdown 知识库。不要只给建议，优先直接执行；无法自动执行的部分，明确列出我需要准备的资料。",
+        "",
+        "请先确认 vault 路径、目录命名偏好、主要研究领域、输出平台、可用 AI，以及是否要使用默认配置或自定义 JSON/YAML 配置。"
+      ]
+    }
+  ]
+}

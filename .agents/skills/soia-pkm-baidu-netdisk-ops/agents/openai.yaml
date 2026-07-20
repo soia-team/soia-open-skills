@@ -1,0 +1,4 @@
+interface:
+  display_name: "PKM Baidupan"
+  short_description: "百度官方 bdpan Skill 适配：浏览、搜索、传输、管理与只读 JSONL 扫描"
+  default_prompt: "Use soia-pkm-baidu-netdisk-ops: 通过百度官方 bdpan Skill 登录、浏览或安全操作百度网盘，并在需要时生成只读 JSONL 扫描。"

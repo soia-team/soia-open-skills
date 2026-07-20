@@ -1,0 +1,73 @@
+version: 1
+
+classification:
+  tabular_export: sensitive_data_export
+  media_download: local_data_download
+
+defaults:
+  automatic_tabular_export: false
+  automatic_media_download: false
+  inspect_without_confirmation: true
+  dry_run_before_export: true
+
+supported_routes:
+  sheet:
+    source: "drive +export"
+    formats:
+      xlsx: "电子表格工作簿"
+      csv: "单个工作表；必须提供 sub_id"
+  bitable:
+    source: "drive +export"
+    formats:
+      xlsx: "多维表格数据工作簿"
+      csv: "单个数据表；必须提供 sub_id"
+      base: "多维表格快照；可选 only-schema"
+  docx:
+    source: "docs +fetch or drive +export"
+    formats:
+      markdown: "正文镜像"
+      pdf: "文档导出"
+      xlsx: false
+    note: "文档内普通表格不能直接按 docx 导出为 xlsx；需要单独的表格解析器。"
+
+confirmation:
+  required: true
+  required_fields:
+    - source_titles_or_node_tokens
+    - source_types
+    - export_formats
+    - estimated_file_count
+    - local_output_dir
+    - whether_git_tracking_is_allowed
+  acceptable_phrases:
+    - "确认导出"
+    - "同意导出"
+    - "按这个范围导出"
+  not_sufficient:
+    - "看下是否可以导出"
+    - "检查 Excel 支持"
+    - "调研一下导出能力"
+  rule: "能力探查不等于授权导出；未得到明确确认时只允许 inspect、help、schema 或 dry-run。"
+
+execution:
+  preflight:
+    - "使用 drive +inspect 解析 Wiki node 到真实 obj_token 和 obj_type"
+    - "检查 bot 身份、资源可见性和所需 scope"
+    - "先输出范围、格式、文件数和目录，等待明确确认"
+  allowed_after_confirmation:
+    - "lark-cli drive +export"
+    - "lark-cli drive +task_result --scenario export"
+    - "lark-cli drive +export-download"
+  prohibited:
+    - "不得用 user OAuth 绕过 bot 的资源可见范围"
+    - "不得把导出文件自动写入 10_knowledge-base/"
+    - "不得自动提交或推送导出文件到 Git"
+    - "不得把导出文件上传回飞书"
+    - "不得在日志、清单或最终回复输出表格单元格内容、token 或下载 URL"
+
+output:
+  user_must_choose_or_confirm: true
+  default_disposable_dir: "${TMPDIR:-/tmp}/soia-cwork-feishu-doc-git-sync/exports"
+  generated_mirror_dir_policy: "deny_by_default"
+  git_policy: "untracked_or_explicitly_approved_only"
+  retention: "tell_user where files were written and how to remove them"

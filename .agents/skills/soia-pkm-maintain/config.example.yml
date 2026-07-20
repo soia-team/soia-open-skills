@@ -1,0 +1,6 @@
+# soia-pkm-maintain private config example.
+# Copy to ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-maintain/config.yml.
+
+env:
+  OBSIDIAN_VAULT: "<vault-path>"
+  SOIA_SESSION_LOG_DIR: "30_日志与思考/20_Agent工作日志"

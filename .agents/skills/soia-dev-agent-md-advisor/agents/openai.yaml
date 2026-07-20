@@ -1,0 +1,7 @@
+# Optional OpenAI/Codex/SOIA catalog metadata.
+# Canonical instructions still live in ../SKILL.md so Claude Code and other
+# skills.sh-compatible agents receive the same dependencies and workflow rules.
+interface:
+  display_name: "Agent MD Advisor"
+  short_description: "AGENTS.md / CLAUDE.md / GEMINI.md 与 .claude 配置设计顾问：审查诊断、新项目起草、最佳实践问答三种模式，六维度诊断长度预算/可执行性/分区路由/重复矛盾/入口一致性/时效。"
+  default_prompt: "Use soia-dev-agent-md-advisor: 审查我的 AGENTS.md/CLAUDE.md 配置，按六维度给我一份问题清单和改写建议，先别动手改，等我确认。"
