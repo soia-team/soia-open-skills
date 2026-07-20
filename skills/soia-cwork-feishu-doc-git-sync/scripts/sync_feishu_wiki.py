@@ -2150,6 +2150,25 @@ def merge_asset_results(
     return merged_map, retained_errors
 
 
+def summarize_asset_errors(errors: dict[str, str]) -> dict[str, int]:
+    """Count only safe asset failure categories, never signed URLs or messages."""
+    categories: dict[str, int] = {}
+    for detail in errors.values():
+        marker = re.search(
+            r"\bcategory=(rate_limit|permission_denied|not_found|temporary_network|invalid_response|cli_error)\b",
+            detail,
+        )
+        category = (
+            "refresh_required"
+            if detail == "refresh_required"
+            else marker.group(1)
+            if marker
+            else safe_error_category(detail)
+        )
+        categories[category] = categories.get(category, 0) + 1
+    return dict(sorted(categories.items()))
+
+
 def nodes_requiring_asset_refresh(
     nodes: list[dict[str, Any]],
     fetched: dict[str, tuple[str, str, str, str]],
@@ -3001,6 +3020,7 @@ def sync(args: argparse.Namespace) -> int:
         "assets_reused": 0,
         "assets_failed": 0,
         "assets_deferred": 0,
+        "asset_error_categories": {},
         "asset_content_refreshed": 0,
         "asset_content_refresh_failed": 0,
         "moved_deleted": 0,
@@ -3316,6 +3336,7 @@ def sync(args: argparse.Namespace) -> int:
         counts["assets_downloaded"] = assets_downloaded
         counts["assets_reused"] = assets_reused
         counts["assets_failed"] = len(asset_errors)
+        counts["asset_error_categories"] = summarize_asset_errors(asset_errors)
         counts["assets_deferred"] = assets_deferred
         print(
             f"asset_download completed={len(asset_map)} downloaded={assets_downloaded} "
@@ -3414,12 +3435,19 @@ def sync(args: argparse.Namespace) -> int:
             counts["assets_downloaded"] += assets_downloaded
             counts["assets_reused"] += assets_reused
             counts["assets_failed"] = len(asset_errors)
+            counts["asset_error_categories"] = summarize_asset_errors(asset_errors)
             counts["assets_deferred"] += assets_deferred
             print(
                 f"asset_download refreshed={len(asset_map)} downloaded={assets_downloaded} "
                 f"reused={assets_reused} failed={len(asset_errors)} deferred={assets_deferred}",
                 flush=True,
             )
+            if asset_errors:
+                print(
+                    "asset_download error_categories="
+                    f"{json.dumps(counts['asset_error_categories'], ensure_ascii=False, sort_keys=True)}",
+                    flush=True,
+                )
 
     complete_sheet_exports: dict[str, str] = {}
     complete_bitable_exports: dict[str, str] = {}

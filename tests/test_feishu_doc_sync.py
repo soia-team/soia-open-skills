@@ -1111,6 +1111,22 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertIn("../_assets/image.png", rewritten)
         self.assertIn("../_assets/archive.zip", rewritten)
 
+    def test_asset_error_summary_redacts_resource_references(self) -> None:
+        errors = {
+            "https://internal-api-drive-stream.feishu.cn/media?code=expired": "HTTP Error 403: Forbidden",
+            "feishu-media://file-token": "lark-cli media request failed category=temporary_network",
+            "https://internal-api-drive-stream.feishu.cn/image?code=refresh": "refresh_required",
+        }
+
+        self.assertEqual(
+            sync.summarize_asset_errors(errors),
+            {
+                "permission_denied": 1,
+                "refresh_required": 1,
+                "temporary_network": 1,
+            },
+        )
+
     def test_media_tokens_survive_normalization_as_downloadable_references(self) -> None:
         content = '<source token="file-token-1" />\n<img token="img-token-2" />'
         normalized = sync.normalize_content(content, "带图片文档")
