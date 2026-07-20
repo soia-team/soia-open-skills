@@ -63,6 +63,21 @@ sync:
       layout: true
       charts: true
       floating_images: true
+      # Report metadata stays opt-in: it is retained in the Sheet JSON snapshot,
+      # not reconstructed as interactive Markdown.
+      pivots: false
+      filters: false
+      conditional_formats: false
+      sparklines: false
+    # Complete workbooks preserve formulas, styles, comments, charts, pivots
+    # and cell images more faithfully than Markdown. This is a full sensitive
+    # data export and therefore needs BOTH flags plus an explicit user approval.
+    workbook_exports:
+      enabled: false
+      all_nodes: false
+      batch_size: 10
+      timeout_seconds: 120
+      output_dir: "_exports/sheets"
   # Base/bitable data is also sensitive. Select individual tables and a
   # record limit; Markdown is accompanied by a schema-and-record JSON snapshot.
   bitables:
@@ -76,7 +91,26 @@ sync:
     #   table_id: "<table-id>"
     #   max_records: 200
     #   include_views: false
+    #   include_dashboards: false
     #   download_attachments: false
+    # Complete Base exports preserve tables, views and dashboards in their
+    # native .base form. This is an explicit full-export authorization.
+    base_exports:
+      enabled: false
+      all_nodes: false
+      batch_size: 5
+      timeout_seconds: 120
+      output_dir: "_exports/bitables"
+  # Wiki `file` nodes are opaque binary downloads. Their types may include
+  # zip/dmg/exe; the synchronizer only saves them and never opens, executes,
+  # mounts, unzips, or parses them.
+  files:
+    downloads:
+      enabled: false
+      all_nodes: false
+      batch_size: 10
+      timeout_seconds: 120
+      output_dir: "_assets/wiki-files"
   # Keep existing Feishu links by default. Enable only when the local mirror
   # should be self-contained and document references should point to local files.
   localize_internal_links: false

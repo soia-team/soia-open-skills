@@ -41,6 +41,12 @@ resources:
       - "Chart and floating-image metadata are captured per selected worksheet; they are not rendered as native Markdown charts."
       - "Formula results are captured but not recalculated locally."
       - "Cell-image binary download, pivot-table recreation, and a native workbook file remain separate confirmed export work."
+    complete_workbook:
+      status: supported_after_full_export_confirmation
+      route: "sheets +workbook-export --file-extension xlsx"
+      config: "sync.sheets.workbook_exports.enabled=true and all_nodes=true"
+      local_form: "batched .xlsx fidelity files linked from generated Sheet indexes"
+      preserves: [formulas, styles, comments, charts, pivot_tables, cell_images]
 
   bitable:
     table_snapshot:
@@ -57,6 +63,24 @@ resources:
       config: "sync.bitables.download_attachments: true, optionally overridden per selection"
       local_form: "local files with relative paths recorded in the private table snapshot"
       limits: "sync.max_asset_bytes applies to every downloaded attachment"
+    dashboard_reports:
+      status: supported_when_selected
+      route: "base +dashboard-list and base +dashboard-block-list"
+      config: "sync.bitables.selections[].include_dashboards=true"
+      local_form: "dashboard and block metadata in the Base JSON snapshot"
+    complete_base:
+      status: supported_after_full_export_confirmation
+      route: "drive +export --doc-type bitable --file-extension base"
+      config: "sync.bitables.base_exports.enabled=true and all_nodes=true"
+      local_form: "batched .base fidelity files linked from generated Base indexes"
+
+  wiki_file:
+    opaque_binary:
+      status: supported_after_explicit_full_download_confirmation
+      route: "drive +download"
+      config: "sync.files.downloads.enabled=true and all_nodes=true"
+      local_form: "local binary copy linked from the generated file index"
+      safety: "download only; never execute, mount, unpack, or parse ZIP/DMG/EXE and other opaque formats"
 
 safety:
   required_before_local_data_write:
@@ -65,6 +89,6 @@ safety:
     - "explicit attachment download opt-in when binaries are needed"
   isolated_pilot: "--pilot-node-token writes only the selected node(s) to the configured pilot output directory after verifying they exist in the current Wiki tree"
   never_automatic:
-    - "whole-workbook or whole-Base export"
+    - "whole-workbook or whole-Base export without sync.sheets.workbook_exports or sync.bitables.base_exports explicit approval"
     - "automatic Git commit or push"
     - "Feishu write-back"

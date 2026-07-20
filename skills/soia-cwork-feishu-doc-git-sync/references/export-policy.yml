@@ -74,6 +74,19 @@ confirmation:
     - "调研一下导出能力"
   rule: "能力探查不等于授权导出；未得到明确确认时只允许 inspect、help、schema 或 dry-run。"
 
+complete_mirror_initialization:
+  allowed_after_explicit_approval: true
+  required_private_flags:
+    - "sync.sheets.workbook_exports.enabled=true and all_nodes=true"
+    - "sync.bitables.base_exports.enabled=true and all_nodes=true"
+    - "sync.files.downloads.enabled=true and all_nodes=true"
+  batching: "Each resource type must set batch_size from 1 to 100; repeat until its deferred count is zero."
+  formats:
+    sheet: xlsx
+    bitable: base
+    wiki_file: original_binary
+  binary_safety: "Never execute, mount, unpack, parse, or otherwise activate downloaded binary files."
+
 execution:
   preflight:
     - "使用 drive +inspect 解析 Wiki node 到真实 obj_token 和 obj_type"
@@ -85,7 +98,7 @@ execution:
     - "lark-cli drive +export-download"
   prohibited:
     - "不得用 user OAuth 绕过 bot 的资源可见范围"
-    - "不得把导出文件自动写入 10_knowledge-base/"
+    - "不得把导出文件自动写入 10_knowledge-base/，除非用户已明确授权完整镜像初始化且对应私有配置双开关已启用；此时只可写入其 _exports/ 或 _assets/ 子目录"
     - "不得自动提交或推送导出文件到 Git"
     - "不得把导出文件上传回飞书"
     - "不得在日志、清单或最终回复输出表格单元格内容、token 或下载 URL"

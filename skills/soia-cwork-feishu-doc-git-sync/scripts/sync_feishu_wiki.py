@@ -84,6 +84,9 @@ DEFAULT_SHEET_MAX_CELLS = 10_000
 DEFAULT_SHEET_MAX_CHARS = 100_000
 DEFAULT_SHEET_SNAPSHOT_DIR = "_snapshots"
 DEFAULT_BITABLE_MAX_RECORDS = 1_000
+DEFAULT_RESOURCE_EXPORT_DIR = "_exports"
+DEFAULT_RESOURCE_BATCH_SIZE = 10
+DEFAULT_RESOURCE_TIMEOUT_SECONDS = 120
 SHEET_RANGE_PATTERN = re.compile(r"^([A-Z]+)([1-9][0-9]*):([A-Z]+)([1-9][0-9]*)$")
 
 
@@ -564,6 +567,13 @@ def configured_sheet_selections(config: dict[str, Any], enabled: bool) -> dict[s
         "layout": bool(preserve.get("layout", True)),
         "charts": bool(preserve.get("charts", True)),
         "floating_images": bool(preserve.get("floating_images", True)),
+        # Report-oriented metadata remains opt-in even when the existing
+        # preservation bundle is enabled, so current mirrors do not gain
+        # extra API calls unexpectedly.
+        "pivots": bool(preserve.get("pivots", False)),
+        "filters": bool(preserve.get("filters", False)),
+        "conditional_formats": bool(preserve.get("conditional_formats", False)),
+        "sparklines": bool(preserve.get("sparklines", False)),
     }
     selections: dict[str, list[dict[str, Any]]] = {}
     seen: set[tuple[str, str, str]] = set()
@@ -765,6 +775,22 @@ def fetch_sheet_markdown(
                             "--sheet-id", sheet_id, "--format", "json"),
                     "data", default={},
                 )
+            report_queries = (
+                ("pivots", "+pivot-list", "pivot_tables"),
+                ("filters", "+filter-list", "filters"),
+                ("conditional_formats", "+cond-format-list", "conditional_formats"),
+                ("sparklines", "+sparkline-list", "sparklines"),
+            )
+            for option, command, field in report_queries:
+                if options.get(option):
+                    snapshot[field] = nested(
+                        run_cli(
+                            config, "sheets", command, "--as", "bot",
+                            "--spreadsheet-token", obj_token, "--sheet-id", sheet_id,
+                            "--format", "json",
+                        ),
+                        "data", default={},
+                    )
             snapshot_root.mkdir(parents=True, exist_ok=True)
             filename = f"{(node_token or obj_token)[:16]}--{sheet_id[:16]}.sheet.json"
             write_text(snapshot_root / filename, json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n")
@@ -775,6 +801,10 @@ def fetch_sheet_markdown(
                 "layout": "布局",
                 "charts": "图表",
                 "floating_images": "浮动图片",
+                "pivots": "透视表",
+                "filters": "筛选器",
+                "conditional_formats": "条件格式",
+                "sparklines": "迷你图",
             }
             preserved = "、".join(label for key, label in labels.items() if options.get(key))
             preservation_note = f"已保存{preserved or '单元格'}的本地保真快照。"
@@ -830,6 +860,7 @@ def configured_bitable_selections(config: dict[str, Any], enabled: bool) -> dict
                 "view_id": str(raw.get("view_id", "")).strip(),
                 "max_records": max_records,
                 "include_views": bool(raw.get("include_views", False)),
+                "include_dashboards": bool(raw.get("include_dashboards", False)),
                 "download_attachments": bool(raw.get("download_attachments", download_attachments)),
             }
         )
@@ -941,6 +972,48 @@ def download_bitable_record_attachments(
     return files
 
 
+def paged_base_items(config: dict[str, Any], *args: str) -> list[dict[str, Any]]:
+    """Read a bounded Base paginated list without silently dropping reports."""
+    page_token = ""
+    items: list[dict[str, Any]] = []
+    for _page in range(100):
+        command = [*args, "--page-size", "100"]
+        if page_token:
+            command.extend(["--page-token", page_token])
+        payload = run_cli(config, *command)
+        data = nested(payload, "data", default={})
+        if not isinstance(data, dict):
+            raise RuntimeError("Base paginated payload has no data object")
+        page_items = data.get("items", [])
+        if not isinstance(page_items, list):
+            raise RuntimeError("Base paginated payload has no items list")
+        items.extend(item for item in page_items if isinstance(item, dict))
+        page_token = str(data.get("page_token") or "")
+        if not data.get("has_more"):
+            return items
+        if not page_token:
+            raise RuntimeError("Base paginated payload reports has_more without page_token")
+    raise RuntimeError("Base paginated list exceeded 100 pages")
+
+
+def fetch_bitable_dashboards(config: dict[str, Any], base_token: str) -> list[dict[str, Any]]:
+    """Capture Base dashboard definitions and their report blocks as JSON metadata."""
+    dashboards = paged_base_items(
+        config, "base", "+dashboard-list", "--as", "bot", "--base-token", base_token, "--format", "json"
+    )
+    result: list[dict[str, Any]] = []
+    for dashboard in dashboards:
+        dashboard_id = str(dashboard.get("dashboard_id", "")).strip()
+        entry = dict(dashboard)
+        if dashboard_id:
+            entry["blocks"] = paged_base_items(
+                config, "base", "+dashboard-block-list", "--as", "bot", "--base-token", base_token,
+                "--dashboard-id", dashboard_id, "--format", "json",
+            )
+        result.append(entry)
+    return result
+
+
 def fetch_bitable_markdown(
     config: dict[str, Any],
     obj_token: str,
@@ -1036,6 +1109,8 @@ def fetch_bitable_markdown(
                         "--table-id", table_id, "--limit", "200", "--format", "json"),
                 "data", default={},
             )
+        if selection.get("include_dashboards"):
+            snapshot["dashboards"] = fetch_bitable_dashboards(config, obj_token)
         write_text(snapshot_root / f"{node_token[:16]}--{table_id[:16]}.bitable.json", json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n")
         attachment_note = ""
         if attachment_files:
@@ -1046,6 +1121,188 @@ def fetch_bitable_markdown(
             ["", f"## {table_id}", *(["", attachment_note] if attachment_note else []), "", markdown_table_from_rows(rendered_rows)]
         )
     return "\n".join(sections).rstrip() + "\n", ""
+
+
+def relative_safe_directory(value: Any, *, setting: str) -> Path:
+    """Validate a generated-resource directory before passing it to lark-cli."""
+    directory = str(value or "").strip("/\\")
+    path = Path(directory)
+    if not directory or path.is_absolute() or ".." in path.parts:
+        raise SystemExit(f"{setting} must be a relative directory without '..'")
+    return path
+
+
+def resource_initialization_settings(
+    config: dict[str, Any],
+    *,
+    section: str,
+    key: str,
+) -> dict[str, Any] | None:
+    """Return an explicit whole-resource initialization policy, or None.
+
+    A plain ``enabled`` switch is deliberately insufficient here: these routes
+    download complete workbooks, Bases, or Drive files.  Requiring both flags
+    records the user's whole-resource approval in the private config.
+    """
+    settings = nested(config, "sync", section, key, default={})
+    if not isinstance(settings, dict):
+        raise SystemExit(f"sync.{section}.{key} must be a mapping")
+    if not bool(settings.get("enabled", False)):
+        return None
+    if not bool(settings.get("all_nodes", False)):
+        raise SystemExit(
+            f"sync.{section}.{key}.all_nodes=true is required for complete resource initialization"
+        )
+    directory = relative_safe_directory(
+        settings.get("output_dir", f"{DEFAULT_RESOURCE_EXPORT_DIR}/{section}"),
+        setting=f"sync.{section}.{key}.output_dir",
+    )
+    try:
+        batch_size = max(1, min(int(settings.get("batch_size", DEFAULT_RESOURCE_BATCH_SIZE)), 100))
+    except (TypeError, ValueError):
+        raise SystemExit(f"sync.{section}.{key}.batch_size must be an integer from 1 to 100")
+    try:
+        timeout_seconds = max(10, min(int(settings.get("timeout_seconds", DEFAULT_RESOURCE_TIMEOUT_SECONDS)), 900))
+    except (TypeError, ValueError):
+        raise SystemExit(f"sync.{section}.{key}.timeout_seconds must be an integer from 10 to 900")
+    return {
+        "output_dir": directory,
+        "batch_size": batch_size,
+        "timeout_seconds": timeout_seconds,
+    }
+
+
+def safe_file_extension(title: Any, fallback: str = ".bin") -> str:
+    """Keep a harmless filename suffix so opaque binary assets stay identifiable."""
+    suffix = Path(str(title or "")).suffix.lower()
+    if re.fullmatch(r"\.[a-z0-9]{1,12}", suffix):
+        return suffix
+    return fallback
+
+
+def resource_export_path(node: dict[str, Any], output_dir: Path, suffix: str) -> Path:
+    """Return a stable local resource target without exposing remote tokens in names."""
+    seed = f"{node.get('obj_token', '')}\0{node.get('node_token', '')}"
+    name = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:24] + suffix
+    return output_dir / name
+
+
+def run_cli_to_local_path(
+    config: dict[str, Any],
+    mirror_dir: Path,
+    target: Path,
+    timeout_seconds: int,
+    *args: str,
+) -> None:
+    """Run a read-only CLI download/export and require the requested local file."""
+    command = cli_command(config, *args)
+    for attempt in range(5):
+        REQUEST_LIMITER.acquire()
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=mirror_dir,
+                env=command_env(config),
+                timeout=timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            if attempt < 4:
+                REQUEST_LIMITER.cooldown(min(30, 2**attempt))
+                continue
+            raise CliCommandError(
+                "lark-cli resource export timed out",
+                category="temporary_network",
+                retryable=True,
+            ) from exc
+        if result.returncode == 0 and target.is_file() and target.stat().st_size > 0:
+            return
+        detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+        info = cli_error_info(detail)
+        if result.returncode == 0 and not detail:
+            info = {"category": "export_incomplete", "code": "", "retryable": True}
+        if info["retryable"] and attempt < 4:
+            REQUEST_LIMITER.cooldown(min(30, 2**attempt))
+            continue
+        code_suffix = f" code={info['code']}" if info["code"] else ""
+        raise CliCommandError(
+            f"lark-cli resource export failed category={info['category']}{code_suffix}",
+            category=str(info["category"]),
+            code=str(info["code"]),
+            retryable=bool(info["retryable"]),
+        )
+
+
+def initialize_complete_resources(
+    config: dict[str, Any],
+    nodes: list[dict[str, Any]],
+    mirror_dir: Path,
+    *,
+    obj_type: str,
+    section: str,
+    key: str,
+) -> tuple[dict[str, str], dict[str, str], dict[str, int]]:
+    """Export/download a bounded batch of whole resources with explicit approval.
+
+    The returned paths are relative to the generated mirror so caller-created
+    Markdown can link to the offline original without leaking tokens.
+    """
+    settings = resource_initialization_settings(config, section=section, key=key)
+    stats = {"downloaded": 0, "reused": 0, "failed": 0, "deferred": 0}
+    if settings is None:
+        return {}, {}, stats
+    candidates = [node for node in nodes if str(node.get("obj_type", "")) == obj_type]
+    target_dir = mirror_dir / settings["output_dir"]
+    ready: dict[str, str] = {}
+    pending: list[tuple[dict[str, Any], Path]] = []
+    for node in candidates:
+        suffix = (
+            ".xlsx" if obj_type == "sheet" else ".base" if obj_type == "bitable" else safe_file_extension(node.get("title"))
+        )
+        target = resource_export_path(node, target_dir, suffix)
+        token = str(node.get("node_token", ""))
+        if target.is_file() and target.stat().st_size > 0:
+            ready[token] = target.relative_to(mirror_dir).as_posix()
+            stats["reused"] += 1
+        else:
+            pending.append((node, target))
+    selected, deferred = pending[: settings["batch_size"]], pending[settings["batch_size"] :]
+    stats["deferred"] = len(deferred)
+    errors: dict[str, str] = {}
+    for node, target in selected:
+        token = str(node.get("node_token", ""))
+        relative_target = target.relative_to(mirror_dir).as_posix()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            if obj_type == "sheet":
+                run_cli_to_local_path(
+                    config, mirror_dir, target, settings["timeout_seconds"],
+                    "sheets", "+workbook-export", "--as", "bot",
+                    "--spreadsheet-token", str(node.get("obj_token", "")),
+                    "--file-extension", "xlsx", "--output-path", relative_target, "--format", "json",
+                )
+            elif obj_type == "bitable":
+                run_cli_to_local_path(
+                    config, mirror_dir, target, settings["timeout_seconds"],
+                    "drive", "+export", "--as", "bot", "--doc-type", "bitable",
+                    "--token", str(node.get("obj_token", "")), "--file-extension", "base",
+                    "--output-dir", settings["output_dir"].as_posix(), "--file-name", target.name,
+                    "--overwrite", "--format", "json",
+                )
+            else:
+                run_cli_to_local_path(
+                    config, mirror_dir, target, settings["timeout_seconds"],
+                    "drive", "+download", "--as", "bot", "--file-token", str(node.get("obj_token", "")),
+                    "--output", relative_target, "--overwrite", "--format", "json",
+                )
+            ready[token] = relative_target
+            stats["downloaded"] += 1
+        except Exception as exc:
+            errors[token] = safe_error_category(exc)
+            stats["failed"] += 1
+    return ready, errors, stats
 
 
 def clean_title(title: Any, fallback: str) -> str:
@@ -2542,6 +2799,18 @@ def sync(args: argparse.Namespace) -> int:
         "sheet_tabs_mirrored": 0,
         "bitables_mirrored": 0,
         "bitable_tables_mirrored": 0,
+        "sheet_workbooks_downloaded": 0,
+        "sheet_workbooks_reused": 0,
+        "sheet_workbooks_failed": 0,
+        "sheet_workbooks_deferred": 0,
+        "bitable_exports_downloaded": 0,
+        "bitable_exports_reused": 0,
+        "bitable_exports_failed": 0,
+        "bitable_exports_deferred": 0,
+        "wiki_files_downloaded": 0,
+        "wiki_files_reused": 0,
+        "wiki_files_failed": 0,
+        "wiki_files_deferred": 0,
         "error_categories": {},
     }
     fetched: dict[str, tuple[str, str, str, str]] = {}
@@ -2941,9 +3210,44 @@ def sync(args: argparse.Namespace) -> int:
                 flush=True,
             )
 
+    complete_sheet_exports: dict[str, str] = {}
+    complete_bitable_exports: dict[str, str] = {}
+    complete_file_downloads: dict[str, str] = {}
+    resource_init_errors: dict[str, str] = {}
+    if not args.skip_content:
+        complete_sheet_exports, sheet_export_errors, sheet_export_stats = initialize_complete_resources(
+            config, ordered, mirror_dir, obj_type="sheet", section="sheets", key="workbook_exports"
+        )
+        complete_bitable_exports, bitable_export_errors, bitable_export_stats = initialize_complete_resources(
+            config, ordered, mirror_dir, obj_type="bitable", section="bitables", key="base_exports"
+        )
+        complete_file_downloads, file_download_errors, file_download_stats = initialize_complete_resources(
+            config, ordered, mirror_dir, obj_type="file", section="files", key="downloads"
+        )
+        resource_init_errors = {
+            **sheet_export_errors,
+            **bitable_export_errors,
+            **file_download_errors,
+        }
+        for prefix, stats in (
+            ("sheet_workbooks", sheet_export_stats),
+            ("bitable_exports", bitable_export_stats),
+            ("wiki_files", file_download_stats),
+        ):
+            for name, value in stats.items():
+                counts[f"{prefix}_{name}"] = value
+        print(
+            "resource_initialization "
+            f"sheets_downloaded={sheet_export_stats['downloaded']} sheets_deferred={sheet_export_stats['deferred']} "
+            f"bitables_downloaded={bitable_export_stats['downloaded']} bitables_deferred={bitable_export_stats['deferred']} "
+            f"files_downloaded={file_download_stats['downloaded']} files_deferred={file_download_stats['deferred']}",
+            flush=True,
+        )
+
     for node in ordered:
         token = str(node["node_token"])
         relative = planned_paths[token]
+        target = output_dir / MIRROR_DIR / relative
         title = clean_title(node.get("title"), token)
         obj_type = str(node.get("obj_type", ""))
         status = "ok"
@@ -2976,6 +3280,24 @@ def sync(args: argparse.Namespace) -> int:
             elif obj_type == "bitable":
                 counts["bitables_mirrored"] += 1
                 counts["bitable_tables_mirrored"] += len(bitable_selections.get(token, []))
+        elif obj_type == "sheet" and token in complete_sheet_exports:
+            status = "ok"
+            content = (
+                f"# {title}\n\n"
+                "> 已初始化完整 Sheet 工作簿的本地保真副本；公式、样式、批注、图表、透视与单元格图片以 .xlsx 为准。\n"
+            )
+        elif obj_type == "bitable" and token in complete_bitable_exports:
+            status = "ok"
+            content = (
+                f"# {title}\n\n"
+                "> 已初始化完整多维表格的本地保真副本；表、视图、仪表盘/报表及附件关联以 .base 为准。\n"
+            )
+        elif obj_type == "file" and token in complete_file_downloads:
+            status = "ok"
+            content = (
+                f"# {title}\n\n"
+                "> 已下载知识库文件的原始二进制副本；文件仅保存，不会执行、挂载、解压或解析。\n"
+            )
         else:
             status = "metadata_stub"
             counts["stub"] += 1
@@ -2984,7 +3306,30 @@ def sync(args: argparse.Namespace) -> int:
                 f"该知识库节点类型为 `{obj_type or 'unknown'}`，当前同步器只读取文档正文。\n\n"
                 f"如需转换该类型，请单独设计对应的导出策略。\n"
             )
-        target = output_dir / MIRROR_DIR / relative
+        local_resource = (
+            complete_sheet_exports.get(token)
+            or complete_bitable_exports.get(token)
+            or complete_file_downloads.get(token)
+        )
+        if local_resource:
+            resource_target = mirror_dir / local_resource
+            label = (
+                "本地完整工作簿 (.xlsx)"
+                if obj_type == "sheet"
+                else "本地完整多维表格 (.base)"
+                if obj_type == "bitable"
+                else "本地原始附件（二进制）"
+            )
+            content = content.rstrip() + "\n\n" + relative_markdown_link(target, resource_target, label) + "\n"
+        resource_error = resource_init_errors.get(token)
+        if resource_error:
+            if status not in {"failed", "stale"}:
+                counts["failed"] += 1
+                categories = counts["error_categories"]
+                categories[resource_error] = categories.get(resource_error, 0) + 1
+            status = "failed"
+            error = resource_error
+            content = content.rstrip() + "\n\n> 完整本地资源初始化未完成；可按同一私有配置重试。\n"
         counts["remote_images"] += len(extract_image_urls(content))
         if download_assets_enabled:
             content = rewrite_asset_urls(content, target, mirror_dir, asset_map)

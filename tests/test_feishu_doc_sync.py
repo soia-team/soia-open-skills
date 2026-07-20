@@ -259,6 +259,76 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertEqual(selections["node-base"][0]["max_records"], 20)
         self.assertTrue(selections["node-base"][0]["download_attachments"])
 
+    def test_complete_resource_initialization_requires_enabled_and_all_nodes(self) -> None:
+        with self.assertRaises(SystemExit):
+            sync.resource_initialization_settings(
+                {"sync": {"sheets": {"workbook_exports": {"enabled": True}}}},
+                section="sheets",
+                key="workbook_exports",
+            )
+        settings = sync.resource_initialization_settings(
+            {
+                "sync": {
+                    "sheets": {
+                        "workbook_exports": {
+                            "enabled": True,
+                            "all_nodes": True,
+                            "batch_size": 3,
+                            "output_dir": "_exports/sheets",
+                        }
+                    }
+                }
+            },
+            section="sheets",
+            key="workbook_exports",
+        )
+        self.assertEqual(settings["batch_size"], 3)
+
+    def test_complete_sheet_initialization_reuses_then_batches_remaining_workbooks(self) -> None:
+        nodes = [
+            {"node_token": "sheet-node-1", "obj_token": "sheet-obj-1", "obj_type": "sheet"},
+            {"node_token": "sheet-node-2", "obj_token": "sheet-obj-2", "obj_type": "sheet"},
+            {"node_token": "sheet-node-3", "obj_token": "sheet-obj-3", "obj_type": "sheet"},
+        ]
+        config = {
+            "sync": {
+                "sheets": {
+                    "workbook_exports": {
+                        "enabled": True,
+                        "all_nodes": True,
+                        "batch_size": 1,
+                        "output_dir": "_exports/sheets",
+                    }
+                }
+            }
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            mirror = Path(temp)
+            existing = sync.resource_export_path(nodes[0], mirror / "_exports/sheets", ".xlsx")
+            existing.parent.mkdir(parents=True)
+            existing.write_bytes(b"existing")
+            with mock.patch.object(sync, "run_cli_to_local_path") as export:
+                paths, errors, stats = sync.initialize_complete_resources(
+                    config,
+                    nodes,
+                    mirror,
+                    obj_type="sheet",
+                    section="sheets",
+                    key="workbook_exports",
+                )
+
+        self.assertIn("sheet-node-1", paths)
+        self.assertIn("sheet-node-2", paths)
+        self.assertNotIn("sheet-node-3", paths)
+        self.assertEqual(errors, {})
+        self.assertEqual(stats, {"downloaded": 1, "reused": 1, "failed": 0, "deferred": 1})
+        export.assert_called_once()
+
+    def test_opaque_file_extensions_are_retained_without_processing_content(self) -> None:
+        self.assertEqual(sync.safe_file_extension("installer.DMG"), ".dmg")
+        self.assertEqual(sync.safe_file_extension("archive.zip"), ".zip")
+        self.assertEqual(sync.safe_file_extension("no-extension"), ".bin")
+
     def test_fetch_sheet_markdown_reads_only_the_selected_grid_range(self) -> None:
         calls = []
 

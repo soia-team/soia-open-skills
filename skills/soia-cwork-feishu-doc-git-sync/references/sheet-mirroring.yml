@@ -33,12 +33,17 @@ rendering:
   preservation_snapshot:
     opt_in: "sync.sheets.preserve.enabled=true"
     output: "_snapshots/<node-and-sheet>.sheet.json"
-    supported: [formulas, styles, comments, layout_metadata, chart_metadata, floating_image_metadata]
+    supported: [formulas, styles, comments, layout_metadata, chart_metadata, floating_image_metadata, pivot_metadata, filter_metadata, conditional_format_metadata, sparkline_metadata]
+  whole_workbook_export:
+    opt_in: "sync.sheets.workbook_exports.enabled=true and all_nodes=true after explicit full-export approval"
+    route: "sheets +workbook-export --file-extension xlsx"
+    output: "generated mirror _exports/sheets/ as an offline fidelity artifact"
+    preserves_as_native_file: [formulas, styles, comments, charts, pivot_tables, cell_images]
   unsupported_as_native_markdown: [chart_rendering, formula_recalculation, pivot_tables, cell_image_binary_download, attachments]
 
 safety:
   explicit_user_approval: required_before_local_mirror_write
   private_config_opt_in: sync.sheets.enabled
-  no_file_export: true
+  no_file_export: "unless sync.sheets.workbook_exports explicitly records whole-workbook approval"
   no_media_download: true
   no_auto_git_commit_or_push: true
