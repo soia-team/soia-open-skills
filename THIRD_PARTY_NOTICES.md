@@ -1,10 +1,18 @@
 # THIRD_PARTY_NOTICES
 
-> Last updated: 2026-07-20
+> Last updated: 2026-07-20（新增 §0 代码改编）
 > 本文件集中声明本仓库各 skill 引用、依赖或参考的第三方项目与服务。
-> 本仓库**未复制或改编任何第三方源代码**——所有引用属于以下三类之一：接口口径的源码级参考（只读其源码核对参数，不搬运实现）、运行时调用的外部工具/库/skill、在线 API 服务。因此不设 `licenses/` 本地副本目录；若未来出现真正的代码改编，改编处必须携带上游 license 副本并在本文件登记。
+> 除 §0 明确登记的代码改编（携带 `licenses/` 上游 license 副本）外，其余引用属于以下三类之一：接口口径的源码级参考（只读其源码核对参数，不搬运实现）、运行时调用的外部工具/库/skill、在线 API 服务。
 >
 > 列入标准：仓库文档（`SKILL.md`、README、references）中出现**显式上游链接或安装指令**的第三方。协议列为 GitHub / PyPI / Homebrew 元数据快照（快照日期 2026-07-20），复用前请重新核对上游实时协议。
+
+## 0. 代码改编（携带上游 license 副本）
+
+| 上游 | 协议 | 改编处 | 说明 |
+|---|---|---|---|
+| [wshuyi/x-article-publisher-skill](https://github.com/wshuyi/x-article-publisher-skill) | MIT（副本：`licenses/wshuyi-x-article-publisher-skill-LICENSE.txt`） | `soia-pkm-publish-x-article/scripts/parse_x_article.py` | Markdown 解析/block_index 定位/HTML 转换逻辑改编自其 `parse_markdown.py`；文件头已注明出处。剪贴板脚本为本仓库独立实现（osascript 路线），未取自上游 |
+
+工作流设计参考（无代码复制）：[mcncarl/yichen-skills](https://github.com/mcncarl/yichen-skills)（非商业协议）的 `yichen-x-article-draft-uploader` —— 借鉴其「封面缺失先中断询问」「上传后机械校验清单」「只存草稿不发布」的流程设计；其代码未阅读复制，自动化路线（agent 驱动浏览器 vs 独立 Playwright + cookie 导出）也与其不同。
 
 ## 1. 接口口径参考（源码级阅读，无代码复制）
 
