@@ -1187,6 +1187,54 @@ def resource_export_path(node: dict[str, Any], output_dir: Path, suffix: str) ->
     return output_dir / name
 
 
+def export_file_token(payload: Any) -> str:
+    """Find the file token returned by a completed/pending export task."""
+    if isinstance(payload, dict):
+        token = payload.get("file_token")
+        if isinstance(token, str) and token.strip():
+            return token.strip()
+        for value in payload.values():
+            token = export_file_token(value)
+            if token:
+                return token
+    elif isinstance(payload, list):
+        for value in payload:
+            token = export_file_token(value)
+            if token:
+                return token
+    return ""
+
+
+def resume_export_download(
+    config: dict[str, Any],
+    mirror_dir: Path,
+    target: Path,
+    timeout_seconds: int,
+    stdout: str,
+) -> subprocess.CompletedProcess[str] | None:
+    """Download a ready export file when the async exporter returned its token."""
+    try:
+        token = export_file_token(parse_cli_json(stdout))
+    except RuntimeError:
+        return None
+    if not token:
+        return None
+    REQUEST_LIMITER.acquire()
+    return subprocess.run(
+        cli_command(
+            config,
+            "drive", "+download", "--as", "bot", "--file-token", token,
+            "--output", target.relative_to(mirror_dir).as_posix(), "--overwrite", "--format", "json",
+        ),
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=mirror_dir,
+        env=command_env(config),
+        timeout=timeout_seconds,
+    )
+
+
 def run_cli_to_local_path(
     config: dict[str, Any],
     mirror_dir: Path,
@@ -1217,8 +1265,19 @@ def run_cli_to_local_path(
                 category="temporary_network",
                 retryable=True,
             ) from exc
-        if result.returncode == 0 and target.is_file() and target.stat().st_size > 0:
-            return
+        if result.returncode == 0:
+            if target.is_file() and target.stat().st_size > 0:
+                return
+            try:
+                resumed = resume_export_download(
+                    config, mirror_dir, target, timeout_seconds, result.stdout
+                )
+            except subprocess.TimeoutExpired:
+                resumed = None
+            if resumed is not None:
+                result = resumed
+                if result.returncode == 0 and target.is_file() and target.stat().st_size > 0:
+                    return
         detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
         # `sheets +workbook-export` can successfully create/poll an async
         # task yet return before its requested local file is available.  Its

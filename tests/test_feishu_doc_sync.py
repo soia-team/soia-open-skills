@@ -345,6 +345,11 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertEqual(raised.exception.category, "export_incomplete")
         self.assertTrue(raised.exception.retryable)
 
+    def test_export_file_token_finds_async_result_without_exposing_it_in_paths(self) -> None:
+        payload = {"data": {"export_result": {"file_token": "export-file-token"}}}
+        self.assertEqual(sync.export_file_token(payload), "export-file-token")
+        self.assertEqual(sync.export_file_token({"data": {}}), "")
+
     def test_fetch_sheet_markdown_reads_only_the_selected_grid_range(self) -> None:
         calls = []
 
