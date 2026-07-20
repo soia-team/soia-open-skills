@@ -184,12 +184,14 @@ def release(args: argparse.Namespace, *, home: Path | None = None) -> int:
     try:
         # 1. Install each requested skill so a failure names its exact target.
         for name in skills:
-            run_command(["npx", "skills", "add", args.repo, "-g", "-a", agents, "-s", name, "-y"])
+            agent_flags=[flag for a in agents.split(",") for flag in ("-a", a.strip()) if a.strip()]
+            run_command(["npx", "skills", "add", args.repo, "-g", *agent_flags, "-s", name, "-y"])
 
         # 2. Remove renamed/deleted skills in both skills.sh and all managed homes.
         if removed:
             for name in removed:
-                run_command(["npx", "skills", "remove", args.repo, "-g", "-a", agents, "-s", name, "-y"])
+                agent_flags=[flag for a in agents.split(",") for flag in ("-a", a.strip()) if a.strip()]
+                run_command(["npx", "skills", "remove", args.repo, "-g", *agent_flags, "-s", name, "-y"])
             remove_old_skills(user_home, removed, dry_run=False)
 
         # 3. Update cross-referenced skills.

@@ -1,9 +1,9 @@
 ---
 name: soia-dev-skill-release
 description: 技能 PR merge 后一键完成安装、旧名清理、全 AI 软链、lock 与版本对账；触发词「发布技能」「技能发布收尾」「release skill」。
-version: 1.0.0
+version: 1.0.1
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-07-21 00:00:00
+updated_at: 2026-07-21 07:51:16
 created_by: gpt-5.6-terra
 updated_by: gpt-5.6-terra
 dependencies:
