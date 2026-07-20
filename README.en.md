@@ -56,6 +56,7 @@ Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, K
            soia-dev-github-ops / soia-dev-ai-cli-upgrade (shared dev-tooling line)
            soia-dev-open-design-ops (Open Design atomic layer: daemon/catalogs/design systems/exports/resume)
            soia-cwork-feishu-cli (enterprise collaboration line: read-only Feishu CLI research across drives, docs, and wikis)
+           soia-cwork-processon-diagrams (enterprise collaboration line: inventory, preview, and export ProcessOn diagrams)
 ```
 
 **Core idea**: saving ≠ absorbing. Most people's knowledge bases are "information graveyards" — piled high, never revisited. `soia-pkm` breaks the chain from "save → opinion → draft → publish" — the path **from consumption to creation** — into single-purpose, composable skills, so AI helps you turn hoarded information into work that is genuinely **yours**.
@@ -151,6 +152,7 @@ Open Design setup: copy [`config.example.yml`](./skills/soia-dev-open-design-ops
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | Uses the official `lark-cli` with app credentials (bot identity) to inventory Feishu drives, cloud documents, wikis, comments, permissions, and metadata in read-only mode | ✅ Usable (configure Feishu app credentials and grant access to target resources) | Official Feishu `lark-cli`; app credentials; target docs/wikis must be visible to the app |
 | [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | Mirrors a Feishu wiki by stable `node_token` while preserving hierarchy, using incremental Markdown sync for Git, Obsidian, and VitePress; event targets are optional and write-back is not enabled by default | ✅ Usable (run a dry-run and establish a baseline first; grant the target space document read scopes) | `soia-cwork-feishu-cli`; `lark-cli`; Python 3.10+; PyYAML; Git/VitePress/Obsidian optional |
+| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | Reuses the customer's authenticated browser to inventory ProcessOn team spaces, preview diagrams, and export approved POS, image, PDF, XMind, or Office files | ✅ Usable (browser inventory verified; customers must complete security challenges manually) | ProcessOn account and resource access; browser control; Python 3.10+ for local export inspection |
 
 #### Minimal Feishu setup
 
@@ -177,6 +179,18 @@ Run a dry-run first, then sync after checking node counts, permissions, and outp
 ```
 
 See [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) for the config template, permission layers, ID-based incremental flow, and event boundary. Bidirectional sync requires an explicit ownership model, conflict policy, and Feishu write scopes.
+
+### soia-cwork-processon-diagrams
+
+Uses the customer's existing ProcessOn browser session to inventory personal/team spaces, inspect titles and visible diagram content, and export through the official Browse/Download menus. It is read-only by default and never shares, edits, moves, or deletes remote files. The customer completes sliders, CAPTCHAs, and other security checks manually.
+
+```text
+Inventory this ProcessOn team space: <team-url>
+Export three diagrams from “System Architecture” as POS and high-resolution PNG
+Parse these ProcessOn POS files and summarize their diagram text
+```
+
+ProcessOn does not publish a consumer REST API for listing and bulk-downloading normal account/team files. Its enterprise API service is a separately provisioned embedding and format-conversion product. See [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) for the format matrix, browser boundaries, and local POS/XMind inspector.
 
 ---
 
@@ -330,6 +344,7 @@ This installs every skill under `skills/` into your agent's skill directory — 
 | `Start the Open Design daemon` / `Export this deck to PPTX` | soia-dev-open-design-ops |
 | `Research my Feishu drive/wiki` / `Read a Feishu work document` | soia-cwork-feishu-cli |
 | `Mirror my Feishu wiki to Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
+| `Inventory a ProcessOn team space` / `Export ProcessOn architecture diagrams` | soia-cwork-processon-diagrams |
 
 Antigravity CLI uses the `agy` command. Its global skill directory is
 `~/.gemini/antigravity-cli/skills/`, and workspace skills live under
@@ -445,7 +460,8 @@ soia-open-skills/
     ├── soia-dev-terminal-ops/
     ├── soia-dev-design-explorer/
     ├── soia-dev-open-design-ops/
-    └── soia-cwork-feishu-cli/
+    ├── soia-cwork-feishu-cli/
+    └── soia-cwork-processon-diagrams/
 ```
 
 Every skill lives in its own folder with an independent `SKILL.md` (frontmatter holding just `name` + `description`) and its own `scripts/`.
