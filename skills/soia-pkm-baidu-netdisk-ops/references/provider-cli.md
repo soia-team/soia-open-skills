@@ -33,6 +33,32 @@
 - `ls --json` 通常返回数组，核心字段为 `fs_id`、`path`、`server_filename`、`size`、`isdir`、`md5`、`server_mtime`。扫描器以 `server_filename` 和当前递归父目录组合虚拟路径，不把人类展示路径当作命令路径。
 - `share` 使用可能收费的能力；必须单独提醒和确认。分享链接转存需要用户提供提取码，不能猜测或代填。
 
+## 官方登录的设备码路径
+
+2026-07-20 的真实验证发现：当前 `bdpan` 3.8.3 的登录帮助同时提供
+`--get-auth-url` 和 `--device-code`，但上游 `scripts/login.sh` 使用的授权链接路径可能在“获取授权链接失败”处终止；这不是用户账号或应用目录配置错误。
+
+处理顺序：
+
+1. Agent 先执行 `bdpan help login`，检查当前版本是否包含 `--device-code`。
+2. 若支持设备码，直接使用本技能的 `scripts/device_login.py`，让 CLI 自动确认免责声明、生成设备码和二维码图片地址，并等待授权完成；客户不在终端输入 `Y` 或授权码。
+3. 使用 `scripts/decode_qr.py` 解析二维码图片地址，向客户返回二维码内的设备授权地址；客户用百度 App/浏览器授权，Agent 不替客户确认。
+4. 若当前版本没有 `--device-code`，才自动执行上游 `baidu-drive/scripts/login.sh --yes`；旧版 OOB 流程可能需要客户在聊天中提供网页授权码，但不需要客户操作终端。
+5. 授权完成后必须重新执行 `whoami` 与 `--json ls`，分别证明登录态和应用目录访问都可用。
+
+设备码是短时一次性凭据。不要重放过期地址，不要把设备码、二维码内文、token 或用户身份写入仓库和回执。若 `--device-code` 不存在，停止并等待上游 CLI/Skill 更新，不猜测参数。
+
+## 上传前向测试的失败判定
+
+2026-07-20 的真实前向测试中，`whoami` 和应用根目录 `ls --json` 均成功，但上传一个小型 PNG 到应用根目录时，`bdpan` 返回业务 JSON `code: 1`、`errno=-10`；随后回读目标显示“目录不存在”，证明没有成功创建文件。
+
+遇到这个组合时：
+
+1. 不把登录成功或 `ls` 成功说成“上传可用”。
+2. 不连续重试同一个上传请求；先检查百度网盘网页显示的容量是否已满/超额。
+3. 再检查百度开放平台当前应用是否开通网盘上传能力；百度开发者中心的 FAQ 说明，网盘上传能力需要在开放平台申请开通。[百度开发者中心 FAQ](https://developer.baidu.com/article/details/293412)
+4. 处理容量或能力开通后，再用不冲突的测试文件名重试，并用 `ls --json` 回读确认最终落点。
+
 ## 官方 Skill 内置记忆能力
 
 官方 `baidu-drive` Skill 还包含记忆备份/恢复，这与独立的 Baidu Drive Backup Plugin 不同。它只在 KimiClaw、MaxClaw、QClaw、OpenClaw 环境启用，并识别以下意图：

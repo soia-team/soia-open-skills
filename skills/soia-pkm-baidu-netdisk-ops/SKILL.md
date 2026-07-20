@@ -6,11 +6,11 @@ dependencies:
     - name: baidu-drive
       required: true
       install: "npx skills add https://github.com/baidu-netdisk/bdpan-storage/skills --skill baidu-drive"
-version: 2.0.0
+version: 2.1.3
 created_at: 2026-07-15 18:27:15
-updated_at: 2026-07-16 15:34:25
+updated_at: 2026-07-20 15:30:00
 created_by: claude opus 4.6
-updated_by: gpt-5.6-luna
+updated_by: gpt-5
 ---
 
 # soia-pkm-baidu-netdisk-ops — 百度网盘原子操作层
@@ -48,13 +48,13 @@ updated_by: gpt-5.6-luna
 npx skills add https://github.com/baidu-netdisk/bdpan-storage/skills --skill baidu-drive
 ```
 
-随后严格按上游 `baidu-drive/SKILL.md` 操作：
+随后按上游 `baidu-drive/SKILL.md` 操作：
 
 1. 由上游 `scripts/install.sh` 安装 `bdpan`（当前上游安装器版本需以仓库为准；安装脚本从百度 CDN 下载，执行前应审查脚本和网络来源）。
-2. 登录只使用上游 `scripts/login.sh`。不要让 Agent 直接执行 `bdpan login`，也不要代替用户输入账号、密码、验证码或授权码。
+2. 登录先检查 `bdpan help login` 是否包含 `--device-code`：支持时直接由 Agent 执行本技能的[设备码登录入口](references/login-playbook.md)，自动生成授权链接/二维码并等待客户在百度页面或 App 中授权；该入口自动传入 `--accept-disclaimer`，客户不需要在终端输入 `Y` 或授权码。只有旧版本不支持设备码时，才回退到上游 `scripts/login.sh --yes`；这时 `--yes` 只跳过已展示给客户的脚本安全须知提示，授权仍由客户完成。
 3. 运行 `bdpan whoami` 验证登录态。
 
-上游 Skill 的路径是它自己的安装目录，不要把本技能目录误当成上游目录；缺少上游 Skill 时应停止并提示安装依赖。安装、登录和更新都需要用户明确意图，不要静默执行，也不要使用 `--yes` 绕过确认。
+上游 Skill 的路径是它自己的安装目录，不要把本技能目录误当成上游目录；缺少上游 Skill 时应停止并提示安装依赖。安装、登录和更新都需要用户明确意图，不要静默触发；在客户明确要求登录后，`--yes` 仅用于跳过已经展示过的脚本免责声明，不代表替客户完成百度授权。
 
 社区模式需要 AppKey、SecretKey 和应用名称；官方模式不需要这些变量。两种后端的事实、限制和切换边界见 [provider-cli.md](references/provider-cli.md)。
 
@@ -83,7 +83,7 @@ python3 <skill-path>/scripts/run_with_env.py -- version
 python3 <skill-path>/scripts/run_with_env.py -- whoami
 ```
 
-包装器会按 `config.yml` 选择 `bdpan` 或 `baidupan-cli`。若官方模式的 `bdpan` 不存在，先请用户确认，再运行上游安装脚本；若社区模式的 `baidupan-cli` 不存在，从其 [Releases](https://github.com/mqhe2007/baidupan-cli/releases) 安装。官方模式登录失效时，运行上游 `scripts/login.sh`，不要直接调用 `bdpan login`；社区模式才使用 `baidupan-cli login`。登录后再次执行 `whoami`，不要把授权码或 token 写入回执。
+包装器会按 `config.yml` 选择 `bdpan` 或 `baidupan-cli`。若官方模式的 `bdpan` 不存在，先请用户确认，再运行上游安装脚本；若社区模式的 `baidupan-cli` 不存在，从其 [Releases](https://github.com/mqhe2007/baidupan-cli/releases) 安装。官方模式登录失效时，先检查当前 CLI 是否支持设备码；支持时使用本技能的 `scripts/device_login.py`，它会自动带上 `--accept-disclaimer`、生成链接并等待授权。设备码登录产生二维码图片地址时，用 `scripts/decode_qr.py` 解出浏览器授权地址，并把地址作为可点击链接交给客户；客户只需在百度 App/浏览器完成授权，不需要打开终端、输入 `Y` 或粘贴授权码。旧版本才回退到上游 `scripts/login.sh --yes`。登录后依次执行 `whoami` 和 `--json ls`，检查实际输出和退出码；不要把授权码、二维码内容或 token 写入回执。完整门禁和失败处理见 [login-playbook.md](references/login-playbook.md)。
 
 ### 2. 只读操作
 
@@ -98,7 +98,7 @@ python3 <skill-path>/scripts/run_with_env.py -- whoami
 
 ### 3. 远端写操作
 
-先用包装器执行 `ls --json` 检查源和目标父目录，再明确确认精确范围、冲突策略和是否允许部分成功。命令名称和参数以所选 provider 的参考文档为准。
+先用包装器执行 `ls --json` 检查源和目标父目录，再明确确认精确范围、冲突策略和是否允许部分成功。命令名称和参数以所选 provider 的参考文档为准。上传若返回业务 JSON 错误（尤其是 `errno=-10`），必须停止重试并回读目标；同时让客户检查网盘容量和开放平台上传能力，不能只凭登录成功推断具备写权限。
 
 ```bash
 python3 <skill-path>/scripts/run_with_env.py -- mkdir 资料/新目录
@@ -122,7 +122,7 @@ python3 <skill-path>/scripts/run_with_env.py -- download 资料/a.pdf <local-fil
 python3 <skill-path>/scripts/run_with_env.py -- download '<share-url>' <local-dir> -p '<提取码>'
 ```
 
-单文件上传的远端目标需包含文件名；目录上传以 `/` 结尾。覆盖、大文件、批量任务和分享转存都要先确认，完成后核对本地文件存在性、大小，必要时独立计算哈希。终端超时不等于传输失败，应先查询任务/目标状态再决定是否重试。
+单文件上传的远端目标需包含文件名；目录上传以 `/` 结尾。覆盖、大文件、批量任务和分享转存都要先确认，完成后核对本地文件存在性、大小，必要时独立计算哈希。终端超时不等于传输失败，应先查询任务/目标状态再决定是否重试；明确的 API 业务错误不能按超时处理。
 
 ### 5. 全盘只读 JSONL 扫描
 
