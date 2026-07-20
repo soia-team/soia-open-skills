@@ -137,7 +137,7 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 | [`soia-dev-agent-md-advisor`](./skills/soia-dev-agent-md-advisor/) | Design advisor for AGENTS.md / CLAUDE.md / `.claude` configuration: review & diagnose / draft for a new project / best-practice Q&A — three modes, with a six-dimension health check (length budget / actionability / section routing / duplication & contradiction / entry-point consistency / staleness) | ✅ Usable (pure methodology diagnosis, no scripts, no hard dependency) | None |
 | [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | Controlled dispatch of tasks to external coding CLIs (codex/agy/gemini/kimi/opencode/qwen, etc.): task-boundary splitting, injection-resistant prompt patterns, a model-tiering matrix, and three-step Anti-Fake-Fix verification | ✅ Usable (command templates + tiering matrix complete) | The target coding CLI (codex/agy/gemini/kimi/opencode/qwen, etc., as needed), installed and logged in |
 | [`soia-dev-terminal-ops`](./skills/soia-dev-terminal-ops/) | POSIX/macOS/Linux long-job and tmux session operations with multi-signal stall diagnosis, log capture, and safe TERM→recheck→KILL gates | ✅ Usable (command workflow; session, logs, timeouts, and fallback are parameterized) | POSIX shell, `ps`, and `kill`; tmux/lsof are workflow-specific |
-| [`soia-design-explorer`](./skills/soia-design-explorer/) | Public wrapper for hi-fi HTML prototypes, design variants, decks, animations, and reviews, with an explicit upstream path, user-supplied brand inputs, classified outputs, and verification | ✅ Usable (requires external huashu-design) | `alchaincyf/huashu-design` (MIT; install separately) |
+| [`soia-dev-design-explorer`](./skills/soia-dev-design-explorer/) | Public wrapper for hi-fi HTML prototypes, design variants, decks, animations, and reviews, with an explicit upstream path, user-supplied brand inputs, classified outputs, and verification | ✅ Usable (requires external huashu-design) | `alchaincyf/huashu-design` (MIT; install separately) |
 
 ### 🏢 CWork · enterprise collaboration
 
@@ -322,7 +322,7 @@ This installs every skill under `skills/` into your agent's skill directory — 
 | `Check this PR's checks` / `Find out why the recent GitHub Actions run failed` | soia-dev-github-ops |
 | `Upgrade my local AI CLIs` / `Dry-run to check codex/claude versions` | soia-dev-ai-cli-upgrade |
 | `Monitor this long-running job` / `Check whether this process is truly stalled` | soia-dev-terminal-ops |
-| `Build a hi-fi HTML prototype` / `Review this visual direction` | soia-design-explorer |
+| `Build a hi-fi HTML prototype` / `Review this visual direction` | soia-dev-design-explorer |
 | `Research my Feishu drive/wiki` / `Read a Feishu work document` | soia-cwork-feishu-cli |
 | `Mirror my Feishu wiki to Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
 
@@ -438,7 +438,7 @@ soia-open-skills/
     ├── soia-dev-agent-md-advisor/
     ├── soia-dev-agent-cli-dispatch/
     ├── soia-dev-terminal-ops/
-    ├── soia-design-explorer/
+    ├── soia-dev-design-explorer/
     └── soia-cwork-feishu-cli/
 ```
 
@@ -478,7 +478,7 @@ Third-party skills this repo works alongside (this repo only declares the relati
 |---|---|---|
 | `weread-skills` | [Tencent/WeChatReading](https://github.com/Tencent/WeChatReading) | **Hard dependency** for `soia-pkm-library-weread-sync`'s WeChat Reading sync and detail scripts; an optional data enhancement for `soia-pkm-reading-plan` |
 | `huashu-weread-advisor` | [alchaincyf/huashu-weread](https://github.com/alchaincyf/huashu-weread) | `soia-pkm-reading-plan` optionally reuses its book-selection/recommendation methodology; `soia-pkm-distill-article-opinion` only references its "alchemy" method, with no runtime dependency |
-| `huashu-design` | [alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design) | External hard dependency for `soia-design-explorer`; install it separately; the upstream currently uses MIT |
+| `huashu-design` | [alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design) | External hard dependency for `soia-dev-design-explorer`; install it separately; the upstream currently uses MIT |
 | `book-to-skill` | [virgiliojr94/book-to-skill](https://github.com/virgiliojr94/book-to-skill) | Not a runtime dependency; a standalone tool for turning books/documents into skills |
 | `find-skills` | [vercel-labs/skills](https://github.com/vercel-labs/skills) | Not a runtime dependency; a helper tool for discovering/installing skills |
 

@@ -141,7 +141,7 @@ npx skills add soia-team/soia-open-skills
 | [`soia-dev-agent-md-advisor`](./skills/soia-dev-agent-md-advisor/) | AGENTS.md / CLAUDE.md / `.claude` 配置设计顾问：审查诊断 / 新项目起草 / 最佳实践问答三模式，六维度体检（长度预算/可执行性/分区路由/重复矛盾/入口一致性/时效）| ✅ 可用（纯方法论诊断，无脚本无强依赖）| 无 |
 | [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | 受控派发任务给外部编码 CLI（codex/agy/gemini/kimi/opencode/qwen 等）：任务边界拆分、防注入 prompt 写法、模型分级矩阵、Anti-Fake-Fix 三步验证 | ✅ 可用（命令模板 + 分级矩阵齐全）| 目标编码 CLI（按需 codex/agy/gemini/kimi/opencode/qwen 等）已安装登录 |
 | [`soia-dev-terminal-ops`](./skills/soia-dev-terminal-ops/) | POSIX/macOS/Linux 长任务与 tmux 会话管理：多信号停滞诊断、日志抓取、安全 TERM→复查→KILL | ✅ 可用（纯命令工作流；参数化 session、日志、超时和 fallback） | POSIX shell、`ps`、`kill`；tmux/lsof 按工作流可选 |
-| [`soia-design-explorer`](./skills/soia-design-explorer/) | 高保真 HTML 原型、设计变体、deck、动画和设计评审的公共包装层：显式 upstream 路径、用户品牌输入、五分类输出与验证 | ✅ 可用（依赖外部 huashu-design） | `alchaincyf/huashu-design`（MIT，需单独安装） |
+| [`soia-dev-design-explorer`](./skills/soia-dev-design-explorer/) | 高保真 HTML 原型、设计变体、deck、动画和设计评审的公共包装层：显式 upstream 路径、用户品牌输入、五分类输出与验证 | ✅ 可用（依赖外部 huashu-design） | `alchaincyf/huashu-design`（MIT，需单独安装） |
 
 百度网盘技能配置：复制 [`config.example.yml`](./skills/soia-pkm-baidu-netdisk-ops/config.example.yml) 到技能专属私有配置目录，在 `provider` 中选择 `official` 或 `community`。社区模式填写百度开放平台的 AppKey、SecretKey、应用名称；不要把密钥提交仓库或发送到聊天。
 
@@ -328,7 +328,7 @@ npx skills add soia-team/soia-open-skills
 | `查这个 PR checks` / `看最近 GitHub Actions 失败原因` | soia-dev-github-ops |
 | `升级本机 AI CLI` / `dry-run 看 codex/claude 版本` | soia-dev-ai-cli-upgrade |
 | `监控这个长任务` / `判断进程是否真的卡住` | soia-dev-terminal-ops |
-| `做高保真 HTML 原型` / `评审这个视觉方向` | soia-design-explorer |
+| `做高保真 HTML 原型` / `评审这个视觉方向` | soia-dev-design-explorer |
 | `调研飞书云盘/知识库` / `读取飞书工作文档` | soia-cwork-feishu-cli |
 | `同步飞书知识库到 Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
 
@@ -443,7 +443,7 @@ soia-open-skills/
     ├── soia-dev-agent-md-advisor/
     ├── soia-dev-agent-cli-dispatch/
     ├── soia-dev-terminal-ops/
-    ├── soia-design-explorer/
+    ├── soia-dev-design-explorer/
     └── soia-cwork-feishu-cli/
 ```
 
@@ -483,7 +483,7 @@ python3 scripts/audit_skills.py
 |---|---|---|
 | `weread-skills` | [Tencent/WeChatReading](https://github.com/Tencent/WeChatReading) | `soia-pkm-library-weread-sync` 微信读书同步与详情脚本的**强依赖**；`soia-pkm-reading-plan` 的可选数据增强 |
 | `huashu-weread-advisor` | [alchaincyf/huashu-weread](https://github.com/alchaincyf/huashu-weread) | `soia-pkm-reading-plan` 可选复用其选书/推荐方法论；`soia-pkm-distill-article-opinion` 只参考 alchemy 方法，不运行依赖 |
-| `huashu-design` | [alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design) | `soia-design-explorer` 的外部强依赖；需单独安装，当前上游采用 MIT |
+| `huashu-design` | [alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design) | `soia-dev-design-explorer` 的外部强依赖；需单独安装，当前上游采用 MIT |
 | `book-to-skill` | [virgiliojr94/book-to-skill](https://github.com/virgiliojr94/book-to-skill) | 非运行依赖；用于把书籍/文档转成 skill 的独立工具 |
 | `find-skills` | [vercel-labs/skills](https://github.com/vercel-labs/skills) | 非运行依赖；用于发现/安装 skill 的辅助工具 |
 

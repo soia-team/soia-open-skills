@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Explorer"
+  short_description: "Create and verify hi-fi prototypes, decks, animations, and design reviews"
+  default_prompt: "Use $soia-dev-design-explorer with an explicit huashu-design path, user-provided brand inputs, a classified output destination, and verifiable delivery evidence."

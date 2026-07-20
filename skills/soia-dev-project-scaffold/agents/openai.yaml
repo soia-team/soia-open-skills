@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dev Project Scaffold"
+  short_description: "为任意新 Git 项目创建最小 AI 协作基线。"
+  default_prompt: "Use $soia-dev-project-scaffold to create a minimal AGENTS.md and docs baseline for a new Git project."
