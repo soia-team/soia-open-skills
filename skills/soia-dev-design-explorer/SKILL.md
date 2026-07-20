@@ -1,21 +1,18 @@
 ---
 name: soia-dev-design-explorer
-description: 调用外部 huashu-design 能力制作高保真 HTML 原型、设计变体、幻灯片、动画或设计评审；要求显式上游路径、用户自带品牌规范、五分类输出落点与可复现验证。
+description: 基于 Open Design（经 soia-dev-open-design-ops）做高保真 HTML 原型、设计变体、幻灯片、动画探索与设计评审；要求用户品牌输入、五分类输出落点与可复现验证。
 dependencies:
-  external:
-    - name: huashu-design
-      required: true
-      install: "npx skills add alchaincyf/huashu-design -g -y"
-version: 1.2.0
+  hard: [soia-dev-open-design-ops]
+version: 1.3.0
 created_at: 2026-07-07 14:44:10
-updated_at: 2026-07-20 11:52:54
+updated_at: 2026-07-20 14:54:56
 created_by: claude opus 4.6
 updated_by: gpt-5.6-terra
 ---
 
 # soia-dev-design-explorer
 
-这是一个公共设计产物工作流包装层。它把外部 `huashu-design` 的能力收敛为明确输入、显式依赖路径、可控输出和可复现验证；它不替代产品规格或生产实现。
+这是一个公共设计产物工作流包装层。它以 `soia-dev-open-design-ops` 提供的 Open Design 原子操作为底座，将高保真设计探索收敛为明确输入、受控输出和可复现验证；它不替代产品规格或生产实现。
 
 ## 客户可读说明
 
@@ -23,7 +20,7 @@ updated_by: gpt-5.6-terra
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
-| 高保真 prototype / deck / animation | 收集目标、画幅、内容和资产，调用上游工作流逐步生成 | 产物路径、预览、缺口与验证证据 |
+| 高保真 prototype / deck / animation | 收集目标、画幅、内容和资产，借助 Open Design 逐步生成 | 产物路径、预览、缺口与验证证据 |
 | style exploration | 生成 2–4 个可比较方向，不让用户只凭文字盲选 | 方向差异、真实视觉和推荐理由 |
 | design review | 对已有页面或截图分级评审 | 结论、严重度、优先修复动作 |
 
@@ -39,38 +36,22 @@ updated_by: gpt-5.6-terra
 4. 真实内容与资产；
 5. 用户自带的品牌规范（文件、URL 或明确说明“无”）；
 6. 输出类别与路径；
-7. `huashu-design` 的显式安装根路径。
+7. Open Design checkout 路径；设计系统接入时再提供项目路径或 `DESIGN.md`。
 
 需求模糊时先给 2–3 个互斥形态选项。品牌信息不足时使用中性探索方向并标注 placeholder，不从记忆猜品牌色。
 
 ### 依赖与安装
 
-安装本技能和外部依赖：
+安装本技能及其硬依赖：
 
 ```bash
 npx skills add soia-team/soia-open-skills -g -a '*' -s soia-dev-design-explorer -y
-npx skills add alchaincyf/huashu-design -g -y
+npx skills add soia-team/soia-open-skills -g -a '*' -s soia-dev-open-design-ops -y
 ```
 
-`huashu-design` 是第三方 external dependency，不由本仓库维护或复制。上游公开仓库为 `https://github.com/alchaincyf/huashu-design`；其 README 与 LICENSE 当前声明自 2026-05-14 起采用 MIT，可个人或商业使用。升级前仍应复核上游版本和许可证。
+Open Design 的 checkout、Node/pnpm 前置、私有配置、daemon 端口及安全边界全部由 `soia-dev-open-design-ops` 维护。本技能不内嵌或安装 Open Design；原子层不可用时停止设计生成路径，返回其安装或修复建议，不把本地替代品称为 Open Design 交付。
 
-本技能不扫描 `$HOME` 猜测 upstream。每次必须通过本次输入、环境变量或配置给出路径：
-
-```text
-~/.config/soia-skills/soia-open-skills/soia-dev/soia-dev-design-explorer/config.yml
-SOIA_DEV_DESIGN_EXPLORER_CONFIG_FILE=<custom-config-path>
-HUASHU_DESIGN_ROOT=<huashu-design-root>
-```
-
-建议配置：
-
-```yaml
-schema_version: 1
-env:
-  HUASHU_DESIGN_ROOT: "<huashu-design-root>"
-  DESIGN_EXPLORER_TEMP_ROOT: "<optional-temp-root>"
-  DESIGN_EXPLORER_STATE_ROOT: "<optional-state-root>"
-```
+设计系统优先使用正式三件套：`manifest.json`、`DESIGN.md`、`tokens.css`。现有用户项目可走 `DESIGN.md`-only 兼容接入；须由原子层的 CLI/App `import-local` 注册，不能复制或猜测用户项目路径。
 
 品牌规范不是 skill 依赖。客户可提供 brand guideline、logo、色板、字体、截图和文案规则；未提供时明确记录缺口。
 
@@ -81,7 +62,7 @@ env:
 
 日志摘要：
 - type/platform: <类型与画幅>
-- upstream: <显式路径与读取的参考，不输出秘密>
+- open-design: <环境/daemon/设计系统或目录检查结果，不输出秘密>
 - inputs: <品牌/内容/素材完整度>
 - created/updated: <产物路径>
 - skipped/failed: <数量和原因>
@@ -95,14 +76,14 @@ env:
 - 做高保真 HTML 原型或 interactive demo；
 - 做 HTML slides、动画、演示视频素材或设计变体；
 - 对已有视觉稿做方向推荐、评审或改版建议；
-- 用户明确提到 `soia-dev-design-explorer`、`huashu-design`、`prototype` 或“视觉方向”。
+- 用户明确提到 `soia-dev-design-explorer`、Open Design、`prototype` 或“视觉方向”。
 
 ## 边界
 
 - 输出是设计探索物或评审，不自动成为生产代码、业务合同或产品规格。
 - 修改现有文件、覆盖导出、发布或写远端前必须预览并取得确认。
 - 不加载或假定任何组织内部 workspace、治理目录、品牌 skill 或落盘规则。
-- 上游是独立第三方项目；只读取显式根路径内与当前任务相关的文件，不修改第三方 skill。
+- 不修改 Open Design checkout 的上游源码；只通过原子层脚本或上游 CLI/App 做受控操作。
 
 ## 最小工作流
 
@@ -128,24 +109,25 @@ env:
 
 资产缺失会显著影响结果时先询问。允许 placeholder 时必须在产物和回执中标明。
 
-### Step 3. 解析并验证 upstream
+### Step 3. 调用 Open Design 原子层
 
-从显式输入、`HUASHU_DESIGN_ROOT` 或配置读取根路径。路径缺失时停止并给出安装/配置命令，不递归扫描用户家目录猜测安装位置。
+先使用 `soia-dev-open-design-ops` 检查环境和 daemon；不得以进程存活替代目录可用性检查：
 
-```sh
-HUASHU_DESIGN_ROOT="${HUASHU_DESIGN_ROOT:?set explicit huashu-design root}"
-test -f "$HUASHU_DESIGN_ROOT/SKILL.md"
+```bash
+# 从已安装 skill 调用（任意工作目录）
+python3 ~/.agents/skills/soia-dev-open-design-ops/scripts/check_env.py
+python3 ~/.agents/skills/soia-dev-open-design-ops/scripts/daemon_ctl.py status
+python3 ~/.agents/skills/soia-dev-open-design-ops/scripts/daemon_ctl.py health
+
+# 在 soia-open-skills 仓库根目录开发时
+python3 skills/soia-dev-open-design-ops/scripts/check_env.py
+python3 skills/soia-dev-open-design-ops/scripts/daemon_ctl.py status
+python3 skills/soia-dev-open-design-ops/scripts/daemon_ctl.py health
 ```
 
-先读取上游 `SKILL.md`，再按任务读取其直接参考：
+`check_env.py` 必须返回 `status=ok`；`health` 必须以 `/api/skills` 返回数组为证据。缺失 checkout、Node/pnpm 或 daemon 不可用时停止，并按原子层给出的建议修复。
 
-- 通用流程与验证：`references/workflow.md`、`references/verification.md`；
-- 评审：`references/critique-guide.md`；
-- 幻灯片：`references/slide-decks.md`、`references/editable-pptx.md`；
-- 动画：`references/animations.md`、`references/video-export.md`；
-- 风格探索：`references/design-styles.md`、`references/scene-templates.md`。
-
-上游版本的文件名可能变化；文件不存在时报告实际缺口，不臆造内容。
+接入设计规则时，先检查用户提供的项目是否有正式三件套；没有时将用户项目的 `DESIGN.md` 作为兼容输入，并由原子层的 `design-systems import-local` 接入。查询 functional skills 用 `list_skills.py`；查询 rendering templates 用 Open Design App 的 “Start from” 或 `GET /api/design-templates`。两种目录不得混为一谈。
 
 ### Step 4. 按五分类选择输出落点
 
@@ -167,14 +149,15 @@ test -f "$HUASHU_DESIGN_ROOT/SKILL.md"
 - style exploration 先产出 2–4 个实质不同方向；
 - prototype 先保证关键路径可点击，再打磨视觉；
 - review 先给结论和问题分级，再给修复建议；
-- 所有品牌选择以用户资产或可引用的公开品牌资料为证据。
+- 所有品牌选择以用户资产或可引用的公开品牌资料为证据；
+- 通过 Open Design App/CLI 生成、继续会话或导出时，遵从原子层的稳定入口；不构造未文档化的 API payload。
 
 ### Step 6. 验证
 
 至少执行与交付类型相称的一项验证：
 
 - 浏览器打开并检查关键 viewport；
-- Playwright/上游验证脚本截图；
+- Playwright/Open Design 验证脚本截图；
 - 导出文件可打开、页数/时长符合预期；
 - prototype 的关键交互可点击；
 - review 覆盖优点、严重度排序问题和最高优先级 3 个动作。
