@@ -1,11 +1,11 @@
 ---
 name: soia-pkm-clip-wechat-account
 description: 批量归档用户自己管理的微信公众号已发文章到 Obsidian vault。支持官方 API、公众号后台接口、登录态 Cookie 三条路线，并按 url 去重。Triggers：「同步我的公众号」「批量拉取我公众号历史文章」「批量归档我的公众号」「导入公众号已发文章」「clip 我的公众号」
-version: 2.0.0
+version: 2.0.1
 created_at: 2026-07-08 14:30:37
-updated_at: 2026-07-16 15:34:25
+updated_at: 2026-07-20 19:05:00
 created_by: claude opus 4.6
-updated_by: gpt-5.6-luna
+updated_by: claude fable 5
 ---
 
 # soia-pkm-clip-wechat-account
