@@ -2146,11 +2146,21 @@ def rewrite_asset_urls(
         label = re.sub(r"<[^>]+>", "", match.group(2)).strip() or "飞书附件"
         return markdown_link(label, href)
 
-    return re.sub(
+    content = re.sub(
         r"<a\b([^>]*)>(.*?)</a>",
         rewrite_local_attachment_card,
         content,
         flags=re.IGNORECASE | re.DOTALL,
+    )
+    # Markdown is not parsed inside an HTML block by Obsidian.  Feishu often
+    # wraps a source card in a paragraph, so remove only a paragraph whose
+    # complete content is a now-local attachment link.  Do not touch normal
+    # prose paragraphs or HTML table cells.
+    return re.sub(
+        r"<p\b[^>]*>\s*(\[飞书附件\]\(<[^>]+>\))\s*</p>",
+        r"\1",
+        content,
+        flags=re.IGNORECASE,
     )
 
 

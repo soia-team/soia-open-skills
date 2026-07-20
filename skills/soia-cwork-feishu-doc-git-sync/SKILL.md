@@ -185,7 +185,7 @@ sync:
 - `--rebuild-tree-only` 仅复用已有 manifest 和生成文件做目录迁移，不发起飞书正文请求；如果同时启用资源本地化，仍可能只为刷新过期媒体 URL 读取含资源的文档。
 - `--refresh-tree-only` 会重新读取飞书节点树和兄弟顺序，按最新 `parent_node_token` 重建本地目录和侧边栏，但复用已有本地正文；启用资源本地化时，会额外刷新仍含未本地化资源的文档；必须与 `--rebuild-tree` 一起使用。
 - `manifest.json`/`sync-state.json` 的 `tree_order: feishu_node_list` 表示目录顺序来源于飞书节点列表，不是标题排序。
-- 图片默认保留远程 URL；设置 `sync.download_assets: true` 或传入 `--download-assets` 后，技能会把正文中的远程图片及 `<source token="...">` 媒体块下载到 `paths.generated_dir/_assets/`，并把 Markdown/HTML 引用改写为相对路径。已下载的飞书附件卡片必须进一步改写为标准 Markdown 本地链接，确保 Obsidian 和 VitePress 都能点击打开；未下载的卡片仍保留原远程引用并报告失败。
+- 图片默认保留远程 URL；设置 `sync.download_assets: true` 或传入 `--download-assets` 后，技能会把正文中的远程图片及 `<source token="...">` 媒体块下载到 `paths.generated_dir/_assets/`，并把 Markdown/HTML 引用改写为相对路径。已下载的飞书附件卡片必须进一步改写为标准 Markdown 本地链接；若该链接被单独的 `<p>` 包裹，必须同时移除该 HTML 容器，确保 Obsidian 和 VitePress 都能点击打开。未下载的卡片仍保留原远程引用并报告失败。
 - 下载资源时，优先按飞书媒体 token 去重；同一附件或图片即使带有不同的短期签名 URL，也只保留一份本地资源。无 token 的资源仍按 URL 内容寻址。
 - `sync.localize_internal_links: true` 时，已同步的 Wiki/文档引用会改为相对本地 Markdown 链接；`sync.render_sub_page_navigation: true` 时，飞书导出的 `<sub-page-list>` 会改为本地 Markdown 子页面导航。两项均默认关闭，不影响已有外链行为。
 - `sync.change_ledger: true` 时，会在同步元数据下按运行生成新增、修改、移动和远端删除的变更台账；修改项只保留受 `change_ledger_max_diff_lines` 限制的 diff，不复制文档全文，也不改变生成镜像或本地补录目录。

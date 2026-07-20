@@ -1090,8 +1090,8 @@ class FeishuDocSyncTests(unittest.TestCase):
     def test_downloaded_attachment_card_becomes_a_portable_markdown_link(self) -> None:
         remote = "https://internal-api-drive-stream.feishu.cn/file/one?code=current"
         content = (
-            f'<a href="{remote}" data-feishu-attachment="true" '
-            'data-feishu-token="file-token">飞书附件</a>'
+            f'<p><a href="{remote}" data-feishu-attachment="true" '
+            'data-feishu-token="file-token">飞书附件</a></p>'
         )
 
         with tempfile.TemporaryDirectory() as temp:
@@ -1107,6 +1107,7 @@ class FeishuDocSyncTests(unittest.TestCase):
 
         self.assertEqual(rewritten, "[飞书附件](<../_assets/attachment.dmg>)")
         self.assertNotIn("data-feishu-attachment", rewritten)
+        self.assertNotIn("<p>", rewritten)
 
     def test_angle_wrapped_markdown_assets_enter_the_local_download_queue(self) -> None:
         image = "https://internal-api-drive-stream.feishu.cn/image/one?code=current"
