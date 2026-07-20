@@ -39,6 +39,7 @@ rendering:
     route: "sheets +workbook-export --file-extension xlsx"
     output: "generated mirror _exports/sheets/ as an offline fidelity artifact"
     preserves_as_native_file: [formulas, styles, comments, charts, pivot_tables, cell_images]
+    async_recovery: "Persist a pending export ticket locally, poll it on later batches, then use drive +export-download when ready; do not create a duplicate export task."
   unsupported_as_native_markdown: [chart_rendering, formula_recalculation, pivot_tables, cell_image_binary_download, attachments]
 
 safety:

@@ -321,7 +321,10 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertIn("sheet-node-2", paths)
         self.assertNotIn("sheet-node-3", paths)
         self.assertEqual(errors, {})
-        self.assertEqual(stats, {"downloaded": 1, "reused": 1, "failed": 0, "deferred": 1})
+        self.assertEqual(
+            stats,
+            {"downloaded": 1, "reused": 1, "failed": 0, "pending": 0, "deferred": 1},
+        )
         export.assert_called_once()
 
     def test_opaque_file_extensions_are_retained_without_processing_content(self) -> None:
@@ -365,6 +368,49 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertIn("+export-download", command)
         self.assertNotIn("+download", command)
         self.assertIn("--output-dir", command)
+
+    def test_export_task_reference_reads_ticket_and_source_file_token(self) -> None:
+        reference = sync.export_task_reference(
+            '{"ok":true,"data":{"ticket":"ticket-1","token":"source-file-token"}}'
+        )
+        self.assertEqual(reference, ("ticket-1", "source-file-token"))
+        self.assertIsNone(sync.export_task_reference('{"ok":true,"data":{"ready":false}}'))
+
+    def test_pending_sheet_export_persists_a_task_for_later_polling(self) -> None:
+        node = {"node_token": "sheet-node", "obj_token": "sheet-obj", "obj_type": "sheet"}
+        config = {
+            "sync": {
+                "sheets": {
+                    "workbook_exports": {
+                        "enabled": True,
+                        "all_nodes": True,
+                        "batch_size": 1,
+                        "output_dir": "_exports/sheets",
+                    }
+                }
+            }
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            mirror = Path(temp)
+            with mock.patch.object(
+                sync,
+                "run_cli_to_local_path",
+                side_effect=sync.ExportPending("ticket-1", "source-file-token"),
+            ):
+                paths, errors, stats = sync.initialize_complete_resources(
+                    config,
+                    [node],
+                    mirror,
+                    obj_type="sheet",
+                    section="sheets",
+                    key="workbook_exports",
+                )
+            state = json.loads((mirror / "_snapshots/sheet-export-tasks.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(paths, {})
+        self.assertEqual(errors, {"sheet-node": "export_pending"})
+        self.assertEqual(stats["pending"], 1)
+        self.assertEqual(state["tasks"]["sheet-node"]["ticket"], "ticket-1")
 
     def test_fetch_sheet_markdown_reads_only_the_selected_grid_range(self) -> None:
         calls = []

@@ -107,6 +107,19 @@ class CliCommandError(RuntimeError):
         self.retryable = retryable
 
 
+class ExportPending(CliCommandError):
+    """A successfully created async export task that is not ready to download."""
+
+    def __init__(self, ticket: str, source_file_token: str) -> None:
+        super().__init__(
+            "lark-cli export task is still processing",
+            category="export_pending",
+            retryable=True,
+        )
+        self.ticket = ticket
+        self.source_file_token = source_file_token
+
+
 class RequestLimiter:
     """Coordinate request starts across worker threads and backoff all workers."""
 
@@ -1205,6 +1218,45 @@ def export_file_token(payload: Any) -> str:
     return ""
 
 
+def export_task_reference(stdout: str) -> tuple[str, str] | None:
+    """Return an async export ticket and its source file token, when present."""
+    try:
+        payload = parse_cli_json(stdout)
+    except RuntimeError:
+        return None
+    data = nested(payload, "data", default={})
+    if not isinstance(data, dict):
+        return None
+    ticket = str(data.get("ticket") or "").strip()
+    source_file_token = str(data.get("token") or "").strip()
+    return (ticket, source_file_token) if ticket and source_file_token else None
+
+
+def download_export_file(
+    config: dict[str, Any],
+    mirror_dir: Path,
+    target: Path,
+    timeout_seconds: int,
+    file_token: str,
+) -> subprocess.CompletedProcess[str]:
+    """Download a completed Drive export through its dedicated endpoint."""
+    REQUEST_LIMITER.acquire()
+    return subprocess.run(
+        cli_command(
+            config,
+            "drive", "+export-download", "--as", "bot", "--file-token", file_token,
+            "--output-dir", target.parent.relative_to(mirror_dir).as_posix(),
+            "--file-name", target.name, "--overwrite", "--format", "json",
+        ),
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=mirror_dir,
+        env=command_env(config),
+        timeout=timeout_seconds,
+    )
+
+
 def resume_export_download(
     config: dict[str, Any],
     mirror_dir: Path,
@@ -1219,13 +1271,25 @@ def resume_export_download(
         return None
     if not token:
         return None
+    return download_export_file(config, mirror_dir, target, timeout_seconds, token)
+
+
+def poll_sheet_export_task(
+    config: dict[str, Any],
+    mirror_dir: Path,
+    target: Path,
+    timeout_seconds: int,
+    *,
+    ticket: str,
+    source_file_token: str,
+) -> bool:
+    """Poll one saved Sheet export task once, downloading it only when ready."""
     REQUEST_LIMITER.acquire()
-    return subprocess.run(
+    result = subprocess.run(
         cli_command(
             config,
-            "drive", "+export-download", "--as", "bot", "--file-token", token,
-            "--output-dir", target.parent.relative_to(mirror_dir).as_posix(),
-            "--file-name", target.name, "--overwrite", "--format", "json",
+            "drive", "+task_result", "--as", "bot", "--scenario", "export",
+            "--ticket", ticket, "--file-token", source_file_token, "--format", "json",
         ),
         check=False,
         capture_output=True,
@@ -1233,6 +1297,37 @@ def resume_export_download(
         cwd=mirror_dir,
         env=command_env(config),
         timeout=timeout_seconds,
+    )
+    if result.returncode != 0:
+        detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+        info = cli_error_info(detail)
+        raise CliCommandError(
+            f"lark-cli export task poll failed category={info['category']}",
+            category=str(info["category"]),
+            code=str(info["code"]),
+            retryable=bool(info["retryable"]),
+        )
+    payload = parse_cli_json(result.stdout)
+    data = nested(payload, "data", default={})
+    if not isinstance(data, dict):
+        raise CliCommandError("lark-cli export task returned no data", category="invalid_response")
+    if data.get("failed") is True:
+        raise CliCommandError("lark-cli export task reported failure", category="cli_error")
+    if not data.get("ready"):
+        return False
+    file_token = export_file_token(data)
+    if not file_token:
+        raise CliCommandError("ready export task returned no exported file token", category="invalid_response")
+    download = download_export_file(config, mirror_dir, target, timeout_seconds, file_token)
+    if download.returncode == 0 and target.is_file() and target.stat().st_size > 0:
+        return True
+    detail = " ".join(part.strip() for part in (download.stderr, download.stdout) if part.strip())
+    info = cli_error_info(detail)
+    raise CliCommandError(
+        f"lark-cli export download failed category={info['category']}",
+        category=str(info["category"]),
+        code=str(info["code"]),
+        retryable=bool(info["retryable"]),
     )
 
 
@@ -1279,6 +1374,9 @@ def run_cli_to_local_path(
                 result = resumed
                 if result.returncode == 0 and target.is_file() and target.stat().st_size > 0:
                     return
+            reference = export_task_reference(result.stdout)
+            if reference is not None:
+                raise ExportPending(*reference)
         detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
         # `sheets +workbook-export` can successfully create/poll an async
         # task yet return before its requested local file is available.  Its
@@ -1316,13 +1414,17 @@ def initialize_complete_resources(
     Markdown can link to the offline original without leaking tokens.
     """
     settings = resource_initialization_settings(config, section=section, key=key)
-    stats = {"downloaded": 0, "reused": 0, "failed": 0, "deferred": 0}
+    stats = {"downloaded": 0, "reused": 0, "failed": 0, "pending": 0, "deferred": 0}
     if settings is None:
         return {}, {}, stats
     candidates = [node for node in nodes if str(node.get("obj_type", "")) == obj_type]
     target_dir = mirror_dir / settings["output_dir"]
     ready: dict[str, str] = {}
     pending: list[tuple[dict[str, Any], Path]] = []
+    task_state_path = mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR / "sheet-export-tasks.json"
+    task_state = load_json(task_state_path, {"version": 1, "tasks": {}}) if obj_type == "sheet" else {}
+    tasks = task_state.get("tasks", {}) if isinstance(task_state, dict) else {}
+    tasks = dict(tasks) if isinstance(tasks, dict) else {}
     for node in candidates:
         suffix = (
             ".xlsx" if obj_type == "sheet" else ".base" if obj_type == "bitable" else safe_file_extension(node.get("title"))
@@ -1332,6 +1434,7 @@ def initialize_complete_resources(
         if target.is_file() and target.stat().st_size > 0:
             ready[token] = target.relative_to(mirror_dir).as_posix()
             stats["reused"] += 1
+            tasks.pop(token, None)
         else:
             pending.append((node, target))
     selected, deferred = pending[: settings["batch_size"]], pending[settings["batch_size"] :]
@@ -1343,13 +1446,28 @@ def initialize_complete_resources(
         target.parent.mkdir(parents=True, exist_ok=True)
         try:
             if obj_type == "sheet":
-                run_cli_to_local_path(
-                    config, mirror_dir, target, settings["timeout_seconds"],
-                    "drive", "+export", "--as", "bot", "--doc-type", "sheet",
-                    "--token", str(node.get("obj_token", "")), "--file-extension", "xlsx",
-                    "--output-dir", settings["output_dir"].as_posix(), "--file-name", target.name,
-                    "--overwrite", "--format", "json",
-                )
+                saved_task = tasks.get(token)
+                if isinstance(saved_task, dict):
+                    ticket = str(saved_task.get("ticket") or "").strip()
+                    source_file_token = str(saved_task.get("source_file_token") or "").strip()
+                    if ticket and source_file_token:
+                        if not poll_sheet_export_task(
+                            config, mirror_dir, target, settings["timeout_seconds"],
+                            ticket=ticket, source_file_token=source_file_token,
+                        ):
+                            errors[token] = "export_pending"
+                            stats["pending"] += 1
+                            continue
+                    else:
+                        tasks.pop(token, None)
+                if not target.is_file() or target.stat().st_size == 0:
+                    run_cli_to_local_path(
+                        config, mirror_dir, target, settings["timeout_seconds"],
+                        "drive", "+export", "--as", "bot", "--doc-type", "sheet",
+                        "--token", str(node.get("obj_token", "")), "--file-extension", "xlsx",
+                        "--output-dir", settings["output_dir"].as_posix(), "--file-name", target.name,
+                        "--overwrite", "--format", "json",
+                    )
             elif obj_type == "bitable":
                 run_cli_to_local_path(
                     config, mirror_dir, target, settings["timeout_seconds"],
@@ -1366,9 +1484,20 @@ def initialize_complete_resources(
                 )
             ready[token] = relative_target
             stats["downloaded"] += 1
+            tasks.pop(token, None)
+        except ExportPending as exc:
+            tasks[token] = {
+                "ticket": exc.ticket,
+                "source_file_token": exc.source_file_token,
+                "created_at": utc_now(),
+            }
+            errors[token] = "export_pending"
+            stats["pending"] += 1
         except Exception as exc:
             errors[token] = safe_error_category(exc)
             stats["failed"] += 1
+    if obj_type == "sheet":
+        write_text(task_state_path, json.dumps({"version": 1, "tasks": tasks}, ensure_ascii=False, indent=2) + "\n")
     return ready, errors, stats
 
 
