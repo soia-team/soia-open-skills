@@ -350,6 +350,22 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertEqual(sync.export_file_token(payload), "export-file-token")
         self.assertEqual(sync.export_file_token({"data": {}}), "")
 
+    def test_pending_export_is_resumed_through_export_download(self) -> None:
+        result = mock.Mock(returncode=0, stdout='{"ok":true}', stderr="")
+        sync.REQUEST_LIMITER.configure(0)
+        with tempfile.TemporaryDirectory() as temp:
+            mirror = Path(temp)
+            target = mirror / "_exports" / "sheet.xlsx"
+            target.parent.mkdir()
+            with mock.patch.object(sync.subprocess, "run", return_value=result) as run:
+                sync.resume_export_download(
+                    {}, mirror, target, 10, '{"data":{"file_token":"export-file-token"}}'
+                )
+        command = run.call_args.args[0]
+        self.assertIn("+export-download", command)
+        self.assertNotIn("+download", command)
+        self.assertIn("--output-dir", command)
+
     def test_fetch_sheet_markdown_reads_only_the_selected_grid_range(self) -> None:
         calls = []
 

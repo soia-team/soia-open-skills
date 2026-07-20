@@ -1223,8 +1223,9 @@ def resume_export_download(
     return subprocess.run(
         cli_command(
             config,
-            "drive", "+download", "--as", "bot", "--file-token", token,
-            "--output", target.relative_to(mirror_dir).as_posix(), "--overwrite", "--format", "json",
+            "drive", "+export-download", "--as", "bot", "--file-token", token,
+            "--output-dir", target.parent.relative_to(mirror_dir).as_posix(),
+            "--file-name", target.name, "--overwrite", "--format", "json",
         ),
         check=False,
         capture_output=True,
@@ -1344,9 +1345,10 @@ def initialize_complete_resources(
             if obj_type == "sheet":
                 run_cli_to_local_path(
                     config, mirror_dir, target, settings["timeout_seconds"],
-                    "sheets", "+workbook-export", "--as", "bot",
-                    "--spreadsheet-token", str(node.get("obj_token", "")),
-                    "--file-extension", "xlsx", "--output-path", relative_target, "--format", "json",
+                    "drive", "+export", "--as", "bot", "--doc-type", "sheet",
+                    "--token", str(node.get("obj_token", "")), "--file-extension", "xlsx",
+                    "--output-dir", settings["output_dir"].as_posix(), "--file-name", target.name,
+                    "--overwrite", "--format", "json",
                 )
             elif obj_type == "bitable":
                 run_cli_to_local_path(
