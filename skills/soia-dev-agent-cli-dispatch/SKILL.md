@@ -3,11 +3,11 @@ name: soia-dev-agent-cli-dispatch
 description: 通用外部 AI 模型/CLI 调度器（codex/claude/agy/gemini/kimi/opencode/qwen，非宿主内置子代理），可由任意宿主 AI 用于编码、审查、分析、研究、文档和内容任务：支持显式模型+推理深度或按难度自动选型，并输出 Token/费用、模型完整性、额度与恢复回执。Triggers：「派活给 codex」「让 claude 分析」「调用 agy」「调用外部 AI」「多 CLI 派发」等
 dependencies:
   optional: [soia-dev-sync-skills]
-version: 1.0.0
+version: 1.1.0
 created_at: 2026-07-10 11:28:32
-updated_at: 2026-07-15 18:30:25
+updated_at: 2026-07-20 15:18:33
 created_by: claude opus 4.6
-updated_by: claude opus 4.6
+updated_by: Claude Fable 5
 ---
 
 # soia-dev-agent-cli-dispatch
@@ -405,7 +405,7 @@ python3 scripts/run_claude_prompt.py \
 调用前只保留这条主流程：
 
 1. 先做 CLI 版本和认证/额度预检，结果为 `hold` 或 `skip` 时停止并说明原因。
-2. 固定 `requested_model` 与 `actual_model` 两个字段；无法从执行器输出验证时写 `unknown`，不能用请求值冒充实际值。
+2. 固定 `requested_model` 与 `actual_model` 两个字段；无法从执行器输出验证时写 `unknown`，不能用请求值冒充实际值。codex 的 actual_model 以会话头 `model:` 行为唯一权威（models cache 损坏时其自报身份不可信，详见 `references/codex.md`「实战控制规程」）。
 3. 批量任务使用可恢复 manifest；每个 case 完成后原子写入状态，失败、降级、超时和未测试不得伪装成通过。
 4. 完成回执必须同时给出执行器、模型、用量状态、异常/降级、问题和下一步；未知值保持未知。
 5. 涉及危险目录、外部写入或代码代理任务时，先执行参考文件中的安全门禁和真实输出验证。
