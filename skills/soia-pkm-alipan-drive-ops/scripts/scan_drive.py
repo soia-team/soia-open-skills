@@ -13,11 +13,14 @@
   {"path": <父目录>, "name": <名>, "id": <file_id>, "dir": true/false,
    "size": <字节或null>, "sha1": <文件SHA-1或null>}
    [, "agg_files": N, "agg_size": 字节]}   # 聚合行：碎片区某目录只记文件数/总大小不逐列
+   [, "ambiguous_name": true]              # 同名兄弟目录：全部显式标记且不下钻
 扫描根自身不入 JSONL（其 file_id 另用 roots.json 提供给 gen_catalog）。
 错误/进度写 <out>.errors / <out>.progress；已完整列出的目录逐行记入 <out>.done(断点续扫的权威依据，
 旧格式扫描无此文件时退回 JSONL 启发式并自动迁移)。被 kill 后加 --resume 重跑接着扫。
+同一父目录下重名的目录无法用路径可靠区分，扫描器会为每个对象写 AMBIGUOUS_NAME 错误并全部停止下钻。
 """
 import argparse, json, os, queue, subprocess, sys, threading, time
+from collections import Counter
 from pathlib import Path
 
 RUNNER_ENV = "SOIA_ALIPAN_RUNNER"
@@ -147,6 +150,7 @@ def main():
             if not o.get('dir') or not o.get('name'): continue
             dp = str(o.get('path')) + '/' + str(o.get('name'))   # 与 worker 里 dpath 拼法一致
             if 'agg_files' in o: aggdone.add(dp)             # 聚合行：该目录已按聚合语义记账，不重列
+            elif o.get('ambiguous_name'): continue           # 同名目录无法按路径归属，续扫也保持不下钻
             elif o.get('name') not in a.no_descend: dirseen.add(dp)
     if a.resume and not has_sidecar and done:
         with open(done_p, 'w') as seed:                      # 迁移种子：启发式 done 落盘，此后以 sidecar 为准
@@ -154,7 +158,7 @@ def main():
 
     lock = threading.Lock()
     jf = open(a.out, 'a'); ef = open(err_p, 'a'); df = open(done_p, 'a')
-    cnt = {'dirs': 0, 'files': 0, 'agg': 0, 'errors': 0, 'calls': 0}
+    cnt = {'dirs': 0, 'files': 0, 'agg': 0, 'ambig': 0, 'errors': 0, 'calls': 0}
     tq = queue.Queue()
 
     def emit(o):
@@ -183,13 +187,20 @@ def main():
             if path in done: tq.task_done(); continue        # 已列出过的目录不重列、不重发子行
             try:
                 with lock:
-                    open(prog_p, 'w').write(
-                        f"calls={cnt['calls']} dirs={cnt['dirs']} files={cnt['files']} "
-                        f"agg={cnt['agg']} errors={cnt['errors']} q={tq.qsize()} cur={path}\n")
+                    with open(prog_p, 'w') as progress:
+                        progress.write(
+                            f"calls={cnt['calls']} dirs={cnt['dirs']} files={cnt['files']} "
+                            f"agg={cnt['agg']} ambig={cnt['ambig']} errors={cnt['errors']} "
+                            f"q={tq.qsize()} cur={path}\n")
                 out = run_ll(path)
                 if out is None: continue
                 rows = parse_ll_output(out)
                 dirs = [e for e in rows if e['dir']]; files = [e for e in rows if not e['dir']]
+                dir_name_counts = Counter(d['name'] for d in dirs)
+                ambiguous_ids = {
+                    name: [str(d['id']) for d in dirs if d['name'] == name]
+                    for name, count in dir_name_counts.items() if count >= 2
+                }
                 nowagg = inagg or bool(a.agg_prefix) and (path == a.agg_prefix or path.startswith(a.agg_prefix + '/'))
                 if a.agg_prefix and nowagg and depth >= a.agg_min_depth and len(files) > a.agg_threshold:
                     emit({'path': path.rsplit('/', 1)[0] or '/', 'name': path.rsplit('/', 1)[-1],
@@ -202,14 +213,24 @@ def main():
                               'size': f['size'], 'sha1': f['sha1']})
                         with lock: cnt['files'] += 1
                 for d in dirs:
-                    emit({'path': path, 'name': d['name'], 'id': d['id'], 'dir': True,
-                          'size': None, 'sha1': None})
-                    with lock: cnt['dirs'] += 1
-                    if d['name'] in a.no_descend: continue          # 隐私：记录但不下钻
                     dpath = path + '/' + d['name']
-                    if a.resume and dpath in done: continue          # 断点续扫：已扫过的跳过
+                    ambiguous = dir_name_counts[d['name']] >= 2
+                    row = {'path': path, 'name': d['name'], 'id': d['id'], 'dir': True,
+                           'size': None, 'sha1': None}
+                    if ambiguous: row['ambiguous_name'] = True
+                    emit(row)
+                    with lock: cnt['dirs'] += 1
+                    if ambiguous:
+                        with lock: cnt['ambig'] += 1
+                        ids = ','.join(ambiguous_ids[d['name']])
+                        logerr(f"AMBIGUOUS_NAME {dpath!r} ids=[{ids}] not_descended")
+                        continue
+                    if d['name'] in a.no_descend: continue          # 隐私：记录但不下钻
+                    if dpath in done: continue                       # 已扫过的路径不重复入队
                     tq.put((dpath, depth + 1, nowagg))
-                with lock: df.write(path + '\n'); df.flush() # 该目录全部 emit+入队完毕，落盘断点(空目录也记)
+                with lock:
+                    df.write(path + '\n'); df.flush()        # 该目录全部 emit+入队完毕，落盘断点(空目录也记)
+                    done.add(path)                            # 同一进程内重复入队也不再重列
             finally:
                 tq.task_done()
 
@@ -228,6 +249,7 @@ def main():
     for t in ts: t.start()
     tq.join()
     jf.close(); ef.close(); df.close()
-    print(f"DONE dirs={cnt['dirs']} files={cnt['files']} agg={cnt['agg']} errors={cnt['errors']} calls={cnt['calls']}")
+    print(f"DONE dirs={cnt['dirs']} files={cnt['files']} agg={cnt['agg']} ambig={cnt['ambig']} "
+          f"errors={cnt['errors']} calls={cnt['calls']}")
 
 if __name__ == '__main__': main()

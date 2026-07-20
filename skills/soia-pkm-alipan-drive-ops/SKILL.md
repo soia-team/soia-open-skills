@@ -1,11 +1,11 @@
 ---
 name: soia-pkm-alipan-drive-ops
 description: 阿里云盘原子操作层：安装/登录 aliyunpan、显式 driveId 双盘操作、目录浏览、移动/重命名/删除、下载上传、容量查询、全盘 JSONL 扫描。作为 curator 的底层依赖。Triggers：「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」「云盘登录过期了」「全盘扫描云盘」
-version: 2.1.0
+version: 2.2.0
 created_at: 2026-07-02 23:02:39
-updated_at: 2026-07-17 09:11:21
+updated_at: 2026-07-20 11:15:19
 created_by: claude opus 4.6
-updated_by: gpt-5.6-terra
+updated_by: gpt-5.6-sol
 ---
 
 # soia-pkm-alipan-drive-ops — 阿里云盘原子操作层
@@ -169,5 +169,5 @@ aliyunpan ls "$DIR" </dev/null 2>/dev/null | \
 - 安装/登录细节：两步授权+扫码流程、登录态约 3 天过期的症状与处理，以及非交互环境标准远程恢复的第一步（伪终端 pty / 长驻进程读 stdout）；完整恢复流程见上文「登录失效的远程协作恢复」
 - `--driveId` 显式传参铁律：为什么绝不能用 `aliyunpan drive <id>` 切全局盘（多代理并发会互相污染当前盘上下文）
 - 批量操作实战坑与限流纪律：批量 rename 的 cd 依赖坑、API 桶与 429 等待、`ll` 输出里的 FILE ID 与直达链接拼法、移动改名不改 file_id 但跨盘移动会换 file_id、删除进回收站 30 天且回收站清空才真正释放配额
-- 全盘 JSONL 爬虫：**已脚本化为 `scripts/scan_drive.py`**（参数化 DFS + 线程池 + 重试 + 断点续扫 + 聚合剪枝 + 敏感目录不下钻）；输出保留目录名原始连续空格，并记录 file_id、大小与 SHA-1。用法见 ops-playbook §三。**完整图书馆流水线** = `scan_drive.py`（实盘→JSONL）→ alipan-curator 的 `gen_catalog.py`（JSONL→折叠树总览+全文检索）。登录瞬断、历史解析器折叠特殊空格两坑的处理见 ops-playbook。`scan_drive.py` 产出的 `.errors`/`.progress`/`.done` sidecar 刻意与 `--out` 主产出同目录、同生命周期——断点续扫（`--resume`）靠 sidecar 定位进度（`.done` 逐行记录已完整列出的目录，是续扫的权威断点）、质量核对要和主产出对得上，这是设计而非遗漏，不要挪去临时目录
+- 全盘 JSONL 爬虫：**已脚本化为 `scripts/scan_drive.py`**（参数化 DFS + 线程池 + 重试 + 断点续扫 + 聚合剪枝 + 敏感目录不下钻）；输出保留目录名原始连续空格，并记录 file_id、大小与 SHA-1。同名兄弟目录会各自标记 `ambiguous_name: true` 且全部不下钻，`.errors` sidecar 同步记录 `AMBIGUOUS_NAME`，使消费端 fail-closed；必须先 rename 消歧，再定向重扫该子树。用法见 ops-playbook §三。**完整图书馆流水线** = `scan_drive.py`（实盘→JSONL）→ alipan-curator 的 `gen_catalog.py`（JSONL→折叠树总览+全文检索）。登录瞬断、历史解析器折叠特殊空格与同名遮蔽三坑的处理见 ops-playbook。`scan_drive.py` 产出的 `.errors`/`.progress`/`.done` sidecar 刻意与 `--out` 主产出同目录、同生命周期——断点续扫（`--resume`）靠 sidecar 定位进度（`.done` 逐行记录已完整列出的目录，是续扫的权威断点）、质量核对要和主产出对得上，这是设计而非遗漏，不要挪去临时目录
 - 防代理卡死纪律：长内容一律脚本落文件、对话回复限 15 行
