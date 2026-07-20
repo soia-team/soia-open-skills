@@ -329,6 +329,22 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertEqual(sync.safe_file_extension("archive.zip"), ".zip")
         self.assertEqual(sync.safe_file_extension("no-extension"), ".bin")
 
+    def test_successful_export_without_a_local_file_is_retryable(self) -> None:
+        result = mock.Mock(returncode=0, stdout='{"ok":true}', stderr="")
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.object(sync.subprocess, "run", return_value=result), mock.patch.object(sync.time, "sleep"):
+                with self.assertRaises(sync.CliCommandError) as raised:
+                    sync.run_cli_to_local_path(
+                        {},
+                        Path(temp),
+                        Path(temp) / "missing.xlsx",
+                        10,
+                        "sheets",
+                        "+workbook-export",
+                    )
+        self.assertEqual(raised.exception.category, "export_incomplete")
+        self.assertTrue(raised.exception.retryable)
+
     def test_fetch_sheet_markdown_reads_only_the_selected_grid_range(self) -> None:
         calls = []
 

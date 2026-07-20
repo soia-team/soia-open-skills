@@ -1220,9 +1220,15 @@ def run_cli_to_local_path(
         if result.returncode == 0 and target.is_file() and target.stat().st_size > 0:
             return
         detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
-        info = cli_error_info(detail)
-        if result.returncode == 0 and not detail:
-            info = {"category": "export_incomplete", "code": "", "retryable": True}
+        # `sheets +workbook-export` can successfully create/poll an async
+        # task yet return before its requested local file is available.  Its
+        # JSON status is not an API error, so classify every zero-exit/missing
+        # target case as retryable rather than leaking it as `cli_error`.
+        info = (
+            {"category": "export_incomplete", "code": "", "retryable": True}
+            if result.returncode == 0
+            else cli_error_info(detail)
+        )
         if info["retryable"] and attempt < 4:
             REQUEST_LIMITER.cooldown(min(30, 2**attempt))
             continue
