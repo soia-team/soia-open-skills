@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -23,6 +24,17 @@ def load_module():
 
 
 class ScanDriveTests(unittest.TestCase):
+    @staticmethod
+    def ll_output(path, entries=()):
+        lines = [f"当前目录: {path}", "----"]
+        for index, (id_, sha1, size, name) in enumerate(entries, 1):
+            lines.append(
+                f"  {index}  {id_}  -  {sha1}  {size}  "
+                f"2022-05-08 11:57:35  2022-05-08 11:57:35  {name}"
+            )
+        lines.append("----")
+        return "\n".join(lines) + "\n"
+
     def test_default_runner_is_resolved_from_this_skill_scripts_directory(self):
         module = load_module()
 
@@ -130,6 +142,104 @@ class ScanDriveTests(unittest.TestCase):
                 },
             ],
         )
+
+    def test_ambiguous_sibling_names_are_marked_and_not_descended(self):
+        module = load_module()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            runner = root / "runner.py"
+            runner.write_text("# test runner\n", encoding="utf-8")
+            output = root / "scan.jsonl"
+            calls = []
+
+            def fake_run(args, **kwargs):
+                path = args[-1]
+                calls.append(path)
+                if path == "/root":
+                    stdout = self.ll_output(
+                        path,
+                        [
+                            ("dup-a", "-", "-", "same/"),
+                            ("dup-b", "-", "-", "same/"),
+                            ("unique-id", "-", "-", "unique/"),
+                        ],
+                    )
+                elif path == "/root/unique":
+                    stdout = self.ll_output(path, [("file-1", "ABC", "7", "child.txt")])
+                else:
+                    self.fail(f"unexpected ll path: {path}")
+                return subprocess.CompletedProcess(args, 0, stdout, "")
+
+            stdout = io.StringIO()
+            argv = [
+                str(SCRIPT),
+                "--driveId", "drive-1",
+                "--root", "/root",
+                "--out", str(output),
+                "--workers", "1", "--attempts", "1",
+                "--no-descend", "same",
+            ]
+            with mock.patch.dict(module.os.environ, {module.RUNNER_ENV: str(runner)}, clear=False), \
+                    mock.patch.object(module.subprocess, "run", side_effect=fake_run), \
+                    mock.patch.object(module.sys, "argv", argv), \
+                    mock.patch.object(module.sys, "stdout", stdout):
+                module.main()
+
+            rows = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines()]
+            duplicate_rows = [row for row in rows if row.get("name") == "same"]
+            self.assertEqual(len(duplicate_rows), 2)
+            self.assertTrue(all(row.get("ambiguous_name") is True for row in duplicate_rows))
+            unique_row = next(row for row in rows if row.get("name") == "unique")
+            self.assertNotIn("ambiguous_name", unique_row)
+            self.assertIn("/root/unique", calls)
+            self.assertNotIn("/root/same", calls)
+
+            errors = output.with_suffix(".jsonl.errors").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(errors), 2)
+            self.assertTrue(
+                all(
+                    "AMBIGUOUS_NAME '/root/same' ids=[dup-a,dup-b] not_descended" in line
+                    for line in errors
+                ),
+                errors,
+            )
+            done = output.with_suffix(".jsonl.done").read_text(encoding="utf-8").splitlines()
+            self.assertNotIn("/root/same", done)
+            self.assertIn("/root/unique", done)
+            self.assertIn("ambig=2", output.with_suffix(".jsonl.progress").read_text(encoding="utf-8"))
+            self.assertIn("ambig=2", stdout.getvalue())
+
+    def test_completed_directories_are_not_relisted_within_run(self):
+        module = load_module()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            runner = root / "runner.py"
+            runner.write_text("# test runner\n", encoding="utf-8")
+            output = root / "scan.jsonl"
+
+            completed = subprocess.CompletedProcess(
+                [], 0, self.ll_output("/root"), ""
+            )
+            argv = [
+                str(SCRIPT),
+                "--driveId", "drive-1",
+                "--root", "/root",
+                "--root", "/root",
+                "--out", str(output),
+                "--workers", "1", "--attempts", "1",
+            ]
+            stdout = io.StringIO()
+            with mock.patch.dict(module.os.environ, {module.RUNNER_ENV: str(runner)}, clear=False), \
+                    mock.patch.object(module.subprocess, "run", return_value=completed) as run, \
+                    mock.patch.object(module.sys, "argv", argv), \
+                    mock.patch.object(module.sys, "stdout", stdout):
+                module.main()
+
+            run.assert_called_once()
+            self.assertEqual(
+                output.with_suffix(".jsonl.done").read_text(encoding="utf-8").splitlines(),
+                ["/root"],
+            )
 
 
     def test_resume_reenqueues_unscanned_frontier(self):
