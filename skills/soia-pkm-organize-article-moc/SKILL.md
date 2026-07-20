@@ -1,11 +1,11 @@
 ---
 name: soia-pkm-organize-article-moc
 description: 整理 Obsidian 文章库——补 frontmatter（topics/captured_at/author）、按主题双链归类、建/更新两级 MOC、按月份归位、补双链。底层调 rebuild_moc.py / backfill 等脚本，上层用 LLM 判断分类。用于激活存量收藏、规整新归档。Triggers：「整理文章库」「补 topics」「重建 MOC」「把这些收藏归类」「organize 一下」「归位到月份」
-version: 2.0.0
+version: 2.0.1
 created_at: 2026-07-02 17:57:11
-updated_at: 2026-07-16 15:34:25
+updated_at: 2026-07-20 19:05:00
 created_by: claude opus 4.6
-updated_by: gpt-5.6-luna
+updated_by: claude fable 5
 ---
 
 # soia-pkm-organize-article-moc

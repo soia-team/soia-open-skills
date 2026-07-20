@@ -1,11 +1,11 @@
 ---
 name: soia-pkm-publish-wechat-draft
 description: 把成文草稿排版成符合微信公众号限制的内联样式 HTML，机械校验通过后推入微信公众号草稿箱；只建草稿，绝不自动群发。Triggers：「把这篇发成公众号」「排版这篇公众号」「推到公众号草稿箱」「公众号 draft」
-version: 2.0.0
+version: 2.0.1
 created_at: 2026-07-02 17:49:40
-updated_at: 2026-07-16 15:44:20
+updated_at: 2026-07-20 19:05:00
 created_by: claude opus 4.6
-updated_by: gpt-5.6-luna
+updated_by: claude fable 5
 ---
 
 # soia-pkm-publish-wechat-draft
