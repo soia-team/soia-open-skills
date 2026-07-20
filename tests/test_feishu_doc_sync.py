@@ -294,6 +294,24 @@ class FeishuDocSyncTests(unittest.TestCase):
         )
         self.assertEqual(errors, {"https://old.example/failed.png": "permission_denied"})
 
+    def test_event_scoped_asset_download_uses_only_fresh_document_bodies(self) -> None:
+        fetched = {
+            "fresh": ("ok", "![new](https://asset.example/new.png)", "", ""),
+            "reused": ("ok", "![old](https://asset.example/old.png)", "", ""),
+        }
+
+        self.assertEqual(
+            sync.asset_contents_for_sync(fetched, {"fresh"}, targeted=True),
+            ["![new](https://asset.example/new.png)"],
+        )
+        self.assertEqual(
+            sync.asset_contents_for_sync(fetched, {"fresh"}, targeted=False),
+            [
+                "![new](https://asset.example/new.png)",
+                "![old](https://asset.example/old.png)",
+            ],
+        )
+
     def test_asset_refresh_targets_only_documents_with_failed_references(self) -> None:
         nodes = [
             {"node_token": "doc-failed", "obj_type": "docx"},

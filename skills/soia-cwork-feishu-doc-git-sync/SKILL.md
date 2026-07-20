@@ -3,9 +3,9 @@ name: soia-cwork-feishu-doc-git-sync
 description: 将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。
 dependencies:
   hard: [soia-cwork-feishu-cli]
-version: 1.6.0
+version: 1.6.1
 created_at: 2026-07-14 23:24:26
-updated_at: 2026-07-20 18:15:32
+updated_at: 2026-07-20 18:31:03
 created_by: claude opus 4.6
 updated_by: gpt-5.6-sol
 ---
@@ -203,6 +203,7 @@ sync:
 - Wiki `file` 节点默认只生成元数据 stub；用户明确确认完整初始化后，同时设置 `sync.files.downloads.enabled: true` 与 `all_nodes: true`，同步器才会分批调用 `drive +download`。文件以原始二进制保存，不会执行、挂载、解压或解析 ZIP、DMG、EXE 等格式。
 - 飞书 Markdown 导出的图片 URL 可能是短期鉴权地址；启用本地化与资源刷新后，技能会先重读关联文档取得新 URL，再下载资源，避免对已过期的 Feishu drive/stream 链接反复等待；不会无条件重拉所有正文。可用 `--refresh-asset-urls` 显式打开该行为。
 - 图片会统一转为带转义 `alt` 的 HTML `<img>`，避免超长说明被 Markdown/Vue 渲染成可见超链接。资源下载优先根据文件二进制识别 PNG/JPEG/GIF/WebP/SVG，而非盲信短期 URL 或响应头；发现旧缓存后缀与真实格式不符时会在生成资产目录内更正后缀。
+- 传入事件目标、`--changed-*-token`、`--only-node-token` 或隔离试点时，资源下载只检查本轮重新读取的文档，不会因为修复一个页面而把整座既有知识库的历史资源重新放进下载队列；需要完整资源回填时，不传事件目标并按 `asset_batch_size` 分批执行。
 - 图片下载使用 URL 内容寻址文件名，重复同步会复用已有资源；Markdown 的普通 URL 与 `(<https://…>)` 尖括号 URL 都会进入同一下载队列。可通过 `asset_workers`、`asset_timeout_seconds`、`asset_download_attempts`、`max_asset_bytes` 限制并发、超时、媒体重试和单文件大小；单资源默认上限为 50 MiB，可在私有配置中按已确认的下载范围调低或调高。携带飞书媒体 token 的附件遇到短暂或未归类 CLI 失败时会在上限内重试；明确的权限不足、资源不存在或 `asset_too_large` 不会盲目重试。大型存量镜像可设置正整数 `asset_batch_size`：每次只请求该数量的尚未落盘资源，已下载资源仍会被本地化改写；`asset_refreshed_batch_size` 可限制同一批已刷新文档的新链接下载量。重复执行并以 `--validate-only` 确认完成。manifest 会报告本轮 `assets_deferred`。下载失败只保留原 URL，并在 manifest 的 `assets_failed` 计数中报告，不把鉴权 URL 写入日志或清单。
 - `<source token="...">` 或无 URL 的 `<img token="...">` 会调用官方 `docs +media-download`；远程 URL 不可直接读取时，需要按权限清单补充 `docs:document.media:download` 或 `drive:file:download`，并在私有配置中启用本地资源下载。没有下载权限时不得猜测本地资源已经完整。
 

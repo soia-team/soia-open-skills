@@ -2111,6 +2111,21 @@ def extract_asset_references(content: str) -> list[str]:
     )
 
 
+def asset_contents_for_sync(
+    fetched: dict[str, tuple[str, str, str, str]],
+    fresh_tokens: set[str],
+    *,
+    targeted: bool,
+) -> list[str]:
+    """Keep event and pilot asset downloads within the documents fetched in this run."""
+    tokens = fresh_tokens if targeted else set(fetched)
+    return [
+        fetched[token][1]
+        for token in sorted(tokens)
+        if token in fetched and isinstance(fetched[token], tuple) and len(fetched[token]) > 1
+    ]
+
+
 def image_extension(content_type: str, data: bytes, url: str) -> str:
     """Infer a browser-renderable extension from bytes before response metadata."""
     if data.startswith(b"\x89PNG\r\n\x1a\n"):
@@ -3451,6 +3466,7 @@ def sync(args: argparse.Namespace) -> int:
         "error_categories": {},
     }
     fetched: dict[str, tuple[str, str, str, str]] = {}
+    fresh_content_tokens: set[str] = set()
     previous_bodies: dict[str, str] = {}
     remote_metadata: dict[str, dict[str, Any]] = {}
     metadata_probe_errors: dict[str, str] = {}
@@ -3685,6 +3701,7 @@ def sync(args: argparse.Namespace) -> int:
                 if completed == 1 or completed % 100 == 0 or completed == len(futures):
                     print(f"content_fetch progress={completed}/{len(futures)}", flush=True)
         counts["content_fetched"] = len(content_nodes_to_fetch)
+        fresh_content_tokens.update(fetched)
         print(
             f"content_fetch completed={len(fetched)} fetched_now={len(content_nodes_to_fetch)} workers={workers}"
         )
@@ -3742,8 +3759,13 @@ def sync(args: argparse.Namespace) -> int:
     asset_map: dict[str, str] = {}
     asset_errors: dict[str, str] = {}
     if download_assets_enabled:
+        asset_contents = asset_contents_for_sync(
+            fetched,
+            fresh_content_tokens,
+            targeted=event_driven,
+        )
         asset_map, asset_errors, assets_downloaded, assets_reused, assets_deferred = materialize_assets(
-            [value[1] for value in fetched.values() if isinstance(value, tuple) and len(value) > 1],
+            asset_contents,
             mirror_dir,
             config,
             refresh_short_lived_urls=refresh_asset_urls_enabled,
@@ -3845,9 +3867,11 @@ def sync(args: argparse.Namespace) -> int:
                 config,
                 batch_size_override=refreshed_batch_size,
             )
-            final_contents = [
-                value[1] for value in fetched.values() if isinstance(value, tuple) and len(value) > 1
-            ]
+            final_contents = asset_contents_for_sync(
+                fetched,
+                fresh_content_tokens,
+                targeted=event_driven,
+            )
             asset_map, asset_errors = merge_asset_results(
                 asset_map,
                 asset_errors,
