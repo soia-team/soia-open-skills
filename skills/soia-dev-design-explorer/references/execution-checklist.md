@@ -5,7 +5,8 @@
 - 已锁定 `prototype` / `deck` / `animation` / `style-exploration` / `review` 之一
 - 已确认平台、画幅、受众、用途和成功标准
 - 已把内容、素材和用户品牌规范标为 `available / missing / placeholder`
-- 已从输入、环境或配置取得显式 `HUASHU_DESIGN_ROOT`，未扫描用户家目录
+- 已通过 `soia-dev-open-design-ops` 的 `check_env.py` 检查 Open Design 环境，`daemon_ctl.py health` 已以 `/api/skills` 数组验证 daemon
+- 设计系统已确认正式三件套（`manifest.json`、`DESIGN.md`、`tokens.css`）或明确标为 `DESIGN.md`-only compatibility，并按原子层流程接入
 - 已按 A/B/C/D/E 分类选择输出目录，并预览将创建或覆盖的文件
 
 ## 生成中
@@ -26,7 +27,7 @@
 - prototype 关键交互可点击
 - review 包含优点、严重度问题和优先修复动作
 
-确认回执同时包含：上游路径来源、产物绝对路径、验证命令/结果、缺失素材和 placeholder。
+确认回执同时包含：Open Design 环境/daemon/设计系统检查结果、产物绝对路径、验证命令/结果、缺失素材和 placeholder。
 
 ## 最终汇报模板
 
