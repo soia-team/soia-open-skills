@@ -2,7 +2,7 @@
 
 > Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.
 > Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.
-> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 48 skills.
+> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 49 skills.
 
 ## Source Fields
 
@@ -70,6 +70,7 @@
 | [`soia-dev-open-design-ops`](./soia-dev-open-design-ops/) | Operate Open Design daemon, catalogs, design systems, exports, and session resume | Use $soia-dev-open-design-ops to check my Open Design environment, start the local daemon safely, query real catalogs, and run a source-backed export or resume workflow. |
 | [`soia-dev-project-scaffold`](./soia-dev-project-scaffold/) | 为任意新 Git 项目创建最小 AI 协作基线。 | Use $soia-dev-project-scaffold to create a minimal AGENTS.md and docs baseline for a new Git project. |
 | [`soia-dev-prompt-clarity`](./soia-dev-prompt-clarity/) | 中英文提示词编写、诊断、防误伤改写与可验证规格化 | Use $soia-dev-prompt-clarity to turn my request into a clear, directly usable prompt; preserve my chosen prompt and explanation languages, and use a named framework only when it materially improves the result. |
+| [`soia-dev-skill-release`](./soia-dev-skill-release/) | 完成 merge 后技能的本机安装、软链、lock 与版本发布收尾。 | Use $soia-dev-skill-release to finish local release cleanup for merged skill names from an owner/name repository. |
 | [`soia-dev-sync-skills`](./soia-dev-sync-skills/) | 将共享技能目录以软链接同步到用户选择的 AI 工具目录。 | Use $soia-dev-sync-skills to preview and sync a shared skill source to explicitly selected AI tool directories. |
 | [`soia-dev-task-execute`](./soia-dev-task-execute/) | 执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务。 |  |
 | [`soia-dev-terminal-ops`](./soia-dev-terminal-ops/) | Monitor long-running POSIX jobs and recover stalled processes safely | Use $soia-dev-terminal-ops to monitor this long-running command, diagnose progress with multiple signals, and apply the TERM-to-KILL confirmation gates if recovery is needed. |
