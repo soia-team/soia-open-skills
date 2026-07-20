@@ -52,7 +52,7 @@ normalization:
   local_asset_dir: "10_knowledge-base/_assets"
   media_token_strategy: "docs +media-download --as bot --token <file_token>"
   asset_deduplication: "prefer stable Feishu media token; fall back to source URL"
-  attachment_rendering: "preserve a remote link by default; rewrite to a relative local path after an explicitly enabled download"
+  attachment_rendering: "preserve a remote link by default; after an explicitly enabled download, replace Feishu HTML cards with portable Markdown links to the relative local file"
   unresolved_image_behavior: keep_original_url_and_report
   unresolved_image_logging: counts_only_no_auth_urls
 

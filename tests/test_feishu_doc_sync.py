@@ -1087,6 +1087,27 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertIn("../_assets/a.png", rewritten)
         self.assertIn("../_assets/b.png", rewritten)
 
+    def test_downloaded_attachment_card_becomes_a_portable_markdown_link(self) -> None:
+        remote = "https://internal-api-drive-stream.feishu.cn/file/one?code=current"
+        content = (
+            f'<a href="{remote}" data-feishu-attachment="true" '
+            'data-feishu-token="file-token">飞书附件</a>'
+        )
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            mirror = root / "10_knowledge-base"
+            target = mirror / "目录" / "文档.md"
+            rewritten = sync.rewrite_asset_urls(
+                content,
+                target,
+                mirror,
+                {remote: "_assets/attachment.dmg"},
+            )
+
+        self.assertEqual(rewritten, "[飞书附件](<../_assets/attachment.dmg>)")
+        self.assertNotIn("data-feishu-attachment", rewritten)
+
     def test_angle_wrapped_markdown_assets_enter_the_local_download_queue(self) -> None:
         image = "https://internal-api-drive-stream.feishu.cn/image/one?code=current"
         attachment = "https://internal-api-drive-stream.feishu.cn/file/two?code=current"

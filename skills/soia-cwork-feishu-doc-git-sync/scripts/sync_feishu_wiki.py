@@ -2124,12 +2124,34 @@ def rewrite_asset_urls(
     mirror_dir: Path,
     asset_map: dict[str, str],
 ) -> str:
-    """Rewrite downloaded image URLs to paths relative to the generated Markdown."""
+    """Rewrite downloaded media URLs to portable links relative to the Markdown."""
     for url, mirror_relative in asset_map.items():
         local_path = mirror_dir / mirror_relative
         relative = Path(os.path.relpath(local_path, target.parent)).as_posix()
         content = content.replace(url, relative)
-    return content
+
+    def rewrite_local_attachment_card(match: re.Match[str]) -> str:
+        attrs = html_attributes(match.group(1))
+        href = attrs.get("href", "").strip()
+        if (
+            attrs.get("data-feishu-attachment", "").lower() != "true"
+            or not href
+            or href.startswith(("http://", "https://", "feishu-media://"))
+        ):
+            return match.group(0)
+        # Obsidian reliably intercepts Markdown links inside a vault, while a
+        # relative raw HTML anchor can be delegated to the renderer's app URL
+        # and appear unclickable.  Once an attachment is local there is no
+        # need to retain its Feishu-only card attributes.
+        label = re.sub(r"<[^>]+>", "", match.group(2)).strip() or "飞书附件"
+        return markdown_link(label, href)
+
+    return re.sub(
+        r"<a\b([^>]*)>(.*?)</a>",
+        rewrite_local_attachment_card,
+        content,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
 
 
 def merge_asset_results(
