@@ -142,3 +142,13 @@ codex exec -m <model> -c model_reasoning_effort="high" \
 - 不要把 `dangerously-bypass-approvals-and-sandbox` 当默认模式。
 - 需要 scratch 任务时，优先临时 git repo 或 `git worktree`。
 - 若用于 review，不要在 live 主工作目录切分支污染现场。
+
+## 实战控制规程（2026-07 云盘战役校准，七条全部有实证）
+
+1. **actual_model 的唯一权威是会话头 `model:` 行**。codex v0.144.x 在 models cache 损坏时（症状：stderr 出现 `ERROR codex_models_manager…failed to load models cache`）自报身份失灵：五次实跑 sol/terra，回执分别自称 gpt-5.6-luna（四次）与 gpt-5（一次）；任务书写明"以会话头为准"也拦不住。主控必须自己 grep 输出中的 `model:` 行定 actual_model，并核验/修正 codex 写进产物的署名（SKILL.md `updated_by`、commit `Co-Authored-By`）。
+2. **长执行进程禁止由 codex 启动**。codex exec 会话结束会杀死其子进程（四次实证：扫描器/预检器随会话退出被杀）。耗时执行（全盘扫描、批量写入、构建）一律由主控 `nohup … &` 直跑并用监控哨看护；codex 只做规划、编码、审计。
+3. **完成以证据文件为准，不信叙述**。codex 曾两次以"正在运行"结束会话而进程已死。任务书要求前台同步等待+产物落盘；主控验收看文件与退出码，不看回执的过程描述。
+4. **派发前主控做基线核验**。建分支前确认目标仓工作树目标文件无未提交改动、且 main 与 origin/main 对齐。实证：本地 main 曾挂着一个未推 commit，codex 基于污染基线建分支，PR 卷入无关变更，需 cherry-pick 重建。注意口径：无关的他人未提交文件**不构成阻塞**（见下条），不要把本条放大为"工作树必须全净"。
+5. **无关未提交文件：列明、不 add、回执申明**。任务书写明"工作树可能存在无关未提交文件（列出或描述特征），不得 add，只提交本任务文件"；codex 完成后在回执申明"无关文件未纳入 commit"。同一脏工作树上四次派发零误提交的正面模式。
+6. **heredoc 写 prompt 前必 `mkdir -p`**（两次踩坑）：目标目录不存在时 `cat > $DIR/prompt.txt` 静默失败，codex 收到空输入照样开跑。
+7. **回执模板增补两行**：①原文引用会话头 `model:` 行；②"无关未提交文件未纳入 commit"申明。
