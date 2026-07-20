@@ -20,7 +20,9 @@ resources:
       route: "docs +media-download or authenticated remote media download"
       config: "sync.download_assets: true"
       local_form: "deduplicated files in the generated mirror asset directory and rewritten relative links"
+      limits: "sync.max_asset_bytes defaults to 50 MiB per resource; larger files remain remote and report asset_too_large until the customer explicitly raises the private limit."
       large_mirror_control: "A positive sync.asset_batch_size downloads only that many missing resources per run; existing local resources are still rewritten and manifest.stats.assets_deferred reports the remaining queue."
+      retry_policy: "Token-backed media retries bounded transient or unclassified CLI failures; confirmed permission-denied and not-found responses remain actionable failures."
 
   sheet:
     display_table:

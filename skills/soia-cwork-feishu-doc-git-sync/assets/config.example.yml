@@ -123,6 +123,9 @@ sync:
   asset_dir: "_assets"
   asset_workers: 4
   asset_timeout_seconds: 30
+  # Retry a token-backed media download after a transient or unclassified CLI
+  # failure. Permission-denied and not-found responses stop immediately.
+  asset_download_attempts: 3
   # Set a positive value for large mirrors to process only that many missing
   # resources per run. Already-downloaded assets are still rewritten locally;
   # repeat until --validate-only reports no unresolved assets. 0 means no limit.
@@ -131,7 +134,10 @@ sync:
   # to complete that document's local links in the same bounded retry step.
   # 0 means no limit.
   asset_refreshed_batch_size: 0
-  max_asset_bytes: 20971520
+  # Default 50 MiB per file. Lower this for storage-constrained mirrors.
+  # Larger attachments remain explicit local downloads and are reported as
+  # asset_too_large instead of being silently represented as local files.
+  max_asset_bytes: 52428800
   # Create a private per-run Markdown change ledger and bounded content diffs
   # under 90_同步元数据/. This never changes generated documents or deletes history.
   change_ledger: false

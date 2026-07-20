@@ -54,7 +54,8 @@ SIDEBAR_FILE = "sidebar.json"
 MAX_PATH_COMPONENT_LENGTH = 48
 DEFAULT_ASSET_DIR = "_assets"
 DEFAULT_ASSET_TIMEOUT_SECONDS = 30
-DEFAULT_MAX_ASSET_BYTES = 20 * 1024 * 1024
+DEFAULT_ASSET_DOWNLOAD_ATTEMPTS = 3
+DEFAULT_MAX_ASSET_BYTES = 50 * 1024 * 1024
 PRIVATE_PATH_PATTERN = re.compile(
     r"(?:/(?:Users|home|private|var/folders|tmp)/[^\s'\";]+|[A-Za-z]:[\\/][^\s'\";]+)"
 )
@@ -105,6 +106,13 @@ class CliCommandError(RuntimeError):
         self.category = category
         self.code = code
         self.retryable = retryable
+
+
+class AssetSizeLimitError(RuntimeError):
+    """A downloaded resource exceeded the configured local safety limit."""
+
+    def __init__(self) -> None:
+        super().__init__("asset exceeds configured size limit")
 
 
 class ExportPending(CliCommandError):
@@ -433,6 +441,8 @@ def error_info(exc: Exception | str) -> dict[str, Any]:
     """Return a small, safe error record for manifests and validation."""
     if isinstance(exc, CliCommandError):
         return {"category": exc.category, "code": exc.code, "retryable": exc.retryable}
+    if isinstance(exc, AssetSizeLimitError):
+        return {"category": "asset_too_large", "code": "", "retryable": False}
     return cli_error_info(str(exc))
 
 
@@ -1884,7 +1894,7 @@ def download_one_asset(
         content_type = response.headers.get("Content-Type", "")
         data = response.read(max_bytes + 1)
     if len(data) > max_bytes:
-        raise RuntimeError(f"asset exceeds max_asset_bytes={max_bytes}")
+        raise AssetSizeLimitError()
     extension = image_extension(content_type, data, url)
     if extension == ".bin" and require_image:
         raise RuntimeError(f"remote response is not a recognized image: {content_type or 'unknown content type'}")
@@ -1905,12 +1915,25 @@ def download_one_media(
     asset_dir: str,
     max_bytes: int,
     timeout_seconds: float,
+    *,
+    attempts: int = DEFAULT_ASSET_DOWNLOAD_ATTEMPTS,
 ) -> tuple[str, str, str]:
-    """Download token-backed media with a bounded lark-cli request."""
+    """Download token-backed media with bounded retries for transient CLI failures."""
     reference = f"feishu-media://{token}"
     digest = hashlib.sha256(reference.encode("utf-8")).hexdigest()[:24]
     asset_root = mirror_dir / asset_dir
-    existing = next(iter(sorted(asset_root.glob(f"{digest}.*"))), None) if asset_root.is_dir() else None
+    existing = (
+        next(
+            (
+                candidate
+                for candidate in sorted(asset_root.glob(f"{digest}.*"))
+                if candidate.is_file() and candidate.stat().st_size > 0
+            ),
+            None,
+        )
+        if asset_root.is_dir()
+        else None
+    )
     if existing and existing.is_file() and existing.stat().st_size:
         return reference, existing.name, "reused"
     asset_root.mkdir(parents=True, exist_ok=True)
@@ -1929,33 +1952,60 @@ def download_one_media(
         "--format",
         "json",
     )
-    REQUEST_LIMITER.acquire()
-    result = subprocess.run(
-        command,
-        check=False,
-        capture_output=True,
-        text=True,
-        cwd=mirror_dir,
-        env=command_env(config),
-        timeout=timeout_seconds,
-    )
-    if result.returncode != 0:
-        detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
-        info = cli_error_info(detail)
+    attempts = max(1, min(int(attempts), 5))
+    for attempt in range(attempts):
+        REQUEST_LIMITER.acquire()
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=mirror_dir,
+                env=command_env(config),
+                timeout=timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            info = {"category": "temporary_network", "code": "", "retryable": True}
+            failure: Exception | None = exc
+        else:
+            failure = None
+            if result.returncode == 0:
+                target = next(
+                    (
+                        candidate
+                        for candidate in sorted(asset_root.glob(f"{digest}.*"))
+                        if candidate.is_file() and candidate.stat().st_size > 0
+                    ),
+                    None,
+                )
+                if target is not None:
+                    if target.stat().st_size > max_bytes:
+                        target.unlink()
+                        raise AssetSizeLimitError()
+                    return reference, target.name, "downloaded"
+                info = {"category": "invalid_response", "code": "", "retryable": True}
+            else:
+                detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+                info = cli_error_info(detail)
+
+        # Some Feishu media calls fail once with an unclassified CLI response
+        # even though the same stable token is immediately downloadable.  Retry
+        # that bounded case, but never retry a confirmed permission or not-found
+        # response that requires user action instead.
+        retryable = bool(info["retryable"]) or str(info["category"]) in {"cli_error", "invalid_response"}
+        if retryable and attempt < attempts - 1:
+            REQUEST_LIMITER.cooldown(min(30, 2**attempt))
+            continue
+        code_suffix = f" code={info['code']}" if info["code"] else ""
         raise CliCommandError(
-            f"lark-cli media request failed category={info['category']}",
+            f"lark-cli media request failed category={info['category']}{code_suffix}",
             category=str(info["category"]),
             code=str(info["code"]),
-            retryable=bool(info["retryable"]),
-        )
-    candidates = sorted(asset_root.glob(f"{digest}.*"))
-    if not candidates:
-        raise RuntimeError("docs +media-download returned no local file")
-    target = candidates[0]
-    if target.stat().st_size > max_bytes:
-        target.unlink()
-        raise RuntimeError(f"asset exceeds max_asset_bytes={max_bytes}")
-    return reference, target.name, "downloaded"
+            retryable=retryable,
+        ) from failure
+
+    raise AssertionError("unreachable media download retry state")
 
 
 def cached_asset_filename(identity: str, asset_root: Path) -> str:
@@ -2005,6 +2055,23 @@ def materialize_assets(
     except (TypeError, ValueError):
         timeout_seconds = DEFAULT_ASSET_TIMEOUT_SECONDS
     try:
+        media_attempts = max(
+            1,
+            min(
+                int(
+                    nested(
+                        config,
+                        "sync",
+                        "asset_download_attempts",
+                        default=DEFAULT_ASSET_DOWNLOAD_ATTEMPTS,
+                    )
+                ),
+                5,
+            ),
+        )
+    except (TypeError, ValueError):
+        media_attempts = DEFAULT_ASSET_DOWNLOAD_ATTEMPTS
+    try:
         max_bytes = max(1024, int(nested(config, "sync", "max_asset_bytes", default=DEFAULT_MAX_ASSET_BYTES)))
     except (TypeError, ValueError):
         max_bytes = DEFAULT_MAX_ASSET_BYTES
@@ -2042,10 +2109,11 @@ def materialize_assets(
                     asset_dir,
                     max_bytes,
                     timeout_seconds,
+                    attempts=media_attempts,
                 )
                 return candidates, filename, status, ""
             except Exception as exc:  # Signed URLs are a best-effort fallback for token download failures.
-                last_error = str(exc)
+                last_error = f"asset download failed category={safe_error_category(exc)}"
         for reference in candidates:
             # The stable-token attempt above already covered this exact source.
             if reference == f"feishu-media://{media_token}":
@@ -2059,6 +2127,7 @@ def materialize_assets(
                         asset_dir,
                         max_bytes,
                         timeout_seconds,
+                        attempts=media_attempts,
                     )
                 else:
                     _source, filename, status = download_one_asset(
@@ -2071,7 +2140,7 @@ def materialize_assets(
                     )
                 return candidates, filename, status, ""
             except Exception as exc:  # try a refreshed signed URL for the same media token
-                last_error = str(exc)
+                last_error = f"asset download failed category={safe_error_category(exc)}"
         return candidates, "", "failed", last_error
 
     pending_groups: list[tuple[str, list[str]]] = []
@@ -2187,7 +2256,7 @@ def summarize_asset_errors(errors: dict[str, str]) -> dict[str, int]:
     categories: dict[str, int] = {}
     for detail in errors.values():
         marker = re.search(
-            r"\bcategory=(rate_limit|permission_denied|not_found|temporary_network|invalid_response|cli_error)\b",
+            r"\bcategory=(asset_too_large|rate_limit|permission_denied|not_found|temporary_network|invalid_response|cli_error)\b",
             detail,
         )
         category = (
@@ -2615,6 +2684,7 @@ def validate_mirror(
         raw_category = str(record.get("error", "") or "")
         if raw_category:
             known_categories = {
+                "asset_too_large",
                 "rate_limit",
                 "permission_denied",
                 "not_found",
