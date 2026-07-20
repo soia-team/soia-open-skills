@@ -1,6 +1,6 @@
 # THIRD_PARTY_NOTICES
 
-> Last updated: 2026-07-20（新增 §0 代码改编）
+> Last updated: 2026-07-20（新增 ProcessOn 路径配置的可选 PyYAML 依赖）
 > 本文件集中声明本仓库各 skill 引用、依赖或参考的第三方项目与服务。
 > 除 §0 明确登记的代码改编（携带 `licenses/` 上游 license 副本）外，其余引用属于以下三类之一：接口口径的源码级参考（只读其源码核对参数，不搬运实现）、运行时调用的外部工具/库/skill、在线 API 服务。
 >
@@ -46,6 +46,7 @@
 | [trafilatura](https://pypi.org/project/trafilatura/) | Apache-2.0 | `soia-pkm-clip-web` | 正文抽取，运行时调用（与 readability-lxml 互为兜底） |
 | [readability-lxml](https://pypi.org/project/readability-lxml/) | Apache-2.0 | `soia-pkm-clip-web` | 正文抽取，运行时调用 |
 | [Telethon](https://github.com/LonamiWebs/Telethon) | MIT | `soia-pkm-clip-x` | 可选依赖，仅 Telegram MTProto 收藏同步路线使用 |
+| [PyYAML](https://pypi.org/project/PyYAML/) | MIT | `soia-cwork-processon-diagrams` | 可选依赖，仅在读取私有 `config.yml` 路径配置时调用 |
 
 ### 2.3 第三方 skill
 
