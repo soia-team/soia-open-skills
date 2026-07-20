@@ -488,13 +488,15 @@ Third-party skills this repo works alongside (this repo only declares the relati
 | `book-to-skill` | [virgiliojr94/book-to-skill](https://github.com/virgiliojr94/book-to-skill) | Not a runtime dependency; a standalone tool for turning books/documents into skills |
 | `find-skills` | [vercel-labs/skills](https://github.com/vercel-labs/skills) | Not a runtime dependency; a helper tool for discovering/installing skills |
 
+See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for the complete third-party reference inventory (interface-level references / runtime CLIs, libraries, skills / online API services, with license snapshots and maintenance rules).
+
 ## Contributing
 
 PRs and issues are welcome. To add a skill: ① read [SKILL_SPEC.md](./SKILL_SPEC.md) first ② copy from [templates/skill-template](./templates/skill-template/) ③ place it in `skills/<name>/` ④ include a `SKILL.md` (only `name` + `description`, description ideally ≤200 characters) ⑤ pass all paths/keys/personal data via CLI arguments, environment variables, or a skill-specific `config.yml` — never hardcode them ⑥ run `python3 scripts/generate_skill_catalog.py && python3 scripts/audit_skills.py` ⑦ include at least one end-to-end example. See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 ## License
 
-[MIT](./LICENSE) — fork it, adapt it, use it commercially, just keep the attribution.
+[MIT](./LICENSE) — fork it, adapt it, use it commercially, just keep the attribution. Third-party notices: [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 ## Maintainers
 

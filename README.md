@@ -493,13 +493,15 @@ python3 scripts/audit_skills.py
 | `book-to-skill` | [virgiliojr94/book-to-skill](https://github.com/virgiliojr94/book-to-skill) | 非运行依赖；用于把书籍/文档转成 skill 的独立工具 |
 | `find-skills` | [vercel-labs/skills](https://github.com/vercel-labs/skills) | 非运行依赖；用于发现/安装 skill 的辅助工具 |
 
+完整的第三方引用清单（接口口径参考 / 运行时 CLI·库·skill / 在线 API 服务，含协议快照与维护规则）见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
+
 ## 贡献
 
 欢迎 PR / issue。加 skill 请：① 先读 [SKILL_SPEC.md](./SKILL_SPEC.md) ② 从 [templates/skill-template](./templates/skill-template/) 复制 ③ 放 `skills/<name>/` ④ 有 `SKILL.md`（仅 `name` + `description`，description 尽量 ≤200 字）⑤ 路径 / key / 个人数据全用 CLI 参数、环境变量或 skill-specific `config.yml`，严禁硬编码 ⑥ 跑 `python3 scripts/generate_skill_catalog.py && python3 scripts/audit_skills.py` ⑦ 至少 1 个端到端用例。详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
 ## License
 
-[MIT](./LICENSE) — 自由 fork、改造、商用，请保留 attribution。
+[MIT](./LICENSE) — 自由 fork、改造、商用，请保留 attribution。第三方引用声明见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
 
 ## 维护者
 
