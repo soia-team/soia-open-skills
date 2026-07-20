@@ -67,6 +67,7 @@
 | `cdn.syndication.twimg.com` | Twitter/X 公开 syndication 端点 | — | `soia-pkm-clip-x` | fxtwitter 失败时的兜底端点 |
 | 微信公众号后台接口（`mp.weixin.qq.com/cgi-bin/*`) | 腾讯 | — | `soia-pkm-clip-wechat-account` | 用户以自己账号的登录态读取自己的数据；接口口径参考见 §1 |
 | 微信读书 API | 腾讯 | — | `soia-pkm-library-weread-sync` 等 | 经官方 `weread-skills` 与用户 API Key 调用 |
+| ProcessOn Web 与 API 服务 | 北京大麦地信息技术有限公司 | — | `soia-cwork-processon-diagrams` | 通过用户已授权的 Web 登录态浏览/导出；企业 API 服务仅作官方能力说明，不逆向私有接口 |
 
 ## 4. 维护规则
 

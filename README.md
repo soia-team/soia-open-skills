@@ -57,6 +57,7 @@ npx skills add soia-team/soia-open-skills
         soia-dev-github-ops / soia-dev-ai-cli-upgrade（公共开发工具线）
         soia-dev-open-design-ops（Open Design 原子层：daemon / 目录 / 设计系统 / 导出 / resume）
         soia-cwork-feishu-cli（企业协作线：飞书 CLI 只读调研云盘、文档、知识库）
+        soia-cwork-processon-diagrams（企业协作线：盘点、预览和导出 ProcessOn 图表）
 ```
 
 **核心理念**：收藏 ≠ 吸收。大多数人的知识库是"信息坟场"——囤了一大堆，从不回看。`soia-pkm` 把「收藏 → 观点 → 成文 → 发布」这条**从消费到创造**的链路，拆成职责单一、可组合的 skill，让 AI 帮你把囤积的信息真正变成**你自己的**作品。
@@ -157,6 +158,7 @@ Open Design 配置：复制 [`config.example.yml`](./skills/soia-dev-open-design
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | 通过官方 `lark-cli` 以应用凭证（bot）只读盘点飞书云盘、云文档、知识库、评论、权限和元数据 | ✅ 可用（需配置飞书应用凭据并授予目标资源权限） | 飞书官方 `lark-cli`；应用凭证；目标文档/知识库需对应用可见 |
 | [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | 将飞书知识库按 `node_token` 保留树形结构并增量镜像为 Markdown，接入 Git、Obsidian 与 VitePress；可接收事件目标但不默认写回飞书 | ✅ 可用（先执行 dry-run，再建立基线；需按目标空间授予文档只读权限） | `soia-cwork-feishu-cli`；`lark-cli`；Python 3.10+；PyYAML；Git/VitePress/Obsidian 可选 |
+| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | 复用用户浏览器登录态盘点 ProcessOn 团队空间，预览图表，并按授权导出 POS、图片、PDF、XMind 或 Office 文件 | ✅ 可用（浏览/目录读取已验证；安全验证需用户手动完成） | ProcessOn 账号与资源权限；浏览器控制；Python 3.10+（本地导出检查） |
 
 #### 飞书技能最小上手
 
@@ -183,6 +185,18 @@ npx skills add larksuite/cli -g -y
 ```
 
 配置模板、权限分层、按 ID 增量同步和事件边界见 [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/)。双向同步需要另行确定文档归属、冲突策略和飞书写权限，不能把只读镜像当作双向同步。
+
+### soia-cwork-processon-diagrams
+
+使用客户已登录的 ProcessOn 浏览器盘点个人/团队空间、读取图表标题与可见内容，并通过官方“浏览/下载”菜单导出。默认只读，不分享、编辑、移动或删除远端文件；遇到滑块或验证码时由客户手动完成。
+
+```text
+盘点这个 ProcessOn 团队空间：<team-url>
+把“系统架构”文件夹中的 3 张图导出为 POS 和高清 PNG
+解析这些 ProcessOn POS 文件并整理图中文字
+```
+
+ProcessOn 面向普通账号没有公开的团队文件 REST API；企业 API 服务属于另行购买的嵌入/格式转换能力。格式矩阵、浏览器执行边界和本地 POS/XMind 检查脚本见 [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/)。
 
 ---
 
@@ -336,6 +350,7 @@ npx skills add soia-team/soia-open-skills
 | `启动 Open Design daemon` / `把这个 deck 导出 PPTX` | soia-dev-open-design-ops |
 | `调研飞书云盘/知识库` / `读取飞书工作文档` | soia-cwork-feishu-cli |
 | `同步飞书知识库到 Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
+| `盘点 ProcessOn 团队空间` / `导出 ProcessOn 架构图` | soia-cwork-processon-diagrams |
 
 Antigravity CLI 的命令是 `agy`：全局技能目录为
 `~/.gemini/antigravity-cli/skills/`，workspace 技能目录为 `.agents/skills/`。
@@ -450,7 +465,8 @@ soia-open-skills/
     ├── soia-dev-terminal-ops/
     ├── soia-dev-design-explorer/
     ├── soia-dev-open-design-ops/
-    └── soia-cwork-feishu-cli/
+    ├── soia-cwork-feishu-cli/
+    └── soia-cwork-processon-diagrams/
 ```
 
 每个 skill 一个文件夹，独立 `SKILL.md`（frontmatter 含 `name` + `description`）+ 自己的 `scripts/`。
