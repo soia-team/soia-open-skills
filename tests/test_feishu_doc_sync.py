@@ -1087,6 +1087,30 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertIn("../_assets/a.png", rewritten)
         self.assertIn("../_assets/b.png", rewritten)
 
+    def test_angle_wrapped_markdown_assets_enter_the_local_download_queue(self) -> None:
+        image = "https://internal-api-drive-stream.feishu.cn/image/one?code=current"
+        attachment = "https://internal-api-drive-stream.feishu.cn/file/two?code=current"
+        content = f"![截图](<{image}>)\n[飞书附件](<{attachment}>)"
+
+        self.assertEqual(sync.extract_image_urls(content), [image])
+        self.assertEqual(sync.extract_attachment_urls(content), [attachment])
+        self.assertEqual(sync.extract_asset_references(content), [attachment, image])
+
+        with tempfile.TemporaryDirectory() as temp:
+            mirror = Path(temp) / "10_knowledge-base"
+            target = mirror / "目录" / "文档.md"
+            rewritten = sync.rewrite_asset_urls(
+                content,
+                target,
+                mirror,
+                {image: "_assets/image.png", attachment: "_assets/archive.zip"},
+            )
+
+        self.assertNotIn(image, rewritten)
+        self.assertNotIn(attachment, rewritten)
+        self.assertIn("../_assets/image.png", rewritten)
+        self.assertIn("../_assets/archive.zip", rewritten)
+
     def test_media_tokens_survive_normalization_as_downloadable_references(self) -> None:
         content = '<source token="file-token-1" />\n<img token="img-token-2" />'
         normalized = sync.normalize_content(content, "带图片文档")

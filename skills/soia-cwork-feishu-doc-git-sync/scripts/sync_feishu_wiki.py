@@ -1770,9 +1770,20 @@ def normalize_content(
 
 
 def extract_image_urls(content: str) -> list[str]:
-    """Return remote image URLs from Markdown images and raw HTML img tags."""
+    """Return remote image URLs from Markdown images and raw HTML img tags.
+
+    Feishu's Markdown exporter may wrap a URL destination in ``<...>``.  That
+    is valid CommonMark (and protects signed query strings), but it used to
+    bypass the asset queue because the older matcher expected ``(https://``
+    directly.  Accept both forms so a valid image never becomes an accidental
+    offline placeholder merely because of its Markdown delimiter.
+    """
     urls = set(
-        re.findall(r"!\[[^\]]*\]\((https?://[^)\s]+)", content, flags=re.IGNORECASE)
+        re.findall(
+            r"!\[[^\]]*\]\(\s*<?(https?://[^)\s>]+)>?",
+            content,
+            flags=re.IGNORECASE,
+        )
     )
     urls.update(
         re.findall(r"<img\b[^>]*\bsrc=[\"'](https?://[^\"']+)", content, flags=re.IGNORECASE)
@@ -1784,7 +1795,7 @@ def extract_attachment_urls(content: str) -> list[str]:
     """Return remote URLs from both legacy Markdown and normalized attachment links."""
     urls = set(
         re.findall(
-            r"\[飞书附件\]\((https?://[^)\s]+)",
+            r"\[飞书附件\]\(\s*<?(https?://[^)\s>]+)>?",
             content,
             flags=re.IGNORECASE,
         )
