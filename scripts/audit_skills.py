@@ -136,8 +136,35 @@ def add_line_finding(findings: list[Finding], severity: str, root: Path, path: P
     findings.append(Finding(severity, rel(path, root), message, line_no))
 
 
+VALID_DOMAINS = ("pkm", "dev", "gov", "cwork", "design", "env", "meta")
+
+
+def audit_skill_name(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
+    """Naming contract: soia-<domain>-<kebab-name>, no repeated tokens, known domain."""
+    name = skill_dir.name
+    import re as _re
+    if not _re.fullmatch(r"soia-[a-z0-9]+(-[a-z0-9]+)+", name):
+        findings.append(Finding("ERROR", rel(skill_dir, root),
+            f"skill name must match soia-<domain>-<kebab-name>: {name!r}"))
+        return
+    parts = name.split("-")
+    domain = parts[1]
+    if domain not in VALID_DOMAINS:
+        findings.append(Finding("ERROR", rel(skill_dir, root),
+            f"unknown domain {domain!r}; valid: {', '.join(VALID_DOMAINS)}"))
+    for i in range(len(parts) - 1):
+        if parts[i] == parts[i + 1]:
+            findings.append(Finding("ERROR", rel(skill_dir, root),
+                f"repeated token {parts[i]!r} in skill name (e.g. the soia-dev-soia-* anti-pattern)"))
+            break
+    if "soia" in parts[2:]:
+        findings.append(Finding("ERROR", rel(skill_dir, root),
+            "'soia' must not reappear after the domain segment; product-only governance skills belong to the gov domain"))
+
+
 def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
     skill_name = skill_dir.name
+    audit_skill_name(root, skill_dir, findings)
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.is_file():
         findings.append(Finding("ERROR", rel(skill_dir, root), "missing SKILL.md"))

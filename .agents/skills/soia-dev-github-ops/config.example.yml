@@ -1,0 +1,5 @@
+# soia-dev-github-ops private config example.
+# Copy to ~/.config/soia-skills/soia-open-skills/soia-dev/soia-dev-github-ops/config.yml.
+
+env:
+  GITHUB_REPOSITORY: "<owner>/<repo>"

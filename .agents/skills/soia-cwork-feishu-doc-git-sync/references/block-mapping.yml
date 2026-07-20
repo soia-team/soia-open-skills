@@ -1,0 +1,37 @@
+version: 1
+
+source:
+  api: "lark-cli docs +fetch"
+  preferred_format: markdown
+  supported_object_types:
+    - docx
+    - doc
+
+normalization:
+  remove_title_tag: true
+  remove_dynamic_tags:
+    - "<wiki_recent_update></wiki_recent_update>"
+  preserve_tables: true
+  preserve_remote_images: true
+  download_images: opt_in
+  local_asset_dir: "10_knowledge-base/_assets"
+  media_token_strategy: "docs +media-download --as bot --token <file_token>"
+  unresolved_image_behavior: keep_original_url_and_report
+  unresolved_image_logging: counts_only_no_auth_urls
+
+cite:
+  document_id_strategy: "resolve doc-id by node_token first, then obj_token"
+  document_rendering: "Markdown link with Feishu wiki source URL"
+  user_rendering: "@user-name, fallback to @user-id"
+  missing_target_behavior: "plain visible title, never inline code"
+
+unsupported:
+  behavior: create_metadata_stub
+  examples:
+    - sheet
+    - bitable
+    - mindnote
+    - file
+  special_routes:
+    sheet: "只读盘点使用 drive +inspect；实际 xlsx/csv 导出必须遵循 references/export-policy.yml"
+    bitable: "只读盘点使用 drive +inspect；实际 xlsx/csv/base 导出必须遵循 references/export-policy.yml"

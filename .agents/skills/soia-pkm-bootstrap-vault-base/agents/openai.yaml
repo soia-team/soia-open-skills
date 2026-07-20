@@ -1,0 +1,4 @@
+interface:
+  display_name: "PKM Vault Base"
+  short_description: "初始化知识库中立的 Markdown vault：PARA、AGENTS、模板、多 AI 入口和 PKM 闭环"
+  default_prompt: "Use soia-pkm-bootstrap-vault-base: 初始化通用 Markdown 知识库骨架并接入多 AI 与 PKM 闭环"
