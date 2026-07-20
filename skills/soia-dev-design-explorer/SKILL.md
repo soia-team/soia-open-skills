@@ -1,19 +1,19 @@
 ---
-name: soia-design-explorer
+name: soia-dev-design-explorer
 description: 调用外部 huashu-design 能力制作高保真 HTML 原型、设计变体、幻灯片、动画或设计评审；要求显式上游路径、用户自带品牌规范、五分类输出落点与可复现验证。
 dependencies:
   external:
     - name: huashu-design
       required: true
       install: "npx skills add alchaincyf/huashu-design -g -y"
-version: 1.1.0
+version: 1.2.0
 created_at: 2026-07-07 14:44:10
-updated_at: 2026-07-17 09:33:04
+updated_at: 2026-07-20 11:52:54
 created_by: claude opus 4.6
-updated_by: gpt-5.6-sol
+updated_by: gpt-5.6-terra
 ---
 
-# soia-design-explorer
+# soia-dev-design-explorer
 
 这是一个公共设计产物工作流包装层。它把外部 `huashu-design` 的能力收敛为明确输入、显式依赖路径、可控输出和可复现验证；它不替代产品规格或生产实现。
 
@@ -48,7 +48,7 @@ updated_by: gpt-5.6-sol
 安装本技能和外部依赖：
 
 ```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s soia-design-explorer -y
+npx skills add soia-team/soia-open-skills -g -a '*' -s soia-dev-design-explorer -y
 npx skills add alchaincyf/huashu-design -g -y
 ```
 
@@ -57,8 +57,8 @@ npx skills add alchaincyf/huashu-design -g -y
 本技能不扫描 `$HOME` 猜测 upstream。每次必须通过本次输入、环境变量或配置给出路径：
 
 ```text
-~/.config/soia-skills/soia-open-skills/soia-design/soia-design-explorer/config.yml
-SOIA_DESIGN_EXPLORER_CONFIG_FILE=<custom-config-path>
+~/.config/soia-skills/soia-open-skills/soia-dev/soia-dev-design-explorer/config.yml
+SOIA_DEV_DESIGN_EXPLORER_CONFIG_FILE=<custom-config-path>
 HUASHU_DESIGN_ROOT=<huashu-design-root>
 ```
 
@@ -95,7 +95,7 @@ env:
 - 做高保真 HTML 原型或 interactive demo；
 - 做 HTML slides、动画、演示视频素材或设计变体；
 - 对已有视觉稿做方向推荐、评审或改版建议；
-- 用户明确提到 `soia-design-explorer`、`huashu-design`、`prototype` 或“视觉方向”。
+- 用户明确提到 `soia-dev-design-explorer`、`huashu-design`、`prototype` 或“视觉方向”。
 
 ## 边界
 
@@ -153,8 +153,8 @@ test -f "$HUASHU_DESIGN_ROOT/SKILL.md"
 
 | 类别 | 本技能中的例子 | 落点 |
 |---|---|---|
-| A 临时 | 一次性预览、中间截图、临时 render | 用户指定 `DESIGN_EXPLORER_TEMP_ROOT`；否则 `${TMPDIR}/soia-design-explorer/<slug>/`，`TMPDIR` 未设置则先询问 |
-| B 审计 | 发布、覆盖、远端写入等高影响动作记录 | 用户指定 `DESIGN_EXPLORER_STATE_ROOT` 或 `${XDG_STATE_HOME}/soia-design-explorer/`；未配置则先询问 |
+| A 临时 | 一次性预览、中间截图、临时 render | 用户指定 `DESIGN_EXPLORER_TEMP_ROOT`；否则 `${TMPDIR}/soia-dev-design-explorer/<slug>/`，`TMPDIR` 未设置则先询问 |
+| B 审计 | 发布、覆盖、远端写入等高影响动作记录 | 用户指定 `DESIGN_EXPLORER_STATE_ROOT` 或 `${XDG_STATE_HOME}/soia-dev-design-explorer/`；未配置则先询问 |
 | C 交付物 | HTML、PPTX、PDF、MP4、GIF、最终截图 | 用户明确指定的交付目录；不得默认写 cwd 或 Downloads |
 | D 产品功能即日志 | 目标产品明确规定的设计记录 | 只服从目标项目公开/本地规则，不由本技能创建约定 |
 | E 纯 stdout | 无需留档的简短 review | 不写磁盘 |
