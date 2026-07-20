@@ -1,0 +1,12 @@
+# soia-dev-open-design-ops private config example.
+# Copy to ~/.config/soia-skills/soia-open-skills/soia-dev/soia-dev-open-design-ops/config.yml.
+# Put real checkout and product DESIGN.md paths only in the private copy.
+
+schema_version: 1
+env:
+  OPEN_DESIGN_HOME: "<path-to-open-design-checkout>"
+  OPEN_DESIGN_DAEMON_PORT: "7456"
+  OPEN_DESIGN_WEB_PORT: ""
+  OPEN_DESIGN_DAEMON_URL: ""
+  OPEN_DESIGN_STATE_DIR: ""
+  OPEN_DESIGN_PROJECT_DESIGN_MD: "<path-to-user-project>/DESIGN.md"
