@@ -412,6 +412,22 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertEqual(stats["pending"], 1)
         self.assertEqual(state["tasks"]["sheet-node"]["ticket"], "ticket-1")
 
+    def test_pending_export_ticket_wins_over_any_source_file_token(self) -> None:
+        result = mock.Mock(
+            returncode=0,
+            stdout='{"ok":true,"data":{"ticket":"ticket-1","token":"source-file-token","file_token":"source-file-token"}}',
+            stderr="",
+        )
+        sync.REQUEST_LIMITER.configure(0)
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.object(sync.subprocess, "run", return_value=result), mock.patch.object(
+                sync, "resume_export_download"
+            ) as resume:
+                with self.assertRaises(sync.ExportPending) as raised:
+                    sync.run_cli_to_local_path({}, Path(temp), Path(temp) / "sheet.xlsx", 10, "drive", "+export")
+        self.assertEqual(raised.exception.ticket, "ticket-1")
+        resume.assert_not_called()
+
     def test_fetch_sheet_markdown_reads_only_the_selected_grid_range(self) -> None:
         calls = []
 

@@ -1364,6 +1364,13 @@ def run_cli_to_local_path(
         if result.returncode == 0:
             if target.is_file() and target.stat().st_size > 0:
                 return
+            # A pending export response may contain the source document's
+            # file token.  Persist its ticket before attempting any generic
+            # file-token download, otherwise that source token can be
+            # mistaken for a completed export artifact.
+            reference = export_task_reference(result.stdout)
+            if reference is not None:
+                raise ExportPending(*reference)
             try:
                 resumed = resume_export_download(
                     config, mirror_dir, target, timeout_seconds, result.stdout
@@ -1374,9 +1381,6 @@ def run_cli_to_local_path(
                 result = resumed
                 if result.returncode == 0 and target.is_file() and target.stat().st_size > 0:
                     return
-            reference = export_task_reference(result.stdout)
-            if reference is not None:
-                raise ExportPending(*reference)
         detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
         # `sheets +workbook-export` can successfully create/poll an async
         # task yet return before its requested local file is available.  Its
