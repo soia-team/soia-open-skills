@@ -1,0 +1,10 @@
+# Copy to the skill-specific private config directory documented in SKILL.md.
+# Do not add a ProcessOn username, password, cookie, token, or browser profile.
+
+schema_version: 1
+
+env:
+  SOIA_CWORK_PROCESSON_DIAGRAMS_TEMP_DIR: "<temporary-download-directory>"
+  SOIA_CWORK_PROCESSON_DIAGRAMS_OUTPUT_DIR: "<final-delivery-directory>"
+  SOIA_CWORK_PROCESSON_DIAGRAMS_MANIFEST_DIR: "<audit-manifest-directory>"
+  SOIA_CWORK_PROCESSON_DIAGRAMS_RETENTION_DAYS: "7"

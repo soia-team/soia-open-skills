@@ -1,16 +1,16 @@
 ---
 name: soia-cwork-processon-diagrams
-description: 浏览和盘点 ProcessOn 个人/团队空间，预览流程图与思维导图，并按用户授权导出 POS、PNG、SVG、PDF、XMind、Office 等文件；适用于“读取 ProcessOn 文件”“导出架构图”“盘点团队图表”“从 POS 提取文字”等请求。
-version: 1.0.0
+description: 浏览和盘点 ProcessOn 个人/团队空间，预览流程图与思维导图，按授权导出 POS、PNG、SVG、PDF、XMind、Office 等文件，并通过可配置的临时/交付/审计目录完成下载校验与归档；适用于“读取 ProcessOn 文件”“导出架构图”“盘点团队图表”“从 POS 提取文字”“整理浏览器下载”等请求。
+version: 1.1.0
 created_at: 2026-07-20 18:57:53
-updated_at: 2026-07-20 18:57:53
+updated_at: 2026-07-21 00:05:34
 created_by: gpt-5.6-luna
 updated_by: gpt-5.6-luna
 ---
 
 # ProcessOn 图表浏览与导出
 
-通过用户已经授权的 ProcessOn 账号和浏览器登录态，读取团队空间、文件夹、图表标题与可见内容；在用户指定范围内导出图表，并对本地 POS、图片、SVG、PDF、XMind 文件生成可核验清单。默认只读，不修改、分享、移动或删除远端文件。
+通过用户已经授权的 ProcessOn 账号和浏览器登录态，读取团队空间、文件夹、图表标题与可见内容；在用户指定范围内导出图表，把浏览器下载安全归档到交付目录，并对本地 POS、图片、SVG、PDF、XMind 文件生成可核验清单。默认只读，不修改、分享、移动或删除远端文件。
 
 ## 客户可读说明
 
@@ -21,6 +21,7 @@ updated_by: gpt-5.6-luna
 | 盘点团队空间 | 浏览指定空间/文件夹，整理目录、文件名、作者、更新时间和类型 | Markdown/JSON 清单与权限缺口 |
 | 看图里有什么 | 进入“浏览”视图读取可访问文字，并用截图核对视觉布局 | 内容摘要、关键文字与截图 |
 | 导出图表 | 按客户授权选择 POS、PNG、SVG、PDF、XMind 或 Office 格式 | 下载文件、格式/大小/SHA-256 验收 |
+| 归档浏览器下载 | 解析 CLI、环境变量和私有 YAML 中的路径，把下载文件校验后复制/移动到交付目录 | 最终路径、碰撞策略、SHA-256 和审计 manifest |
 | 解析已有导出 | 读取本地 POS/XMind/SVG/图片等文件 | 标题、图表类型、节点文字、尺寸与校验值 |
 
 ### 客户如何使用
@@ -30,8 +31,8 @@ updated_by: gpt-5.6-luna
 1. ProcessOn 团队、文件夹或图表 URL；也可以给出空间名和文件名。
 2. 目标动作：盘点、预览、导出或解析本地导出文件。
 3. 导出时指定文件范围、格式和交付目录；不指定格式时，结构化留档优先 POS，视觉复用优先 SVG/高清 PNG，审阅交付优先 PDF。
-4. 客户先在可控制的浏览器中登录 ProcessOn。技能不读取 Cookie、Local Storage、密码文件或浏览器配置。
-5. 遇到滑块、验证码或短信验证时，由客户手动完成；完成后告诉 Agent 继续。技能不得绕过或代做安全验证。
+4. 客户在可控制的浏览器中手动输入用户名、密码、短信码或验证码；登录完成后告诉 Agent 继续。技能不读取、记录或保存 Cookie、Local Storage、密码文件、凭据或浏览器配置。
+5. 可选复制 [路径配置模板](assets/config.example.yml) 到私有配置目录，固定临时下载、最终交付、审计清单和保留天数。
 
 示例：
 
@@ -39,6 +40,7 @@ updated_by: gpt-5.6-luna
 盘点这个 ProcessOn 团队空间，只读，不下载：<team-url>
 打开“系统架构”文件夹，读取其中架构图的标题和主要内容
 把这 3 张图导出为 POS 和高清 PNG，放到 <output-dir>
+把浏览器刚下载的 <downloaded-file> 校验后归档到配置的交付目录
 解析 <export-dir> 里的 POS，整理成 Markdown 目录
 ```
 
@@ -48,10 +50,18 @@ updated_by: gpt-5.6-luna
 |---|---|---|---|
 | ProcessOn 账号与目标资源权限 | 强依赖 | 客户在 ProcessOn 官方页面登录，并确保自己可见目标空间 | 停止远端读取，列出缺失权限 |
 | 可复用登录态的浏览器控制能力 | 远端操作强依赖 | 使用当前 Agent 已安装的浏览器/Chrome 控制能力 | 改为客户手动导出后解析本地文件 |
-| Python 3.10+ | 本地解析依赖 | 系统 Python 即可，无第三方包 | 只完成浏览器侧盘点/导出 |
+| Python 3.10+ | 本地解析与归档依赖 | 系统 Python 即可 | 只完成浏览器侧盘点/导出 |
+| PyYAML | 私有配置可选依赖 | 使用 `config.yml` 时安装：`python3 -m pip install pyyaml` | 改用 CLI 参数、环境变量或安全默认值 |
 | ProcessOn API 服务 | 可选商业能力 | 企业按官方流程申请 JS-SDK/格式转换凭证 | 不影响普通账号的浏览器工作流 |
 
-本技能不保存 ProcessOn 凭据，不需要创建私有 `config.yml`。如需固定交付目录，由客户在每次请求中明确提供。
+私有配置默认位置：
+
+```text
+~/.config/soia-skills/soia-open-skills/cwork/soia-cwork-processon-diagrams/config.yml
+SOIA_CWORK_PROCESSON_DIAGRAMS_CONFIG_FILE=<custom-config-path>
+```
+
+配置优先级为 CLI 参数 → 进程环境变量 → 私有 `config.yml` → 跨平台安全默认值。配置键、默认路径和命令见 [下载归档工作流](references/download-workflow.md)。私有配置只保存路径和保留策略，不保存用户名、密码、Cookie、Token 或浏览器 profile。
 
 ### 日志与完成回执
 
@@ -60,6 +70,8 @@ updated_by: gpt-5.6-luna
 - 读取的空间/文件夹范围，以及发现的文件夹数、图表数和受限项数。
 - 预览时实际看到的是 DOM 文字、缩略图、浏览视图还是导出的 POS；不要把缩略图 OCR 当作结构化原文。
 - 导出时逐类报告请求格式、实际格式、成功/失败数、文件大小与校验结果。
+- 归档时报告浏览器实际下载路径、最终交付路径、复制/移动模式、同名处理、manifest 路径和 SHA-256。
+- 清理时先报告 dry-run 候选数；实际清理只处理带技能标记的临时目录，并生成删除审计 manifest。
 - 安全验证、会员格式限制、权限不足或页面结构变化必须单列，不得伪装成成功。
 - 最终回复给出交付目录、验证方式和未完成项；不输出账号、Cookie、Token 或浏览器内部状态。
 
@@ -70,6 +82,9 @@ updated_by: gpt-5.6-luna
 - 只处理客户有权访问的文件。不要通过猜测 URL、内部接口、Cookie 或未公开端点扩大可见范围。
 - 优先使用 ProcessOn 官方 UI 和官方文档。普通账号没有公开的团队文件 REST API 时，不得把逆向接口包装成稳定 API。
 - 页面出现验证码时停止自动交互，保留页面供客户接管；不得模拟拖动、调用验证码接口或绕过验证。
+- 不要求客户把密码发到对话中；不把用户名、密码、Cookie、Token、登录态或浏览器 profile 写入配置、命令参数、日志或 manifest。
+- 下载归档默认复制并在同名时自动改名。`--move` 只允许处理带技能标记的临时目录；覆盖必须同时使用 `--collision overwrite --allow-overwrite`，且客户在当前请求中明确授权。
+- 临时清理必须显式执行 `cleanup`；无技能标记、交付目录位于临时目录内部或符号链接文件时一律拒绝。
 
 ## 工作流
 
@@ -78,8 +93,11 @@ updated_by: gpt-5.6-luna
 1. 先查找是否存在 ProcessOn 官方连接器、公开 API 或 CLI。
 2. 若没有满足当前任务的专用能力，使用已安装的浏览器控制能力，并优先复用客户现有登录态。
 3. 打开客户给出的 URL；未给 URL 时，从 ProcessOn 官方“我的文件/团队空间”进入。
-4. 验证页面显示目标账号可见的空间或文件；若跳到登录页，要求客户在该浏览器登录。
-5. 读取 [ProcessOn 能力与格式](references/processon-capabilities.md)，再决定浏览、预览或导出路线。
+4. 若跳到登录页，停在登录表单并让客户在该浏览器手动输入用户名、密码和安全验证；不要读取输入值。客户确认登录完成后重新读取页面快照。
+5. 验证页面显示目标账号可见的空间或文件。
+6. 读取 [ProcessOn 能力与格式](references/processon-capabilities.md)，再决定浏览、预览或导出路线。
+
+CDP/浏览器控制只负责导航、点击、读取页面和下载，不充当密码库。首次登录由客户手动完成，后续由浏览器自身的持久化 profile 复用登录态；普通盘点和导出不需要额外 Chrome 扩展。详细边界见 [下载归档工作流](references/download-workflow.md)。
 
 ### 2. 盘点团队空间
 
@@ -107,16 +125,19 @@ updated_by: gpt-5.6-luna
 
 1. 根据最新页面快照定位目标文件的“下载/导出”操作，不依赖固定坐标或私有 CSS。
 2. 按客户指定格式导出。格式选择见 [ProcessOn 能力与格式](references/processon-capabilities.md)。
-3. 使用浏览器的下载事件或下载列表确认真实文件落地；不要只凭菜单关闭或 Toast 判断成功。
-4. 下载后运行：
+3. 首次需要受管临时目录时运行 `paths --ensure`。浏览器能力支持指定下载目录时使用解析出的临时目录；否则保留下载事件返回的真实文件路径。
+4. 使用浏览器的下载事件或下载列表确认真实文件落地；不要只凭菜单关闭或 Toast 判断成功。
+5. 先 dry-run，再把真实下载文件归档。文件位于受管临时目录时可以显式 `--move`；否则默认复制并保留浏览器原文件：
 
 ```bash
-python3 scripts/inspect_processon_export.py <downloaded-file-or-dir> --format markdown
-python3 scripts/inspect_processon_export.py <downloaded-file-or-dir> --format json --output <manifest.json>
+python3 scripts/finalize_processon_download.py paths --ensure
+python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file> --dry-run
+python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file>
 ```
 
-5. 核对文件非空、扩展名与内容类型一致；图像核对尺寸，POS/XMind 核对标题和可提取文字，所有文件记录 SHA-256。
-6. 批量导出默认逐个文件执行并汇总结果。官网未明确支持批量下载时，不声称存在批量 API。
+6. 核对文件非空、扩展名与内容类型一致；图像核对尺寸，POS/XMind 核对标题和可提取文字，所有文件记录 SHA-256。
+7. 批量导出默认逐个文件执行并汇总结果。官网未明确支持批量下载时，不声称存在批量 API。
+8. 需要清理技能临时目录时先运行 `cleanup --dry-run`；只有客户确认候选范围后才运行实际 `cleanup`。
 
 ### 5. 本地解析兜底
 
@@ -133,10 +154,20 @@ python3 scripts/inspect_processon_export.py <downloaded-file-or-dir> --format js
 - 对 PDF 和其他文件至少记录大小、扩展名与 SHA-256。
 - 默认只读，不修改源文件。
 
+`scripts/finalize_processon_download.py`：
+
+- 解析 CLI、环境变量、私有 YAML 和跨平台默认路径。
+- 初始化带安全标记的临时目录，拒绝认领非空共享目录。
+- 先检查再原子复制；默认同名改名，覆盖需要双重显式开关。
+- 仅对受管临时目录开放 `--move` 和清理，成功后生成 JSON manifest。
+- 交付目录和审计目录不得放在临时目录内部。
+
 ## 验证
 
-- 静态：`python3 -m py_compile scripts/inspect_processon_export.py`
+- 静态：`python3 -m py_compile scripts/inspect_processon_export.py scripts/finalize_processon_download.py`
+- 单测：`python3 -m unittest tests.test_processon_downloads -v`，覆盖配置优先级、安全默认路径、原子复制、同名改名、受管移动与保留期清理。
 - POS：用一份流程图和一份思维导图 POS 运行 `--format json`，确认标题、category、节点文字和元素数。
 - 图片：用 PNG/JPEG 运行脚本，确认宽高与 SHA-256。
+- 归档：用真实导出文件依次运行 `finalize --dry-run` 和 `finalize`，核对交付文件 SHA-256 与 manifest；不要把 fixture 路径写入公共文档。
 - 远端：至少验证一次“打开团队空间 → 读取文件列表 → 右键看到浏览/下载”；若安全验证阻断导出，结论必须写成“远端读取已验证，完整导出待人工验证后继续”。
 - 结构：运行仓库 `scripts/audit_skills.py --strict`、支持本仓库版本字段的 skill validator 和 `git diff --check`。

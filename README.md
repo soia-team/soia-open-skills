@@ -158,7 +158,7 @@ Open Design 配置：复制 [`config.example.yml`](./skills/soia-dev-open-design
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | 通过官方 `lark-cli` 以应用凭证（bot）只读盘点飞书云盘、云文档、知识库、评论、权限和元数据 | ✅ 可用（需配置飞书应用凭据并授予目标资源权限） | 飞书官方 `lark-cli`；应用凭证；目标文档/知识库需对应用可见 |
 | [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | 将飞书知识库按 `node_token` 保留树形结构并增量镜像为 Markdown，接入 Git、Obsidian 与 VitePress；可接收事件目标但不默认写回飞书 | ✅ 可用（先执行 dry-run，再建立基线；需按目标空间授予文档只读权限） | `soia-cwork-feishu-cli`；`lark-cli`；Python 3.10+；PyYAML；Git/VitePress/Obsidian 可选 |
-| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | 复用用户浏览器登录态盘点 ProcessOn 团队空间，预览图表，并按授权导出 POS、图片、PDF、XMind 或 Office 文件 | ✅ 可用（浏览/目录读取已验证；安全验证需用户手动完成） | ProcessOn 账号与资源权限；浏览器控制；Python 3.10+（本地导出检查） |
+| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | 复用用户浏览器登录态盘点 ProcessOn 团队空间，预览图表，按授权导出，并把浏览器下载校验归档到可配置的交付目录 | ✅ 可用（浏览/目录读取与本地归档已验证；登录和安全验证需用户手动完成） | ProcessOn 账号与资源权限；浏览器控制；Python 3.10+；PyYAML 仅配置文件需要 |
 
 #### 飞书技能最小上手
 
@@ -188,15 +188,16 @@ npx skills add larksuite/cli -g -y
 
 ### soia-cwork-processon-diagrams
 
-使用客户已登录的 ProcessOn 浏览器盘点个人/团队空间、读取图表标题与可见内容，并通过官方“浏览/下载”菜单导出。默认只读，不分享、编辑、移动或删除远端文件；遇到滑块或验证码时由客户手动完成。
+使用客户已登录的 ProcessOn 浏览器盘点个人/团队空间、读取图表标题与可见内容，并通过官方“浏览/下载”菜单导出。客户在浏览器中手动输入用户名、密码和验证码；技能不保存凭据。下载后按 CLI → 环境变量 → 私有 YAML → 安全默认值解析临时、交付和审计目录，校验后原子归档并生成 manifest。
 
 ```text
 盘点这个 ProcessOn 团队空间：<team-url>
 把“系统架构”文件夹中的 3 张图导出为 POS 和高清 PNG
+把浏览器下载的文件校验后归档到配置的交付目录
 解析这些 ProcessOn POS 文件并整理图中文字
 ```
 
-ProcessOn 面向普通账号没有公开的团队文件 REST API；企业 API 服务属于另行购买的嵌入/格式转换能力。格式矩阵、浏览器执行边界和本地 POS/XMind 检查脚本见 [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/)。
+ProcessOn 面向普通账号没有公开的团队文件 REST API；企业 API 服务属于另行购买的嵌入/格式转换能力。格式矩阵、浏览器执行边界、路径配置、下载归档和本地 POS/XMind 检查脚本见 [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/)。
 
 ---
 
