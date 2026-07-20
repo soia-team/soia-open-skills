@@ -44,10 +44,15 @@ def _parse_scalar(value: str) -> str:
     if not value or value in {"null", "~"}:
         return ""
     if value[0] in {"'", '"'} and value[-1:] == value[0]:
+        inner = value[1:-1]
+        if value[0] == "'" or "\\" not in inner:
+            return inner
         try:
-            return value[1:-1] if value[0] == "'" else bytes(value[1:-1], "utf-8").decode("unicode_escape")
+            # 只在含反斜杠时展开 \n/\t 等转义；latin-1+backslashreplace 往返
+            # 保住非 ASCII 字符（直接 utf-8→unicode_escape 会把中文毁成 mojibake）
+            return inner.encode("latin-1", "backslashreplace").decode("unicode_escape")
         except UnicodeDecodeError:
-            return value[1:-1]
+            return inner
     return value.split(" #", 1)[0].strip()
 
 

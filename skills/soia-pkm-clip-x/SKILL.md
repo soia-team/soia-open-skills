@@ -1,11 +1,11 @@
 ---
 name: soia-pkm-clip-x
 description: 归档 X/Twitter 推文、thread、Article 到 Obsidian vault。基于 fxtwitter API，单条零配置；可选同步 Telegram 收藏。需要 PDF 时优先用 Obsidian 导出。Triggers：「归档这条 X」「archive this」「clip 这条推文」「整理这条 thread」「同步我的电报收藏」
-version: 1.1.0
+version: 1.1.1
 created_at: 2026-07-02 03:51:43
-updated_at: 2026-07-16 17:22:50
+updated_at: 2026-07-20 19:05:00
 created_by: claude opus 4.6
-updated_by: gpt-5.6-luna
+updated_by: claude fable 5
 ---
 
 # soia-pkm-clip-x
