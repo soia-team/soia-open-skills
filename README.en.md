@@ -54,6 +54,7 @@ Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, K
            soia-pkm-alipan-curator (cloud drive line · advisor layer: inventory/organize/catalog/study plans)
            soia-dev-archify-diagrams (doc diagram line: Archify JSON IR → README/docs PNG diagrams)
            soia-dev-github-ops / soia-dev-ai-cli-upgrade (shared dev-tooling line)
+           soia-dev-open-design-ops (Open Design atomic layer: daemon/catalogs/design systems/exports/resume)
            soia-cwork-feishu-cli (enterprise collaboration line: read-only Feishu CLI research across drives, docs, and wikis)
 ```
 
@@ -138,6 +139,9 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 | [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | Controlled dispatch of tasks to external coding CLIs (codex/agy/gemini/kimi/opencode/qwen, etc.): task-boundary splitting, injection-resistant prompt patterns, a model-tiering matrix, and three-step Anti-Fake-Fix verification | ✅ Usable (command templates + tiering matrix complete) | The target coding CLI (codex/agy/gemini/kimi/opencode/qwen, etc., as needed), installed and logged in |
 | [`soia-dev-terminal-ops`](./skills/soia-dev-terminal-ops/) | POSIX/macOS/Linux long-job and tmux session operations with multi-signal stall diagnosis, log capture, and safe TERM→recheck→KILL gates | ✅ Usable (command workflow; session, logs, timeouts, and fallback are parameterized) | POSIX shell, `ps`, and `kill`; tmux/lsof are workflow-specific |
 | [`soia-dev-design-explorer`](./skills/soia-dev-design-explorer/) | Public wrapper for hi-fi HTML prototypes, design variants, decks, animations, and reviews, with an explicit upstream path, user-supplied brand inputs, classified outputs, and verification | ✅ Usable (requires external huashu-design) | `alchaincyf/huashu-design` (MIT; install separately) |
+| [`soia-dev-open-design-ops`](./skills/soia-dev-open-design-ops/) | Open Design atomic operations for environment/daemon control, design-system and project onboarding, functional-skill/template queries, HTML/PDF/PPTX/MP4 exports, and native session resume | ✅ Usable (stdlib scripts + upstream CLI/App) | Open Design checkout; Node 24.x, Corepack, pnpm 10.33.x; private `OPEN_DESIGN_HOME` |
+
+Open Design setup: copy [`config.example.yml`](./skills/soia-dev-open-design-ops/config.example.yml) to the skill-specific private config directory and set `OPEN_DESIGN_HOME`; never commit local checkout paths, product `DESIGN.md` paths, or port overrides.
 
 ### 🏢 CWork · enterprise collaboration
 
@@ -323,6 +327,7 @@ This installs every skill under `skills/` into your agent's skill directory — 
 | `Upgrade my local AI CLIs` / `Dry-run to check codex/claude versions` | soia-dev-ai-cli-upgrade |
 | `Monitor this long-running job` / `Check whether this process is truly stalled` | soia-dev-terminal-ops |
 | `Build a hi-fi HTML prototype` / `Review this visual direction` | soia-dev-design-explorer |
+| `Start the Open Design daemon` / `Export this deck to PPTX` | soia-dev-open-design-ops |
 | `Research my Feishu drive/wiki` / `Read a Feishu work document` | soia-cwork-feishu-cli |
 | `Mirror my Feishu wiki to Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
 
@@ -439,6 +444,7 @@ soia-open-skills/
     ├── soia-dev-agent-cli-dispatch/
     ├── soia-dev-terminal-ops/
     ├── soia-dev-design-explorer/
+    ├── soia-dev-open-design-ops/
     └── soia-cwork-feishu-cli/
 ```
 
