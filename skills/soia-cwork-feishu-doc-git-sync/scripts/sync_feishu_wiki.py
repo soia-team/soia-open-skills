@@ -83,12 +83,17 @@ DEFAULT_CHANGE_LEDGER_DIR = "change-reports"
 DEFAULT_CHANGE_LEDGER_MAX_DIFF_LINES = 400
 DEFAULT_SHEET_MAX_CELLS = 10_000
 DEFAULT_SHEET_MAX_CHARS = 100_000
+DEFAULT_EMBEDDED_SHEET_MAX_ROWS = 200
+DEFAULT_EMBEDDED_SHEET_MAX_COLUMNS = 50
+DEFAULT_EMBEDDED_SHEET_MAX_PER_DOCUMENT = 100
 DEFAULT_SHEET_SNAPSHOT_DIR = "_snapshots"
 DEFAULT_BITABLE_MAX_RECORDS = 1_000
 DEFAULT_RESOURCE_EXPORT_DIR = "_exports"
 DEFAULT_RESOURCE_BATCH_SIZE = 10
 DEFAULT_RESOURCE_TIMEOUT_SECONDS = 120
 SHEET_RANGE_PATTERN = re.compile(r"^([A-Z]+)([1-9][0-9]*):([A-Z]+)([1-9][0-9]*)$")
+EMBEDDED_SHEET_SCAN_MARKER = "<!-- soia:embedded-sheet-scan -->"
+EMBEDDED_SHEET_RENDER_MARKER = "<!-- soia:embedded-sheet -->"
 
 
 class CliCommandError(RuntimeError):
@@ -199,6 +204,11 @@ def parse_args() -> argparse.Namespace:
         "--sync-sheets",
         action="store_true",
         help="mirror explicitly configured Feishu Sheet ranges as Markdown tables",
+    )
+    parser.add_argument(
+        "--sync-embedded-sheets",
+        action="store_true",
+        help="mirror explicitly authorised Sheet blocks embedded inside Feishu documents",
     )
     parser.add_argument(
         "--sync-bitables",
@@ -548,6 +558,32 @@ def fetch_doc(config: dict[str, Any], obj_token: str) -> tuple[str, str]:
     return content, str(revision_id) if revision_id is not None else ""
 
 
+def fetch_doc_xml(config: dict[str, Any], obj_token: str) -> str:
+    """Read a document's XML only when an opted-in feature needs block metadata."""
+    payload = run_cli(
+        config,
+        "docs",
+        "+fetch",
+        "--as",
+        "bot",
+        "--doc",
+        obj_token,
+        "--scope",
+        "full",
+        "--doc-format",
+        "xml",
+        "--format",
+        "json",
+    )
+    document = nested(payload, "data", "document", default={})
+    if not isinstance(document, dict):
+        raise RuntimeError("docs +fetch XML payload has no data.document object")
+    content = document.get("content")
+    if not isinstance(content, str):
+        raise RuntimeError("docs +fetch XML payload has no data.document.content string")
+    return content
+
+
 def a1_column_number(label: str) -> int:
     """Return the one-based number for an A1 column label."""
     value = 0
@@ -556,6 +592,42 @@ def a1_column_number(label: str) -> int:
             raise ValueError("invalid A1 column")
         value = value * 26 + ord(character) - ord("A") + 1
     return value
+
+
+def a1_column_label(value: int) -> str:
+    """Return the A1 column label for a positive, one-based column number."""
+    if value < 1:
+        raise ValueError("A1 column number must be positive")
+    letters: list[str] = []
+    while value:
+        value, remainder = divmod(value - 1, 26)
+        letters.append(chr(ord("A") + remainder))
+    return "".join(reversed(letters))
+
+
+def sheet_preservation_options(settings: dict[str, Any]) -> tuple[bool, dict[str, bool]]:
+    """Read one bounded preservation policy shared by standalone and embedded Sheets."""
+    preserve = settings.get("preserve", {})
+    if preserve is True:
+        preserve = {"enabled": True}
+    if not isinstance(preserve, dict):
+        raise SystemExit("Sheet preserve must be a mapping when provided")
+    preserve_enabled = bool(preserve.get("enabled", False))
+    return preserve_enabled, {
+        "formulas": bool(preserve.get("formulas", True)),
+        "styles": bool(preserve.get("styles", True)),
+        "comments": bool(preserve.get("comments", True)),
+        "layout": bool(preserve.get("layout", True)),
+        "charts": bool(preserve.get("charts", True)),
+        "floating_images": bool(preserve.get("floating_images", True)),
+        # Report-oriented metadata remains opt-in even when the existing
+        # preservation bundle is enabled, so current mirrors do not gain
+        # extra API calls unexpectedly.
+        "pivots": bool(preserve.get("pivots", False)),
+        "filters": bool(preserve.get("filters", False)),
+        "conditional_formats": bool(preserve.get("conditional_formats", False)),
+        "sparklines": bool(preserve.get("sparklines", False)),
+    }
 
 
 def configured_sheet_selections(config: dict[str, Any], enabled: bool) -> dict[str, list[dict[str, Any]]]:
@@ -577,27 +649,7 @@ def configured_sheet_selections(config: dict[str, Any], enabled: bool) -> dict[s
     except (TypeError, ValueError):
         max_chars = DEFAULT_SHEET_MAX_CHARS
     skip_hidden = bool(settings.get("skip_hidden", False))
-    preserve = settings.get("preserve", {})
-    if preserve is True:
-        preserve = {"enabled": True}
-    if not isinstance(preserve, dict):
-        raise SystemExit("sync.sheets.preserve must be a mapping when provided")
-    preserve_enabled = bool(preserve.get("enabled", False))
-    preserve_options = {
-        "formulas": bool(preserve.get("formulas", True)),
-        "styles": bool(preserve.get("styles", True)),
-        "comments": bool(preserve.get("comments", True)),
-        "layout": bool(preserve.get("layout", True)),
-        "charts": bool(preserve.get("charts", True)),
-        "floating_images": bool(preserve.get("floating_images", True)),
-        # Report-oriented metadata remains opt-in even when the existing
-        # preservation bundle is enabled, so current mirrors do not gain
-        # extra API calls unexpectedly.
-        "pivots": bool(preserve.get("pivots", False)),
-        "filters": bool(preserve.get("filters", False)),
-        "conditional_formats": bool(preserve.get("conditional_formats", False)),
-        "sparklines": bool(preserve.get("sparklines", False)),
-    }
+    preserve_enabled, preserve_options = sheet_preservation_options(settings)
     selections: dict[str, list[dict[str, Any]]] = {}
     seen: set[tuple[str, str, str]] = set()
     for raw in raw_selections:
@@ -631,6 +683,103 @@ def configured_sheet_selections(config: dict[str, Any], enabled: bool) -> dict[s
             }
         )
     return selections
+
+
+def configured_embedded_sheet_settings(config: dict[str, Any], enabled: bool) -> dict[str, Any] | None:
+    """Return an explicit, bounded policy for Sheet blocks embedded in documents."""
+    if not enabled:
+        return None
+    settings = nested(config, "sync", "embedded_sheets", default={})
+    if not isinstance(settings, dict):
+        raise SystemExit("sync.embedded_sheets must be a mapping")
+    all_docx = bool(settings.get("all_docx", False))
+    raw_node_tokens = settings.get("node_tokens", [])
+    if not isinstance(raw_node_tokens, list) or any(not isinstance(item, str) for item in raw_node_tokens):
+        raise SystemExit("sync.embedded_sheets.node_tokens must be a list of node tokens")
+    node_tokens = {item.strip() for item in raw_node_tokens if item.strip()}
+    if not all_docx and not node_tokens:
+        raise SystemExit(
+            "sync.embedded_sheets requires all_docx=true or at least one explicit node_tokens entry"
+        )
+
+    def bounded_int(name: str, default: int, hard_limit: int) -> int:
+        try:
+            value = int(settings.get(name, default))
+        except (TypeError, ValueError):
+            value = default
+        return max(1, min(value, hard_limit))
+
+    max_cells = bounded_int("max_cells", DEFAULT_SHEET_MAX_CELLS, 100_000)
+    max_rows = bounded_int("max_rows", DEFAULT_EMBEDDED_SHEET_MAX_ROWS, 100_000)
+    max_columns = bounded_int("max_columns", DEFAULT_EMBEDDED_SHEET_MAX_COLUMNS, 702)
+    if max_rows * max_columns > max_cells:
+        raise SystemExit("sync.embedded_sheets.max_rows * max_columns exceeds max_cells")
+    max_chars = bounded_int("max_chars", DEFAULT_SHEET_MAX_CHARS, 500_000)
+    max_sheets = bounded_int("max_sheets_per_document", DEFAULT_EMBEDDED_SHEET_MAX_PER_DOCUMENT, 500)
+    preserve_enabled, preserve_options = sheet_preservation_options(settings)
+    return {
+        "all_docx": all_docx,
+        "node_tokens": node_tokens,
+        "max_cells": max_cells,
+        "max_rows": max_rows,
+        "max_columns": max_columns,
+        "max_chars": max_chars,
+        "max_sheets_per_document": max_sheets,
+        "skip_hidden": bool(settings.get("skip_hidden", False)),
+        "preserve": preserve_enabled,
+        "preserve_options": preserve_options,
+    }
+
+
+def embedded_sheet_references(content: str, *, max_count: int) -> list[dict[str, str]]:
+    """Extract unique workbook and worksheet identifiers from document XML."""
+    references: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for match in re.finditer(r"<sheet\b([^>]*)/?>", content, flags=re.IGNORECASE):
+        attrs = html_attributes(match.group(1))
+        workbook_token = attrs.get("token", "").strip()
+        sheet_id = attrs.get("sheet-id", "").strip()
+        if not workbook_token or not sheet_id:
+            raise RuntimeError("embedded Sheet tag is missing a workbook token or sheet id")
+        key = (workbook_token, sheet_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        references.append({"workbook_token": workbook_token, "sheet_id": sheet_id})
+        if len(references) > max_count:
+            raise RuntimeError("embedded Sheet reference count exceeds the configured document limit")
+    return references
+
+
+def embedded_sheet_selection(settings: dict[str, Any], sheet: dict[str, Any]) -> dict[str, Any]:
+    """Constrain one embedded worksheet to an A1 range before reading its values."""
+    try:
+        source_rows = max(1, int(sheet.get("row_count") or settings["max_rows"]))
+    except (TypeError, ValueError):
+        source_rows = int(settings["max_rows"])
+    try:
+        source_columns = max(1, int(sheet.get("column_count") or settings["max_columns"]))
+    except (TypeError, ValueError):
+        source_columns = int(settings["max_columns"])
+    width = min(source_columns, int(settings["max_columns"]))
+    height = min(source_rows, int(settings["max_rows"]), int(settings["max_cells"]) // width)
+    if height < 1:
+        raise RuntimeError("embedded Sheet bounds leave no readable cells")
+    return {
+        "sheet_id": str(sheet["sheet_id"]),
+        "range": f"A1:{a1_column_label(width)}{height}",
+        "max_chars": int(settings["max_chars"]),
+        "skip_hidden": bool(settings["skip_hidden"]),
+        "preserve": bool(settings["preserve"]),
+        "preserve_options": dict(settings["preserve_options"]),
+    }
+
+
+def embedded_sheet_sync_applies(node: dict[str, Any], settings: dict[str, Any] | None) -> bool:
+    """Limit XML reads to the document nodes explicitly authorised in private config."""
+    if settings is None or str(node.get("obj_type", "")) not in {"docx", "doc"}:
+        return False
+    return bool(settings["all_docx"] or str(node.get("node_token", "")) in settings["node_tokens"])
 
 
 def trim_sheet_rows(rows: list[list[str]]) -> list[list[str]]:
@@ -674,20 +823,24 @@ def fetch_sheet_markdown(
     *,
     snapshot_root: Path | None = None,
     node_token: str = "",
+    workbook_sheets: list[dict[str, Any]] | None = None,
+    include_document_heading: bool = True,
+    section_heading_level: int = 2,
 ) -> tuple[str, str]:
     """Read explicitly selected Sheet ranges through lark-cli and render Markdown tables."""
-    workbook_payload = run_cli(
-        config,
-        "sheets",
-        "+workbook-info",
-        "--as",
-        "bot",
-        "--spreadsheet-token",
-        obj_token,
-        "--format",
-        "json",
-    )
-    workbook_sheets = nested(workbook_payload, "data", "sheets", default=[])
+    if workbook_sheets is None:
+        workbook_payload = run_cli(
+            config,
+            "sheets",
+            "+workbook-info",
+            "--as",
+            "bot",
+            "--spreadsheet-token",
+            obj_token,
+            "--format",
+            "json",
+        )
+        workbook_sheets = nested(workbook_payload, "data", "sheets", default=[])
     if not isinstance(workbook_sheets, list):
         raise RuntimeError("sheets +workbook-info payload has no data.sheets list")
     sheets_by_id = {
@@ -695,7 +848,8 @@ def fetch_sheet_markdown(
         for item in workbook_sheets
         if isinstance(item, dict) and item.get("sheet_id")
     }
-    sections = [f"# {title}", "", "> 已按私有配置读取指定飞书电子表格范围。"]
+    sections = [f"# {title}", "", "> 已按私有配置读取指定飞书电子表格范围。"] if include_document_heading else []
+    heading = "#" * max(1, min(section_heading_level, 6))
     for selection in selections:
         sheet_id = str(selection["sheet_id"])
         sheet = sheets_by_id.get(sheet_id)
@@ -834,7 +988,7 @@ def fetch_sheet_markdown(
         sections.extend(
             [
                 "",
-                f"## {sheet_title}",
+                f"{heading} {sheet_title}",
                 "",
                 f"范围：`{selection['range']}`",
                 *(["", preservation_note] if preservation_note else []),
@@ -843,6 +997,70 @@ def fetch_sheet_markdown(
             ]
         )
     return "\n".join(sections).rstrip() + "\n", ""
+
+
+def fetch_embedded_sheet_markdown(
+    config: dict[str, Any],
+    document_xml: str,
+    settings: dict[str, Any],
+    *,
+    snapshot_root: Path | None,
+    node_token: str,
+) -> tuple[str, int]:
+    """Render opted-in Sheet blocks found in one document XML as bounded local tables."""
+    references = embedded_sheet_references(
+        document_xml,
+        max_count=int(settings["max_sheets_per_document"]),
+    )
+    if not references:
+        return "", 0
+    workbook_cache: dict[str, list[dict[str, Any]]] = {}
+    sections: list[str] = []
+    for reference in references:
+        workbook_token = reference["workbook_token"]
+        workbook_sheets = workbook_cache.get(workbook_token)
+        if workbook_sheets is None:
+            payload = run_cli(
+                config,
+                "sheets",
+                "+workbook-info",
+                "--as",
+                "bot",
+                "--spreadsheet-token",
+                workbook_token,
+                "--format",
+                "json",
+            )
+            workbook_sheets = nested(payload, "data", "sheets", default=[])
+            if not isinstance(workbook_sheets, list):
+                raise RuntimeError("embedded Sheet workbook metadata has no data.sheets list")
+            workbook_cache[workbook_token] = workbook_sheets
+        sheet = next(
+            (
+                item
+                for item in workbook_sheets
+                if isinstance(item, dict) and str(item.get("sheet_id", "")) == reference["sheet_id"]
+            ),
+            None,
+        )
+        if sheet is None:
+            raise RuntimeError("embedded Sheet reference was not found in workbook metadata")
+        if str(sheet.get("resource_type", "sheet")) != "sheet":
+            raise RuntimeError("embedded Sheet reference is not a grid worksheet")
+        selection = embedded_sheet_selection(settings, sheet)
+        rendered, _ = fetch_sheet_markdown(
+            config,
+            workbook_token,
+            "嵌入式表格",
+            [selection],
+            snapshot_root=snapshot_root,
+            node_token=node_token,
+            workbook_sheets=workbook_sheets,
+            include_document_heading=False,
+            section_heading_level=3,
+        )
+        sections.extend([EMBEDDED_SHEET_RENDER_MARKER, rendered.rstrip()])
+    return "\n\n".join(sections).rstrip(), len(references)
 
 
 def configured_bitable_selections(config: dict[str, Any], enabled: bool) -> dict[str, list[dict[str, Any]]]:
@@ -1723,14 +1941,22 @@ def normalize_content(
     if localize_document_links and cite_links:
         value = rewrite_feishu_document_urls(value, cite_links)
 
-    # Some Feishu image descriptions contain copied HTML such as
-    # ``<a href=...``. If it remains in the Markdown image label, the Vue
-    # compiler can mistake it for a real tag and report a missing end tag.
-    def escape_image_alt(match: re.Match[str]) -> str:
-        alt = match.group(1).replace("<", "&lt;").replace(">", "&gt;")
-        return f"![{alt}]({match.group(2)})"
+    # Feishu occasionally exports a very long image description as a Markdown
+    # image label.  Markdown renderers disagree on those labels (especially
+    # when they contain copied punctuation), and some degrade them into a
+    # visible hyperlink instead of an image.  Use one portable HTML form for
+    # every ordinary image, with a compact escaped alt value.  Asset discovery
+    # and local URL rewriting both support this form.
+    def render_markdown_image(match: re.Match[str]) -> str:
+        alt = re.sub(r"\s+", " ", match.group(1)).strip() or "飞书图片"
+        source = match.group(2).strip()
+        if source.startswith("<") and source.endswith(">"):
+            source = source[1:-1].strip()
+        if not source:
+            return "（飞书图片）"
+        return f'<img src="{html_escape(source, quote=True)}" alt="{html_escape(alt, quote=True)}">'
 
-    value = re.sub(r"!\[([^\]\n]*)\]\(([^)\n]+)\)", escape_image_alt, value)
+    value = re.sub(r"!\[([^\]\n]*)\]\(\s*(<[^>\n]+>|[^)\n]+)\s*\)", render_markdown_image, value)
 
     # A few exports escape only the opening/closing table tags while keeping
     # the inner HTML. Restore the block boundary and remove paragraph wrappers
@@ -1777,6 +2003,43 @@ def normalize_content(
 
     value = value.strip()
     return value or f"# {title}\n\n（飞书文档当前没有可转换的正文内容。）"
+
+
+def render_document_content(
+    config: dict[str, Any],
+    obj_token: str,
+    title: str,
+    cite_links: dict[str, str] | None,
+    *,
+    render_sub_page_navigation: bool,
+    localize_document_links: bool,
+    embedded_sheet_settings: dict[str, Any] | None = None,
+    snapshot_root: Path | None = None,
+    node_token: str = "",
+) -> tuple[str, str]:
+    """Fetch Markdown and, when explicitly enabled, append bounded embedded Sheet snapshots."""
+    raw_content, revision_id = fetch_doc(config, obj_token)
+    content = normalize_content(
+        raw_content,
+        title,
+        cite_links,
+        render_sub_page_navigation=render_sub_page_navigation,
+        localize_document_links=localize_document_links,
+    )
+    if embedded_sheet_settings is None:
+        return content, revision_id
+    document_xml = fetch_doc_xml(config, obj_token)
+    embedded_content, _ = fetch_embedded_sheet_markdown(
+        config,
+        document_xml,
+        embedded_sheet_settings,
+        snapshot_root=snapshot_root,
+        node_token=node_token,
+    )
+    appendix = [EMBEDDED_SHEET_SCAN_MARKER]
+    if embedded_content:
+        appendix.extend(["", "## 嵌入式表格", "", embedded_content])
+    return content.rstrip() + "\n\n" + "\n".join(appendix), revision_id
 
 
 def extract_image_urls(content: str) -> list[str]:
@@ -1849,7 +2112,17 @@ def extract_asset_references(content: str) -> list[str]:
 
 
 def image_extension(content_type: str, data: bytes, url: str) -> str:
-    """Infer a browser-renderable extension without trusting Feishu's URL path."""
+    """Infer a browser-renderable extension from bytes before response metadata."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return ".jpg"
+    if data.startswith((b"GIF87a", b"GIF89a")):
+        return ".gif"
+    if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        return ".webp"
+    if data.lstrip().startswith(b"<svg") or b"<svg" in data[:512]:
+        return ".svg"
     header = (content_type or "").split(";", 1)[0].lower().strip()
     by_type = {
         "image/jpeg": ".jpg",
@@ -1861,18 +2134,23 @@ def image_extension(content_type: str, data: bytes, url: str) -> str:
     }
     if header in by_type:
         return by_type[header]
-    if data.startswith(b"\x89PNG\r\n\x1a\n"):
-        return ".png"
-    if data.startswith(b"\xff\xd8\xff"):
-        return ".jpg"
-    if data.startswith((b"GIF87a", b"GIF89a")):
-        return ".gif"
-    if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
-        return ".webp"
-    if data.lstrip().startswith(b"<svg") or b"<svg" in data[:512]:
-        return ".svg"
     guessed = Path(urlparse(url).path).suffix.lower()
     return guessed if guessed in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp"} else ".bin"
+
+
+def repair_cached_image_extension(existing: Path, url: str) -> Path:
+    """Correct a legacy image suffix when server headers disagreed with file bytes."""
+    try:
+        detected = image_extension("", existing.read_bytes()[:512], url)
+    except OSError:
+        return existing
+    if detected == ".bin" or existing.suffix.lower() == detected:
+        return existing
+    corrected = existing.with_suffix(detected)
+    if corrected.exists():
+        return corrected if corrected.is_file() and corrected.stat().st_size else existing
+    existing.rename(corrected)
+    return corrected
 
 
 def download_one_asset(
@@ -1887,6 +2165,8 @@ def download_one_asset(
     digest = hashlib.sha256((identity or url).encode("utf-8")).hexdigest()[:24]
     existing = next(iter(sorted(asset_root.glob(f"{digest}.*"))), None)
     if existing and existing.is_file() and existing.stat().st_size:
+        if require_image:
+            existing = repair_cached_image_extension(existing, url)
         return url, existing.name, "reused"
 
     request = Request(url, headers={"User-Agent": "soia-cwork-feishu-doc-git-sync/1"})
@@ -3031,6 +3311,14 @@ def sync(args: argparse.Namespace) -> int:
         or nested(config, "sync", "sheets", "enabled", default=False)
     )
     sheet_selections = configured_sheet_selections(config, sheet_sync_enabled)
+    embedded_sheet_sync_enabled = bool(
+        getattr(args, "sync_embedded_sheets", False)
+        or nested(config, "sync", "embedded_sheets", "enabled", default=False)
+    )
+    embedded_sheet_settings = configured_embedded_sheet_settings(
+        config,
+        embedded_sheet_sync_enabled,
+    )
     bitable_sync_enabled = bool(
         getattr(args, "sync_bitables", False)
         or nested(config, "sync", "bitables", "enabled", default=False)
@@ -3109,6 +3397,20 @@ def sync(args: argparse.Namespace) -> int:
                     links[str(identifier)] = target
         return links
 
+    def has_embedded_sheet_scan(node: dict[str, Any], old: dict[str, Any]) -> bool:
+        if not embedded_sheet_sync_applies(node, embedded_sheet_settings):
+            return True
+        old_path = old.get("relative_path") if isinstance(old, dict) else None
+        if not isinstance(old_path, str):
+            return False
+        existing = output_dir / old_path
+        if not existing.is_file():
+            return False
+        try:
+            return EMBEDDED_SHEET_SCAN_MARKER in existing.read_text(encoding="utf-8")
+        except OSError:
+            return False
+
     records: list[dict[str, Any]] = []
     counts = {
         "created": 0,
@@ -3130,6 +3432,8 @@ def sync(args: argparse.Namespace) -> int:
         "content_reused": 0,
         "sheets_mirrored": 0,
         "sheet_tabs_mirrored": 0,
+        "embedded_sheet_documents_scanned": 0,
+        "embedded_sheets_mirrored": 0,
         "bitables_mirrored": 0,
         "bitable_tables_mirrored": 0,
         "sheet_workbooks_downloaded": 0,
@@ -3254,6 +3558,7 @@ def sync(args: argparse.Namespace) -> int:
                 )
                 missing_baseline = not old_marker and not has_local_success
                 probe_failed = token in metadata_probe_errors
+                needs_embedded_sheet_scan = not has_embedded_sheet_scan(node, old)
                 if (
                     token in changed_node_tokens
                     or not isinstance(old, dict)
@@ -3261,6 +3566,7 @@ def sync(args: argparse.Namespace) -> int:
                     or changed_remotely
                     or missing_baseline
                     or probe_failed
+                    or needs_embedded_sheet_scan
                 ):
                     content_nodes_to_fetch.append(node)
             print(
@@ -3339,13 +3645,20 @@ def sync(args: argparse.Namespace) -> int:
                         mirror_dir=mirror_dir,
                     )
                 else:
-                    raw_content, revision_id = fetch_doc(config, str(node.get("obj_token", "")))
-                    content = normalize_content(
-                        raw_content,
+                    content, revision_id = render_document_content(
+                        config,
+                        str(node.get("obj_token", "")),
                         title,
                         document_links_for(token),
                         render_sub_page_navigation=render_sub_page_navigation,
                         localize_document_links=localize_document_links,
+                        embedded_sheet_settings=(
+                            embedded_sheet_settings
+                            if embedded_sheet_sync_applies(node, embedded_sheet_settings)
+                            else None
+                        ),
+                        snapshot_root=mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR,
+                        node_token=token,
                     )
                 return token, "ok", content, "", revision_id
             except Exception as exc:  # keep inventory even when one document is unavailable
@@ -3476,17 +3789,25 @@ def sync(args: argparse.Namespace) -> int:
                     delay = 0.0
                 if delay:
                     time.sleep(delay)
-                raw_content, revision_id = fetch_doc(config, str(node.get("obj_token", "")))
+                content, revision_id = render_document_content(
+                    config,
+                    str(node.get("obj_token", "")),
+                    title,
+                    document_links_for(token),
+                    render_sub_page_navigation=render_sub_page_navigation,
+                    localize_document_links=localize_document_links,
+                    embedded_sheet_settings=(
+                        embedded_sheet_settings
+                        if embedded_sheet_sync_applies(node, embedded_sheet_settings)
+                        else None
+                    ),
+                    snapshot_root=mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR,
+                    node_token=token,
+                )
                 return (
                     token,
                     "ok",
-                    normalize_content(
-                        raw_content,
-                        title,
-                        document_links_for(token),
-                        render_sub_page_navigation=render_sub_page_navigation,
-                        localize_document_links=localize_document_links,
-                    ),
+                    content,
                     "",
                     revision_id,
                 )
@@ -3615,6 +3936,10 @@ def sync(args: argparse.Namespace) -> int:
                 if error:
                     categories = counts["error_categories"]
                     categories[error] = categories.get(error, 0) + 1
+            elif embedded_sheet_sync_applies(node, embedded_sheet_settings):
+                if EMBEDDED_SHEET_SCAN_MARKER in content:
+                    counts["embedded_sheet_documents_scanned"] += 1
+                counts["embedded_sheets_mirrored"] += content.count(EMBEDDED_SHEET_RENDER_MARKER)
             elif obj_type == "sheet":
                 counts["sheets_mirrored"] += 1
                 counts["sheet_tabs_mirrored"] += len(sheet_selections.get(token, []))

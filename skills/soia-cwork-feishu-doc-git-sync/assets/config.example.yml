@@ -78,6 +78,38 @@ sync:
       batch_size: 10
       timeout_seconds: 120
       output_dir: "_exports/sheets"
+  # Embedded Sheet blocks inside Docx/Wiki documents are not present in the
+  # Markdown fetch result. Enable this separately after approving the document
+  # scope; the synchronizer reads the XML block metadata, then mirrors only a
+  # bounded top-left range from each referenced grid worksheet.
+  embedded_sheets:
+    enabled: false
+    # Set all_docx true only after approving every readable Docx/Wiki page.
+    # Otherwise list the exact Wiki document node tokens below.
+    all_docx: false
+    node_tokens: []
+    # At most this many embedded Sheet blocks are read from one document.
+    max_sheets_per_document: 100
+    # Together these bounds must not exceed max_cells (hard cap: 100000).
+    max_rows: 200
+    max_columns: 50
+    max_cells: 10000
+    # Fail instead of writing a partial table when the provider truncates.
+    max_chars: 100000
+    skip_hidden: false
+    # Optional fidelity metadata for each bounded embedded Sheet range.
+    preserve:
+      enabled: false
+      formulas: true
+      styles: true
+      comments: true
+      layout: true
+      charts: true
+      floating_images: true
+      pivots: false
+      filters: false
+      conditional_formats: false
+      sparklines: false
   # Base/bitable data is also sensitive. Select individual tables and a
   # record limit; Markdown is accompanied by a schema-and-record JSON snapshot.
   bitables:

@@ -4,6 +4,20 @@ default:
   enabled: false
   fallback: metadata_stub
 
+embedded_document_sheet:
+  status: supported_when_opted_in
+  discovery: "docs +fetch --doc-format xml, then extract <sheet token=... sheet-id=...>"
+  markdown_fetch_limitation: "The normal Markdown payload omits embedded Sheet blocks, so XML is read only for the approved document scope."
+  private_config:
+    enabled: "sync.embedded_sheets.enabled=true"
+    scope: "all_docx=true, or a non-empty node_tokens list"
+    bounds: [max_sheets_per_document, max_rows, max_columns, max_cells, max_chars]
+  rendering:
+    placement: "A clearly labelled '嵌入式表格' appendix is added after the document body because the Markdown payload has no stable inline marker."
+    format: markdown_table
+    marker: "HTML comments distinguish a completed scan from each mirrored table and make incremental repair deterministic."
+  failure_policy: "Do not write a partial table. Missing worksheet metadata, non-grid resources, configured bound overflow, or truncated reads fail the document for retry."
+
 provider:
   identity: bot
   workbook_metadata: "lark-cli sheets +workbook-info"
@@ -45,6 +59,7 @@ rendering:
 safety:
   explicit_user_approval: required_before_local_mirror_write
   private_config_opt_in: sync.sheets.enabled
+  embedded_document_opt_in: sync.embedded_sheets.enabled with an explicit document scope
   no_file_export: "unless sync.sheets.workbook_exports explicitly records whole-workbook approval"
   no_media_download: true
   no_auto_git_commit_or_push: true

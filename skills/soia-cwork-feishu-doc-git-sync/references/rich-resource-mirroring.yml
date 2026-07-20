@@ -23,6 +23,14 @@ resources:
       limits: "sync.max_asset_bytes defaults to 50 MiB per resource; larger files remain remote and report asset_too_large until the customer explicitly raises the private limit."
       large_mirror_control: "A positive sync.asset_batch_size downloads only that many missing resources per run; existing local resources are still rewritten and manifest.stats.assets_deferred reports the remaining queue."
       retry_policy: "Token-backed media retries bounded transient or unclassified CLI failures; confirmed permission-denied and not-found responses remain actionable failures."
+      rendering_repair: "Markdown images are normalised to escaped HTML img tags; cached files use their detected binary format before any misleading provider Content-Type or URL suffix."
+
+    embedded_sheets:
+      status: supported_when_opted_in
+      route: "docs +fetch XML block discovery, then sheets +workbook-info and bounded sheets +csv-get"
+      config: "sync.embedded_sheets.enabled with all_docx=true or explicit node_tokens"
+      local_form: "labelled Markdown appendix with one table per embedded grid worksheet"
+      limitations: "Original inline placement is unavailable from the provider's Markdown payload; non-grid embedded resources fail visibly rather than being silently omitted."
 
   sheet:
     display_table:

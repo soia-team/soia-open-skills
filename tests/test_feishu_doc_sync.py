@@ -44,6 +44,7 @@ class FeishuDocSyncTests(unittest.TestCase):
             skip_content=False,
             download_assets=False,
             sync_sheets=False,
+            sync_embedded_sheets=False,
             sync_bitables=False,
             refresh_asset_urls=False,
             skip_assets=False,
@@ -167,6 +168,78 @@ class FeishuDocSyncTests(unittest.TestCase):
         }
         with mock.patch.object(sync, "run_cli", return_value=payload):
             self.assertEqual(sync.fetch_doc({}, "obj-1"), ("# 内容", "42"))
+
+    def test_embedded_sheet_mirroring_requires_an_explicit_document_scope(self) -> None:
+        with self.assertRaises(SystemExit):
+            sync.configured_embedded_sheet_settings(
+                {"sync": {"embedded_sheets": {}}},
+                True,
+            )
+        settings = sync.configured_embedded_sheet_settings(
+            {
+                "sync": {
+                    "embedded_sheets": {
+                        "node_tokens": ["doc-node"],
+                        "max_rows": 10,
+                        "max_columns": 4,
+                        "max_cells": 40,
+                    }
+                }
+            },
+            True,
+        )
+        self.assertIsNotNone(settings)
+        self.assertEqual(settings["node_tokens"], {"doc-node"})
+        self.assertEqual(settings["max_rows"], 10)
+
+    def test_embedded_sheet_mirroring_renders_a_bounded_table_and_hides_identifiers(self) -> None:
+        settings = sync.configured_embedded_sheet_settings(
+            {
+                "sync": {
+                    "embedded_sheets": {
+                        "node_tokens": ["doc-node"],
+                        "max_rows": 10,
+                        "max_columns": 4,
+                        "max_cells": 40,
+                    }
+                }
+            },
+            True,
+        )
+
+        def fake_run_cli(_config, *args):
+            if args[:2] == ("sheets", "+workbook-info"):
+                return {
+                    "data": {
+                        "sheets": [
+                            {
+                                "sheet_id": "sheet-1",
+                                "title": "人员",
+                                "resource_type": "sheet",
+                                "row_count": 3,
+                                "column_count": 2,
+                            }
+                        ]
+                    }
+                }
+            if args[:2] == ("sheets", "+csv-get"):
+                return {"data": {"annotated_csv": "姓名,岗位\n张三,后端\n", "has_more": False}}
+            raise AssertionError(args)
+
+        with mock.patch.object(sync, "run_cli", side_effect=fake_run_cli):
+            content, count = sync.fetch_embedded_sheet_markdown(
+                {},
+                '<sheet token="workbook-token" sheet-id="sheet-1"/>',
+                settings,
+                snapshot_root=None,
+                node_token="doc-node",
+            )
+
+        self.assertEqual(count, 1)
+        self.assertIn(sync.EMBEDDED_SHEET_RENDER_MARKER, content)
+        self.assertIn("| 姓名 | 岗位 |", content)
+        self.assertNotIn("workbook-token", content)
+        self.assertNotIn("sheet-1", content)
 
     def test_sheet_sync_requires_an_explicit_bounded_selection(self) -> None:
         with self.assertRaises(SystemExit):
@@ -1179,6 +1252,31 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertIn("&lt;a href=", normalized)
         self.assertIn("<table>", normalized)
         self.assertNotIn("<p>单元格</p>", normalized)
+
+    def test_normalization_uses_stable_html_for_long_markdown_image_labels(self) -> None:
+        content = "![很长的截图说明，包含普通标点和多个词语](../../_assets/example.gif)"
+
+        normalized = sync.normalize_content(content, "图片测试")
+
+        self.assertIn('<img src="../../_assets/example.gif"', normalized)
+        self.assertIn('alt="很长的截图说明，包含普通标点和多个词语"', normalized)
+        self.assertNotIn("![", normalized)
+
+    def test_image_extension_prefers_bytes_and_repairs_a_legacy_cached_suffix(self) -> None:
+        png = b"\x89PNG\r\n\x1a\n" + b"payload"
+        self.assertEqual(sync.image_extension("image/gif", png, "https://example.test/image.gif"), ".png")
+        url = "https://example.test/image.gif"
+        digest = sync.hashlib.sha256(url.encode("utf-8")).hexdigest()[:24]
+        with tempfile.TemporaryDirectory() as temp:
+            asset_root = Path(temp)
+            legacy = asset_root / f"{digest}.gif"
+            legacy.write_bytes(png)
+            _url, filename, status = sync.download_one_asset(url, asset_root, 1, 1024)
+
+            self.assertEqual(status, "reused")
+            self.assertTrue(filename.endswith(".png"))
+            self.assertFalse(legacy.exists())
+            self.assertTrue((asset_root / filename).is_file())
 
     def test_cite_normalization_uses_node_tokens_and_preserves_user_mentions(self) -> None:
         content = (
