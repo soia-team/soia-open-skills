@@ -1,9 +1,9 @@
 # Private Data and Intermediate Storage Spec
 
-This repository publishes public, beginner-facing environment skills. The
-skills may inspect or change a customer's machine, but must not turn the public
-repository, a customer-readable report, or an ordinary config file into a
-credential store.
+This repository publishes public, advanced skills across domains (PKM, dev
+tooling, collaboration, design). Skills here read and write customer data on
+local disk and cloud providers, but must not turn the public repository, a
+customer-readable report, or an ordinary config file into a credential store.
 
 ## Storage classes
 
