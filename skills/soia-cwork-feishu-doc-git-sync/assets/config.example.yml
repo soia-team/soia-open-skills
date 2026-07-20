@@ -89,6 +89,14 @@ sync:
   asset_dir: "_assets"
   asset_workers: 4
   asset_timeout_seconds: 30
+  # Set a positive value for large mirrors to process only that many missing
+  # resources per run. Already-downloaded assets are still rewritten locally;
+  # repeat until --validate-only reports no unresolved assets. 0 means no limit.
+  asset_batch_size: 0
+  # A refreshed document may contain several newly signed URLs. Use this limit
+  # to complete that document's local links in the same bounded retry step.
+  # 0 means no limit.
+  asset_refreshed_batch_size: 0
   max_asset_bytes: 20971520
   # Create a private per-run Markdown change ledger and bounded content diffs
   # under 90_同步元数据/. This never changes generated documents or deletes history.

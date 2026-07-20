@@ -20,6 +20,7 @@ resources:
       route: "docs +media-download or authenticated remote media download"
       config: "sync.download_assets: true"
       local_form: "deduplicated files in the generated mirror asset directory and rewritten relative links"
+      large_mirror_control: "A positive sync.asset_batch_size downloads only that many missing resources per run; existing local resources are still rewritten and manifest.stats.assets_deferred reports the remaining queue."
 
   sheet:
     display_table:

@@ -3,9 +3,9 @@ name: soia-cwork-feishu-doc-git-sync
 description: 将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。
 dependencies:
   hard: [soia-cwork-feishu-cli]
-version: 1.4.2
+version: 1.4.5
 created_at: 2026-07-14 23:24:26
-updated_at: 2026-07-18 10:04:02
+updated_at: 2026-07-20 10:00:00
 created_by: claude opus 4.6
 updated_by: gpt-5.6-sol
 ---
@@ -185,8 +185,8 @@ sync:
 - `sync.sheets.preserve.enabled: true` 会在同一选定范围另存单元格值、公式、样式、批注，以及工作表布局、图表和浮动图片元数据的 JSON 快照。它不调用 `drive +export`，不生成 xlsx/csv，也不把图表或图片伪装成原生 Markdown；公式重算、透视表重建、单元格图片二进制下载仍需单独确认的导出方案。
 - 图片/附件本地化是显式 opt-in 的本地数据下载；不能因为用户只要求“检查图片”就下载全部素材。持久化配置中的 `sync.download_assets: true` 只能视为用户此前对该资源范围的明确授权，不得扩展为表格或多维表格导出授权。
 - `bitable` 与未明确选择的 `sheet` 默认只生成元数据 stub，不读取表内数据。设置 `sync.bitables.enabled: true` 后，必须逐项声明 `node_token`、`table_id` 与 `max_records`；同步器以 `base +field-list`、`base +record-list` 和可选的 `base +view-list` 生成 Markdown 与 JSON 快照。`sync.bitables.download_attachments: true` 是独立的二进制下载授权，使用 `base +record-download-attachment` 并只处理已选表的已读记录附件。工作簿 `xlsx`/`csv`/`base` 导出仍必须遵循 [references/export-policy.yml](references/export-policy.yml) 的确认流程。
-- 飞书 Markdown 导出的图片 URL 可能是短期鉴权地址；启用本地化时，默认只重新读取仍含远程图片的文档来刷新 URL，不会无条件重拉所有正文。可用 `--refresh-asset-urls` 显式打开该行为。
-- 图片下载使用 URL 内容寻址文件名，重复同步会复用已有资源；可通过 `asset_workers`、`asset_timeout_seconds`、`max_asset_bytes` 限制并发、超时和单文件大小。下载失败只保留原 URL，并在 manifest 的 `assets_failed` 计数中报告，不把鉴权 URL 写入日志或清单。
+- 飞书 Markdown 导出的图片 URL 可能是短期鉴权地址；启用本地化与资源刷新后，技能会先重读关联文档取得新 URL，再下载资源，避免对已过期的 Feishu drive/stream 链接反复等待；不会无条件重拉所有正文。可用 `--refresh-asset-urls` 显式打开该行为。
+- 图片下载使用 URL 内容寻址文件名，重复同步会复用已有资源；可通过 `asset_workers`、`asset_timeout_seconds`、`max_asset_bytes` 限制并发、超时和单文件大小。大型存量镜像可设置正整数 `asset_batch_size`：每次只请求该数量的尚未落盘资源，已下载资源仍会被本地化改写；`asset_refreshed_batch_size` 可限制同一批已刷新文档的新链接下载量。重复执行并以 `--validate-only` 确认完成。manifest 会报告本轮 `assets_deferred`。下载失败只保留原 URL，并在 manifest 的 `assets_failed` 计数中报告，不把鉴权 URL 写入日志或清单。
 - `<source token="...">` 或无 URL 的 `<img token="...">` 会调用官方 `docs +media-download`；远程 URL 不可直接读取时，需要按权限清单补充 `docs:document.media:download` 或 `drive:file:download`，并在私有配置中启用本地资源下载。没有下载权限时不得猜测本地资源已经完整。
 
 ## 安全规则

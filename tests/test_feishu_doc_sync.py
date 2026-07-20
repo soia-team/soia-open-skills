@@ -988,6 +988,107 @@ class FeishuDocSyncTests(unittest.TestCase):
 
         self.assertEqual(identities[first], "feishu-token:media-1")
         self.assertEqual(identities[second], "feishu-token:media-1")
+        self.assertEqual(sync.extract_attachment_urls(content), [second])
+
+    def test_assets_with_feishu_tokens_use_media_download_before_signed_urls(self) -> None:
+        first = "https://internal-api-drive-stream.feishu.cn/authcode?code=old"
+        second = "https://internal-api-drive-stream.feishu.cn/authcode?code=new"
+        content = (
+            f'<img src="{first}" data-feishu-token="media-1">\n'
+            f'<a href="{second}" data-feishu-attachment="true" data-feishu-token="media-1">附件</a>'
+        )
+
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.object(
+                sync,
+                "download_one_media",
+                return_value=("feishu-media://media-1", "media.bin", "downloaded"),
+            ) as media_download, mock.patch.object(sync, "download_one_asset") as url_download:
+                asset_map, errors, downloaded, reused, deferred = sync.materialize_assets(
+                    [content],
+                    Path(temp),
+                    {"sync": {"asset_dir": "_assets", "asset_workers": 1}},
+                )
+
+        self.assertEqual(errors, {})
+        self.assertEqual(downloaded, 1)
+        self.assertEqual(reused, 0)
+        self.assertEqual(deferred, 0)
+        self.assertEqual(
+            asset_map,
+            {first: "_assets/media.bin", second: "_assets/media.bin"},
+        )
+        media_download.assert_called_once()
+        url_download.assert_not_called()
+
+    def test_media_download_timeout_falls_back_to_the_signed_url(self) -> None:
+        remote = "https://internal-api-drive-stream.feishu.cn/authcode?code=current"
+        content = f'<img src="{remote}" data-feishu-token="media-1">'
+        timeout = sync.subprocess.TimeoutExpired(cmd=["lark-cli"], timeout=3)
+
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.object(sync, "download_one_media", side_effect=timeout) as media_download, mock.patch.object(
+                sync,
+                "download_one_asset",
+                return_value=(remote, "fallback.png", "downloaded"),
+            ) as url_download:
+                asset_map, errors, downloaded, reused, deferred = sync.materialize_assets(
+                    [content],
+                    Path(temp),
+                    {"sync": {"asset_dir": "_assets", "asset_workers": 1, "asset_timeout_seconds": 3}},
+                )
+
+        self.assertEqual(errors, {})
+        self.assertEqual(downloaded, 1)
+        self.assertEqual(reused, 0)
+        self.assertEqual(deferred, 0)
+        self.assertEqual(asset_map, {remote: "_assets/fallback.png"})
+        media_download.assert_called_once()
+        url_download.assert_called_once()
+
+    def test_asset_batch_defers_uncached_resources_without_dropping_completed_mappings(self) -> None:
+        first = "https://example.test/a.png"
+        second = "https://example.test/b.png"
+        content = f'![a]({first})\n![b]({second})'
+
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.object(
+                sync,
+                "download_one_asset",
+                return_value=(first, "a.png", "downloaded"),
+            ) as asset_download:
+                asset_map, errors, downloaded, reused, deferred = sync.materialize_assets(
+                    [content],
+                    Path(temp),
+                    {"sync": {"asset_dir": "_assets", "asset_workers": 1, "asset_batch_size": 1}},
+                )
+
+        self.assertEqual(errors, {})
+        self.assertEqual(downloaded, 1)
+        self.assertEqual(reused, 0)
+        self.assertEqual(deferred, 1)
+        self.assertEqual(asset_map, {first: "_assets/a.png"})
+        asset_download.assert_called_once()
+
+    def test_short_lived_feishu_urls_refresh_before_download(self) -> None:
+        remote = "https://internal-api-drive-stream.feishu.cn/authcode?code=expired"
+        content = f'![image]({remote})'
+
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.object(sync, "download_one_asset") as asset_download:
+                asset_map, errors, downloaded, reused, deferred = sync.materialize_assets(
+                    [content],
+                    Path(temp),
+                    {"sync": {"asset_dir": "_assets", "asset_workers": 1}},
+                    refresh_short_lived_urls=True,
+                )
+
+        self.assertEqual(asset_map, {})
+        self.assertEqual(errors, {remote: "refresh_required"})
+        self.assertEqual(downloaded, 0)
+        self.assertEqual(reused, 0)
+        self.assertEqual(deferred, 0)
+        asset_download.assert_not_called()
 
     def test_change_ledger_writes_bounded_diff_without_touching_the_mirror(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

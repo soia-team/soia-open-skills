@@ -1324,16 +1324,20 @@ def extract_image_urls(content: str) -> list[str]:
 
 
 def extract_attachment_urls(content: str) -> list[str]:
-    """Return remote URLs currently used by normalized Feishu attachments."""
-    return sorted(
-        set(
-            re.findall(
-                r"\[飞书附件\]\((https?://[^)\s]+)",
-                content,
-                flags=re.IGNORECASE,
-            )
+    """Return remote URLs from both legacy Markdown and normalized attachment links."""
+    urls = set(
+        re.findall(
+            r"\[飞书附件\]\((https?://[^)\s]+)",
+            content,
+            flags=re.IGNORECASE,
         )
     )
+    for match in re.finditer(r"<a\b([^>]*)>", content, flags=re.IGNORECASE):
+        attrs = html_attributes(match.group(1))
+        href = attrs.get("href", "").strip()
+        if attrs.get("data-feishu-attachment", "").lower() == "true" and href.startswith(("http://", "https://")):
+            urls.add(href)
+    return sorted(urls)
 
 
 def extract_media_tokens(content: str) -> list[str]:
@@ -1432,8 +1436,9 @@ def download_one_media(
     mirror_dir: Path,
     asset_dir: str,
     max_bytes: int,
+    timeout_seconds: float,
 ) -> tuple[str, str, str]:
-    """Download a token-backed document media resource through lark-cli."""
+    """Download token-backed media with a bounded lark-cli request."""
     reference = f"feishu-media://{token}"
     digest = hashlib.sha256(reference.encode("utf-8")).hexdigest()[:24]
     asset_root = mirror_dir / asset_dir
@@ -1464,6 +1469,7 @@ def download_one_media(
         text=True,
         cwd=mirror_dir,
         env=command_env(config),
+        timeout=timeout_seconds,
     )
     if result.returncode != 0:
         detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
@@ -1484,15 +1490,37 @@ def download_one_media(
     return reference, target.name, "downloaded"
 
 
+def cached_asset_filename(identity: str, asset_root: Path) -> str:
+    """Return the content-addressed asset filename already present for an identity."""
+    cache_key = (
+        f"feishu-media://{identity.removeprefix('feishu-token:')}"
+        if identity.startswith("feishu-token:")
+        else identity
+    )
+    digest = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()[:24]
+    existing = next(iter(sorted(asset_root.glob(f"{digest}.*"))), None) if asset_root.is_dir() else None
+    return existing.name if existing and existing.is_file() and existing.stat().st_size else ""
+
+
+def is_short_lived_feishu_asset_url(reference: str) -> bool:
+    """Identify Feishu drive/stream URLs that should be refreshed before download."""
+    parsed = urlparse(reference)
+    host = (parsed.hostname or "").lower()
+    return host.endswith(".feishu.cn") and ("drive" in host or "stream" in host)
+
+
 def materialize_assets(
     contents: list[str],
     mirror_dir: Path,
     config: dict[str, Any],
-) -> tuple[dict[str, str], dict[str, str], int, int]:
+    *,
+    refresh_short_lived_urls: bool = False,
+    batch_size_override: int | None = None,
+) -> tuple[dict[str, str], dict[str, str], int, int, int]:
     """Download assets once per stable media token or URL and return local paths."""
     references = sorted({ref for content in contents for ref in extract_asset_references(content)})
     if not references:
-        return {}, {}, 0, 0
+        return {}, {}, 0, 0, 0
     asset_dir = str(nested(config, "sync", "asset_dir", default=DEFAULT_ASSET_DIR)).strip("/\\")
     if not asset_dir or Path(asset_dir).is_absolute() or ".." in Path(asset_dir).parts:
         raise SystemExit("sync.asset_dir must be a relative directory without '..'")
@@ -1512,6 +1540,12 @@ def materialize_assets(
         max_bytes = max(1024, int(nested(config, "sync", "max_asset_bytes", default=DEFAULT_MAX_ASSET_BYTES)))
     except (TypeError, ValueError):
         max_bytes = DEFAULT_MAX_ASSET_BYTES
+    try:
+        batch_size = max(0, int(nested(config, "sync", "asset_batch_size", default=0)))
+    except (TypeError, ValueError):
+        batch_size = 0
+    if batch_size_override is not None:
+        batch_size = max(0, batch_size_override)
 
     identity_by_reference: dict[str, str] = {}
     for content in contents:
@@ -1530,7 +1564,24 @@ def materialize_assets(
 
     def download(identity: str, candidates: list[str]) -> tuple[list[str], str, str, str]:
         last_error = ""
+        media_token = identity.removeprefix("feishu-token:") if identity.startswith("feishu-token:") else ""
+        if media_token:
+            try:
+                _source, filename, status = download_one_media(
+                    config,
+                    media_token,
+                    mirror_dir,
+                    asset_dir,
+                    max_bytes,
+                    timeout_seconds,
+                )
+                return candidates, filename, status, ""
+            except Exception as exc:  # Signed URLs are a best-effort fallback for token download failures.
+                last_error = str(exc)
         for reference in candidates:
+            # The stable-token attempt above already covered this exact source.
+            if reference == f"feishu-media://{media_token}":
+                continue
             try:
                 if reference.startswith("feishu-media://"):
                     _source, filename, status = download_one_media(
@@ -1539,6 +1590,7 @@ def materialize_assets(
                         mirror_dir,
                         asset_dir,
                         max_bytes,
+                        timeout_seconds,
                     )
                 else:
                     _source, filename, status = download_one_asset(
@@ -1554,10 +1606,34 @@ def materialize_assets(
                 last_error = str(exc)
         return candidates, "", "failed", last_error
 
+    pending_groups: list[tuple[str, list[str]]] = []
+    for identity, candidates in grouped_references.items():
+        filename = cached_asset_filename(identity, asset_root)
+        if filename:
+            for source in candidates:
+                asset_map[source] = (Path(asset_dir) / filename).as_posix()
+            reused += 1
+        else:
+            pending_groups.append((identity, candidates))
+    deferred = max(0, len(pending_groups) - batch_size) if batch_size else 0
+    if batch_size:
+        pending_groups = pending_groups[:batch_size]
+    download_groups: list[tuple[str, list[str]]] = []
+    for identity, candidates in pending_groups:
+        if (
+            refresh_short_lived_urls
+            and not identity.startswith("feishu-token:")
+            and any(is_short_lived_feishu_asset_url(reference) for reference in candidates)
+        ):
+            for source in candidates:
+                errors[source] = "refresh_required"
+            continue
+        download_groups.append((identity, candidates))
+
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [
             executor.submit(download, identity, candidates)
-            for identity, candidates in grouped_references.items()
+            for identity, candidates in download_groups
         ]
         for future in as_completed(futures):
             sources, filename, status, error = future.result()
@@ -1571,7 +1647,7 @@ def materialize_assets(
                 downloaded += 1
             else:
                 reused += 1
-    return asset_map, errors, downloaded, reused
+    return asset_map, errors, downloaded, reused, deferred
 
 
 def rewrite_asset_urls(
@@ -2456,6 +2532,7 @@ def sync(args: argparse.Namespace) -> int:
         "assets_downloaded": 0,
         "assets_reused": 0,
         "assets_failed": 0,
+        "assets_deferred": 0,
         "asset_content_refreshed": 0,
         "asset_content_refresh_failed": 0,
         "moved_deleted": 0,
@@ -2750,17 +2827,19 @@ def sync(args: argparse.Namespace) -> int:
     asset_map: dict[str, str] = {}
     asset_errors: dict[str, str] = {}
     if download_assets_enabled:
-        asset_map, asset_errors, assets_downloaded, assets_reused = materialize_assets(
+        asset_map, asset_errors, assets_downloaded, assets_reused, assets_deferred = materialize_assets(
             [value[1] for value in fetched.values() if isinstance(value, tuple) and len(value) > 1],
             mirror_dir,
             config,
+            refresh_short_lived_urls=refresh_asset_urls_enabled,
         )
         counts["assets_downloaded"] = assets_downloaded
         counts["assets_reused"] = assets_reused
         counts["assets_failed"] = len(asset_errors)
+        counts["assets_deferred"] = assets_deferred
         print(
             f"asset_download completed={len(asset_map)} downloaded={assets_downloaded} "
-            f"reused={assets_reused} failed={len(asset_errors)}",
+            f"reused={assets_reused} failed={len(asset_errors)} deferred={assets_deferred}",
             flush=True,
         )
 
@@ -2829,10 +2908,18 @@ def sync(args: argparse.Namespace) -> int:
             flush=True,
         )
         if refreshed_contents:
-            refreshed_map, refreshed_errors, assets_downloaded, assets_reused = materialize_assets(
+            try:
+                refreshed_batch_size = max(
+                    0,
+                    int(nested(config, "sync", "asset_refreshed_batch_size", default=0)),
+                )
+            except (TypeError, ValueError):
+                refreshed_batch_size = 0
+            refreshed_map, refreshed_errors, assets_downloaded, assets_reused, assets_deferred = materialize_assets(
                 refreshed_contents,
                 mirror_dir,
                 config,
+                batch_size_override=refreshed_batch_size,
             )
             final_contents = [
                 value[1] for value in fetched.values() if isinstance(value, tuple) and len(value) > 1
@@ -2847,9 +2934,10 @@ def sync(args: argparse.Namespace) -> int:
             counts["assets_downloaded"] += assets_downloaded
             counts["assets_reused"] += assets_reused
             counts["assets_failed"] = len(asset_errors)
+            counts["assets_deferred"] += assets_deferred
             print(
                 f"asset_download refreshed={len(asset_map)} downloaded={assets_downloaded} "
-                f"reused={assets_reused} failed={len(asset_errors)}",
+                f"reused={assets_reused} failed={len(asset_errors)} deferred={assets_deferred}",
                 flush=True,
             )
 
