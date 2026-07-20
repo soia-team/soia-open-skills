@@ -3162,6 +3162,12 @@ def sync(args: argparse.Namespace) -> int:
         sidebar_file=sidebar_path_file,
         require_local_assets=download_assets_enabled,
     )
+    if download_assets_enabled:
+        # A refreshed document can replace one old signed URL with several
+        # current URLs. Report the post-write validation count rather than
+        # adding intermediate queue sizes from both passes.
+        counts["assets_deferred"] = int(validation["stats"].get("unresolved_assets", 0))
+        manifest["stats"] = {**counts, "deleted": len(deleted), "total": len(records)}
     manifest["validation"] = {
         "ok": validation["ok"],
         "errors": validation["errors"],
