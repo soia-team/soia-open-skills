@@ -53,6 +53,7 @@ Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, K
            soia-pkm-alipan-drive-ops (cloud drive line · atomic layer: reliable atomic operations via the aliyunpan CLI)
            soia-pkm-alipan-curator (cloud drive line · advisor layer: inventory/organize/catalog/study plans)
            soia-dev-archify-diagrams (doc diagram line: Archify JSON IR → README/docs PNG diagrams)
+           soia-dev-drawio-visio-diagrams (Visio/draw.io line: inspect VSDX → editable .drawio → upgrade/render)
            soia-dev-github-ops / soia-dev-ai-cli-upgrade (shared dev-tooling line)
            soia-dev-open-design-ops (Open Design atomic layer: daemon/catalogs/design systems/exports/resume)
            soia-cwork-feishu-cli (enterprise collaboration line: read-only Feishu CLI research across drives, docs, and wikis)
@@ -133,6 +134,7 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 | [`soia-pkm-baidu-netdisk-ops`](./skills/soia-pkm-baidu-netdisk-ops/) | Baidu Netdisk atomic operations layer: official `baidu-drive` / `bdpan` by default, with an explicit community `baidupan-cli` mode and read-only JSONL scanning | ✅ Usable (private config selects the provider) | Official `baidu-drive` Skill or `mqhe2007/baidupan-cli` + Open Platform app |
 | [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | Cloud-drive resource advisor: inventory checks / standardized organizing / cataloging into Obsidian / study plans for kids | ✅ Usable (pure methodology layer, all commands routed through alipan) | `soia-pkm-alipan-drive-ops` (atomic layer) |
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify diagram workflow: architecture / data-flow / workflow / sequence / lifecycle diagrams, maintaining a JSON IR and exporting README/docs PNGs | ✅ Usable (scripts complete; requires a local Archify install) | `ARCHIFY_BIN` or `ARCHIFY_ROOT`, with optional Playwright/Chrome for PNG export |
+| [`soia-dev-drawio-visio-diagrams`](./skills/soia-dev-drawio-visio-diagrams/) | Safely inspect VSDX, convert it to an editable `.drawio` source, apply bounded page/text/style/geometry upgrades, and render PNG/SVG/PDF/JPG | ✅ Usable (stdlib scripts plus a draw.io 30.x forward test) | Python 3.10+; draw.io Desktop for conversion/rendering; MCP optional |
 | [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub operations workflow: issues / PRs / checks / reviews / run logs / releases, defaulting to structured `gh` queries with safety confirmation gates | ✅ Usable (no scripts; command templates already shared) | `gh` CLI logged in; target repo from `--repo` / the current git remote / `$GITHUB_REPOSITORY` |
 | [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | Bulk inventory and upgrade of AI/dev CLIs: Codex / Claude / Antigravity (`agy`, consumer Google-login successor) / Gemini (enterprise, API Key, and Vertex only) / Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ Usable (scripts complete; supports dry-run and logging) | Node/npm; some tools use an official installer, Homebrew, or their own updater |
 | [`soia-dev-skill-release`](./skills/soia-dev-skill-release/) | Post-merge skill release finish: install/update, legacy-name cleanup, Codex links, consumer sync, and lock/version reconciliation | ✅ Usable (dry-run and six-column receipt) | Python 3, `npx skills`, `soia-dev-sync-skills` |
@@ -153,7 +155,7 @@ Open Design setup: copy [`config.example.yml`](./skills/soia-dev-open-design-ops
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | Uses the official `lark-cli` with app credentials (bot identity) to inventory Feishu drives, cloud documents, wikis, comments, permissions, and metadata in read-only mode | ✅ Usable (configure Feishu app credentials and grant access to target resources) | Official Feishu `lark-cli`; app credentials; target docs/wikis must be visible to the app |
 | [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | Mirrors a Feishu wiki by stable `node_token` while preserving hierarchy, using incremental Markdown sync for Git, Obsidian, and VitePress; explicitly configured Sheet ranges and Base tables can become Markdown plus fidelity snapshots, with no default write-back | ✅ Usable (run a dry-run and establish a baseline first; tabular reads need explicit scope and read permission) | `soia-cwork-feishu-cli`; `lark-cli`; Python 3.10+; PyYAML; Git/VitePress/Obsidian optional |
-| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | Reuses the customer's authenticated browser to inventory ProcessOn team spaces, preview and export diagrams, then validate and finalize browser downloads into configured delivery directories | ✅ Usable (browser inventory and local finalization verified; customers enter credentials and complete security challenges manually) | ProcessOn account and resource access; browser control; Python 3.10+; PyYAML only for config files |
+| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | Recursively inventories ProcessOn team spaces through leaf files, previews diagrams, defaults approved flowchart downloads to VSDX, and validates/finalizes downloads | ✅ Usable (recursive inventory and local finalization verified; user takeover only for a challenge visibly blocking the page) | ProcessOn account/access; browser control; Python 3.10+; draw.io/Visio skill optional |
 
 #### Minimal Feishu setup
 
@@ -187,12 +189,12 @@ Uses the customer's existing ProcessOn browser session to inventory personal/tea
 
 ```text
 Inventory this ProcessOn team space: <team-url>
-Export three diagrams from “System Architecture” as POS and high-resolution PNG
+Recursively inventory “System Architecture” through leaf files and export flowcharts as Visio by default
 Validate and finalize the browser-downloaded files into my configured delivery directory
 Parse these ProcessOn POS files and summarize their diagram text
 ```
 
-ProcessOn does not publish a consumer REST API for listing and bulk-downloading normal account/team files. Its enterprise API service is a separately provisioned embedding and format-conversion product. See [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) for the format matrix, browser boundaries, path configuration, download finalizer, and local POS/XMind inspector.
+ProcessOn does not publish a consumer REST API for listing and bulk-downloading normal account/team files. Its enterprise API service is separately provisioned. See [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) for recursive completeness, the format matrix, browser boundaries, path configuration, download finalization, and POS/XMind/VSDX checks. Use [`soia-dev-drawio-visio-diagrams`](./skills/soia-dev-drawio-visio-diagrams/) for deep VSDX interpretation and upgrades.
 
 ---
 
@@ -339,6 +341,7 @@ This installs every skill under `skills/` into your agent's skill directory — 
 | `Configure Obsidian` / `Enable Bases` | soia-pkm-bootstrap-vault-obsidian |
 | `Connect to ima` / `Sync to an ima knowledge base` | soia-pkm-bootstrap-vault-ima |
 | `Draw an architecture diagram for the README` / `Redraw this flow with Archify` | soia-dev-archify-diagrams |
+| `Understand this VSDX` / `Convert Visio to draw.io and upgrade it` | soia-dev-drawio-visio-diagrams |
 | `Check this PR's checks` / `Find out why the recent GitHub Actions run failed` | soia-dev-github-ops |
 | `Upgrade my local AI CLIs` / `Dry-run to check codex/claude versions` | soia-dev-ai-cli-upgrade |
 | `Monitor this long-running job` / `Check whether this process is truly stalled` | soia-dev-terminal-ops |
@@ -346,7 +349,7 @@ This installs every skill under `skills/` into your agent's skill directory — 
 | `Start the Open Design daemon` / `Export this deck to PPTX` | soia-dev-open-design-ops |
 | `Research my Feishu drive/wiki` / `Read a Feishu work document` | soia-cwork-feishu-cli |
 | `Mirror my Feishu wiki to Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
-| `Inventory a ProcessOn team space` / `Export ProcessOn architecture diagrams` | soia-cwork-processon-diagrams |
+| `Recursively inventory a ProcessOn team space` / `Export ProcessOn diagrams as Visio by default` | soia-cwork-processon-diagrams |
 
 Antigravity CLI uses the `agy` command. Its global skill directory is
 `~/.gemini/antigravity-cli/skills/`, and workspace skills live under
@@ -454,6 +457,7 @@ soia-open-skills/
     ├── soia-pkm-translate-article-zh/    ├── soia-pkm-interpret-article-analysis/
     ├── soia-pkm-cover-image/
     ├── soia-dev-archify-diagrams/
+    ├── soia-dev-drawio-visio-diagrams/
     ├── soia-dev-github-ops/
     ├── soia-dev-ai-cli-upgrade/
     ├── soia-dev-prompt-clarity/

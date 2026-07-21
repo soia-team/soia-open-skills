@@ -54,6 +54,7 @@ npx skills add soia-team/soia-open-skills
         soia-pkm-baidu-netdisk-ops（云盘线·原子层：百度官方 baidu-drive / bdpan）
         soia-pkm-alipan-curator（云盘线·顾问层：盘点/整理/索引/学习计划）
         soia-dev-archify-diagrams（文档图表线：Archify JSON IR → README/docs PNG 图）
+        soia-dev-drawio-visio-diagrams（Visio/draw.io 线：VSDX 解析 → .drawio 真源 → 升级/渲染）
         soia-dev-github-ops / soia-dev-ai-cli-upgrade（公共开发工具线）
         soia-dev-open-design-ops（Open Design 原子层：daemon / 目录 / 设计系统 / 导出 / resume）
         soia-cwork-feishu-cli（企业协作线：飞书 CLI 只读调研云盘、文档、知识库）
@@ -137,6 +138,7 @@ npx skills add soia-team/soia-open-skills
 | [`soia-pkm-baidu-netdisk-ops`](./skills/soia-pkm-baidu-netdisk-ops/) | 百度网盘原子操作层：基于官方 `baidu-drive` Skill / `bdpan` CLI 的登录、浏览、搜索、传输、文件管理与只读 JSONL 扫描 | ✅ 可用（官方 Skill 为默认依赖；附扫描器和安全守则）| 百度官方 `baidu-drive` Skill；`bdpan` CLI |
 | [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | 云盘资源顾问：盘点核对（inventory）/规范整理（organize）/OB 索引与两类 Excel（catalog）/学习计划（plan）| ✅ 可用（分区缓存式总索引 + 家庭课程导航）| `soia-pkm-alipan-drive-ops`（原子层）；Excel 需宿主 `@oai/artifact-tool` |
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify 图表工作流：架构图 / 数据流 / 工作流 / 时序 / 生命周期图，维护 JSON IR 并导出 README/docs PNG | ✅ 可用（脚本齐全；需本机可用 Archify）| `ARCHIFY_BIN` 或 `ARCHIFY_ROOT`，可选 Playwright/Chrome 导出 PNG |
+| [`soia-dev-drawio-visio-diagrams`](./skills/soia-dev-drawio-visio-diagrams/) | 安全盘点 VSDX，转成可编辑 `.drawio` 真源，按受控计划修改页面/文字/样式/几何并导出 PNG/SVG/PDF/JPG | ✅ 可用（stdlib 脚本 + draw.io 30.x 前向验证） | Python 3.10+；转换/渲染需要 draw.io Desktop；MCP 可选 |
 | [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release，默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY` |
 | [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | AI/开发 CLI 批量盘点与升级：Codex / Claude / Antigravity (`agy`，消费者 Google 登录后继) / Gemini（仅企业、API Key、Vertex）/ Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ 可用（脚本齐全；支持 dry-run 和日志）| Node/npm；部分工具使用官方 installer、Homebrew 或自身 updater |
 | [`soia-dev-skill-release`](./skills/soia-dev-skill-release/) | 技能 PR merge 后的发布收尾：安装/更新、旧名清理、Codex 补链、消费者同步、lock 与版本对账 | ✅ 可用（支持 dry-run；六列回执） | Python 3、`npx skills`、`soia-dev-sync-skills` |
@@ -159,7 +161,7 @@ Open Design 配置：复制 [`config.example.yml`](./skills/soia-dev-open-design
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | 通过官方 `lark-cli` 以应用凭证（bot）只读盘点飞书云盘、云文档、知识库、评论、权限和元数据 | ✅ 可用（需配置飞书应用凭据并授予目标资源权限） | 飞书官方 `lark-cli`；应用凭证；目标文档/知识库需对应用可见 |
 | [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | 将飞书知识库按 `node_token` 保留树形结构并增量镜像为 Markdown，接入 Git、Obsidian 与 VitePress；可将明确配置的 Sheet 与多维表格转为 Markdown/保真快照，不默认写回飞书 | ✅ 可用（先执行 dry-run，再建立基线；表格读取需额外授予只读权限并明确范围） | `soia-cwork-feishu-cli`；`lark-cli`；Python 3.10+；PyYAML；Git/VitePress/Obsidian 可选 |
-| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | 复用用户浏览器登录态盘点 ProcessOn 团队空间，预览图表，按授权导出，并把浏览器下载校验归档到可配置的交付目录 | ✅ 可用（浏览/目录读取与本地归档已验证；登录和安全验证需用户手动完成） | ProcessOn 账号与资源权限；浏览器控制；Python 3.10+；PyYAML 仅配置文件需要 |
+| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | 复用用户浏览器登录态递归盘点 ProcessOn 到叶子文件，预览图表，默认按 Visio VSDX 导出，并把下载校验归档到可配置目录 | ✅ 可用（递归与本地归档已验证；只有真实可见的安全验证才需用户接管） | ProcessOn 账号与资源权限；浏览器控制；Python 3.10+；draw.io/Visio 技能可选 |
 #### 飞书技能最小上手
 
 ```bash
@@ -192,12 +194,12 @@ npx skills add larksuite/cli -g -y
 
 ```text
 盘点这个 ProcessOn 团队空间：<team-url>
-把“系统架构”文件夹中的 3 张图导出为 POS 和高清 PNG
+把“系统架构”文件夹递归盘点到叶子文件，并把流程图默认导出为 Visio
 把浏览器下载的文件校验后归档到配置的交付目录
 解析这些 ProcessOn POS 文件并整理图中文字
 ```
 
-ProcessOn 面向普通账号没有公开的团队文件 REST API；企业 API 服务属于另行购买的嵌入/格式转换能力。格式矩阵、浏览器执行边界、路径配置、下载归档和本地 POS/XMind 检查脚本见 [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/)。
+ProcessOn 面向普通账号没有公开的团队文件 REST API；企业 API 服务属于另行购买的嵌入/格式转换能力。格式矩阵、递归完整性、浏览器执行边界、路径配置、下载归档和本地 POS/XMind/VSDX 检查脚本见 [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/)。VSDX 的深度理解与升级交给 [`soia-dev-drawio-visio-diagrams`](./skills/soia-dev-drawio-visio-diagrams/)。
 
 ---
 
@@ -344,6 +346,7 @@ npx skills add soia-team/soia-open-skills
 | `配置 Obsidian` / `启用 Bases` | soia-pkm-bootstrap-vault-obsidian |
 | `接入 ima` / `同步到 ima 知识库` | soia-pkm-bootstrap-vault-ima |
 | `给 README 画一张架构图` / `用 Archify 重画流程图` | soia-dev-archify-diagrams |
+| `读懂这个 VSDX` / `把 Visio 转成 draw.io 并升级` | soia-dev-drawio-visio-diagrams |
 | `查这个 PR checks` / `看最近 GitHub Actions 失败原因` | soia-dev-github-ops |
 | `升级本机 AI CLI` / `dry-run 看 codex/claude 版本` | soia-dev-ai-cli-upgrade |
 | `监控这个长任务` / `判断进程是否真的卡住` | soia-dev-terminal-ops |
@@ -351,7 +354,7 @@ npx skills add soia-team/soia-open-skills
 | `启动 Open Design daemon` / `把这个 deck 导出 PPTX` | soia-dev-open-design-ops |
 | `调研飞书云盘/知识库` / `读取飞书工作文档` | soia-cwork-feishu-cli |
 | `同步飞书知识库到 Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
-| `盘点 ProcessOn 团队空间` / `导出 ProcessOn 架构图` | soia-cwork-processon-diagrams |
+| `递归盘点 ProcessOn 团队空间` / `默认导出 ProcessOn Visio` | soia-cwork-processon-diagrams |
 
 Antigravity CLI 的命令是 `agy`：全局技能目录为
 `~/.gemini/antigravity-cli/skills/`，workspace 技能目录为 `.agents/skills/`。
@@ -458,6 +461,7 @@ soia-open-skills/
     ├── soia-pkm-translate-article-zh/    ├── soia-pkm-interpret-article-analysis/
     ├── soia-pkm-cover-image/
     ├── soia-dev-archify-diagrams/
+    ├── soia-dev-drawio-visio-diagrams/
     ├── soia-dev-github-ops/
     ├── soia-dev-ai-cli-upgrade/
     ├── soia-dev-prompt-clarity/

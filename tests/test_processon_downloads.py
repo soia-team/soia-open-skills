@@ -7,6 +7,7 @@ import sys
 import tempfile
 import time
 import unittest
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -50,6 +51,13 @@ def write_pos(path: Path, title: str = "Fixture") -> None:
         ),
         encoding="utf-8",
     )
+
+
+def write_vsdx(path: Path) -> None:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("[Content_Types].xml", "<Types/>")
+        archive.writestr("visio/document.xml", "<VisioDocument/>")
+        archive.writestr("visio/pages/pages.xml", "<Pages/>")
 
 
 class ProcessOnDownloadTests(unittest.TestCase):
@@ -146,6 +154,22 @@ env:
             recorded = json.loads(manifest.read_text(encoding="utf-8"))
             self.assertEqual(recorded["status"], "completed")
             self.assertEqual(recorded["destination"], str(destination))
+
+    def test_vsdx_download_is_structurally_inspected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "diagram.vsdx"
+            write_vsdx(source)
+            settings = self.module.Settings(
+                temp_dir=root / "temp",
+                output_dir=root / "output",
+                manifest_dir=root / "manifests",
+                retention_days=7,
+                config_file=None,
+            )
+            result = self.module.finalize_download(source, settings)
+            self.assertEqual(result["inspection"]["kind"], "visio-vsdx")
+            self.assertEqual(result["inspection"]["page_part_count"], 0)
 
     def test_collision_renames_without_overwriting(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

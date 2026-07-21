@@ -26,6 +26,7 @@ SUPPORTED_SUFFIXES = {
     ".webp",
     ".svg",
     ".pdf",
+    ".vsdx",
 }
 
 
@@ -277,6 +278,27 @@ def inspect_svg(path: Path, text_limit: int) -> dict[str, Any]:
     }
 
 
+def inspect_vsdx(path: Path) -> dict[str, Any]:
+    if not zipfile.is_zipfile(path):
+        raise ValueError("VSDX is not a valid ZIP/OOXML package")
+    with zipfile.ZipFile(path) as archive:
+        names = set(archive.namelist())
+        required = {"[Content_Types].xml", "visio/document.xml", "visio/pages/pages.xml"}
+        missing = sorted(required - names)
+        if missing:
+            raise ValueError(f"VSDX missing required parts: {', '.join(missing)}")
+        page_parts = sorted(
+            name
+            for name in names
+            if re.fullmatch(r"visio/pages/page\d+\.xml", name)
+        )
+    return {
+        "kind": "visio-vsdx",
+        "package_entries": len(names),
+        "page_part_count": len(page_parts),
+    }
+
+
 def inspect_file(path: Path, text_limit: int) -> dict[str, Any]:
     result: dict[str, Any] = {
         "name": path.name,
@@ -295,6 +317,8 @@ def inspect_file(path: Path, text_limit: int) -> dict[str, Any]:
         result.update(inspect_svg(path, text_limit))
     elif suffix == ".pdf":
         result.update({"kind": "pdf"})
+    elif suffix == ".vsdx":
+        result.update(inspect_vsdx(path))
     else:
         result.update({"kind": "unknown"})
     return result

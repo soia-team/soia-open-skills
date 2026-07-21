@@ -2,7 +2,7 @@
 
 > Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.
 > Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.
-> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 49 skills.
+> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 50 skills.
 
 ## Source Fields
 
@@ -52,7 +52,7 @@
 |---|---|---|
 | [`soia-cwork-feishu-cli`](./soia-cwork-feishu-cli/) | 分开核对知识库/Wiki与云盘/Drive权限，再用官方 lark-cli 只读调研。 | 用 soia-cwork-feishu-cli 先区分飞书知识库和云盘，再分别核对应用身份 Bot 与用户 OAuth 的最小只读权限，最后只读调研，不要修改远端内容。 |
 | [`soia-cwork-feishu-doc-git-sync`](./soia-cwork-feishu-doc-git-sync/) | 同步飞书知识库、内嵌或指定 Sheet 与多维表格到 Markdown 和保真快照 | 使用 soia-cwork-feishu-doc-git-sync，先用 --pilot-node-token 在独立目录验证指定飞书节点，再以只读镜像模式批量同步；只读取私有配置中明确选择的独立或文档内嵌 Sheet 范围与多维表格，并按需保留样式、图表、附件和公式快照。 |
-| [`soia-cwork-processon-diagrams`](./soia-cwork-processon-diagrams/) | 浏览、导出并校验归档 ProcessOn 图表。 | Use $soia-cwork-processon-diagrams to inventory this ProcessOn team space, inspect selected diagrams, export approved files without changing remote content, and finalize browser-reported downloads into configured delivery and manifest directories. |
+| [`soia-cwork-processon-diagrams`](./soia-cwork-processon-diagrams/) | 递归盘点 ProcessOn 到叶子文件，默认导出 Visio 并校验归档。 | Use $soia-cwork-processon-diagrams to recursively inventory this ProcessOn team space through every child folder and leaf file, report the discovered-minus-visited gap, default approved flowchart downloads to VSDX when the live menu supports it, and finalize browser-reported downloads without changing remote content. |
 
 ## Development
 
@@ -65,6 +65,7 @@
 | [`soia-dev-coding-protocol`](./soia-dev-coding-protocol/) | 为普通工程代码改动建立最小范围、验证前置、anti-fake-fix 与写后复核契约；适用于修复、重构、实现和评审。 |  |
 | [`soia-dev-design-explorer`](./soia-dev-design-explorer/) | Create and verify hi-fi prototypes, decks, animations, and design reviews | Use $soia-dev-design-explorer with soia-dev-open-design-ops checks, user-provided brand inputs, a classified output destination, and verifiable delivery evidence. |
 | [`soia-dev-doc-sync`](./soia-dev-doc-sync/) | 审计并修复任意代码仓的 docs、README、CHANGELOG、VERSION 与明确真源之间的事实漂移；先建立真源优先级与证据，再按依赖顺序同步派生文档。 |  |
+| [`soia-dev-drawio-visio-diagrams`](./soia-dev-drawio-visio-diagrams/) | 读取 VSDX，转换、理解并升级为可编辑 draw.io 图表。 | Use $soia-dev-drawio-visio-diagrams to inspect this VSDX safely, convert it into an editable draw.io source, apply requested upgrades without overwriting the original, and validate exported artifacts. |
 | [`soia-dev-fix-loop`](./soia-dev-fix-loop/) | 用五步闭环处理代码审查或测试发现：复现、决策、修复、回归复核与回执，防止遗漏、假修复和无证据收口。 |  |
 | [`soia-dev-github-ops`](./soia-dev-github-ops/) | Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates. | Use soia-dev-github-ops: Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates. |
 | [`soia-dev-open-design-ops`](./soia-dev-open-design-ops/) | Operate Open Design daemon, catalogs, design systems, exports, and session resume | Use $soia-dev-open-design-ops to check my Open Design environment, start the local daemon safely, query real catalogs, and run a source-backed export or resume workflow. |

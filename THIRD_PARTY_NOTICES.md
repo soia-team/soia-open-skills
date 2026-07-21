@@ -1,6 +1,6 @@
 # THIRD_PARTY_NOTICES
 
-> Last updated: 2026-07-20（新增 ProcessOn 路径配置的可选 PyYAML 依赖）
+> Last updated: 2026-07-21（新增 draw.io Desktop、drawio-skill 与 drawio-mcp-server 调研登记）
 > 本文件集中声明本仓库各 skill 引用、依赖或参考的第三方项目与服务。
 > 除 §0 明确登记的代码改编（携带 `licenses/` 上游 license 副本）外，其余引用属于以下三类之一：接口口径的源码级参考（只读其源码核对参数，不搬运实现）、运行时调用的外部工具/库/skill、在线 API 服务。
 >
@@ -34,6 +34,7 @@
 | [nexu-io/open-design](https://github.com/nexu-io/open-design) | Apache-2.0 | `soia-dev-open-design-ops` / `soia-dev-design-explorer`（及 transform 家族可选路线） | Open Design 引擎，运行时调用 |
 | [tt-a1i/archify](https://github.com/tt-a1i/archify) | MIT | `soia-dev-archify-diagrams` | 架构图渲染引擎，运行时调用 |
 | [larksuite/cli](https://github.com/larksuite/cli) | MIT | `soia-cwork-feishu-cli` / `soia-cwork-feishu-doc-git-sync` | 飞书官方 lark-cli，运行时调用 |
+| [jgraph/drawio-desktop](https://github.com/jgraph/drawio-desktop) | Apache-2.0 | `soia-dev-drawio-visio-diagrams` | VSDX 导入、draw.io XML 转换与 PNG/SVG/PDF/JPG 渲染的本地官方 CLI |
 | [google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) | Apache-2.0 | `soia-dev-ai-cli-upgrade` / `soia-dev-agent-cli-dispatch` | 被管理/派发的外部 AI CLI |
 | [google-antigravity/antigravity-cli](https://github.com/google-antigravity/antigravity-cli) | 无 SPDX 识别 | `soia-dev-ai-cli-upgrade` / `soia-dev-agent-cli-dispatch` 等 | 被管理/派发的外部 AI CLI（agy） |
 
@@ -59,6 +60,13 @@
 | `huashu-design` | [alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design) | MIT | `soia-dev-design-explorer` 外部强依赖，需单独安装 |
 | `book-to-skill` | [virgiliojr94/book-to-skill](https://github.com/virgiliojr94/book-to-skill) | MIT | 非运行依赖；独立工具 |
 | `find-skills` | [vercel-labs/skills](https://github.com/vercel-labs/skills) | 无 SPDX 识别 | 非运行依赖；skill 发现/安装辅助（`npx skills`） |
+
+工作流/能力设计参考（未复制代码）：
+
+| 上游 | 协议快照 | 用于 | 关系 |
+|---|---|---|---|
+| [Agents365-ai/drawio-skill](https://github.com/Agents365-ai/drawio-skill) | MIT | `soia-dev-drawio-visio-diagrams` | 参考 `.drawio` 真源、CLI 渲染和自检闭环；未复制脚本、shape 索引或 skill 正文 |
+| [lgazo/drawio-mcp-server](https://github.com/lgazo/drawio-mcp-server) | MIT | `soia-dev-drawio-visio-diagrams` | 可选元素级编辑器能力参考；不复制代码，且明确桌面直连 CSP 限制 |
 
 ## 3. 在线 API 服务
 
