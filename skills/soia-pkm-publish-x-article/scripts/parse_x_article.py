@@ -190,10 +190,11 @@ def extract_title(meta: dict[str, str], markdown: str) -> tuple[str, str]:
     """Title precedence: frontmatter title > H1 (removed from body) > H2 > first line."""
     if meta.get("title"):
         # An H1 identical to the frontmatter title would duplicate; drop it.
+        # Skip leading image lines (cover) — the H1 may sit right after them.
         lines = markdown.strip().split("\n")
         for idx, line in enumerate(lines):
             s = line.strip()
-            if not s:
+            if not s or s.startswith("!["):
                 continue
             if s.startswith("# ") and s[2:].strip() == meta["title"]:
                 lines.pop(idx)
