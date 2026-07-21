@@ -1,9 +1,9 @@
 ---
 name: soia-pkm-publish-x-article
-description: 把成文草稿（Markdown）直传 X/Twitter Articles 草稿箱：解析标题/封面/正文图与分割线，富文本粘贴保格式，倒序插图，机械校验后只存草稿、绝不点发布。需要 X Premium+ 与已登录浏览器。Triggers：「发成 X Article」「上传到 X 文章」「推到 X 草稿箱」「X Articles draft」「把这篇发 X 长文」
-version: 1.0.0
+description: 把成文草稿（Markdown）直传 X/Twitter Articles 草稿箱：解析标题/封面/正文图与分割线，富文本粘贴保格式，倒序插图，机械校验后只存草稿、绝不点发布。需已登录浏览器且订阅含「撰写文章」权益。Triggers：「发成 X Article」「上传到 X 文章」「推到 X 草稿箱」「X Articles draft」「把这篇发 X 长文」
+version: 1.0.1
 created_at: 2026-07-20 19:30:00
-updated_at: 2026-07-20 19:30:00
+updated_at: 2026-07-21 09:40:00
 created_by: claude fable 5
 updated_by: claude fable 5
 ---
@@ -26,7 +26,7 @@ updated_by: claude fable 5
 
 ### 客户如何使用
 
-1. 说「把 <文件> 发成 X Article」；确保浏览器已登录 X 且账号有 Premium+（Articles 权限）。
+1. 说「把 <文件> 发成 X Article」；确保浏览器已登录 X 且账号订阅含「撰写文章」权益。
 2. Agent 先 dry-run 解析并汇报：标题、封面、正文图数量、缺图清单；封面缺失时先问你。
 3. 浏览器阶段全程可见；完成后给草稿 URL，由你人工审阅并发布。
 
@@ -38,7 +38,7 @@ npx skills add soia-team/soia-open-skills -g -s soia-pkm-publish-x-article -y
 
 - macOS + Python 3.9+（纯 stdlib；剪贴板走 osascript，图片降采样走系统自带 sips）
 - 浏览器面二选一：**claude-in-chrome**（推荐，复用你真实 Chrome 的 X 登录态）或内置 Browser pane（首次需在其中登录 X）
-- X 账号需 **Premium+**（Articles 为付费功能）
+- X 账号需含「撰写文章」权益的 Premium 订阅（2026-07 购买页显示 US$4 的 Premium 档即含；以 X 购买页实时权益表为准）
 - 无私有 config.yml：本技能不接触任何 key/cookie
 
 ### 日志与完成回执
@@ -75,7 +75,7 @@ JSON 字段：`title` / `cover_image`（仅当文章以图片开头）/ `content
 
 1. 浏览器面选择：优先 claude-in-chrome（真实 Chrome 已登录）；否则 Browser pane（未登录则让用户登录，**不代输凭据**）。
 2. 导航 `https://x.com/compose/articles`——落地是**草稿列表**页，不是编辑器；直接点「create/撰写」按钮进编辑器（不要等「添加标题」出现，它在点击后才渲染）。
-3. 跳到登录页 = 未登录；页面无 Articles 入口 = 无 Premium+。都停下来告知用户。
+3. 跳到登录页 = 未登录；`/compose/articles` 404 或创作者工作室无「文章」入口 = 账号无 Articles 权益（实测未订阅账号点侧栏 Premium 会直接进购买页）。都停下来告知用户，**绝不代为订阅**。
 
 ### 第 3 步：封面 + 标题
 
@@ -135,7 +135,7 @@ python3 scripts/clipboard_x.py image <path> --max-bytes 3000000
 | 场景 | 处理 |
 |---|---|
 | 跳登录页 | 停，让用户在浏览器登录后重试；不碰凭据 |
-| 无 Articles 入口 | 停，提示需 X Premium+ |
+| 无 Articles 入口（/compose/articles 404） | 停，提示需含「撰写文章」权益的 Premium 订阅；绝不代为订阅 |
 | 缺图 | 第 1 步闸门拦截，给清单 |
 | 无封面 | 闸门提醒，明确同意才继续 |
 | 粘贴后格式丢失 | 检查剪贴板脚本输出；重试一次；仍失败则报告实际效果，不硬说成功 |
