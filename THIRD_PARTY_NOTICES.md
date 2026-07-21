@@ -1,6 +1,6 @@
 # THIRD_PARTY_NOTICES
 
-> Last updated: 2026-07-21（新增 draw.io Desktop、drawio-skill 与 drawio-mcp-server 调研登记）
+> Last updated: 2026-07-21（新增 draw.io Desktop、drawio-skill 与 drawio-mcp-server 调研登记；新增 yichen-douyin-fetcher / yichen-xiaohongshu-fetch 接口口径参考登记）
 > 本文件集中声明本仓库各 skill 引用、依赖或参考的第三方项目与服务。
 > 除 §0 明确登记的代码改编（携带 `licenses/` 上游 license 副本）外，其余引用属于以下三类之一：接口口径的源码级参考（只读其源码核对参数，不搬运实现）、运行时调用的外部工具/库/skill、在线 API 服务。
 >
@@ -20,6 +20,8 @@
 |---|---|---|---|
 | [wnma3mz/wechat_articles_spider](https://github.com/wnma3mz/wechat_articles_spider) | Apache-2.0 | `soia-pkm-clip-wechat-account` | 公众号后台 `searchbiz` / `appmsg` 接口参数口径的源码级核对（`ArticlesUrls.py`），未搬运实现 |
 | [cv-cat/WechatOAApis](https://github.com/cv-cat/WechatOAApis) | 无 SPDX 识别（NOASSERTION） | `soia-pkm-clip-wechat-account` | `appmsgpublish` / `searchbiz` 接口参数口径的源码级核对（`utils/wx_utils.py`），未搬运实现；因上游无明确协议，保持只读参考边界 |
+| [mcncarl/yichen-skills — yichen-douyin-fetcher](https://github.com/mcncarl/yichen-skills/tree/main/yichen-douyin-fetcher) | 非商业（Personal Learning and Non-Commercial Use License，仓库级协议）；仅接口口径参考 | `soia-pkm-clip-douyin` | 源码级核对 `download.py` 的 Playwright 拦截思路（`aweme/detail` 响应含 `play_addr.url_list`）；实现为全新代码，且实测发现同一视频还会命中 `mix/aweme` 端点，据此把匹配逻辑改为按内容（`aweme_id` + `video` 键）而非固定端点名，比上游更抗改版 |
+| [mcncarl/yichen-skills — yichen-xiaohongshu-fetch](https://github.com/mcncarl/yichen-skills/tree/main/yichen-xiaohongshu-fetch) | 同上，非商业协议；仅接口口径参考 | `soia-pkm-clip-rednote` | 源码级核对 `fetch.py` 解析 `window.__INITIAL_STATE__` 的字段路径（`noteDetailMap`、`video.media.stream.h264[].masterUrl` 等）；实现为全新代码，所有字段路径与协议行为（含 `masterUrl` 签名截断即 403）均用真实页面重新验证，未直接复用上游解析逻辑 |
 
 ## 2. 运行时依赖的第三方 CLI / 库 / skill
 
