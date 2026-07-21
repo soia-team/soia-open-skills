@@ -1,9 +1,9 @@
 ---
 name: soia-pkm-publish-x-article
 description: 把成文草稿（Markdown）直传 X/Twitter Articles 草稿箱：解析标题/封面/正文图与分割线，富文本粘贴保格式，倒序插图，机械校验后只存草稿、绝不点发布。需已登录浏览器且订阅含「撰写文章」权益。Triggers：「发成 X Article」「上传到 X 文章」「推到 X 草稿箱」「X Articles draft」「把这篇发 X 长文」
-version: 1.0.2
+version: 1.0.3
 created_at: 2026-07-20 19:30:00
-updated_at: 2026-07-21 10:05:00
+updated_at: 2026-07-21 11:20:00
 created_by: claude fable 5
 updated_by: claude fable 5
 ---
@@ -75,6 +75,7 @@ JSON 字段：`title` / `cover_image`（仅当文章以图片开头）/ `content
 ### 第 2 步：进入编辑器
 
 1. 浏览器面选择：优先 claude-in-chrome（真实 Chrome 已登录）；否则 Browser pane（未登录则让用户登录，**不代输凭据**）。
+   ⚠️ **宿主依赖现状**：浏览器阶段目前依赖宿主提供的浏览器工具，在无浏览器工具的宿主（Codex、Gemini CLI 等）中只能完成第 1 步解析；宿主无关的 Playwright 路线（同 `soia-pkm-publish-x-thread` 的 `x_post.py` 方案）在计划中，届时共用同一登录 profile。
 2. 导航 `https://x.com/compose/articles`——落地是**草稿列表**页，不是编辑器；直接点「create/撰写」按钮进编辑器（不要等「添加标题」出现，它在点击后才渲染）。
 3. 跳到登录页 = 未登录；`/compose/articles` 404 或创作者工作室无「文章」入口 = 账号无 Articles 权益。停下并按固定话术提醒（**绝不代为订阅**）：
    > 当前账号未开通含「撰写文章」权益的 X Premium，请到 <https://x.com/i/premium_sign_up> 开通（2026-07 实测 US$4/月的 Premium 档即含此权益）后再试。
