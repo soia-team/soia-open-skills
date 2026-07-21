@@ -92,8 +92,22 @@ DEFAULT_RESOURCE_EXPORT_DIR = "_exports"
 DEFAULT_RESOURCE_BATCH_SIZE = 10
 DEFAULT_RESOURCE_TIMEOUT_SECONDS = 120
 SHEET_RANGE_PATTERN = re.compile(r"^([A-Z]+)([1-9][0-9]*):([A-Z]+)([1-9][0-9]*)$")
+SHEET_MIRROR_MARKER = "<!-- soia:sheet-mirror -->"
+SHEET_TAB_RENDER_MARKER = "<!-- soia:sheet-tab -->"
+SHEET_BITABLE_TAB_RENDER_MARKER = "<!-- soia:sheet-bitable-tab -->"
+SHEET_BITABLE_UNMIRRORED_MARKER = "<!-- soia:unmirrored-sheet-bitable-tab -->"
 EMBEDDED_SHEET_SCAN_MARKER = "<!-- soia:embedded-sheet-scan -->"
 EMBEDDED_SHEET_RENDER_MARKER = "<!-- soia:embedded-sheet -->"
+EMBEDDED_SHEET_UNMIRRORED_MARKER = "<!-- soia:unmirrored-embedded-sheet -->"
+EMBEDDED_SHEET_UNMIRRORED_BLOCK = (
+    EMBEDDED_SHEET_UNMIRRORED_MARKER
+    + "\n> 此处包含尚未归档的飞书嵌入式表格；请启用有界的 embedded_sheets 同步。"
+)
+EMBEDDED_SHEET_MIRRORED_POINTER = "> 嵌入式飞书表格已归档，见本文末尾“嵌入式表格”快照。"
+ERROR_PLACEHOLDER_PATTERN = re.compile(
+    r"同步正文(?:失败|未返回结果)|"
+    r"该知识库节点类型为\s*`[^`]+`，当前同步器只读取文档正文。"
+)
 
 
 class CliCommandError(RuntimeError):
@@ -638,8 +652,12 @@ def configured_sheet_selections(config: dict[str, Any], enabled: bool) -> dict[s
     if not isinstance(settings, dict):
         raise SystemExit("sync.sheets must be a mapping")
     raw_selections = settings.get("selections", [])
-    if not isinstance(raw_selections, list) or not raw_selections:
-        raise SystemExit("sync.sheets.selections is required when Sheet mirroring is enabled")
+    if not isinstance(raw_selections, list):
+        raise SystemExit("sync.sheets.selections must be a list")
+    if not raw_selections and not bool(settings.get("all_nodes", False)):
+        raise SystemExit(
+            "sync.sheets requires all_nodes=true or at least one explicit selections entry"
+        )
     try:
         max_cells = max(1, min(int(settings.get("max_cells", DEFAULT_SHEET_MAX_CELLS)), 100_000))
     except (TypeError, ValueError):
@@ -683,6 +701,48 @@ def configured_sheet_selections(config: dict[str, Any], enabled: bool) -> dict[s
             }
         )
     return selections
+
+
+def configured_all_sheet_settings(config: dict[str, Any], enabled: bool) -> dict[str, Any] | None:
+    """Return bounded automatic discovery settings for every standalone Wiki Sheet node."""
+    if not enabled:
+        return None
+    settings = nested(config, "sync", "sheets", default={})
+    if not isinstance(settings, dict):
+        raise SystemExit("sync.sheets must be a mapping")
+    if not bool(settings.get("all_nodes", False)):
+        return None
+
+    def bounded_int(name: str, default: int, hard_limit: int) -> int:
+        try:
+            value = int(settings.get(name, default))
+        except (TypeError, ValueError):
+            value = default
+        return max(1, min(value, hard_limit))
+
+    max_cells = bounded_int("max_cells", DEFAULT_SHEET_MAX_CELLS, 100_000)
+    max_rows = bounded_int("max_rows", DEFAULT_EMBEDDED_SHEET_MAX_ROWS, 100_000)
+    max_columns = bounded_int("max_columns", DEFAULT_EMBEDDED_SHEET_MAX_COLUMNS, 702)
+    if max_rows * max_columns > max_cells:
+        raise SystemExit("sync.sheets.max_rows * max_columns exceeds max_cells")
+    preserve_enabled, preserve_options = sheet_preservation_options(settings)
+    return {
+        "max_cells": max_cells,
+        "max_rows": max_rows,
+        "max_columns": max_columns,
+        "max_chars": bounded_int("max_chars", DEFAULT_SHEET_MAX_CHARS, 500_000),
+        "max_sheets_per_workbook": bounded_int("max_sheets_per_workbook", 500, 500),
+        "skip_hidden": bool(settings.get("skip_hidden", False)),
+        "include_bitable_tabs": bool(settings.get("include_bitable_tabs", False)),
+        "max_bitable_records": bounded_int(
+            "max_bitable_records", DEFAULT_BITABLE_MAX_RECORDS, 5_000
+        ),
+        "download_bitable_attachments": bool(
+            settings.get("download_bitable_attachments", False)
+        ),
+        "preserve": preserve_enabled,
+        "preserve_options": preserve_options,
+    }
 
 
 def configured_embedded_sheet_settings(config: dict[str, Any], enabled: bool) -> dict[str, Any] | None:
@@ -775,6 +835,66 @@ def embedded_sheet_selection(settings: dict[str, Any], sheet: dict[str, Any]) ->
     }
 
 
+def automatic_sheet_selections(
+    settings: dict[str, Any], workbook_sheets: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Build bounded selections for every grid worksheet discovered in one workbook."""
+    if len(workbook_sheets) > int(settings["max_sheets_per_workbook"]):
+        raise RuntimeError("Sheet workbook tab count exceeds the configured workbook limit")
+    selections = [
+        embedded_sheet_selection(settings, item)
+        for item in workbook_sheets
+        if isinstance(item, dict)
+        and item.get("sheet_id")
+        and str(item.get("resource_type", "sheet")) == "sheet"
+        and not (bool(settings["skip_hidden"]) and bool(item.get("is_hidden", False)))
+    ]
+    return selections
+
+
+def automatic_sheet_bitable_selections(
+    settings: dict[str, Any], workbook_sheets: list[dict[str, Any]]
+) -> list[tuple[str, dict[str, Any]]]:
+    """Route embedded Base tabs in a Sheet workbook through bounded Base reads."""
+    bitable_tabs = [
+        item
+        for item in workbook_sheets
+        if isinstance(item, dict) and str(item.get("resource_type", "")) == "bitable"
+    ]
+    if bitable_tabs and not bool(settings["include_bitable_tabs"]):
+        raise RuntimeError(
+            "Sheet workbook contains a Base tab; enable bounded include_bitable_tabs mirroring"
+        )
+    selections: list[tuple[str, dict[str, Any]]] = []
+    for item in bitable_tabs:
+        base_token = str(item.get("bitable_app_token", "")).strip()
+        table_id = str(item.get("bitable_table_id", "")).strip()
+        if not base_token or not table_id:
+            raise RuntimeError("Sheet workbook Base tab is missing its app token or table id")
+        selections.append(
+            (
+                base_token,
+                {
+                    "table_id": table_id,
+                    "view_id": "",
+                    "max_records": int(settings["max_bitable_records"]),
+                    "include_views": False,
+                    "include_dashboards": False,
+                    "download_attachments": bool(settings["download_bitable_attachments"]),
+                },
+            )
+        )
+    unsupported = [
+        item
+        for item in workbook_sheets
+        if isinstance(item, dict)
+        and str(item.get("resource_type", "sheet")) not in {"sheet", "bitable"}
+    ]
+    if unsupported:
+        raise RuntimeError("Sheet workbook contains an unsupported non-grid tab")
+    return selections
+
+
 def embedded_sheet_sync_applies(node: dict[str, Any], settings: dict[str, Any] | None) -> bool:
     """Limit XML reads to the document nodes explicitly authorised in private config."""
     if settings is None or str(node.get("obj_type", "")) not in {"docx", "doc"}:
@@ -815,6 +935,58 @@ def markdown_table_from_csv(value: str) -> str:
     return "\n".join(lines)
 
 
+def fetch_sheet_csv(config: dict[str, Any], obj_token: str, selection: dict[str, Any]) -> str:
+    """Read a bounded Sheet range, continuing by row when max_chars truncates a response."""
+    requested = str(selection["range"]).upper()
+    match = SHEET_RANGE_PATTERN.fullmatch(requested)
+    if not match:
+        raise RuntimeError("configured Sheet selection is not a bounded A1 range")
+    start_column, start_row_value, end_column, end_row_value = match.groups()
+    next_row = int(start_row_value)
+    end_row = int(end_row_value)
+    chunks: list[str] = []
+    for _chunk in range(end_row - next_row + 2):
+        current_range = f"{start_column}{next_row}:{end_column}{end_row}"
+        payload = run_cli(
+            config,
+            "sheets",
+            "+csv-get",
+            "--as",
+            "bot",
+            "--spreadsheet-token",
+            obj_token,
+            "--sheet-id",
+            str(selection["sheet_id"]),
+            "--range",
+            current_range,
+            "--include-row-prefix=false",
+            "--skip-hidden=true" if selection["skip_hidden"] else "--skip-hidden=false",
+            "--max-chars",
+            str(selection["max_chars"]),
+            "--format",
+            "json",
+        )
+        data = nested(payload, "data", default={})
+        if not isinstance(data, dict):
+            raise RuntimeError("sheets +csv-get payload has no data object")
+        csv_value = data.get("annotated_csv", data.get("csv", ""))
+        if not isinstance(csv_value, str):
+            raise RuntimeError("sheets +csv-get payload has no CSV value")
+        if csv_value:
+            chunks.append(csv_value.rstrip("\n") + "\n")
+        if not data.get("has_more"):
+            return "".join(chunks)
+        actual_range = str(data.get("actual_range", "")).rsplit("!", 1)[-1].replace("$", "").upper()
+        actual_match = SHEET_RANGE_PATTERN.fullmatch(actual_range)
+        if not actual_match:
+            raise RuntimeError("truncated Sheet response has no usable actual_range")
+        actual_end_row = int(actual_match.group(4))
+        if actual_end_row < next_row or actual_end_row >= end_row:
+            raise RuntimeError("truncated Sheet response made no forward row progress")
+        next_row = actual_end_row + 1
+    raise RuntimeError("Sheet CSV pagination exceeded the bounded row count")
+
+
 def fetch_sheet_markdown(
     config: dict[str, Any],
     obj_token: str,
@@ -848,7 +1020,11 @@ def fetch_sheet_markdown(
         for item in workbook_sheets
         if isinstance(item, dict) and item.get("sheet_id")
     }
-    sections = [f"# {title}", "", "> 已按私有配置读取指定飞书电子表格范围。"] if include_document_heading else []
+    sections = (
+        [f"# {title}", "", SHEET_MIRROR_MARKER, "", "> 已按私有配置读取飞书电子表格。"]
+        if include_document_heading
+        else []
+    )
     heading = "#" * max(1, min(section_heading_level, 6))
     for selection in selections:
         sheet_id = str(selection["sheet_id"])
@@ -857,33 +1033,7 @@ def fetch_sheet_markdown(
             raise RuntimeError("configured Sheet selection was not found in workbook metadata")
         if str(sheet.get("resource_type", "sheet")) != "sheet":
             raise RuntimeError("configured Sheet selection is not a grid worksheet")
-        payload = run_cli(
-            config,
-            "sheets",
-            "+csv-get",
-            "--as",
-            "bot",
-            "--spreadsheet-token",
-            obj_token,
-            "--sheet-id",
-            sheet_id,
-            "--range",
-            str(selection["range"]),
-            "--include-row-prefix=false",
-            "--skip-hidden=true" if selection["skip_hidden"] else "--skip-hidden=false",
-            "--max-chars",
-            str(selection["max_chars"]),
-            "--format",
-            "json",
-        )
-        data = nested(payload, "data", default={})
-        if not isinstance(data, dict):
-            raise RuntimeError("sheets +csv-get payload has no data object")
-        if data.get("has_more"):
-            raise RuntimeError("configured Sheet range was truncated; reduce the range or increase max_chars")
-        csv_value = data.get("annotated_csv", data.get("csv", ""))
-        if not isinstance(csv_value, str):
-            raise RuntimeError("sheets +csv-get payload has no CSV value")
+        csv_value = fetch_sheet_csv(config, obj_token, selection)
         sheet_title = str(sheet.get("title") or sheet.get("sheet_name") or sheet_id).strip()
         preservation_note = ""
         if selection.get("preserve"):
@@ -987,6 +1137,8 @@ def fetch_sheet_markdown(
             preservation_note = f"已保存{preserved or '单元格'}的本地保真快照。"
         sections.extend(
             [
+                "",
+                SHEET_TAB_RENDER_MARKER,
                 "",
                 f"{heading} {sheet_title}",
                 "",
@@ -1264,9 +1416,12 @@ def fetch_bitable_markdown(
     snapshot_root: Path,
     node_token: str,
     mirror_dir: Path | None = None,
+    include_document_heading: bool = True,
+    section_heading_level: int = 2,
 ) -> tuple[str, str]:
     """Mirror selected Base tables, schemas, records and optional view metadata."""
-    sections = [f"# {title}", "", "> 已按私有配置读取指定多维表格。"]
+    sections = [f"# {title}", "", "> 已按私有配置读取指定多维表格。"] if include_document_heading else []
+    heading = "#" * max(1, min(section_heading_level, 6))
     snapshot_root.mkdir(parents=True, exist_ok=True)
     for selection in selections:
         table_id = str(selection["table_id"])
@@ -1359,7 +1514,7 @@ def fetch_bitable_markdown(
         elif attachment_errors:
             attachment_note = "部分附件未能下载；失败类别已写入保真快照。"
         sections.extend(
-            ["", f"## {table_id}", *(["", attachment_note] if attachment_note else []), "", markdown_table_from_rows(rendered_rows)]
+            ["", f"{heading} {table_id}", *(["", attachment_note] if attachment_note else []), "", markdown_table_from_rows(rendered_rows)]
         )
     return "\n".join(sections).rstrip() + "\n", ""
 
@@ -1882,8 +2037,20 @@ def normalize_content(
             return "## 子页面导航\n\n" + "\n".join(pages)
 
         value = SUB_PAGE_LIST_PATTERN.sub(render_sub_page_list, value)
+
+    # Current lark-cli Markdown can expose an embedded worksheet as a bare
+    # <sheet> tag.  Older normalisation removed that tag together with wrapper
+    # markup, which silently turned a non-empty source block into blank local
+    # content.  Keep a deterministic incompleteness marker unless the opted-in
+    # XML + Sheets route replaces it with a bounded snapshot below.
     value = re.sub(
-        r"</?(?:figure|grid|column|callout|sub-page-list|sub-page|sheet|readonly-block)\b[^>]*>",
+        r"<sheet\b[^>]*?/?>\s*(?:</sheet\s*>)?",
+        "\n\n" + EMBEDDED_SHEET_UNMIRRORED_BLOCK + "\n\n",
+        value,
+        flags=re.IGNORECASE,
+    )
+    value = re.sub(
+        r"</?(?:figure|grid|column|callout|sub-page-list|sub-page|readonly-block)\b[^>]*>",
         "",
         value,
         flags=re.IGNORECASE,
@@ -2029,13 +2196,20 @@ def render_document_content(
     if embedded_sheet_settings is None:
         return content, revision_id
     document_xml = fetch_doc_xml(config, obj_token)
-    embedded_content, _ = fetch_embedded_sheet_markdown(
+    embedded_content, embedded_count = fetch_embedded_sheet_markdown(
         config,
         document_xml,
         embedded_sheet_settings,
         snapshot_root=snapshot_root,
         node_token=node_token,
     )
+    if EMBEDDED_SHEET_UNMIRRORED_MARKER in content and embedded_count == 0:
+        raise RuntimeError("document Markdown contains an embedded Sheet that XML discovery did not resolve")
+    if embedded_count:
+        content = content.replace(
+            EMBEDDED_SHEET_UNMIRRORED_BLOCK,
+            EMBEDDED_SHEET_MIRRORED_POINTER,
+        )
     appendix = [EMBEDDED_SHEET_SCAN_MARKER]
     if embedded_content:
         appendix.extend(["", "## 嵌入式表格", "", embedded_content])
@@ -2923,7 +3097,7 @@ def has_error_placeholder(path: Path) -> bool:
     except OSError:
         return True
     body = raw.split("---", 2)[2] if raw.count("---") >= 2 else raw
-    return bool(re.search(r"同步正文(?:失败|未返回结果)", body))
+    return bool(ERROR_PLACEHOLDER_PATTERN.search(body))
 
 
 def validate_mirror(
@@ -2931,6 +3105,8 @@ def validate_mirror(
     manifest: dict[str, Any] | None = None,
     sidebar_file: Path | None = None,
     require_local_assets: bool = False,
+    require_embedded_sheet_scan: bool = False,
+    require_all_sheet_nodes: bool = False,
 ) -> dict[str, Any]:
     """Validate the generated mirror as a separate, deterministic acceptance gate."""
     manifest = manifest if isinstance(manifest, dict) else load_json(output_dir / METADATA_DIR / MANIFEST_FILE, {})
@@ -2946,6 +3122,10 @@ def validate_mirror(
     missing_files = 0
     frontmatter_errors = 0
     placeholder_errors = 0
+    unresolved_embedded_sheets = 0
+    unscanned_embedded_sheet_documents = 0
+    unmirrored_sheet_nodes = 0
+    unresolved_sheet_bitable_tabs = 0
     unresolved_assets = 0
     failed_records = 0
     stale_records = 0
@@ -2998,8 +3178,23 @@ def validate_mirror(
         if fields.get("node_token") != token or fields.get("sync_status") != status:
             frontmatter_errors += 1
         body = raw.split("---", 2)[2] if raw.count("---") >= 2 else raw
-        if status in {"ok", "stale"} and re.search(r"同步正文(?:失败|未返回结果)", body):
+        if status in {"ok", "stale"} and ERROR_PLACEHOLDER_PATTERN.search(body):
             placeholder_errors += 1
+        unresolved_embedded_sheets += body.count(EMBEDDED_SHEET_UNMIRRORED_MARKER)
+        unresolved_sheet_bitable_tabs += body.count(SHEET_BITABLE_UNMIRRORED_MARKER)
+        if (
+            require_all_sheet_nodes
+            and str(record.get("obj_type", "")) == "sheet"
+            and (status != "ok" or SHEET_MIRROR_MARKER not in body)
+        ):
+            unmirrored_sheet_nodes += 1
+        if (
+            require_embedded_sheet_scan
+            and str(record.get("obj_type", "")) in {"doc", "docx"}
+            and status in {"ok", "stale"}
+            and EMBEDDED_SHEET_SCAN_MARKER not in body
+        ):
+            unscanned_embedded_sheet_documents += 1
         if status == "ok":
             unresolved_assets += len(extract_asset_references(body))
 
@@ -3009,6 +3204,14 @@ def validate_mirror(
         errors.append("invalid_frontmatter")
     if placeholder_errors:
         errors.append("error_placeholder_in_successful_document")
+    if unresolved_embedded_sheets:
+        errors.append("unresolved_embedded_sheets")
+    if unscanned_embedded_sheet_documents:
+        errors.append("unscanned_embedded_sheet_documents")
+    if unmirrored_sheet_nodes:
+        errors.append("unmirrored_sheet_nodes")
+    if unresolved_sheet_bitable_tabs:
+        errors.append("unresolved_sheet_bitable_tabs")
     if failed_records:
         errors.append("failed_records")
     if stale_records:
@@ -3032,6 +3235,10 @@ def validate_mirror(
         "missing_files": missing_files,
         "frontmatter_errors": frontmatter_errors,
         "placeholder_errors": placeholder_errors,
+        "unresolved_embedded_sheets": unresolved_embedded_sheets,
+        "unscanned_embedded_sheet_documents": unscanned_embedded_sheet_documents,
+        "unmirrored_sheet_nodes": unmirrored_sheet_nodes,
+        "unresolved_sheet_bitable_tabs": unresolved_sheet_bitable_tabs,
         "failed_records": failed_records,
         "stale_records": stale_records,
         "unresolved_assets": unresolved_assets,
@@ -3053,6 +3260,10 @@ def print_validation(result: dict[str, Any]) -> None:
         f"records={stats.get('records', 0)} files_checked={stats.get('files_checked', 0)} "
         f"missing_files={stats.get('missing_files', 0)} frontmatter_errors={stats.get('frontmatter_errors', 0)} "
         f"placeholder_errors={stats.get('placeholder_errors', 0)} failed_records={stats.get('failed_records', 0)} "
+        f"unresolved_embedded_sheets={stats.get('unresolved_embedded_sheets', 0)} "
+        f"unscanned_embedded_sheet_documents={stats.get('unscanned_embedded_sheet_documents', 0)} "
+        f"unmirrored_sheet_nodes={stats.get('unmirrored_sheet_nodes', 0)} "
+        f"unresolved_sheet_bitable_tabs={stats.get('unresolved_sheet_bitable_tabs', 0)} "
         f"stale_records={stats.get('stale_records', 0)} unresolved_assets={stats.get('unresolved_assets', 0)} "
         f"sidebar_missing_links={stats.get('sidebar_missing_links', 0)}"
     )
@@ -3124,6 +3335,14 @@ def sync(args: argparse.Namespace) -> int:
             sidebar_file=sidebar_path_file,
             require_local_assets=bool(
                 nested(config, "sync", "download_assets", default=False) and not args.skip_assets
+            ),
+            require_embedded_sheet_scan=bool(
+                nested(config, "sync", "embedded_sheets", "enabled", default=False)
+                and nested(config, "sync", "embedded_sheets", "all_docx", default=False)
+            ),
+            require_all_sheet_nodes=bool(
+                nested(config, "sync", "sheets", "enabled", default=False)
+                and nested(config, "sync", "sheets", "all_nodes", default=False)
             ),
         )
         print_validation(validation)
@@ -3326,6 +3545,7 @@ def sync(args: argparse.Namespace) -> int:
         or nested(config, "sync", "sheets", "enabled", default=False)
     )
     sheet_selections = configured_sheet_selections(config, sheet_sync_enabled)
+    all_sheet_settings = configured_all_sheet_settings(config, sheet_sync_enabled)
     embedded_sheet_sync_enabled = bool(
         getattr(args, "sync_embedded_sheets", False)
         or nested(config, "sync", "embedded_sheets", "enabled", default=False)
@@ -3357,7 +3577,11 @@ def sync(args: argparse.Namespace) -> int:
     def reads_sync_content(node: dict[str, Any]) -> bool:
         obj_type = str(node.get("obj_type", ""))
         return obj_type in {"docx", "doc"} or (
-            obj_type == "sheet" and str(node.get("node_token")) in sheet_selections
+            obj_type == "sheet"
+            and (
+                str(node.get("node_token")) in sheet_selections
+                or all_sheet_settings is not None
+            )
         ) or (obj_type == "bitable" and str(node.get("node_token")) in bitable_selections)
 
     content_nodes = [node for node in ordered if reads_sync_content(node)]
@@ -3423,6 +3647,20 @@ def sync(args: argparse.Namespace) -> int:
             return False
         try:
             return EMBEDDED_SHEET_SCAN_MARKER in existing.read_text(encoding="utf-8")
+        except OSError:
+            return False
+
+    def has_standalone_sheet_mirror(node: dict[str, Any], old: dict[str, Any]) -> bool:
+        if all_sheet_settings is None or str(node.get("obj_type", "")) != "sheet":
+            return True
+        old_path = old.get("relative_path") if isinstance(old, dict) else None
+        if not isinstance(old_path, str) or str(old.get("sync_status", "")) != "ok":
+            return False
+        existing = output_dir / old_path
+        if not existing.is_file():
+            return False
+        try:
+            return SHEET_MIRROR_MARKER in existing.read_text(encoding="utf-8")
         except OSError:
             return False
 
@@ -3537,8 +3775,36 @@ def sync(args: argparse.Namespace) -> int:
                     or has_error_placeholder(
                         output_dir / str(old_nodes[str(node["node_token"])].get("relative_path", ""))
                     )
+                    or not has_embedded_sheet_scan(
+                        node, old_nodes.get(str(node["node_token"]), {})
+                    )
+                    or not has_standalone_sheet_mirror(
+                        node, old_nodes.get(str(node["node_token"]), {})
+                    )
                 )
             ]
+            retry_candidates.sort(
+                key=lambda node: (
+                    0
+                    if has_error_placeholder(
+                        output_dir
+                        / str(old_nodes.get(str(node["node_token"]), {}).get("relative_path", ""))
+                    )
+                    else 1
+                    if (
+                        str(node.get("obj_type", "")) == "sheet"
+                        and str(
+                            old_nodes.get(str(node["node_token"]), {}).get("sync_status", "")
+                        )
+                        != "failed"
+                    )
+                    else 2
+                    if not has_embedded_sheet_scan(
+                        node, old_nodes.get(str(node["node_token"]), {})
+                    )
+                    else 3
+                )
+            )
             if args.retry_batch_size is not None:
                 if args.retry_batch_size <= 0:
                     raise SystemExit("--retry-batch-size must be greater than zero")
@@ -3642,14 +3908,75 @@ def sync(args: argparse.Namespace) -> int:
                 if delay:
                     time.sleep(delay)
                 if str(node.get("obj_type", "")) == "sheet":
+                    selections = sheet_selections.get(token)
+                    workbook_sheets = None
+                    if not selections:
+                        if all_sheet_settings is None:
+                            raise RuntimeError("Sheet node is outside the configured mirror scope")
+                        workbook_payload = run_cli(
+                            config,
+                            "sheets",
+                            "+workbook-info",
+                            "--as",
+                            "bot",
+                            "--spreadsheet-token",
+                            str(node.get("obj_token", "")),
+                            "--format",
+                            "json",
+                        )
+                        workbook_sheets = nested(workbook_payload, "data", "sheets", default=[])
+                        if not isinstance(workbook_sheets, list):
+                            raise RuntimeError("sheets +workbook-info payload has no data.sheets list")
+                        selections = automatic_sheet_selections(all_sheet_settings, workbook_sheets)
+                    bitable_tabs = (
+                        automatic_sheet_bitable_selections(all_sheet_settings, workbook_sheets)
+                        if all_sheet_settings is not None and workbook_sheets is not None
+                        else []
+                    )
+                    if not selections and not bitable_tabs:
+                        raise RuntimeError("Sheet workbook has no readable grid or Base tab")
                     content, revision_id = fetch_sheet_markdown(
                         config,
                         str(node.get("obj_token", "")),
                         title,
-                        sheet_selections[token],
+                        selections,
                         snapshot_root=mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR,
                         node_token=token,
+                        workbook_sheets=workbook_sheets,
                     )
+                    mixed_bitable_error = ""
+                    for base_token, base_selection in bitable_tabs:
+                        try:
+                            rendered_base, _ = fetch_bitable_markdown(
+                                config,
+                                base_token,
+                                "内嵌多维表格",
+                                [base_selection],
+                                snapshot_root=mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR,
+                                node_token=token,
+                                mirror_dir=mirror_dir,
+                                include_document_heading=False,
+                                section_heading_level=2,
+                            )
+                            content = (
+                                content.rstrip()
+                                + "\n\n"
+                                + SHEET_BITABLE_TAB_RENDER_MARKER
+                                + "\n\n"
+                                + rendered_base.lstrip()
+                            )
+                        except Exception as exc:
+                            category = safe_error_category(exc)
+                            mixed_bitable_error = mixed_bitable_error or category
+                            content = (
+                                content.rstrip()
+                                + "\n\n"
+                                + SHEET_BITABLE_UNMIRRORED_MARKER
+                                + "\n\n> 此工作簿中的多维表格子表尚未归档；"
+                                + f"错误类别：`{category}`。普通 Sheet 子表已保留。\n"
+                            )
+                    if mixed_bitable_error:
+                        return token, "failed", content, mixed_bitable_error, revision_id
                 elif str(node.get("obj_type", "")) == "bitable":
                     content, revision_id = fetch_bitable_markdown(
                         config,
@@ -3960,13 +4287,21 @@ def sync(args: argparse.Namespace) -> int:
                 if error:
                     categories = counts["error_categories"]
                     categories[error] = categories.get(error, 0) + 1
+                if obj_type == "sheet" and SHEET_MIRROR_MARKER in content:
+                    counts["sheet_tabs_mirrored"] += content.count(SHEET_TAB_RENDER_MARKER)
+                    counts["sheet_tabs_mirrored"] += content.count(
+                        SHEET_BITABLE_TAB_RENDER_MARKER
+                    )
+            elif status == "metadata_stub":
+                counts["stub"] += 1
             elif embedded_sheet_sync_applies(node, embedded_sheet_settings):
                 if EMBEDDED_SHEET_SCAN_MARKER in content:
                     counts["embedded_sheet_documents_scanned"] += 1
                 counts["embedded_sheets_mirrored"] += content.count(EMBEDDED_SHEET_RENDER_MARKER)
-            elif obj_type == "sheet":
+            elif obj_type == "sheet" and SHEET_MIRROR_MARKER in content:
                 counts["sheets_mirrored"] += 1
-                counts["sheet_tabs_mirrored"] += len(sheet_selections.get(token, []))
+                counts["sheet_tabs_mirrored"] += content.count(SHEET_TAB_RENDER_MARKER)
+                counts["sheet_tabs_mirrored"] += content.count(SHEET_BITABLE_TAB_RENDER_MARKER)
             elif obj_type == "bitable":
                 counts["bitables_mirrored"] += 1
                 counts["bitable_tables_mirrored"] += len(bitable_selections.get(token, []))
@@ -4196,6 +4531,10 @@ def sync(args: argparse.Namespace) -> int:
         manifest=manifest,
         sidebar_file=sidebar_path_file,
         require_local_assets=download_assets_enabled,
+        require_embedded_sheet_scan=bool(
+            embedded_sheet_settings and embedded_sheet_settings["all_docx"]
+        ),
+        require_all_sheet_nodes=all_sheet_settings is not None,
     )
     if download_assets_enabled:
         # A refreshed document can replace one old signed URL with several

@@ -3,9 +3,9 @@ name: soia-cwork-feishu-doc-git-sync
 description: 将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。
 dependencies:
   hard: [soia-cwork-feishu-cli]
-version: 1.6.2
+version: 1.6.5
 created_at: 2026-07-14 23:24:26
-updated_at: 2026-07-21 09:04:13
+updated_at: 2026-07-21 14:16:00
 created_by: claude opus 4.6
 updated_by: gpt-5.6-sol
 ---
@@ -25,7 +25,7 @@ updated_by: gpt-5.6-sol
 | 用 Obsidian 查看 | 在独立 vault 中保存规则、镜像和本地补录 | 可直接用 Obsidian 打开的 vault |
 | 用 VitePress 展示 | 生成站点侧边栏并构建静态站点 | 本地开发服务或构建产物 |
 | 检查表格/多维表格导出能力 | 解析真实资源类型、权限和可用导出格式 | 只读探查结果；不会默认生成 Excel 文件 |
-| 同步指定或内嵌 Sheet | 对私有配置明确授权的范围读取 Sheet；内嵌 Sheet 从文档 XML 中识别后再读取 | 有边界的 Markdown 表格快照；内嵌表格追加到“嵌入式表格”区块，默认不读取任何单元格 |
+| 同步独立或内嵌 Sheet | 对私有配置明确授权的范围读取 Sheet；可自动覆盖全部独立 Sheet 节点，内嵌 Sheet 从文档 XML 中识别后再读取 | 有边界的 Markdown 表格快照；不再把已授权的 Sheet 节点写成正文占位 |
 | 保留 Sheet 公式、样式、批注与图表信息 | 对已选范围保存单元格、布局、图表和浮动图片元数据快照 | Markdown 表格旁的本地保真 JSON；不伪装为可编辑工作簿 |
 | 初始化完整 Sheet 与报表 | 经确认后分批导出整个 Sheet 工作簿 | `.xlsx` 保真副本，保留公式、样式、批注、图表、透视和单元格图片 |
 | 镜像指定多维表格 | 读取指定 Base 表的字段、限量记录和可选视图，生成 Markdown 与快照 | 有上限的表格内容、schema/记录快照；默认不读取任何 Base 数据 |
@@ -42,10 +42,10 @@ updated_by: gpt-5.6-sol
 3. 首次使用先执行 dry-run，核对空间、节点数量和目标目录。
 4. 先用单节点隔离试点核对表格、资源和样式快照；`--pilot-node-token` 只写明确选择的节点到单独试点目录，不会给空目录补齐其他节点占位文件。
 5. 执行镜像同步。默认只写本地文件和同步元数据，不修改飞书内容，也不删除本地历史文件。
-6. 同步写入后会自动校验 manifest、文件存在性、frontmatter、失败占位、侧边栏覆盖范围和资源引用；发现 `failed`/`stale` 时返回非零结果，不能把旧正文当作最新成功。
+6. 同步写入后会自动校验 manifest、文件存在性、frontmatter、失败占位、侧边栏覆盖范围、资源引用、未归档的嵌入式 Sheet、未归档的 Sheet 内嵌 Base、`all_docx` 模式下尚未完成 XML 语义扫描的历史文档，以及 `all_nodes` 模式下仍未生成真实表格的独立 Sheet；发现 `failed`/`stale` 或语义缺口时返回非零结果，不能把空白占位或局部内容当作完整成功。
 7. 如需检查表格导出，先做 `drive +inspect`/帮助/schema 探查；能力探查不等于授权导出。
 8. 只有客户明确确认导出范围、格式、文件数和本地目录后，才调用 `drive +export` 或 `drive +export-download`。
-9. 如需镜像 Sheet，先在私有配置明确范围：独立 Sheet 在 `sync.sheets.selections` 中逐项指定 `node_token`、稳定 `sheet_id` 和有界 A1 `range`；文档内嵌 Sheet 启用 `sync.embedded_sheets.enabled` 后，还须选择 `all_docx: true` 或 `node_tokens`，并设置每页数量、行列、单元格和返回字符上限。按需开启 `sync.sheets.preserve` 保存公式、样式、批注、布局和图表等元数据；内嵌表格因没有可靠原位标记，会追加为本地快照。
+9. 如需镜像 Sheet，先在私有配置明确范围：全部独立 Sheet 使用 `sync.sheets.enabled: true` 与 `all_nodes: true` 自动发现每个网格子表，或在 `selections` 中逐项指定 `node_token`、稳定 `sheet_id` 和有界 A1 `range`；两种方式都必须设置行列、单元格和返回字符上限。响应达到 `max_chars` 时必须按 `actual_range` 下一行续读，不能把截断当成整表失败。混合工作簿还需显式设置 `include_bitable_tabs: true` 与记录上限，随后把 Base 子表路由到多维表格读取。文档内嵌 Sheet 启用 `sync.embedded_sheets.enabled` 后，还须选择 `all_docx: true` 或 `node_tokens`。按需开启 `sync.sheets.preserve` 保存公式、样式、批注、布局和图表等元数据。未启用时必须显示并校验语义缺口，不得静默删除 `<sheet>` 或把独立 Sheet 占位当成完整归档。
 11. 如需镜像多维表格，逐项指定 `sync.bitables.selections` 的 `node_token`、`table_id` 和 `max_records`，再开启 `sync.bitables.enabled` 或传入 `--sync-bitables`；附件二进制还需要单独开启 `download_attachments`，仪表盘/报表元数据需要 `include_dashboards`。
 12. 只有用户明确确认来源、格式、文件数、输出目录和 Git 策略后，才能执行完整初始化：Sheet 设置 `sync.sheets.workbook_exports.enabled=true` 与 `all_nodes=true`，Base 设置 `sync.bitables.base_exports.enabled=true` 与 `all_nodes=true`，Wiki 文件设置 `sync.files.downloads.enabled=true` 与 `all_nodes=true`。每项必须配置 `batch_size`，重复执行至 deferred 为零。
 13. 如需离线资源、文档间本地跳转、子页面导航或变更台账，先在私有配置中逐项启用 `download_assets`、`localize_internal_links`、`render_sub_page_navigation`、`change_ledger`；它们默认关闭以兼容已有镜像。
@@ -61,7 +61,7 @@ python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --output-dir <
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental
 # 没有事件订阅时，按 wiki +node-get 的远端更新时间判断正文是否变化
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental --probe-remote-metadata
-# 如果上次清单已有失败项，复用成功正文，只退避重试失败项
+# 复用已完整正文，优先补独立 Sheet stub、未扫描的内嵌 Sheet 文档，再退避重试失败项
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --retry-failed
 # 事件适配器已经拿到变动 ID 时，只拉对应节点；可重复传入多个 ID
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental \
@@ -175,9 +175,10 @@ sync:
 - 飞书文档引用会按 `node_token` 优先、`obj_token` 兜底解析为可点击的飞书 Wiki 链接；用户引用会保留为 `@显示名`。静态 Markdown 不复制飞书的悬浮卡片和成员头像交互，但不再错误降级为代码样式。
 - 有子节点的飞书节点必须生成一个同名目录，并把正文放在目录内的同名 index Markdown：`父目录/节点名/节点名.md`；叶子节点才直接生成 `节点名.md`。不要生成同级的“同名文件 + 同名文件夹”。
 - 如果飞书本身存在同名叶子与可展开节点、父子同名或同级重复可展开节点，目录/文件会追加稳定的 node ID 短后缀；这是为了避免本地文件系统发生同级冲突，manifest 仍以 `node_token` 区分真实节点。
-- `--retry-failed` 会复用上次 `sync_status: ok` 的本地正文，只读取上次失败的文档；适合遇到飞书接口限流后继续补齐。
-- `--retry-batch-size N` 仅与 `--retry-failed` 配合使用，每次最多补偿 N 个失败节点；大型空间应重复执行，并以 `--validate-only` 的 `failed_records=0` 作为结束条件。
-- `--retry-failed` 使用上一次 manifest 作为节点清单，不再先对全量文档做元数据探测；这样补偿运行只消耗失败正文请求，并继续受全局节流保护。
+- `--retry-failed` 会复用已有完整正文，并把失败节点、独立 Sheet stub、未完成 XML 语义扫描的历史文档加入补偿队列；适合遇到飞书接口限流或启用新的 Sheet 策略后继续补齐。
+- 历史镜像中如果保留“当前同步器只读取文档正文”一类旧占位，即使飞书节点后来从 Sheet 变成 Docx、manifest 状态仍是 `ok`，验收也会判定失败，并在 `--retry-failed` 队列中最高优先级重拉；不能把类型漂移后的旧占位当成成功正文。
+- `--retry-batch-size N` 仅与 `--retry-failed` 配合使用，每次最多补偿 N 个失败或语义缺口节点；大型空间应重复执行，并以 `--validate-only` 的 `failed_records=0`、`unmirrored_sheet_nodes=0`、`unscanned_embedded_sheet_documents=0` 为结束条件。
+- `--retry-failed` 使用上一次 manifest 作为节点清单，不再先对全量文档做元数据探测；启用 Sheet 全量策略时，它会优先补独立 Sheet stub 与缺少语义扫描标记的历史 Docx，再重试普通失败项，并继续受全局节流保护。大型空间配合 `--retry-batch-size` 重复执行，直到 `unmirrored_sheet_nodes` 与 `unscanned_embedded_sheet_documents` 都为 0。
 - 同一输出目录同时只允许一个同步进程；如果上一轮仍在退出或用户重复启动，后续进程会停止并报告，不会并发覆盖 manifest。
 - 全局请求节流和指数退避会跨同步 worker 生效；`sync.min_request_interval_seconds` 默认 0.5 秒，避免大知识库并发触发 `99991400` 限流。
 - 正文读取失败但本地已有旧正文时，节点会标记为 `stale` 并保留旧正文；下一次增量同步会继续重试，校验不会将其视为成功。
@@ -192,12 +193,12 @@ sync:
 - 下载资源时，优先按飞书媒体 token 去重；同一附件或图片即使带有不同的短期签名 URL，也只保留一份本地资源。无 token 的资源仍按 URL 内容寻址。
 - `sync.localize_internal_links: true` 时，已同步的 Wiki/文档引用会改为相对本地 Markdown 链接；`sync.render_sub_page_navigation: true` 时，飞书导出的 `<sub-page-list>` 会改为本地 Markdown 子页面导航。两项均默认关闭，不影响已有外链行为。
 - `sync.change_ledger: true` 时，会在同步元数据下按运行生成新增、修改、移动和远端删除的变更台账；修改项只保留受 `change_ledger_max_diff_lines` 限制的 diff，不复制文档全文，也不改变生成镜像或本地补录目录。
-- `sheet` 默认只生成元数据 stub。设置 `sync.sheets.enabled: true` 后，仍必须在 `sync.sheets.selections` 中逐项声明 Wiki `node_token`、由 `sheets +workbook-info` 确认的 `sheet_id`、以及有界 A1 `range`；同步器再用 `sheets +csv-get` 读取显示值并生成 Markdown 表格。范围、最大单元格数和最大返回字符数的完整契约见 [references/sheet-mirroring.yml](references/sheet-mirroring.yml)。
-- 文档内嵌的 `<sheet>` 不会出现在飞书 Markdown 正文中。仅当 `sync.embedded_sheets.enabled` 且明确选择 `all_docx: true` 或 `node_tokens` 时，才读取文档 XML 并在配置上限内生成“嵌入式表格”快照；首次启用会补扫旧文档。由于没有可靠原位标记，快照不会伪装成原段落内容。完整范围契约见 [references/sheet-mirroring.yml](references/sheet-mirroring.yml)。
+- `sheet` 默认只生成元数据 stub。经用户明确授权全库有界快照后，设置 `sync.sheets.enabled: true` 与 `all_nodes: true`，同步器会用 `sheets +workbook-info` 自动发现每个独立 Sheet 的网格子表，再按 `max_rows`、`max_columns`、`max_cells`、`max_chars` 上限调用 `sheets +csv-get`；响应截断时按 `actual_range` 分行续读。也可继续用 `selections` 精确声明单个范围。混合工作簿中的 Base 子表只有在 `include_bitable_tabs: true` 时才按 `max_bitable_records` 有界读取，否则节点失败，不能静默跳过；若 Base 权限不足，已读出的普通 Sheet 仍落盘，但节点保持 `failed` 并写入明确缺口标记。`all_nodes` 验收会拒绝任何 `metadata_stub`、缺少真实表格标记的 Sheet 节点或未归档的 Base 子表。完整契约见 [references/sheet-mirroring.yml](references/sheet-mirroring.yml)。
+- 飞书 Markdown 可能只返回 `<sheet>` 引用而不返回任何单元格。同步器不得删除该引用后仍报告完整成功：未授权下钻时保留可见缺口并使验收失败；仅当 `sync.embedded_sheets.enabled` 且明确选择 `all_docx: true` 或 `node_tokens` 时，才读取文档 XML 并在配置上限内生成“嵌入式表格”快照。首次启用会补扫旧文档；快照不会伪装成交互式原表。完整范围契约见 [references/sheet-mirroring.yml](references/sheet-mirroring.yml)。
 - `sync.sheets.preserve.enabled: true` 会在同一选定范围另存单元格值、公式、样式、批注，以及工作表布局、图表和浮动图片元数据的 JSON 快照；可额外开启透视、筛选、条件格式和迷你图元数据。它不把图表或图片伪装成原生 Markdown。完整工作簿需在用户明确批准后同时设置 `sync.sheets.workbook_exports.enabled: true` 和 `all_nodes: true`，同步器会用 `drive +export` 分批生成 `.xlsx` 并在 Sheet 索引中链接。
 - 异步 Sheet 导出未在首轮轮询完成时，会把导出任务票据保存在生成目录的私有快照中；后续批次只轮询同一任务，并在就绪后使用 `drive +export-download` 下载，不会反复创建相同工作簿导出任务。`manifest.stats.sheet_workbooks_pending` 表示仍在飞书端处理的数量。
 - 图片/附件本地化是显式 opt-in 的本地数据下载；不能因为用户只要求“检查图片”就下载全部素材。持久化配置中的 `sync.download_assets: true` 只能视为用户此前对该资源范围的明确授权，不得扩展为表格或多维表格导出授权。若先执行 Sheet/Base/文件的结构初始化并使用 `--skip-assets` 避免输出锁冲突，必须在初始化结束后单独执行资源本地化批次；`--skip-assets` 不会把图片或附件标记为已下载。
-- `bitable` 与未明确选择的 `sheet` 默认只生成元数据 stub，不读取表内数据。设置 `sync.bitables.enabled: true` 后，必须逐项声明 `node_token`、`table_id` 与 `max_records`；同步器以 `base +field-list`、`base +record-list` 和可选的 `base +view-list`/`base +dashboard-list`/`base +dashboard-block-list` 生成 Markdown 与 JSON 快照。`sync.bitables.download_attachments: true` 是独立的二进制下载授权，使用 `base +record-download-attachment` 并只处理已选表的已读记录附件。完整 Base 导出仍须在用户明确批准后同时设置 `sync.bitables.base_exports.enabled: true` 和 `all_nodes: true`，同步器用 `drive +export` 分批生成 `.base`。
+- `bitable` 与未授权的 `sheet` 默认只生成元数据 stub，不读取表内数据；已启用 `sync.sheets.all_nodes` 的独立 Sheet 不允许继续保留 stub。设置 `sync.bitables.enabled: true` 后，必须逐项声明 `node_token`、`table_id` 与 `max_records`；同步器以 `base +field-list`、`base +record-list` 和可选的 `base +view-list`/`base +dashboard-list`/`base +dashboard-block-list` 生成 Markdown 与 JSON 快照。`sync.bitables.download_attachments: true` 是独立的二进制下载授权，使用 `base +record-download-attachment` 并只处理已选表的已读记录附件。完整 Base 导出仍须在用户明确批准后同时设置 `sync.bitables.base_exports.enabled: true` 和 `all_nodes: true`，同步器用 `drive +export` 分批生成 `.base`。
 - Wiki `file` 节点默认只生成元数据 stub；用户明确确认完整初始化后，同时设置 `sync.files.downloads.enabled: true` 与 `all_nodes: true`，同步器才会分批调用 `drive +download`。文件以原始二进制保存，不会执行、挂载、解压或解析 ZIP、DMG、EXE 等格式。
 - 飞书图片 URL 可能很快过期。启用本地化并使用 `--refresh-asset-urls` 时，会先刷新关联文档的 URL 再下载，不会无条件重拉所有正文；下载后统一写为转义 `alt` 的本地 HTML `<img>`，并按文件二进制识别 PNG/JPEG/GIF/WebP/SVG、修正错误缓存后缀。
 - 事件目标、`--changed-*-token`、`--only-node-token` 或隔离试点只处理本轮重读文档的资源，不会把整库历史资源重新加入下载队列；完整资源回填则不传目标并按 `asset_batch_size` 分批执行。

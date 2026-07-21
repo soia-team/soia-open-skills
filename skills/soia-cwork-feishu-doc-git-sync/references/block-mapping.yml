@@ -12,6 +12,9 @@ document_blocks:
     rendering: "preserve portable Markdown list syntax and allowed ul/ol/li HTML when present"
   tables:
     rendering: "preserve Markdown tables and allowed table HTML; do not flatten rows into plain text"
+  embedded_sheets:
+    rendering: "never strip a <sheet> reference silently; keep an unresolved marker until an authorised bounded Sheet snapshot replaces it"
+    validation: "unresolved embedded Sheet markers fail mirror validation; all_docx mode also rejects historical Docx files without a completed XML scan marker"
 
 sheet_mirror:
   api:

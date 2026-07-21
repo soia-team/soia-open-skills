@@ -21,6 +21,20 @@ capabilities:
       - docs:doc:readonly
       - docx:document:readonly
       - docs:document.content:read
+  sheet_and_base_content_read:
+    purpose: "读取已明确授权的电子表格与多维表格子表内容"
+    optional: true
+    default: disabled
+    scopes:
+      - sheets:spreadsheet:readonly
+      - sheets:spreadsheet.meta:read
+      - base:app:read
+      - base:record:read
+      - base:record:retrieve
+    notes:
+      - "只有启用 sync.sheets、sync.embedded_sheets 或 sync.bitables 时才申请"
+      - "新增应用权限后必须创建并发布应用版本，再以 bot 身份重试"
+      - "缺少 base:app:read 时，混合工作簿中的普通 Sheet 仍可落盘，但 Base 子表必须保持 permission_denied"
   document_change_events:
     purpose: "接收云文档编辑、标题、创建、回收站和删除事件，驱动按 ID 增量同步"
     optional: true
