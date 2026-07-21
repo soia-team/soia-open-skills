@@ -171,7 +171,7 @@ Open Design 配置：复制 [`config.example.yml`](./skills/soia-dev-open-design
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | 通过官方 `lark-cli` 以应用凭证（bot）只读盘点飞书云盘、云文档、知识库、评论、权限和元数据 | ✅ 可用（需配置飞书应用凭据并授予目标资源权限） | 飞书官方 `lark-cli`；应用凭证；目标文档/知识库需对应用可见 |
 | [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | 将飞书知识库按 `node_token` 保留树形结构并增量镜像为 Markdown，接入 Git、Obsidian 与 VitePress；可将明确配置的 Sheet 与多维表格转为 Markdown/保真快照，不默认写回飞书 | ✅ 可用（先执行 dry-run，再建立基线；表格读取需额外授予只读权限并明确范围） | `soia-cwork-feishu-cli`；`lark-cli`；Python 3.10+；PyYAML；Git/VitePress/Obsidian 可选 |
-| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | 复用用户浏览器登录态递归盘点 ProcessOn 到叶子文件，按 VSDX/XMind 默认格式导出，并用可恢复下载队列逐项校验归档 | ✅ 可用（递归、计划、下载进度、同名隔离、阻断证据与本地归档已验证；只有真实可见的安全验证才需用户接管） | ProcessOn 账号与资源权限；浏览器控制；Python 3.10+；draw.io/Visio 技能可选 |
+| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | 复用用户浏览器登录态递归盘点 ProcessOn 到叶子文件，按 VSDX/XMind 默认格式导出，并用可恢复下载队列逐项校验归档 | ✅ 可用（递归、计划、严格串行异步导出、下载进度、同名隔离、阻断证据与本地归档已验证；只有真实可见的安全验证才需用户接管） | ProcessOn 账号与资源权限；浏览器控制；Python 3.10+；draw.io/Visio 技能可选 |
 #### 飞书技能最小上手
 
 ```bash
