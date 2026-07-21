@@ -91,9 +91,11 @@ python3 scripts/processon_archive_state.py next \
   --limit 10
 ```
 
-浏览器下载、`finalize` 和本地结构校验完成后，用 `record` 绑定 artifact_id、浏览器落地文件、最终交付文件与 finalizer manifest。失败或阻断分别用 `mark` 记录原因；未知类型仍在人工确认队列，不得用 `mark` 冒充已确认类型。
+浏览器下载、`finalize` 和本地结构校验完成后，用 `record` 绑定 artifact_id、浏览器落地文件、最终交付文件与 finalizer manifest。失败或阻断分别用 `mark` 记录原因；已有截图、Markdown 或错误响应等诊断文件时，重复传入 `--evidence-file`，脚本会把它们复制到 `<run-dir>/artifacts/evidence/`、记录大小与 SHA-256，并由 `audit` 重放。未知类型仍在人工确认队列，不得用 `mark` 冒充已确认类型。
 
-每一小批结束运行 `audit`。它重新检查计划 SHA-256、成功记录计数、交付文件大小与 SHA-256、VSDX/XMind 包结构及 finalizer manifest。进度文件使用原子写入和独占锁；会话中断后再次执行 `init` 与 `next` 即可继续。
+ProcessOn 列表是虚拟化渲染：目标不在当前视口时必须先滚动并重新读取快照。思维导图列表页原生格式无产物时进入官方编辑器重试 XMind、POS、POSM；只有 Markdown 能下载时将其作为阻断证据，不作为 artifact 交付物。同目录同名且缺少远端 ID 时，交付目录附加 artifact_id 前 8 位，避免浏览器 `(1)` 后缀失去来源定位。
+
+每一小批结束运行 `audit`。它重新检查计划 SHA-256、成功记录计数、交付文件大小与 SHA-256、VSDX/XMind 包结构、阻断诊断证据及 finalizer manifest。进度文件使用原子写入和独占锁；会话中断后再次执行 `init` 与 `next` 即可继续。
 
 覆盖属于高影响动作，必须由客户在当前请求中明确授权并同时传入：
 

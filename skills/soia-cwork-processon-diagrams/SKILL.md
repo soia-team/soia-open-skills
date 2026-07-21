@@ -1,9 +1,9 @@
 ---
 name: soia-cwork-processon-diagrams
 description: 递归浏览和盘点 ProcessOn 个人/团队空间到叶子文件，预览流程图与思维导图，按授权对流程图默认导出 Visio VSDX、对思维导图默认导出 XMind，将未知类型列入待确认清单，并通过可配置的临时/交付/审计目录完成下载校验与归档；适用于“读取 ProcessOn 文件”“导出架构图”“盘点全部子目录”“从 POS/VSDX/XMind 提取结构”“整理浏览器下载”等请求。
-version: 1.7.0
+version: 1.7.1
 created_at: 2026-07-20 18:57:53
-updated_at: 2026-07-21 19:32:10
+updated_at: 2026-07-21 20:15:00
 created_by: gpt-5.6-sol
 updated_by: gpt-5.6-sol
 dependencies:
@@ -183,11 +183,11 @@ python3 scripts/processon_archive_state.py next \
 
 `init` 在进度文件已存在时只接受相同计划 SHA-256，保留既有成功/失败/阻断证据并机械刷新计数；计划变更时 fail closed。`next` 默认跳过已完成、失败和阻断项，显式重试时才使用 `--include-failed` 或 `--include-blocked`。
 
-1. 根据最新页面快照定位目标的“下载/导出”，不依赖固定坐标或私有 CSS。按已确认类型选择：
+1. 根据最新页面快照定位目标的“下载/导出”，不依赖固定坐标或私有 CSS。ProcessOn 文件列表可能虚拟化；目标条目未进入当前视口时先滚动并重新读取快照，不能把定位超时写成文件不存在。按已确认类型选择：
    - 流程图默认选当前账号菜单中的 `VISIO文件`/`.vsdx`；多画布优先 `导出全部画布 (.vsdx)`；
    - 思维导图默认选 `Xmind文件`/`.xmind`；
    - 无法确认类型的文件加入“待人工确认”清单，不自动打开下载菜单。
-   默认格式不可用、会员/权限阻断或下载失败时回退 POS，并明确记录“原请求格式、实际格式、降级原因”，不得静默替换。格式选择见 [ProcessOn 能力与格式](references/processon-capabilities.md)。
+   默认格式不可用、会员/权限阻断或下载失败时回退 POS，并明确记录“原请求格式、实际格式、降级原因”，不得静默替换。列表页点击无文件时进入官方编辑器重试 XMind/POS/POSM；若这些原生格式均无文件、但 Markdown 能下载，只能把 Markdown 作为诊断证据并将 artifact 标为 `blocked`，不能把 Markdown 冒充 XMind/POS 完成。格式选择见 [ProcessOn 能力与格式](references/processon-capabilities.md)。
 2. 首次需要受管临时目录时运行 `paths --ensure`；用浏览器下载事件或下载列表确认真实文件落地，不凭 Toast 判断成功。先 dry-run，再归档。受管临时目录可显式 `--move`；否则默认复制并保留浏览器原文件：
 
 ```bash
@@ -212,7 +212,19 @@ python3 scripts/processon_archive_state.py record \
   --download-event not_observed_verified_file
 ```
 
-会员限制、真实可见验证码、权限或格式失败用 `mark --outcome blocked|failed --reason <reason>` 落盘；不得混入未开始项。每批结束运行 `audit`，重新检查计划指纹、计数、交付文件、SHA-256 和 finalizer manifest：
+会员限制、真实可见验证码、权限或格式失败用 `mark --outcome blocked|failed --reason <reason>` 落盘；不得混入未开始项。已有诊断文件时用可重复的 `--evidence-file` 归档到运行包，状态脚本会复制、哈希并在 `audit` 时重放，避免 `Downloads` 清理后证据消失：
+
+```bash
+python3 scripts/processon_archive_state.py mark \
+  --plan <run-dir>/artifacts/archive-plan.json \
+  --progress <run-dir>/artifacts/download-progress.json \
+  --artifact-id <artifact-id> \
+  --outcome blocked \
+  --reason "XMind/POS/POSM 无文件落盘；Markdown 仅用于证明下载通道可用" \
+  --evidence-file <diagnostic-export.md>
+```
+
+同目录同名条目没有稳定远端 ID 时，交付目录必须附加稳定 `artifact_id`（建议前 8 位），例如 `未命名文件--8ba9f60f/`；不能只依赖浏览器自动生成的 `(1)` 文件名。每批结束运行 `audit`，重新检查计划指纹、计数、交付文件、阻断证据、SHA-256 和 finalizer manifest：
 
 ```bash
 python3 scripts/processon_archive_state.py audit \
@@ -281,7 +293,7 @@ python3 scripts/processon_archive_state.py audit \
 ## 验证
 
 - 静态：`python3 -m py_compile scripts/inspect_processon_export.py scripts/finalize_processon_download.py scripts/processon_inventory_state.py scripts/build_processon_archive_plan.py scripts/processon_archive_state.py scripts/diff_processon_inventory.py`
-- 单测：`python3 -m unittest tests.test_processon_downloads tests.test_processon_inventory_state tests.test_processon_archive_plan tests.test_processon_archive_state tests.test_processon_inventory_delta -v`，覆盖配置优先级、安全默认路径、原子复制、同名改名、受管移动、保留期清理、目录与资产中间状态、计划漂移拒绝、失败/阻断续跑以及完整快照的增量差分门禁。
+- 单测：`python3 -m unittest tests.test_processon_downloads tests.test_processon_inventory_state tests.test_processon_archive_plan tests.test_processon_archive_state tests.test_processon_inventory_delta -v`，覆盖配置优先级、安全默认路径、原子复制、同名改名、受管移动、保留期清理、目录与资产中间状态、计划漂移拒绝、失败/阻断续跑、诊断证据复制与篡改检测，以及完整快照的增量差分门禁。
 - POS：用一份流程图和一份思维导图 POS 运行 `--format json`，确认标题、category、节点文字和元素数。
 - 图片：用 PNG/JPEG 运行脚本，确认宽高与 SHA-256。
 - 归档：用真实导出文件依次运行 `finalize --dry-run` 和 `finalize`，核对交付文件 SHA-256 与 manifest；不要把 fixture 路径写入公共文档。

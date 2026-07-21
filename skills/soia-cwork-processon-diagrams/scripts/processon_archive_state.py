@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import tempfile
 import zipfile
 from contextlib import contextmanager
@@ -33,6 +34,62 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def inspect_evidence_file(path: Path) -> dict[str, Any]:
+    path = path.expanduser()
+    if path.is_symlink():
+        raise ArchiveStateError(f"refusing symlink evidence file: {path}")
+    if not path.is_file():
+        raise ArchiveStateError(f"evidence file not found: {path}")
+    size = path.stat().st_size
+    if size <= 0:
+        raise ArchiveStateError(f"evidence file is empty: {path}")
+    return {
+        "path": str(path.resolve()),
+        "bytes": size,
+        "sha256": sha256_file(path),
+    }
+
+
+def archive_evidence_file(progress_path: Path, artifact_id: str, source: Path) -> dict[str, Any]:
+    source_inspection = inspect_evidence_file(source)
+    artifact_key = hashlib.sha256(artifact_id.encode("utf-8")).hexdigest()[:16]
+    evidence_dir = progress_path.expanduser().parent / "evidence" / artifact_key
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    destination = evidence_dir / f"{source_inspection['sha256'][:12]}--{source.expanduser().name}"
+    if destination.is_symlink():
+        raise ArchiveStateError(f"refusing symlink evidence destination: {destination}")
+    if destination.exists():
+        destination_inspection = inspect_evidence_file(destination)
+        if (
+            destination_inspection["sha256"] != source_inspection["sha256"]
+            or destination_inspection["bytes"] != source_inspection["bytes"]
+        ):
+            raise ArchiveStateError(f"evidence destination collision: {destination}")
+    else:
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=f".{destination.name}.", suffix=".tmp", dir=evidence_dir
+        )
+        temporary = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "wb") as output, source.expanduser().open("rb") as input_file:
+                shutil.copyfileobj(input_file, output)
+                output.flush()
+                os.fsync(output.fileno())
+            os.chmod(temporary, 0o600)
+            if sha256_file(temporary) != source_inspection["sha256"]:
+                raise ArchiveStateError("evidence SHA-256 mismatch after copy")
+            os.replace(temporary, destination)
+        finally:
+            temporary.unlink(missing_ok=True)
+    os.chmod(destination, 0o600)
+    return {
+        "source": source_inspection["path"],
+        "archived_path": str(destination.resolve()),
+        "bytes": source_inspection["bytes"],
+        "sha256": source_inspection["sha256"],
+    }
 
 
 def load_json(path: Path, label: str) -> dict[str, Any]:
@@ -371,6 +428,7 @@ def mark_outcome(
     artifact_id: str,
     outcome: str,
     reason: str,
+    evidence_files: list[Path] | None = None,
 ) -> dict[str, Any]:
     if outcome not in {"failed", "blocked"}:
         raise ArchiveStateError("outcome must be failed or blocked")
@@ -384,6 +442,16 @@ def mark_outcome(
         normalize_state(state, plan_path, plan)
         if artifact_id in set(identifiers(state["completed"], "completed")):
             raise ArchiveStateError("completed artifact cannot be marked failed or blocked")
+        prior_evidence: list[dict[str, Any]] = []
+        for prior_outcome in ("failed", "blocked"):
+            for prior_entry in state[prior_outcome]:
+                if prior_entry["artifact_id"] == artifact_id:
+                    prior_evidence = prior_entry.get("evidence_files", [])
+                    break
+        evidence_records = [
+            archive_evidence_file(progress_path, artifact_id, evidence_file)
+            for evidence_file in (evidence_files or [])
+        ]
         other = "blocked" if outcome == "failed" else "failed"
         state[other] = [entry for entry in state[other] if entry["artifact_id"] != artifact_id]
         record = {
@@ -392,6 +460,8 @@ def mark_outcome(
             "reason": reason.strip(),
             "updated_at": now(),
         }
+        if evidence_records or prior_evidence:
+            record["evidence_files"] = evidence_records or prior_evidence
         replaced = False
         for index, entry in enumerate(state[outcome]):
             if entry["artifact_id"] == artifact_id:
@@ -468,6 +538,19 @@ def audit_state(plan_path: Path, progress_path: Path) -> dict[str, Any]:
         actual_unknown = set(identifiers(state.get("unknown_pending_confirmation", []), "unknown"))
         if actual_unknown != expected_unknown:
             errors.append("unknown confirmation queue does not match archive plan")
+        for outcome in ("failed", "blocked"):
+            for entry in state.get(outcome, []):
+                for evidence in entry.get("evidence_files", []):
+                    try:
+                        if not isinstance(evidence, dict):
+                            raise ArchiveStateError("evidence record must be an object")
+                        inspection = inspect_evidence_file(Path(evidence.get("archived_path", "")))
+                        if inspection["sha256"] != evidence.get("sha256"):
+                            errors.append(f"evidence SHA-256 mismatch: {entry['artifact_id']}")
+                        if inspection["bytes"] != evidence.get("bytes"):
+                            errors.append(f"evidence size mismatch: {entry['artifact_id']}")
+                    except ArchiveStateError as exc:
+                        errors.append(f"invalid {outcome} evidence for {entry['artifact_id']}: {exc}")
         for entry in state.get("completed", []):
             destination = Path(entry.get("archive_destination", ""))
             actual_format = str(entry.get("actual_format", ""))
@@ -532,6 +615,13 @@ def build_parser() -> argparse.ArgumentParser:
     mark_parser.add_argument("--artifact-id", required=True)
     mark_parser.add_argument("--outcome", choices=["failed", "blocked"], required=True)
     mark_parser.add_argument("--reason", required=True)
+    mark_parser.add_argument(
+        "--evidence-file",
+        type=Path,
+        action="append",
+        default=[],
+        help="copy one diagnostic file into the run evidence directory; repeatable",
+    )
 
     audit_parser = subcommands.add_parser("audit", help="replay archived artifact evidence")
     audit_parser.add_argument("--plan", type=Path, required=True)
@@ -580,7 +670,12 @@ def main() -> int:
             print_json({"status": outcome, "counts": state["counts"]})
         elif args.command == "mark":
             state = mark_outcome(
-                args.plan, args.progress, args.artifact_id, args.outcome, args.reason
+                args.plan,
+                args.progress,
+                args.artifact_id,
+                args.outcome,
+                args.reason,
+                args.evidence_file,
             )
             print_json({"status": args.outcome, "counts": state["counts"]})
         elif args.command == "audit":
