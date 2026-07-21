@@ -38,7 +38,7 @@
 | [`soia-pkm-publish-rednote-card`](./soia-pkm-publish-rednote-card/) | 把文章改写成小红书 rednote 笔记：标题、3–5 段短文、标签和配图建议。 | Use soia-pkm-publish-rednote-card: 把这篇文章改成小红书笔记，给我标题、短文、话题标签和配图建议。 |
 | [`soia-pkm-publish-wechat-draft`](./soia-pkm-publish-wechat-draft/) | 把文章排版成符合微信公众号限制的 HTML，校验后推入草稿箱；只建草稿，绝不自动群发。 | Use soia-pkm-publish-wechat-draft: 把这篇文章排版成公众号文章，校验后推到草稿箱。 |
 | [`soia-pkm-publish-x-article`](./soia-pkm-publish-x-article/) | 把 Markdown 成文直传 X Articles 草稿箱：富文本粘贴、封面与正文图按原位插入，只存草稿绝不发布。 | Use soia-pkm-publish-x-article: 把这篇 Markdown 长文上传到 X Articles 草稿箱，封面用文首第一张图，校验通过后给我草稿 URL。 |
-| [`soia-pkm-publish-x-thread`](./soia-pkm-publish-x-thread/) | 把成文草稿拆成 ≤280 字符的 X thread 文本，人工复制发布，不接 X API。 | Use soia-pkm-publish-x-thread: 把这篇文章拆成带 (1/N) 编号的 X 推文串，保留链接和代码完整性。 |
+| [`soia-pkm-publish-x-thread`](./soia-pkm-publish-x-thread/) | 把成文草稿拆成 ≤280 字符的 X thread；可选浏览器直填存草稿，明确授权才发布，不接 X API。 | Use soia-pkm-publish-x-thread: 把这篇文章拆成带 (1/N) 编号的 X 推文串，保留链接和代码完整性。 |
 | [`soia-pkm-reading-plan`](./soia-pkm-reading-plan/) | 场景化阅读计划生成器。把一批书（来自文章书单、观点映射或主题）组织成带表格、按真实字数排期的可执行阅读计划。可选用 weread-skills 增强字数/评分/书架核实，缺少时降级估算；可选参考 huashu-weread-advisor 方法论但不依赖它。 | Use soia-pkm-reading-plan: 场景化阅读计划生成器。把一批书组织成带表格、按真实字数排期的可执行阅读计划。可选用 weread-skills 增强字数/评分/书架核实，缺少时降级估算；可选参考 huashu-weread-advisor 方法论但不依赖它。 |
 | [`soia-pkm-transform-article-notebooklm`](./soia-pkm-transform-article-notebooklm/) | 用 NotebookLM 把文章转换为试卷、闪卡、脑图、播客、学习笔记等学习类产物，降级为本地 Markdown |  |
 | [`soia-pkm-transform-article-slides`](./soia-pkm-transform-article-slides/) | 把文章、提纲、要点列表、数据表或主题转换为 PPT / PPTX / HTML 演示文稿或课件。本地 HTML deck 优先，可选 Open Design 或 NotebookLM PPT |  |
