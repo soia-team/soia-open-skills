@@ -104,6 +104,10 @@ EMBEDDED_SHEET_UNMIRRORED_BLOCK = (
     + "\n> 此处包含尚未归档的飞书嵌入式表格；请启用有界的 embedded_sheets 同步。"
 )
 EMBEDDED_SHEET_MIRRORED_POINTER = "> 嵌入式飞书表格已归档，见本文末尾“嵌入式表格”快照。"
+ERROR_PLACEHOLDER_PATTERN = re.compile(
+    r"同步正文(?:失败|未返回结果)|"
+    r"该知识库节点类型为\s*`[^`]+`，当前同步器只读取文档正文。"
+)
 
 
 class CliCommandError(RuntimeError):
@@ -3093,7 +3097,7 @@ def has_error_placeholder(path: Path) -> bool:
     except OSError:
         return True
     body = raw.split("---", 2)[2] if raw.count("---") >= 2 else raw
-    return bool(re.search(r"同步正文(?:失败|未返回结果)", body))
+    return bool(ERROR_PLACEHOLDER_PATTERN.search(body))
 
 
 def validate_mirror(
@@ -3174,7 +3178,7 @@ def validate_mirror(
         if fields.get("node_token") != token or fields.get("sync_status") != status:
             frontmatter_errors += 1
         body = raw.split("---", 2)[2] if raw.count("---") >= 2 else raw
-        if status in {"ok", "stale"} and re.search(r"同步正文(?:失败|未返回结果)", body):
+        if status in {"ok", "stale"} and ERROR_PLACEHOLDER_PATTERN.search(body):
             placeholder_errors += 1
         unresolved_embedded_sheets += body.count(EMBEDDED_SHEET_UNMIRRORED_MARKER)
         unresolved_sheet_bitable_tabs += body.count(SHEET_BITABLE_UNMIRRORED_MARKER)
@@ -3782,6 +3786,11 @@ def sync(args: argparse.Namespace) -> int:
             retry_candidates.sort(
                 key=lambda node: (
                     0
+                    if has_error_placeholder(
+                        output_dir
+                        / str(old_nodes.get(str(node["node_token"]), {}).get("relative_path", ""))
+                    )
+                    else 1
                     if (
                         str(node.get("obj_type", "")) == "sheet"
                         and str(
@@ -3789,11 +3798,11 @@ def sync(args: argparse.Namespace) -> int:
                         )
                         != "failed"
                     )
-                    else 1
+                    else 2
                     if not has_embedded_sheet_scan(
                         node, old_nodes.get(str(node["node_token"]), {})
                     )
-                    else 2
+                    else 3
                 )
             )
             if args.retry_batch_size is not None:

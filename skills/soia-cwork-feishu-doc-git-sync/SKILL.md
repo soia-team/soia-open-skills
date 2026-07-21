@@ -3,7 +3,7 @@ name: soia-cwork-feishu-doc-git-sync
 description: 将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。
 dependencies:
   hard: [soia-cwork-feishu-cli]
-version: 1.6.4
+version: 1.6.5
 created_at: 2026-07-14 23:24:26
 updated_at: 2026-07-21 14:16:00
 created_by: claude opus 4.6
@@ -176,6 +176,7 @@ sync:
 - 有子节点的飞书节点必须生成一个同名目录，并把正文放在目录内的同名 index Markdown：`父目录/节点名/节点名.md`；叶子节点才直接生成 `节点名.md`。不要生成同级的“同名文件 + 同名文件夹”。
 - 如果飞书本身存在同名叶子与可展开节点、父子同名或同级重复可展开节点，目录/文件会追加稳定的 node ID 短后缀；这是为了避免本地文件系统发生同级冲突，manifest 仍以 `node_token` 区分真实节点。
 - `--retry-failed` 会复用已有完整正文，并把失败节点、独立 Sheet stub、未完成 XML 语义扫描的历史文档加入补偿队列；适合遇到飞书接口限流或启用新的 Sheet 策略后继续补齐。
+- 历史镜像中如果保留“当前同步器只读取文档正文”一类旧占位，即使飞书节点后来从 Sheet 变成 Docx、manifest 状态仍是 `ok`，验收也会判定失败，并在 `--retry-failed` 队列中最高优先级重拉；不能把类型漂移后的旧占位当成成功正文。
 - `--retry-batch-size N` 仅与 `--retry-failed` 配合使用，每次最多补偿 N 个失败或语义缺口节点；大型空间应重复执行，并以 `--validate-only` 的 `failed_records=0`、`unmirrored_sheet_nodes=0`、`unscanned_embedded_sheet_documents=0` 为结束条件。
 - `--retry-failed` 使用上一次 manifest 作为节点清单，不再先对全量文档做元数据探测；启用 Sheet 全量策略时，它会优先补独立 Sheet stub 与缺少语义扫描标记的历史 Docx，再重试普通失败项，并继续受全局节流保护。大型空间配合 `--retry-batch-size` 重复执行，直到 `unmirrored_sheet_nodes` 与 `unscanned_embedded_sheet_documents` 都为 0。
 - 同一输出目录同时只允许一个同步进程；如果上一轮仍在退出或用户重复启动，后续进程会停止并报告，不会并发覆盖 manifest。

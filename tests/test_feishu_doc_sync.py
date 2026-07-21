@@ -1279,6 +1279,42 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertIn("unmirrored_sheet_nodes", result["errors"])
         self.assertEqual(result["stats"]["unmirrored_sheet_nodes"], 1)
 
+    def test_validation_rejects_legacy_sheet_placeholder_after_type_change(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "docs"
+            mirror = output / "10_knowledge-base"
+            metadata = output / "90_同步元数据"
+            mirror.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            document = mirror / "历史类型漂移.md"
+            document.write_text(
+                '---\nnode_token: "node-docx"\nsync_status: "ok"\n---\n\n'
+                "该知识库节点类型为 `sheet`，当前同步器只读取文档正文。\n",
+                encoding="utf-8",
+            )
+            nodes = [
+                {
+                    "node_token": "node-docx",
+                    "title": "历史类型漂移",
+                    "obj_type": "docx",
+                    "sync_status": "ok",
+                    "relative_path": "10_knowledge-base/历史类型漂移.md",
+                    "parent_node_token": "",
+                }
+            ]
+            sidebar_file = metadata / "sidebar.json"
+            sidebar_file.write_text(
+                json.dumps(sync.build_sidebar(nodes), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            result = sync.validate_mirror(output, {"nodes": nodes}, sidebar_file=sidebar_file)
+            has_placeholder = sync.has_error_placeholder(document)
+
+        self.assertTrue(has_placeholder)
+        self.assertFalse(result["ok"])
+        self.assertIn("error_placeholder_in_successful_document", result["errors"])
+        self.assertEqual(result["stats"]["placeholder_errors"], 1)
+
     def test_validation_rejects_unmirrored_base_tab_in_sheet_workbook(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "docs"
