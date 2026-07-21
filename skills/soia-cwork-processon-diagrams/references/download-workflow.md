@@ -77,6 +77,24 @@ python3 scripts/finalize_processon_download.py finalize <managed-temp-file> --mo
 
 只有交付文件校验和 manifest 写入成功后才删除源文件。
 
+## 正式批量下载队列
+
+目录盘点和归档计划完成后，先初始化可恢复的 artifact 状态，再领取小批次：
+
+```bash
+python3 scripts/processon_archive_state.py init \
+  --plan <run-dir>/artifacts/archive-plan.json \
+  --progress <run-dir>/artifacts/download-progress.json
+python3 scripts/processon_archive_state.py next \
+  --plan <run-dir>/artifacts/archive-plan.json \
+  --progress <run-dir>/artifacts/download-progress.json \
+  --limit 10
+```
+
+浏览器下载、`finalize` 和本地结构校验完成后，用 `record` 绑定 artifact_id、浏览器落地文件、最终交付文件与 finalizer manifest。失败或阻断分别用 `mark` 记录原因；未知类型仍在人工确认队列，不得用 `mark` 冒充已确认类型。
+
+每一小批结束运行 `audit`。它重新检查计划 SHA-256、成功记录计数、交付文件大小与 SHA-256、VSDX/XMind 包结构及 finalizer manifest。进度文件使用原子写入和独占锁；会话中断后再次执行 `init` 与 `next` 即可继续。
+
 覆盖属于高影响动作，必须由客户在当前请求中明确授权并同时传入：
 
 ```bash
