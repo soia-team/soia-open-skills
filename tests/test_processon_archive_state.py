@@ -182,6 +182,45 @@ class ProcessOnArchiveStateTests(unittest.TestCase):
             retried = self.module.next_items(plan(), blocked, 10, None, True, True)
             self.assertEqual([item["prior_outcome"] for item in retried], ["failed", "blocked"])
 
+    def test_blocked_diagnostic_is_copied_and_replayed_by_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            plan_path = root / "archive-plan.json"
+            progress_path = root / "download-progress.json"
+            diagnostic = root / "mindmap.md"
+            plan_path.write_text(json.dumps(plan()), encoding="utf-8")
+            diagnostic.write_text("# diagnostic export\n", encoding="utf-8")
+            self.module.initialize_state(plan_path, progress_path)
+
+            blocked = self.module.mark_outcome(
+                plan_path,
+                progress_path,
+                "mind-1",
+                "blocked",
+                "native export produced no file",
+                [diagnostic],
+            )
+            evidence = blocked["blocked"][0]["evidence_files"][0]
+            archived = Path(evidence["archived_path"])
+            self.assertTrue(archived.is_file())
+            self.assertEqual(archived.stat().st_mode & 0o777, 0o600)
+            self.assertNotEqual(archived, diagnostic)
+            self.assertEqual(self.module.audit_state(plan_path, progress_path)["status"], "passed")
+
+            updated = self.module.mark_outcome(
+                plan_path,
+                progress_path,
+                "mind-1",
+                "blocked",
+                "same blocker after restart",
+            )
+            self.assertEqual(updated["blocked"][0]["evidence_files"], [evidence])
+
+            archived.write_text("tampered\n", encoding="utf-8")
+            result = self.module.audit_state(plan_path, progress_path)
+            self.assertEqual(result["status"], "failed")
+            self.assertTrue(any("evidence" in error for error in result["errors"]))
+
     def test_plan_drift_and_unknown_record_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
