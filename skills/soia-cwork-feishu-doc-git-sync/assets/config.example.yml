@@ -22,6 +22,14 @@ paths:
 sync:
   mode: mirror
   prune: false
+  # Exclude a Wiki node and its complete descendant tree before any document,
+  # Sheet, Base, image, attachment or retry work. Prefer stable node_token;
+  # exact_title is supported for portable rules but can match multiple roots.
+  exclude_subtrees:
+    enabled: false
+    roots: []
+    # - node_token: "<excluded-wiki-root-node-token>"
+    # - exact_title: "<exact-root-title>"
   include_non_docx: true
   keep_remote_assets: true
   workers: 4

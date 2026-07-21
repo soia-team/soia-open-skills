@@ -93,6 +93,73 @@ class FeishuDocSyncTests(unittest.TestCase):
             sync.sidebar_links(sidebar),
         )
 
+    def test_subtree_exclusion_filters_root_and_all_descendants(self) -> None:
+        nodes = [
+            {"node_token": "root", "title": "Private", "parent_node_token": ""},
+            {"node_token": "child", "title": "Child", "parent_node_token": "root"},
+            {"node_token": "grandchild", "title": "Grandchild", "parent_node_token": "child"},
+            {"node_token": "keep", "title": "Keep", "parent_node_token": ""},
+        ]
+        settings = sync.configured_subtree_exclusions(
+            {
+                "sync": {
+                    "exclude_subtrees": {
+                        "enabled": True,
+                        "roots": [{"node_token": "root"}],
+                    }
+                }
+            }
+        )
+
+        included, excluded = sync.filter_excluded_subtrees(nodes, settings)
+
+        self.assertEqual([node["node_token"] for node in included], ["keep"])
+        self.assertEqual(
+            {node["node_token"] for node in excluded},
+            {"root", "child", "grandchild"},
+        )
+
+    def test_walk_nodes_does_not_enumerate_an_excluded_root(self) -> None:
+        settings = sync.configured_subtree_exclusions(
+            {
+                "sync": {
+                    "structure_workers": 1,
+                    "exclude_subtrees": {
+                        "enabled": True,
+                        "roots": [{"exact_title": "Private"}],
+                    },
+                }
+            }
+        )
+
+        def fake_node_list(_config, _space_id, parent=None):
+            if parent is None:
+                return [
+                    {"node_token": "private", "title": "Private", "has_child": True},
+                    {"node_token": "keep", "title": "Keep", "has_child": True},
+                ]
+            if parent == "keep":
+                return [
+                    {
+                        "node_token": "kept-child",
+                        "title": "Kept child",
+                        "parent_node_token": "keep",
+                        "has_child": False,
+                    }
+                ]
+            self.fail("excluded subtree was enumerated")
+
+        with mock.patch.object(sync, "node_list", side_effect=fake_node_list) as node_list:
+            nodes = sync.walk_nodes(
+                {"sync": {"structure_workers": 1}},
+                "space",
+                None,
+                settings,
+            )
+
+        self.assertEqual([node["node_token"] for node in nodes], ["keep", "kept-child"])
+        self.assertEqual([call.args[2] for call in node_list.call_args_list], [None, "keep"])
+
     def test_missing_generated_dir_reuses_the_single_existing_generated_root(self) -> None:
         previous_mirror_dir = sync.MIRROR_DIR
         with tempfile.TemporaryDirectory() as temp:
@@ -1314,6 +1381,60 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertIn("error_placeholder_in_successful_document", result["errors"])
         self.assertEqual(result["stats"]["placeholder_errors"], 1)
+
+    def test_validation_rejects_generated_content_for_excluded_subtree(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "docs"
+            mirror = output / "10_knowledge-base"
+            metadata = output / "90_同步元数据"
+            excluded_dir = mirror / "Excluded"
+            excluded_dir.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            active = mirror / "Active.md"
+            excluded = excluded_dir / "Excluded.md"
+            active.write_text(
+                '---\nnode_token: "active"\nsync_status: "ok"\n---\n\n# Active\n',
+                encoding="utf-8",
+            )
+            excluded.write_text("# legacy generated content\n", encoding="utf-8")
+            nodes = [
+                {
+                    "node_token": "active",
+                    "title": "Active",
+                    "obj_type": "docx",
+                    "sync_status": "ok",
+                    "relative_path": "10_knowledge-base/Active.md",
+                    "parent_node_token": "",
+                }
+            ]
+            excluded_nodes = [
+                {
+                    "node_token": "excluded",
+                    "title": "Excluded",
+                    "obj_type": "docx",
+                    "sync_status": "excluded",
+                    "relative_path": "10_knowledge-base/Excluded/Excluded.md",
+                    "parent_node_token": "",
+                    "has_children": True,
+                }
+            ]
+            sidebar_file = metadata / "sidebar.json"
+            sidebar_file.write_text(
+                json.dumps(sync.build_sidebar(nodes), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            result = sync.validate_mirror(
+                output,
+                {"nodes": nodes, "excluded_nodes": excluded_nodes},
+                sidebar_file=sidebar_file,
+            )
+
+        self.assertFalse(result["ok"])
+        self.assertIn("excluded_generated_files", result["errors"])
+        self.assertIn("excluded_generated_directories", result["errors"])
+        self.assertEqual(result["stats"]["excluded_records"], 1)
+        self.assertEqual(result["stats"]["excluded_generated_files"], 1)
+        self.assertEqual(result["stats"]["excluded_generated_directories"], 1)
 
     def test_validation_rejects_unmirrored_base_tab_in_sheet_workbook(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

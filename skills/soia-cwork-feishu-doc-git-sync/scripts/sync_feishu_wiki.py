@@ -342,6 +342,82 @@ def nested(config: dict[str, Any], *keys: str, default: Any = None) -> Any:
     return value
 
 
+def configured_subtree_exclusions(config: dict[str, Any]) -> dict[str, Any]:
+    """Return validated, user-owned Wiki subtree exclusion settings."""
+    raw = nested(config, "sync", "exclude_subtrees", default={})
+    if raw in (None, False):
+        raw = {}
+    if not isinstance(raw, dict):
+        raise SystemExit("sync.exclude_subtrees must be a mapping")
+    enabled = bool(raw.get("enabled", False))
+    roots = raw.get("roots", [])
+    if roots is None:
+        roots = []
+    if not isinstance(roots, list):
+        raise SystemExit("sync.exclude_subtrees.roots must be a list")
+    node_tokens: set[str] = set()
+    exact_titles: set[str] = set()
+    for item in roots:
+        if not isinstance(item, dict):
+            raise SystemExit("each sync.exclude_subtrees.roots item must be a mapping")
+        node_token = str(item.get("node_token", "") or "").strip()
+        exact_title = str(item.get("exact_title", "") or "").strip()
+        if node_token.startswith("<"):
+            node_token = ""
+        if exact_title.startswith("<"):
+            exact_title = ""
+        if not node_token and not exact_title:
+            raise SystemExit(
+                "each sync.exclude_subtrees.roots item requires node_token or exact_title"
+            )
+        if node_token:
+            node_tokens.add(node_token)
+        if exact_title:
+            exact_titles.add(exact_title)
+    if enabled and not node_tokens and not exact_titles:
+        raise SystemExit("enabled sync.exclude_subtrees requires at least one root")
+    return {
+        "enabled": enabled,
+        "node_tokens": node_tokens if enabled else set(),
+        "exact_titles": exact_titles if enabled else set(),
+    }
+
+
+def is_excluded_subtree_root(node: dict[str, Any], settings: dict[str, Any]) -> bool:
+    if not settings.get("enabled"):
+        return False
+    token = str(node.get("node_token", "") or "").strip()
+    title = str(node.get("title", "") or "").strip()
+    return token in settings.get("node_tokens", set()) or title in settings.get(
+        "exact_titles", set()
+    )
+
+
+def filter_excluded_subtrees(
+    nodes: list[dict[str, Any]], settings: dict[str, Any]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Remove configured roots and all descendants from an existing inventory."""
+    if not settings.get("enabled"):
+        return list(nodes), []
+    excluded_tokens = {
+        str(node.get("node_token", ""))
+        for node in nodes
+        if is_excluded_subtree_root(node, settings)
+    }
+    changed = True
+    while changed:
+        changed = False
+        for node in nodes:
+            token = str(node.get("node_token", ""))
+            parent = str(node.get("parent_node_token", "") or "")
+            if token and token not in excluded_tokens and parent in excluded_tokens:
+                excluded_tokens.add(token)
+                changed = True
+    included = [node for node in nodes if str(node.get("node_token", "")) not in excluded_tokens]
+    excluded = [node for node in nodes if str(node.get("node_token", "")) in excluded_tokens]
+    return included, excluded
+
+
 def command_env(config: dict[str, Any]) -> dict[str, str]:
     env = os.environ.copy()
     profile = nested(config, "provider", "profile")
@@ -506,7 +582,12 @@ def node_get(config: dict[str, Any], node_token: str, space_id: str) -> dict[str
     return data
 
 
-def walk_nodes(config: dict[str, Any], space_id: str, max_nodes: int | None) -> list[dict[str, Any]]:
+def walk_nodes(
+    config: dict[str, Any],
+    space_id: str,
+    max_nodes: int | None,
+    subtree_exclusions: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     frontier: list[tuple[str | None, int]] = [(None, 0)]
     seen: set[str] = set()
@@ -515,6 +596,8 @@ def walk_nodes(config: dict[str, Any], space_id: str, max_nodes: int | None) -> 
         workers = max(1, min(int(workers_value), 8))
     except (TypeError, ValueError):
         workers = 4
+    exclusions = subtree_exclusions or {"enabled": False}
+    excluded_roots = 0
     while frontier:
         next_frontier: list[tuple[str | None, int]] = []
         current_depth = frontier[0][1]
@@ -536,6 +619,9 @@ def walk_nodes(config: dict[str, Any], space_id: str, max_nodes: int | None) -> 
                 node = dict(raw)
                 node["depth"] = depth
                 node["parent_node_token"] = raw.get("parent_node_token") or parent
+                if is_excluded_subtree_root(node, exclusions):
+                    excluded_roots += 1
+                    continue
                 result.append(node)
                 if max_nodes and len(result) >= max_nodes:
                     return result
@@ -543,6 +629,8 @@ def walk_nodes(config: dict[str, Any], space_id: str, max_nodes: int | None) -> 
                     next_frontier.append((token, depth + 1))
         print(f"structure depth={current_depth} nodes_total={len(result)} next_parents={len(next_frontier)}", flush=True)
         frontier = next_frontier
+    if excluded_roots:
+        print(f"structure excluded_subtree_roots={excluded_roots}", flush=True)
     return result
 
 
@@ -3113,6 +3201,9 @@ def validate_mirror(
     records = manifest.get("nodes", []) if isinstance(manifest, dict) else []
     if not isinstance(records, list):
         records = []
+    excluded_records = manifest.get("excluded_nodes", []) if isinstance(manifest, dict) else []
+    if not isinstance(excluded_records, list):
+        excluded_records = []
     root = output_dir.resolve()
     errors: list[str] = []
     seen_tokens: set[str] = set()
@@ -3129,6 +3220,9 @@ def validate_mirror(
     unresolved_assets = 0
     failed_records = 0
     stale_records = 0
+    excluded_nodes_in_active_manifest = 0
+    excluded_generated_files = 0
+    excluded_generated_directories = 0
     categories: dict[str, int] = {}
 
     for record in records:
@@ -3198,6 +3292,27 @@ def validate_mirror(
         if status == "ok":
             unresolved_assets += len(extract_asset_references(body))
 
+    excluded_tokens = {
+        str(record.get("node_token", ""))
+        for record in excluded_records
+        if isinstance(record, dict) and record.get("node_token")
+    }
+    excluded_nodes_in_active_manifest = len(seen_tokens & excluded_tokens)
+    for record in excluded_records:
+        if not isinstance(record, dict):
+            continue
+        relative = record.get("relative_path")
+        if not isinstance(relative, str) or not relative:
+            continue
+        candidate = (output_dir / relative).resolve()
+        if not candidate.is_relative_to(root):
+            continue
+        if candidate.is_file():
+            excluded_generated_files += 1
+        parent_token = str(record.get("parent_node_token", "") or "")
+        if parent_token not in excluded_tokens and bool(record.get("has_children")):
+            excluded_generated_directories += int(candidate.parent.is_dir())
+
     if missing_files:
         errors.append("missing_generated_files")
     if frontmatter_errors:
@@ -3218,6 +3333,12 @@ def validate_mirror(
         errors.append("stale_records")
     if require_local_assets and unresolved_assets:
         errors.append("unresolved_assets")
+    if excluded_nodes_in_active_manifest:
+        errors.append("excluded_nodes_in_active_manifest")
+    if excluded_generated_files:
+        errors.append("excluded_generated_files")
+    if excluded_generated_directories:
+        errors.append("excluded_generated_directories")
 
     sidebar_file = sidebar_file or output_dir / METADATA_DIR / SIDEBAR_FILE
     sidebar_value = load_json(sidebar_file, None)
@@ -3242,6 +3363,10 @@ def validate_mirror(
         "failed_records": failed_records,
         "stale_records": stale_records,
         "unresolved_assets": unresolved_assets,
+        "excluded_records": len(excluded_records),
+        "excluded_nodes_in_active_manifest": excluded_nodes_in_active_manifest,
+        "excluded_generated_files": excluded_generated_files,
+        "excluded_generated_directories": excluded_generated_directories,
         "sidebar_missing_links": sidebar_missing_links,
     }
     return {
@@ -3265,6 +3390,10 @@ def print_validation(result: dict[str, Any]) -> None:
         f"unmirrored_sheet_nodes={stats.get('unmirrored_sheet_nodes', 0)} "
         f"unresolved_sheet_bitable_tabs={stats.get('unresolved_sheet_bitable_tabs', 0)} "
         f"stale_records={stats.get('stale_records', 0)} unresolved_assets={stats.get('unresolved_assets', 0)} "
+        f"excluded_records={stats.get('excluded_records', 0)} "
+        f"excluded_active={stats.get('excluded_nodes_in_active_manifest', 0)} "
+        f"excluded_files={stats.get('excluded_generated_files', 0)} "
+        f"excluded_dirs={stats.get('excluded_generated_directories', 0)} "
         f"sidebar_missing_links={stats.get('sidebar_missing_links', 0)}"
     )
     categories = result.get("error_categories", {}) if isinstance(result, dict) else {}
@@ -3274,6 +3403,7 @@ def print_validation(result: dict[str, Any]) -> None:
 
 def sync(args: argparse.Namespace) -> int:
     config, config_path = load_config(args.config)
+    subtree_exclusions = configured_subtree_exclusions(config)
     if args.rebuild_tree_only and not args.rebuild_tree:
         raise SystemExit("--rebuild-tree-only requires --rebuild-tree")
     if args.refresh_tree_only and not args.rebuild_tree:
@@ -3363,6 +3493,8 @@ def sync(args: argparse.Namespace) -> int:
             node.setdefault("parent_node_token", "")
             node.setdefault("depth", 0)
             node.setdefault("has_child", False)
+            if is_excluded_subtree_root(node, subtree_exclusions):
+                raise SystemExit("pilot node is excluded by sync.exclude_subtrees")
             nodes.append(node)
         print(f"pilot_scope selected_nodes={len(nodes)} source=wiki_node_get", flush=True)
     elif (args.retry_failed or args.rebuild_tree_only) and isinstance(previous_manifest, dict) and isinstance(previous_manifest.get("nodes"), list):
@@ -3370,8 +3502,11 @@ def sync(args: argparse.Namespace) -> int:
         mode = "retry_failed" if args.retry_failed else "tree_rebuild"
         print(f"structure source=previous_manifest mode={mode}", flush=True)
     else:
-        nodes = walk_nodes(config, space_id, args.max_nodes)
-    print(f"processed nodes_discovered={len(nodes)}")
+        nodes = walk_nodes(config, space_id, args.max_nodes, subtree_exclusions)
+    nodes, excluded_current_nodes = filter_excluded_subtrees(nodes, subtree_exclusions)
+    print(
+        f"processed nodes_discovered={len(nodes)} excluded_from_inventory={len(excluded_current_nodes)}"
+    )
     if args.dry_run:
         for node in nodes[:10]:
             print(
@@ -3397,6 +3532,27 @@ def sync(args: argparse.Namespace) -> int:
             for node in (previous_manifest.get("nodes", []) if isinstance(previous_manifest, dict) else [])
             if isinstance(node, dict) and node.get("node_token")
         }
+    previous_excluded_nodes = (
+        previous_manifest.get("excluded_nodes", []) if isinstance(previous_manifest, dict) else []
+    )
+    previous_inventory = [
+        node for node in old_nodes.values() if isinstance(node, dict)
+    ] + [node for node in previous_excluded_nodes if isinstance(node, dict)]
+    _, excluded_previous_nodes = filter_excluded_subtrees(
+        previous_inventory,
+        subtree_exclusions,
+    )
+    excluded_records_by_token: dict[str, dict[str, Any]] = {}
+    for node in [*excluded_previous_nodes, *excluded_current_nodes]:
+        token = str(node.get("node_token", "") or "")
+        if not token:
+            continue
+        record = dict(node)
+        record["sync_status"] = "excluded"
+        record["excluded_at"] = sync_started
+        excluded_records_by_token[token] = record
+    excluded_records = list(excluded_records_by_token.values())
+    excluded_tokens = set(excluded_records_by_token)
     incremental = bool(
         not args.full_content
         and (
@@ -3683,6 +3839,7 @@ def sync(args: argparse.Namespace) -> int:
         "moved_deleted": 0,
         "content_fetched": 0,
         "content_reused": 0,
+        "excluded": len(excluded_records),
         "sheets_mirrored": 0,
         "sheet_tabs_mirrored": 0,
         "embedded_sheet_documents_scanned": 0,
@@ -4426,7 +4583,11 @@ def sync(args: argparse.Namespace) -> int:
     current_tokens = {node["node_token"] for node in nodes}
     deleted = []
     if isinstance(old_nodes, dict):
-        deleted = [dict(value, deleted_at=sync_started) for key, value in old_nodes.items() if key not in current_tokens]
+        deleted = [
+            dict(value, deleted_at=sync_started)
+            for key, value in old_nodes.items()
+            if key not in current_tokens and key not in excluded_tokens
+        ]
     for record in deleted:
         record["sync_status"] = "deleted"
     changes = classify_changes(old_nodes, records, deleted)
@@ -4452,6 +4613,7 @@ def sync(args: argparse.Namespace) -> int:
         "changes": change_stats,
         "change_ledger": {"enabled": change_ledger_enabled},
         "nodes": records,
+        "excluded_nodes": excluded_records,
         "deleted_nodes": deleted,
     }
     state = {
@@ -4552,7 +4714,8 @@ def sync(args: argparse.Namespace) -> int:
     print(
         "completed "
         f"created={counts['created']} updated={counts['updated']} failed={counts['failed']} "
-        f"stale={counts['stale']} stubs={counts['stub']} unchanged={counts['unchanged']} moved_deleted={counts['moved_deleted']} "
+        f"stale={counts['stale']} stubs={counts['stub']} unchanged={counts['unchanged']} "
+        f"excluded={counts['excluded']} moved_deleted={counts['moved_deleted']} "
         f"deleted_marked={len(deleted)} remote_images={counts['remote_images']} "
         f"sheets_mirrored={counts['sheets_mirrored']} sheet_tabs={counts['sheet_tabs_mirrored']} "
         f"bitables_mirrored={counts['bitables_mirrored']} bitable_tables={counts['bitable_tables_mirrored']}"
