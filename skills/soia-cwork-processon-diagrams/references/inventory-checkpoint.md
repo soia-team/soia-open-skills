@@ -112,5 +112,7 @@ python3 scripts/processon_inventory_state.py audit --run-dir <run-dir>
 
 - XDG state 运行包是控制面：持续更新，可以续跑，并保留原始批次证据。
 - Markdown 盘点报告是阶段性快照：从状态文件生成或核对，不反向充当唯一队列。
+- 目录审计通过后，在同一运行包的 `artifacts/archive-plan.json` 生成资产计划；它记录 checkpoint SHA-256、稳定 `artifact_id`、默认格式、unknown 队列和同名风险。计划可重建，不能反向替代 checkpoint。
+- 阶段状态至少区分：`inventory_running`、`inventory_completed_asset_archive_pending`、`known_ready_pending_confirmation`、`asset_archive_running`、`asset_archive_completed`。只有目录审计和资产 manifest 都通过，才可对外报告整体归档完成。
 - VSDX/XMind/POS 和预览文件是内容归档：只在目录盘点和类型确认后下载。
 - 状态 JSON、批次 JSON 和企业图表都可能敏感；公开发布前单独做权限与脱敏审查。
