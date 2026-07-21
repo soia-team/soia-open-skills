@@ -1,4 +1,4 @@
 interface:
   display_name: "Dev GitHub Ops"
-  short_description: "Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates."
-  default_prompt: "Use soia-dev-github-ops: Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates."
+  short_description: "Use gh CLI for GitHub issue, PR, checks, review, workflow run, release, and collaborator-permission operations, plus a pre-merge rule-review procedure, with structured JSON output and safety gates."
+  default_prompt: "Use soia-dev-github-ops: review this open PR against the repo's own rules and tell me whether it's safe to merge."
