@@ -7,11 +7,20 @@ import json
 import os
 import re
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 
-CACHE_VERSION = 3
+CACHE_VERSION = 4
+RELEASE_METADATA_FIELDS = (
+    "catalog_release_id",
+    "index_updated_at",
+    "snapshot_at",
+    "catalog_schema_version",
+    "source_fingerprint",
+)
+RELEASE_METADATA_TIME_FIELDS = ("index_updated_at", "snapshot_at")
 
 TYPE_RULES = [
     ("视频", {"mp4", "mkv", "avi", "flv", "mov", "rmvb", "wmv", "m4v", "ts", "m2ts", "vob", "webm", "mpeg", "mpg"}),
@@ -68,6 +77,49 @@ def load_json(path: Path, default: Any = None) -> Any:
     if not path.exists():
         return default
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def normalize_release_metadata(metadata: Any | None) -> dict[str, str] | None:
+    """Validate caller-owned release metadata without synthesizing timestamps."""
+    if metadata is None:
+        return None
+    if not isinstance(metadata, dict):
+        raise ValueError("release metadata 必须是 JSON 对象")
+    unexpected = sorted(set(metadata) - set(RELEASE_METADATA_FIELDS))
+    missing = [field for field in RELEASE_METADATA_FIELDS if field not in metadata]
+    if missing or unexpected:
+        details = []
+        if missing:
+            details.append(f"缺少字段：{', '.join(missing)}")
+        if unexpected:
+            details.append(f"未知字段：{', '.join(unexpected)}")
+        raise ValueError(f"release metadata 字段必须精确为五项（{'；'.join(details)}）")
+    normalized: dict[str, str] = {}
+    for field in RELEASE_METADATA_FIELDS:
+        value = metadata[field]
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"release metadata.{field} 必须是非空字符串")
+        normalized[field] = value.strip()
+    parsed_times: dict[str, datetime] = {}
+    for field in RELEASE_METADATA_TIME_FIELDS:
+        value = normalized[field]
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise ValueError(f"release metadata.{field} 必须是 ISO-8601 带时区时间") from error
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            raise ValueError(f"release metadata.{field} 必须是 ISO-8601 带时区时间")
+        parsed_times[field] = parsed
+    if parsed_times["snapshot_at"] > parsed_times["index_updated_at"]:
+        raise ValueError("release metadata.snapshot_at 不能晚于 index_updated_at")
+    return normalized
+
+
+def release_metadata_fingerprint(metadata: dict[str, str] | None) -> str | None:
+    if metadata is None:
+        return None
+    canonical = json.dumps(metadata, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def parse_search_markdown(path: Path) -> dict[str, Any]:
@@ -363,6 +415,7 @@ def prepare_incremental(
     cache_dir: Path,
     force: bool = False,
     verify: bool = False,
+    release_metadata: Any | None = None,
 ) -> dict[str, Any]:
     catalog_path = catalog_path.resolve()
     search_dir = search_dir.resolve()
@@ -375,6 +428,8 @@ def prepare_incremental(
     old_manifest = load_json(manifest_path, {}) or {}
     if old_manifest.get("version") != CACHE_VERSION:
         old_manifest = {}
+    release_metadata = normalize_release_metadata(release_metadata)
+    release_fingerprint = release_metadata_fingerprint(release_metadata)
 
     source_paths = sorted(search_dir.glob("*.md"), key=lambda item: item.name)
     if not source_paths:
@@ -394,6 +449,7 @@ def prepare_incremental(
         old = old_partitions.get(partition, {})
         changed = (
             force
+            or old_manifest.get("releaseMetadataFingerprint") != release_fingerprint
             or old.get("sha256") != source_hash
             or old.get("source") != str(source_path.resolve())
             or not cache_path.exists()
@@ -411,6 +467,9 @@ def prepare_incremental(
                 parsed["sha256"] = source_hash
                 atomic_write_json(cache_path, parsed)
                 changed_partitions.append(partition)
+        if parsed.get("releaseMetadata") != release_metadata:
+            parsed["releaseMetadata"] = release_metadata
+            atomic_write_json(cache_path, parsed)
         partition_caches.append(parsed)
         next_partitions[partition] = {
             "source": str(source_path.resolve()),
@@ -448,6 +507,7 @@ def prepare_incremental(
 
     build_master = (
         force
+        or old_manifest.get("releaseMetadataFingerprint") != release_fingerprint
         or bool(changed_partitions)
         or bool(stale_partitions)
         or old_manifest.get("catalogSha256") != catalog_hash
@@ -460,6 +520,8 @@ def prepare_incremental(
         "searchDir": str(search_dir),
         "output": str(output_path),
         "detailDir": str(detail_dir),
+        "releaseMetadata": release_metadata,
+        "releaseMetadataFingerprint": release_fingerprint,
         "partitions": next_partitions,
     }
     plan = {
@@ -472,6 +534,7 @@ def prepare_incremental(
         "aggregatePath": str(aggregate_path),
         "buildMaster": build_master,
         "verify": verify,
+        "releaseMetadata": release_metadata,
         "partitions": partition_plan,
         "changedPartitions": changed_partitions,
         "stalePartitions": stale_partitions,

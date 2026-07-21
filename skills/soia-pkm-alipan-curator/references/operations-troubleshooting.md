@@ -94,6 +94,7 @@
 
 - 关键 Excel/说明上传后重新扫描或独立 `ll`，把最终路径、字节数、SHA1 和可选 file_id 写入 `required_artifacts`；命令回显、旧 manifest 或本地哈希单独都不算远端成功。
 - 资源地图把根入口、重点分类/课程的最终 file_id 写入 `resource_maps.required_ids`，并显式提供本次云盘 `url_prefix`。审计只认 Markdown 链接，不认正文中的“可直达”文字或裸 URL。
+- 结构写入完成后必须重新发布云盘索引：OB、总 Excel、分区 Excel 和现行资源地图共用一份 release metadata；上传后生成 catalog publication manifest，并以 `audit_catalog_publish.py --final` 核对版本/时间一致、期望分区覆盖、本地与远端 SHA1/bytes/file_id、同名唯一和旧 ID 零引用。缺任一证据时状态保持 `pending_catalog_publish`。
 - 若地图链接来自移动前的旧 file_id，或回执抄错 SHA1，结构审计必须失败并以独立实盘结果纠正，不能为了让合同通过而改实盘证据。
 
 ### 去套娃前先判技术依赖

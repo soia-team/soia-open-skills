@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import subprocess
 import sys
@@ -60,6 +61,20 @@ def refresh_migration_conservation_report(root: Path) -> None:
         root / report_member,
         audit.audit_migration_conservation.audit_run(root),
     )
+
+
+def refresh_catalog_publish_report(root: Path) -> None:
+    manifest = audit.read_json(root / "run.json")
+    report = audit.audit_catalog_publish.audit_catalog_publication(
+        root,
+        manifest["files"]["catalog_publish_manifest"],
+        final=True,
+    )
+    write_json(root / manifest["files"]["catalog_publish_audit"], report)
+
+
+def sha1_bytes(value: bytes) -> str:
+    return hashlib.sha1(value).hexdigest()
 
 
 def add_cleanup_batch(
@@ -154,6 +169,47 @@ def make_valid_bundle(root: Path) -> None:
     })
     (root / "handoff").mkdir(parents=True, exist_ok=True)
     (root / "handoff/receipt.md").write_text("completed\n", encoding="utf-8")
+    release_metadata = {
+        "catalog_release_id": "2026.01.01.1",
+        "index_updated_at": "2026-01-01T12:00:00+08:00",
+        "snapshot_at": "2026-01-01T11:59:00+08:00",
+        "catalog_schema_version": "1",
+        "source_fingerprint": "sha256:test-fixture",
+    }
+    release_bytes = json.dumps(release_metadata, ensure_ascii=False).encode("utf-8")
+    entry = root / "catalog/00-catalog.txt"
+    detail = root / "catalog/learning-detail.txt"
+    consumer = root / "catalog/consumer.md"
+    entry.parent.mkdir(parents=True, exist_ok=True)
+    entry.write_bytes(release_bytes)
+    detail.write_bytes(release_bytes)
+    consumer.write_text(json.dumps(release_metadata, ensure_ascii=False), encoding="utf-8")
+    write_json(root / "catalog/release-metadata.json", release_metadata)
+    local_entry = {
+        "logical_name": "catalog-entry", "path": "catalog/00-catalog.txt",
+        "size": len(release_bytes), "sha1": sha1_bytes(release_bytes),
+        "file_id": "catalog-entry-id", "role": "catalog_entry",
+    }
+    local_detail = {
+        "logical_name": "learning-detail", "path": "catalog/learning-detail.txt",
+        "size": len(release_bytes), "sha1": sha1_bytes(release_bytes),
+        "file_id": "learning-detail-id", "role": "partition_detail", "partition": "learning",
+    }
+    remote_entry = {**local_entry, "path": "/00-catalog.xlsx"}
+    remote_detail = {**local_detail, "path": "/00-details/learning.xlsx"}
+    write_json(root / "catalog/catalog-publication.json", {
+        "publication_status": "passed",
+        "idempotence_status": "unchanged",
+        **release_metadata,
+        "expected_partitions": ["learning"],
+        "artifacts": {"local": [local_entry, local_detail], "remote": [remote_entry, remote_detail]},
+        "remote_inventory": [remote_entry, remote_detail],
+        "consumer_audits": [{
+            "path": "catalog/consumer.md",
+            "old_file_ids": [],
+            "old_file_id_references": 0,
+        }],
+    })
     plan = [{"action_id": "B10-001", "op": "mkdir", "to": "/learning/staging", "reason": "prepare"}]
     write_jsonl(root / "actions/10.plan.jsonl", plan)
     write_jsonl(root / "actions/10.result.jsonl", [{**plan[0], "status": "verified"}])
@@ -171,6 +227,9 @@ def make_valid_bundle(root: Path) -> None:
             "final_scan": "verification/final.scan.jsonl",
             "final_errors": "verification/final.scan.jsonl.errors",
             "structure_audit": "verification/structure-audit.json",
+            "catalog_release_metadata": "catalog/release-metadata.json",
+            "catalog_publish_manifest": "catalog/catalog-publication.json",
+            "catalog_publish_audit": "verification/catalog-publish-audit.json",
             "ai_review": "verification/ai-review.json",
             "migration_conservation": "verification/migration-conservation.json",
             "receipt": "handoff/receipt.md",
@@ -178,6 +237,7 @@ def make_valid_bundle(root: Path) -> None:
         "batches": [{"plan": "actions/10.plan.jsonl", "result": "actions/10.result.jsonl"}],
     })
     refresh_migration_conservation_report(root)
+    refresh_catalog_publish_report(root)
 
 
 class RunBundleTests(unittest.TestCase):
@@ -764,6 +824,37 @@ class RunBundleTests(unittest.TestCase):
             write_jsonl(root / "analysis/content-audit.jsonl", rows)
             result = audit.audit_bundle(root, final=True)
         self.assertIn("content_confidence_missing_or_invalid", {item["kind"] for item in result["violations"]})
+
+    def test_final_cloud_write_requires_catalog_publication_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            manifest = audit.read_json(root / "run.json")
+            manifest["files"].pop("catalog_publish_manifest")
+            write_json(root / "run.json", manifest)
+            result = audit.audit_bundle(root, final=True)
+
+        self.assertIn(
+            "catalog_publish_file_not_registered",
+            {item["kind"] for item in result["violations"]},
+        )
+        self.assertEqual(result["checked"]["catalog_publish"], "failed")
+
+    def test_final_rejects_stale_catalog_publication_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            make_valid_bundle(root)
+            report_path = root / "verification/catalog-publish-audit.json"
+            report = audit.read_json(report_path)
+            report["checked"]["expected_partitions"] = 999
+            write_json(report_path, report)
+            result = audit.audit_bundle(root, final=True)
+
+        self.assertIn(
+            "catalog_publish_audit_stale_or_mismatched",
+            {item["kind"] for item in result["violations"]},
+        )
+        self.assertEqual(result["checked"]["catalog_publish"], "failed")
 
     def test_cli_returns_nonzero_for_incomplete_bundle(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

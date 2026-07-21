@@ -19,11 +19,19 @@ JSONL 每行：{"path","name","id","dir","size"[,"agg_files","agg_size"]}
 或通过 SOIA_ALIPAN_URL_PREFIX 提供，不在公共 skill 中写死用户盘位。
 """
 import json, re, argparse, os
-from datetime import date
+from datetime import date, datetime
 from collections import defaultdict, Counter
 VID={'mp4','mkv','avi','flv','rmvb','mov','ts','wmv','m4v','mpg','vob'}
 AUD={'mp3','wma','m4a','flac','wav','ape'}; DOC={'pdf','doc','docx','ppt','pptx','epub','txt','azw3','mobi','xls','xlsx'}; IMG={'jpg','jpeg','png','gif','bmp','webp'}
 SERIES_CAP = 12  # 同一资源下叶文件夹超过此数则压缩
+RELEASE_METADATA_FIELDS = (
+    'catalog_release_id',
+    'index_updated_at',
+    'snapshot_at',
+    'catalog_schema_version',
+    'source_fingerprint',
+)
+RELEASE_METADATA_TIME_FIELDS = ('index_updated_at', 'snapshot_at')
 
 def human(n):
     n=n or 0
@@ -48,6 +56,99 @@ GLOBAL_TOTALS = re.compile(
 )
 SUMMARY_HEADER = '| 区 | 直达 | 目录 | 文件 | 体量 |'
 H1_HEADING = re.compile(r'^#\s+.+$', re.MULTILINE)
+
+
+def _release_metadata_yaml(value):
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _release_metadata_cell(value):
+    return value.replace('|', '\\|')
+
+
+def normalize_release_metadata(metadata):
+    """Validate caller-owned release metadata without inventing a timestamp."""
+    if not isinstance(metadata, dict):
+        raise ValueError('release metadata 必须是 JSON 对象')
+    unexpected = sorted(set(metadata) - set(RELEASE_METADATA_FIELDS))
+    missing = [field for field in RELEASE_METADATA_FIELDS if field not in metadata]
+    if missing or unexpected:
+        details = []
+        if missing:
+            details.append(f"缺少字段：{', '.join(missing)}")
+        if unexpected:
+            details.append(f"未知字段：{', '.join(unexpected)}")
+        raise ValueError(f"release metadata 字段必须精确为五项（{'；'.join(details)}）")
+    normalized = {}
+    for field in RELEASE_METADATA_FIELDS:
+        value = metadata[field]
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f'release metadata.{field} 必须是非空字符串')
+        normalized[field] = value.strip()
+    parsed_times = {}
+    for field in RELEASE_METADATA_TIME_FIELDS:
+        try:
+            parsed = datetime.fromisoformat(normalized[field].replace('Z', '+00:00'))
+        except ValueError as error:
+            raise ValueError(f'release metadata.{field} 必须是 ISO-8601 带时区时间') from error
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            raise ValueError(f'release metadata.{field} 必须是 ISO-8601 带时区时间')
+        parsed_times[field] = parsed
+    if parsed_times['snapshot_at'] > parsed_times['index_updated_at']:
+        raise ValueError('release metadata.snapshot_at 不能晚于 index_updated_at')
+    return normalized
+
+
+def load_release_metadata(argument):
+    if argument is None:
+        return None
+    raw = argument.strip()
+    if not raw:
+        raise ValueError('--release-metadata 不能为空')
+    if raw.startswith('{'):
+        source = raw
+    else:
+        if not os.path.isfile(raw):
+            raise ValueError('--release-metadata 必须是 JSON 对象或存在的 JSON 文件')
+        with open(raw, encoding='utf-8') as handle:
+            source = handle.read()
+    try:
+        return normalize_release_metadata(json.loads(source))
+    except json.JSONDecodeError as error:
+        raise ValueError('--release-metadata 不是有效 JSON') from error
+
+
+def apply_release_metadata(markdown, metadata):
+    """Upsert release metadata into generated Markdown frontmatter and visible header."""
+    if metadata is None:
+        return markdown
+    frontmatter = re.match(r'\A---\n(?P<body>.*?)\n---\n', markdown, re.DOTALL)
+    fields = ''.join(f'{field}: {_release_metadata_yaml(metadata[field])}\n' for field in RELEASE_METADATA_FIELDS)
+    if frontmatter:
+        body = re.sub(
+            rf'^(?:{"|".join(RELEASE_METADATA_FIELDS)}):[^\n]*(?:\n|\Z)',
+            '',
+            frontmatter.group('body'),
+            flags=re.MULTILINE,
+        ).rstrip('\n')
+        prefix = f'{body}\n' if body else ''
+        markdown = f"---\n{prefix}{fields}---\n" + markdown[frontmatter.end():]
+    else:
+        markdown = f"---\n{fields}---\n" + markdown
+    section = '## 发布元数据\n\n| 字段 | 值 |\n|---|---|\n' + ''.join(
+        f'| {field} | {_release_metadata_cell(metadata[field])} |\n'
+        for field in RELEASE_METADATA_FIELDS
+    )
+    field_pattern = '|'.join(RELEASE_METADATA_FIELDS)
+    markdown = re.sub(
+        rf'\n+## 发布元数据\n\n\| 字段 \| 值 \|\n\|---\|---\|\n(?:\| (?:{field_pattern}) \| .* \|\n)+\n+',
+        '\n\n',
+        markdown,
+    )
+    heading = re.search(r'^#\s+.+\n', markdown, re.MULTILINE)
+    if not heading:
+        raise ValueError('无法为 release metadata 定位 Markdown 可见头部')
+    return markdown[:heading.end()] + '\n' + section + markdown[heading.end():]
 
 
 def _natural_key(value):
@@ -416,7 +517,7 @@ def main():
     ap.add_argument('--merge-existing',help='把本次唯一根分区增量合并进现有全盘总览')
     ap.add_argument('--allow-new-partition', action='store_true',
                     help='显式允许增量分区不存在时插入总表和正文；默认缺失即失败')
-    ap.add_argument('--merge-date',default=date.today().isoformat(),help='增量状态日期 YYYY-MM-DD')
+    ap.add_argument('--merge-date',help='可选：增量状态日期/时间；提供 release metadata 时默认使用 index_updated_at')
     ap.add_argument('--title',default='云盘馆藏总览'); ap.add_argument('--drive',default='云盘')
     ap.add_argument('--search-dir',help='额外输出:按区分的全文检索索引目录(每文件一行,只搜不看)')
     ap.add_argument('--junk',default='',help='逗号分隔的路径前缀,其下文件不入检索索引(如模板碎片区)')
@@ -436,10 +537,17 @@ def main():
                     help='可选：关键词到图标的 JSON 对象，如 {"学习":"📚"}')
     ap.add_argument('--max-heading-depth',type=int,default=None,
                     help='标题最大深度;更深的编号目录停留在该标题级别')
+    ap.add_argument('--release-metadata',
+                    help='可选：release metadata JSON 字符串或 JSON 文件（五项字段均需非空，时间须带时区）')
     a=ap.parse_args()
+    try:
+        release_metadata = load_release_metadata(a.release_metadata)
+    except ValueError as error:
+        ap.error(str(error))
     if a.linkify_existing:
         markdown=open(a.linkify_existing).read()
         updated,count=linkify_existing_headings(markdown)
+        updated=apply_release_metadata(updated, release_metadata)
         open(a.out,'w').write(updated)
         print(f"OK {a.out} · {count} 个课程标题改为可点击")
         return
@@ -578,16 +686,19 @@ def main():
         out.append("\n"+title_line(r,r,1,e))
         emit(r, 1, r)
     markdown="\n".join(x for x in out if x is not None)+"\n"
+    markdown=apply_release_metadata(markdown, release_metadata)
     merged_partition=None
     if a.merge_existing:
         existing=open(a.merge_existing).read()
+        merge_stamp=a.merge_date or (release_metadata['index_updated_at'] if release_metadata else None)
         markdown,merged_partition,_,_=merge_partition_catalog(
             existing,
             markdown,
-            a.merge_date,
+            merge_stamp,
             allow_new_partition=a.allow_new_partition,
             expected_partition=expected_partition,
         )
+        markdown=apply_release_metadata(markdown, release_metadata)
     with open(a.out,'w') as target:
         target.write(markdown)
     suffix=f" · 增量合并 {merged_partition}" if merged_partition else ""
@@ -636,8 +747,9 @@ def main():
                 for p in sorted(by_res[res]):
                     rel=esc(p[len(res)+1:] if p.startswith(res+'/') else recs[p]['name'])
                     lines.append(f"| {rel} | {human(recs[p].get('size'))} |")
+            search_markdown=apply_release_metadata("\n".join(lines)+"\n", release_metadata)
             with open(os.path.join(a.search_dir, zone.replace('/','_')+'.md'),'w') as target:
-                target.write("\n".join(lines)+"\n")
+                target.write(search_markdown)
         print(f"检索索引: {a.search_dir} · {len(zfiles)}个区文件 · {idx_total:,}行文件条目")
 
 if __name__=='__main__': main()
