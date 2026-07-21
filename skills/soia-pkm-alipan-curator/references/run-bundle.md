@@ -75,6 +75,9 @@ ${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/runs/<run-id>/
 | `preflight-reclass-<attempt>.json` | 对已登记计划的新鲜只读预检结果，以及 manifest/全部计划/cleanup authorization/empty-cleanup evidence SHA-256 | dry-run 前；先在 `run.json` 登记路径，再生成 |
 | `final.scan.jsonl` | 无聚合、无 `no-descend` 的终态扫描 | 所有导航上传后 |
 | `structure-audit.json` | `audit_structure.py --final` 的完整 JSON 输出 | 终态扫描后 |
+| `release-metadata.json` | 本次索引发布唯一版本、更新时间、快照时间、结构版本与数据源指纹 | 生成 OB/Excel 前创建一次，后续只读 |
+| `catalog-publication.json` | 本地/远端索引产物、期望分区、消费者旧 ID 引用和幂等状态的发布 manifest | 云端上传并独立 `ll` 复核后 |
+| `catalog-publish-audit.json` | `audit_catalog_publish.py --final` 的完整 JSON 输出 | 云端发布证据齐全后 |
 | `ai-review.json` | AI 对名实、分类轴、重点目录、统计与消费端的第二遍审核 | 机械审计后 |
 | `receipt.md` | 给用户和下一个 AI 的短回执 | 全部通过后 |
 
@@ -108,6 +111,9 @@ ${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/runs/<run-id>/
     "final_errors": "verification/final.scan.jsonl.errors",
     "migration_conservation": "verification/migration-conservation.json",
     "structure_audit": "verification/structure-audit.json",
+    "catalog_release_metadata": "catalog/release-metadata.json",
+    "catalog_publish_manifest": "catalog/catalog-publication.json",
+    "catalog_publish_audit": "verification/catalog-publish-audit.json",
     "ai_review": "verification/ai-review.json",
     "receipt": "handoff/receipt.md"
   },
@@ -120,7 +126,10 @@ ${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/runs/<run-id>/
     "audit",
     "dry-run",
     "execute",
-    "fresh-terminal-scan"
+    "fresh-terminal-scan",
+    "refresh-ob-excel",
+    "publish-cloud-catalog",
+    "final-audit"
   ],
   "batches": [
     {"name": "rename-and-regroup", "plan": "actions/10-rename.plan.jsonl", "result": "actions/10-rename.result.jsonl"}
@@ -132,6 +141,8 @@ ${XDG_STATE_HOME:-$HOME/.local/state}/soia-pkm-alipan-curator/runs/<run-id>/
 ```
 
 用户点名的每个链接、inventory 发现的高风险大桶、含“未分类/合集/视频/其他”等弱语义目录，都要进入 `focus_targets`。没有进入焦点合同，就不能靠一句“全区已扫”宣布完成。
+
+有任一普通批次或 cleanup 批次时，索引发布三件套必须登记并存在。云盘结构动作结束、终态扫描通过但索引尚未发布时，`status` 应为 `pending_catalog_publish`；只有发布 manifest 与发布审计通过后才允许改成 `completed`。纯盘点且没有任何云盘写入的运行包不强制生成发布三件套。
 
 ## 执行链与正式脚本
 
@@ -327,7 +338,7 @@ python3 '<skill-dir>/scripts/audit_run_bundle.py' \
   --run-dir '<run-dir>' --final
 ```
 
-`ai-review.json` 必须使用下列稳定检查名，至少覆盖：焦点目录逐项、分类主轴互斥性、名不符实、超限平铺、编号/导览、跨区消费端、计数守恒。稳定名称让后继 AI 和机械脚本能判断复核是否真的做过，而不是只看到一个笼统的 `passed`：
+`ai-review.json` 必须使用下列稳定检查名，至少覆盖：焦点目录逐项、分类主轴互斥性、名不符实、超限平铺、编号/导览、跨区消费端、计数守恒与索引发布。稳定名称让后继 AI 和机械脚本能判断复核是否真的做过，而不是只看到一个笼统的 `passed`：
 
 ```json
 {"status":"passed","checks":[
@@ -337,11 +348,12 @@ python3 '<skill-dir>/scripts/audit_run_bundle.py' \
   {"name":"long-series","status":"passed","evidence":"declared and discovered long series were checked"},
   {"name":"numbering-guides","status":"passed","evidence":"numbering and required guides agree with the contract"},
   {"name":"consumer-links","status":"passed","evidence":"resource maps contain verified direct cloud links"},
-  {"name":"count-conservation","status":"passed","evidence":"initial, moved, archived and final counts reconcile"}
+  {"name":"count-conservation","status":"passed","evidence":"initial, moved, archived and final counts reconcile"},
+  {"name":"catalog-publication","status":"passed","evidence":"OB, local Excel and remote catalog share one release and verified identities"}
 ],"unresolved":[]}
 ```
 
-机械脚本验证“证据是否齐全且相互闭合”，AI 验证“分类判断是否合理”。两者都通过才允许把 `run.json.status` 改为 `completed`。
+机械脚本验证“证据是否齐全且相互闭合”，AI 验证“分类判断是否合理”。结构写入后的索引发布审计也是硬门；三者都通过才允许把 `run.json.status` 改为 `completed`。
 
 ## 生命周期
 
@@ -350,6 +362,7 @@ python3 '<skill-dir>/scripts/audit_run_bundle.py' \
 3. 方案与用户裁定写入运行包，所有写操作先写计划账本。
 4. 每批结果独立复核；失败不覆盖，追加新批次。
 5. 严格按 `merge map → assign numbers (optional) → build reclass → build structure → preflight → audit → dry-run → execute → fresh terminal scan` 收敛；迁移后按 file_id 扫描空壳，获授权后才回收站清理。
-6. 导航上传后做最终扫描、结构审计、AI 复核和运行包审计；随后必须更新 OB、Excel、云盘索引和 `01_先看这里`，并验证这些消费端引用最终 file_id。
-7. OB 只保存资源地图、冻结审计和短回执；运行时 JSONL 留在 state，不复制进 vault。
-8. 交接时只需给出 `<run-dir>`；接手 AI 先运行 `audit_run_bundle.py`，再读 `run.json` 指向的证据。
+6. 终态扫描和结构审计通过后，把运行状态置为 `pending_catalog_publish`；生成一次 release metadata，用它刷新 OB、Excel、现行资源地图和 `01_先看这里`。
+7. 重新上传云端总索引和变化分区明细，独立核对 file_id/SHA1/bytes/唯一同名文件；生成发布 manifest，运行 `audit_catalog_publish.py --final`，再完成 AI 复核和 `audit_run_bundle.py --final`。
+8. OB 只保存资源地图、冻结审计和短回执；运行时 JSONL 留在 state，不复制进 vault。
+9. 交接时只需给出 `<run-dir>`；接手 AI 先运行 `audit_run_bundle.py`，再读 `run.json` 指向的证据。

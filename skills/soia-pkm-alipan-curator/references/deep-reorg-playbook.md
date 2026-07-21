@@ -75,7 +75,7 @@ merge map → assign numbers (optional) → build reclass → build structure
 
 ## 八、完成定义（DoD）
 
-区内：目标结构落地；若方案选择编号，则适用层每目录均有编号、同父层无重复前缀；仅合同显式 `contiguous: true` 的层级要求从 `start`（默认 `1`）无断号，其他层允许保留来源顺序带来的空号。若设置长系列上限，则系列根散文件数为 0、空分组数为 0、超限分组数为 0、未声明超限平铺目录为 0；若选择学习导览，则根级与分类级导览缺失数为 0、正式说明文件缺失数为 0；关键云端 Excel/说明在 `required_artifacts` 中按路径、字节、SHA1 和可选 file_id 精确对账；若指定复核区，则 `unclear` 全部位于该根下、状态已验证且目标文件或完整资源包目录存在于终态扫描；迁移后空壳已按 file_id 独立扫描并仅按批准清单回收站清理；账本齐全、删除项可回滚。使用 `scripts/audit_structure.py` 对终态 scan JSONL 复现这些结论。区外：索引三查通过，`resource_maps` 中要求的最终 file_id 都以真实 Markdown 链接存在，OB、Excel、云盘索引和 `01_先看这里` 均已更新，方案文档变更史回填、遗留项显式列在「待拍板」。正文声称“可直达”不算证据。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
+区内：目标结构落地；若方案选择编号，则适用层每目录均有编号、同父层无重复前缀；仅合同显式 `contiguous: true` 的层级要求从 `start`（默认 `1`）无断号，其他层允许保留来源顺序带来的空号。若设置长系列上限，则系列根散文件数为 0、空分组数为 0、超限分组数为 0、未声明超限平铺目录为 0；若选择学习导览，则根级与分类级导览缺失数为 0、正式说明文件缺失数为 0；关键云端 Excel/说明在 `required_artifacts` 中按路径、字节、SHA1 和可选 file_id 精确对账；若指定复核区，则 `unclear` 全部位于该根下、状态已验证且目标文件或完整资源包目录存在于终态扫描；迁移后空壳已按 file_id 独立扫描并仅按批准清单回收站清理；账本齐全、删除项可回滚。使用 `scripts/audit_structure.py` 对终态 scan JSONL 复现这些结论。区外：索引三查通过，`resource_maps` 中要求的最终 file_id 都以真实 Markdown 链接存在，OB、Excel、云盘索引和 `01_先看这里` 均已更新，且共享同一索引版本、带时区更新时间、快照时间、结构版本和数据源指纹；云端发布 manifest 已按最终 file_id/SHA1/bytes/唯一同名文件完成独立复核，`audit_catalog_publish.py --final` 返回 `passed`。方案文档变更史回填、遗留项显式列在「待拍板」。正文声称“可直达”不算证据。完整异常处理与验收口径见 [operations-troubleshooting.md](operations-troubleshooting.md)。缺一项不算完。
 
 特大模块还要满足：用户点名和 inventory 风险目录全部进入运行包 `focus_targets`；每项都有内容证据和建议；所有动作计划与结果一一闭合；机械结构审计和独立 AI 复核均通过；`audit_run_bundle.py --final` 返回 `passed`。顶层目录看起来整齐、索引已刷新或部分样本通过，都不能替代这道门禁。
 

@@ -13,7 +13,12 @@ import tempfile
 import time
 from pathlib import Path
 
-from catalog_xlsx.cache import commit_manifest, default_cache_dir, prepare_incremental
+from catalog_xlsx.cache import (
+    commit_manifest,
+    default_cache_dir,
+    normalize_release_metadata,
+    prepare_incremental,
+)
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -114,8 +119,31 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--force", action="store_true", help="忽略缓存，重建全部分区")
     parser.add_argument("--verify", action="store_true", help="渲染总索引与本次变化分区的全部工作表")
+    parser.add_argument(
+        "--release-metadata",
+        help="可选：release metadata JSON 字符串或 JSON 文件（五项字段均需非空，时间须带时区）",
+    )
     parser.add_argument("--json", action="store_true", help="只输出 JSON 结果")
     return parser.parse_args()
+
+
+def load_release_metadata(argument: str | None) -> dict[str, str] | None:
+    if argument is None:
+        return None
+    raw = argument.strip()
+    if not raw:
+        raise ValueError("--release-metadata 不能为空")
+    if raw.startswith("{"):
+        source = raw
+    else:
+        path = Path(raw).expanduser()
+        if not path.is_file():
+            raise ValueError("--release-metadata 必须是 JSON 对象或存在的 JSON 文件")
+        source = path.read_text(encoding="utf-8")
+    try:
+        return normalize_release_metadata(json.loads(source))
+    except json.JSONDecodeError as error:
+        raise ValueError("--release-metadata 不是有效 JSON") from error
 
 
 def validate_inputs(args: argparse.Namespace) -> None:
@@ -195,6 +223,7 @@ def cleanup_stale_partition_outputs(plan: dict) -> list[str]:
 def run() -> dict:
     args = parse_args()
     validate_inputs(args)
+    release_metadata = load_release_metadata(args.release_metadata)
     started = time.monotonic()
     cache_dir = (args.cache_dir or default_cache_dir(args.catalog, args.search_dir)).resolve()
     plan = prepare_incremental(
@@ -204,6 +233,7 @@ def run() -> dict:
         cache_dir=cache_dir,
         force=args.force,
         verify=args.verify,
+        release_metadata=release_metadata,
     )
     changed = plan["changedPartitions"]
     managed_outputs = [Path(plan["outputPath"])]
@@ -252,6 +282,7 @@ def run() -> dict:
         "elapsedSeconds": round(time.monotonic() - started, 3),
         "verified": args.verify,
         "recalculated": bool(args.soffice and outputs),
+        "releaseMetadata": release_metadata,
     }
     if args.json:
         print(json.dumps(payload, ensure_ascii=False))

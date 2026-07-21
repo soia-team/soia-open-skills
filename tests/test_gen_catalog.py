@@ -493,6 +493,74 @@ type: moc
 
         self.assertEqual(roots, ["/10_孩子"])
 
+    def test_release_metadata_is_written_to_catalog_and_search_indexes(self) -> None:
+        records = [
+            folder("10_孩子", "root"),
+            folder("10_孩子/10_课程", "course"),
+            file_record("10_孩子/10_课程/lesson.mp4"),
+        ]
+        metadata = json.dumps(
+            {
+                "catalog_release_id": "catalog-20260721.1",
+                "index_updated_at": "2026-07-21T09:30:00+08:00",
+                "snapshot_at": "2026-07-21T09:00:00+08:00",
+                "catalog_schema_version": "2026-07",
+                "source_fingerprint": "sha256:abc123",
+            },
+            ensure_ascii=False,
+        )
+
+        catalog, search = self.run_catalog_with_search(records, "--release-metadata", metadata)
+
+        for markdown in (catalog, search):
+            self.assertIn('catalog_release_id: "catalog-20260721.1"', markdown)
+            self.assertIn('index_updated_at: "2026-07-21T09:30:00+08:00"', markdown)
+            self.assertIn("## 发布元数据", markdown)
+            self.assertIn("| source_fingerprint | sha256:abc123 |", markdown)
+
+    def test_release_metadata_rejects_timezone_less_timestamps(self) -> None:
+        records = [folder("10_孩子", "root")]
+        metadata = json.dumps(
+            {
+                "catalog_release_id": "catalog-20260721.1",
+                "index_updated_at": "2026-07-21T09:30:00",
+                "snapshot_at": "2026-07-21T09:00:00+08:00",
+                "catalog_schema_version": "2026-07",
+                "source_fingerprint": "sha256:abc123",
+            },
+            ensure_ascii=False,
+        )
+        with self.assertRaises(SystemExit):
+            self.run_catalog(records, "--release-metadata", metadata)
+
+    def test_release_metadata_rejects_snapshot_after_publish_time(self) -> None:
+        with self.assertRaisesRegex(ValueError, "不能晚于"):
+            gen_catalog.normalize_release_metadata({
+                "catalog_release_id": "catalog-20260721.1",
+                "index_updated_at": "2026-07-21T09:00:00+08:00",
+                "snapshot_at": "2026-07-21T09:01:00+08:00",
+                "catalog_schema_version": "2026-07",
+                "source_fingerprint": "sha256:abc123",
+            })
+
+    def test_release_metadata_upsert_is_idempotent(self) -> None:
+        metadata = gen_catalog.normalize_release_metadata(
+            {
+                "catalog_release_id": "catalog-20260721.1",
+                "index_updated_at": "2026-07-21T09:30:00+08:00",
+                "snapshot_at": "2026-07-21T09:00:00+08:00",
+                "catalog_schema_version": "2026-07",
+                "source_fingerprint": "sha256:abc123",
+            }
+        )
+        source = "---\ntitle: Catalog\n---\n# Catalog\n\n正文\n"
+
+        first = gen_catalog.apply_release_metadata(source, metadata)
+        second = gen_catalog.apply_release_metadata(first, metadata)
+
+        self.assertEqual(first, second)
+        self.assertEqual(first.count("## 发布元数据"), 1)
+
     def test_url_prefix_must_be_explicit(self) -> None:
         old_argv = sys.argv
         old_env = os.environ.pop("SOIA_ALIPAN_URL_PREFIX", None)
