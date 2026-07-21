@@ -4,7 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import difflib
 import hashlib
+from html import escape as html_escape
+import io
 import json
 import mimetypes
 import os
@@ -50,7 +54,8 @@ SIDEBAR_FILE = "sidebar.json"
 MAX_PATH_COMPONENT_LENGTH = 48
 DEFAULT_ASSET_DIR = "_assets"
 DEFAULT_ASSET_TIMEOUT_SECONDS = 30
-DEFAULT_MAX_ASSET_BYTES = 20 * 1024 * 1024
+DEFAULT_ASSET_DOWNLOAD_ATTEMPTS = 3
+DEFAULT_MAX_ASSET_BYTES = 50 * 1024 * 1024
 PRIVATE_PATH_PATTERN = re.compile(
     r"(?:/(?:Users|home|private|var/folders|tmp)/[^\s'\";]+|[A-Za-z]:[\\/][^\s'\";]+)"
 )
@@ -66,6 +71,29 @@ SENSITIVE_FLAG_PATTERN = re.compile(
     r"(--(?:app-secret|secret|password|passwd|access-token|token|doc|node-token|parent-node-token|obj-token|file-token|folder-token|space-id|config|output|output-dir))\s+([^\s]+)",
     re.IGNORECASE,
 )
+SUB_PAGE_LIST_PATTERN = re.compile(r"<sub-page-list\b[^>]*>.*?</sub-page-list>", re.IGNORECASE | re.DOTALL)
+SUB_PAGE_PATTERN = re.compile(r"<sub-page(?!-list)\b([^>]*)/?>", re.IGNORECASE | re.DOTALL)
+HTML_ATTRIBUTE_PATTERN = re.compile(r"([\w:-]+)=([\"'])(.*?)\2", re.DOTALL)
+MARKDOWN_LINK_PATTERN = re.compile(r"\[([^\]]*)\]\((\s*https?://[^)\s]+\s*)\)")
+BARE_FEISHU_DOCUMENT_URL_PATTERN = re.compile(
+    r"https?://[^\s)\]]*(?:feishu|larksuite)[^\s)\]]*/(?:wiki|docx|doc)/[^\s?#/)]+[^\s)]*",
+    re.IGNORECASE,
+)
+DEFAULT_CHANGE_LEDGER_DIR = "change-reports"
+DEFAULT_CHANGE_LEDGER_MAX_DIFF_LINES = 400
+DEFAULT_SHEET_MAX_CELLS = 10_000
+DEFAULT_SHEET_MAX_CHARS = 100_000
+DEFAULT_EMBEDDED_SHEET_MAX_ROWS = 200
+DEFAULT_EMBEDDED_SHEET_MAX_COLUMNS = 50
+DEFAULT_EMBEDDED_SHEET_MAX_PER_DOCUMENT = 100
+DEFAULT_SHEET_SNAPSHOT_DIR = "_snapshots"
+DEFAULT_BITABLE_MAX_RECORDS = 1_000
+DEFAULT_RESOURCE_EXPORT_DIR = "_exports"
+DEFAULT_RESOURCE_BATCH_SIZE = 10
+DEFAULT_RESOURCE_TIMEOUT_SECONDS = 120
+SHEET_RANGE_PATTERN = re.compile(r"^([A-Z]+)([1-9][0-9]*):([A-Z]+)([1-9][0-9]*)$")
+EMBEDDED_SHEET_SCAN_MARKER = "<!-- soia:embedded-sheet-scan -->"
+EMBEDDED_SHEET_RENDER_MARKER = "<!-- soia:embedded-sheet -->"
 
 
 class CliCommandError(RuntimeError):
@@ -83,6 +111,26 @@ class CliCommandError(RuntimeError):
         self.category = category
         self.code = code
         self.retryable = retryable
+
+
+class AssetSizeLimitError(RuntimeError):
+    """A downloaded resource exceeded the configured local safety limit."""
+
+    def __init__(self) -> None:
+        super().__init__("asset exceeds configured size limit")
+
+
+class ExportPending(CliCommandError):
+    """A successfully created async export task that is not ready to download."""
+
+    def __init__(self, ticket: str, source_file_token: str) -> None:
+        super().__init__(
+            "lark-cli export task is still processing",
+            category="export_pending",
+            retryable=True,
+        )
+        self.ticket = ticket
+        self.source_file_token = source_file_token
 
 
 class RequestLimiter:
@@ -153,6 +201,21 @@ def parse_args() -> argparse.Namespace:
         help="download remote Feishu images into the local mirror and rewrite Markdown links",
     )
     parser.add_argument(
+        "--sync-sheets",
+        action="store_true",
+        help="mirror explicitly configured Feishu Sheet ranges as Markdown tables",
+    )
+    parser.add_argument(
+        "--sync-embedded-sheets",
+        action="store_true",
+        help="mirror explicitly authorised Sheet blocks embedded inside Feishu documents",
+    )
+    parser.add_argument(
+        "--sync-bitables",
+        action="store_true",
+        help="mirror explicitly configured Feishu Base tables as bounded Markdown snapshots",
+    )
+    parser.add_argument(
         "--refresh-asset-urls",
         action="store_true",
         help="re-fetch documents containing remote images before downloading signed image URLs",
@@ -218,6 +281,12 @@ def parse_args() -> argparse.Namespace:
         action="append",
         default=[],
         help="fetch only these wiki nodes; repeat for multiple IDs and reuse all other local content",
+    )
+    parser.add_argument(
+        "--pilot-node-token",
+        action="append",
+        default=[],
+        help="write an isolated pilot mirror containing only these nodes; repeat for multiple IDs",
     )
     parser.add_argument(
         "--changed-obj-token",
@@ -382,6 +451,8 @@ def error_info(exc: Exception | str) -> dict[str, Any]:
     """Return a small, safe error record for manifests and validation."""
     if isinstance(exc, CliCommandError):
         return {"category": exc.category, "code": exc.code, "retryable": exc.retryable}
+    if isinstance(exc, AssetSizeLimitError):
+        return {"category": "asset_too_large", "code": "", "retryable": False}
     return cli_error_info(str(exc))
 
 
@@ -487,6 +558,1181 @@ def fetch_doc(config: dict[str, Any], obj_token: str) -> tuple[str, str]:
     return content, str(revision_id) if revision_id is not None else ""
 
 
+def fetch_doc_xml(config: dict[str, Any], obj_token: str) -> str:
+    """Read a document's XML only when an opted-in feature needs block metadata."""
+    payload = run_cli(
+        config,
+        "docs",
+        "+fetch",
+        "--as",
+        "bot",
+        "--doc",
+        obj_token,
+        "--scope",
+        "full",
+        "--doc-format",
+        "xml",
+        "--format",
+        "json",
+    )
+    document = nested(payload, "data", "document", default={})
+    if not isinstance(document, dict):
+        raise RuntimeError("docs +fetch XML payload has no data.document object")
+    content = document.get("content")
+    if not isinstance(content, str):
+        raise RuntimeError("docs +fetch XML payload has no data.document.content string")
+    return content
+
+
+def a1_column_number(label: str) -> int:
+    """Return the one-based number for an A1 column label."""
+    value = 0
+    for character in label.upper():
+        if not "A" <= character <= "Z":
+            raise ValueError("invalid A1 column")
+        value = value * 26 + ord(character) - ord("A") + 1
+    return value
+
+
+def a1_column_label(value: int) -> str:
+    """Return the A1 column label for a positive, one-based column number."""
+    if value < 1:
+        raise ValueError("A1 column number must be positive")
+    letters: list[str] = []
+    while value:
+        value, remainder = divmod(value - 1, 26)
+        letters.append(chr(ord("A") + remainder))
+    return "".join(reversed(letters))
+
+
+def sheet_preservation_options(settings: dict[str, Any]) -> tuple[bool, dict[str, bool]]:
+    """Read one bounded preservation policy shared by standalone and embedded Sheets."""
+    preserve = settings.get("preserve", {})
+    if preserve is True:
+        preserve = {"enabled": True}
+    if not isinstance(preserve, dict):
+        raise SystemExit("Sheet preserve must be a mapping when provided")
+    preserve_enabled = bool(preserve.get("enabled", False))
+    return preserve_enabled, {
+        "formulas": bool(preserve.get("formulas", True)),
+        "styles": bool(preserve.get("styles", True)),
+        "comments": bool(preserve.get("comments", True)),
+        "layout": bool(preserve.get("layout", True)),
+        "charts": bool(preserve.get("charts", True)),
+        "floating_images": bool(preserve.get("floating_images", True)),
+        # Report-oriented metadata remains opt-in even when the existing
+        # preservation bundle is enabled, so current mirrors do not gain
+        # extra API calls unexpectedly.
+        "pivots": bool(preserve.get("pivots", False)),
+        "filters": bool(preserve.get("filters", False)),
+        "conditional_formats": bool(preserve.get("conditional_formats", False)),
+        "sparklines": bool(preserve.get("sparklines", False)),
+    }
+
+
+def configured_sheet_selections(config: dict[str, Any], enabled: bool) -> dict[str, list[dict[str, Any]]]:
+    """Return explicitly authorised, bounded Sheet ranges grouped by Wiki node token."""
+    if not enabled:
+        return {}
+    settings = nested(config, "sync", "sheets", default={})
+    if not isinstance(settings, dict):
+        raise SystemExit("sync.sheets must be a mapping")
+    raw_selections = settings.get("selections", [])
+    if not isinstance(raw_selections, list) or not raw_selections:
+        raise SystemExit("sync.sheets.selections is required when Sheet mirroring is enabled")
+    try:
+        max_cells = max(1, min(int(settings.get("max_cells", DEFAULT_SHEET_MAX_CELLS)), 100_000))
+    except (TypeError, ValueError):
+        max_cells = DEFAULT_SHEET_MAX_CELLS
+    try:
+        max_chars = max(1_024, min(int(settings.get("max_chars", DEFAULT_SHEET_MAX_CHARS)), 500_000))
+    except (TypeError, ValueError):
+        max_chars = DEFAULT_SHEET_MAX_CHARS
+    skip_hidden = bool(settings.get("skip_hidden", False))
+    preserve_enabled, preserve_options = sheet_preservation_options(settings)
+    selections: dict[str, list[dict[str, Any]]] = {}
+    seen: set[tuple[str, str, str]] = set()
+    for raw in raw_selections:
+        if not isinstance(raw, dict):
+            raise SystemExit("each sync.sheets.selections item must be a mapping")
+        node_token = str(raw.get("node_token", "")).strip()
+        sheet_id = str(raw.get("sheet_id", "")).strip()
+        cell_range = str(raw.get("range", "")).strip().upper()
+        if not node_token or not sheet_id or not cell_range:
+            raise SystemExit("each Sheet selection requires node_token, sheet_id, and range")
+        match = SHEET_RANGE_PATTERN.fullmatch(cell_range)
+        if not match:
+            raise SystemExit("each Sheet selection range must use a bounded A1 range such as A1:F200")
+        start_column, start_row, end_column, end_row = match.groups()
+        width = a1_column_number(end_column) - a1_column_number(start_column) + 1
+        height = int(end_row) - int(start_row) + 1
+        if width <= 0 or height <= 0 or width * height > max_cells:
+            raise SystemExit(f"Sheet selection range exceeds sync.sheets.max_cells={max_cells}")
+        key = (node_token, sheet_id, cell_range)
+        if key in seen:
+            raise SystemExit("sync.sheets.selections contains a duplicate node_token, sheet_id, and range")
+        seen.add(key)
+        selections.setdefault(node_token, []).append(
+            {
+                "sheet_id": sheet_id,
+                "range": cell_range,
+                "max_chars": max_chars,
+                "skip_hidden": skip_hidden,
+                "preserve": bool(raw.get("preserve", preserve_enabled)),
+                "preserve_options": preserve_options,
+            }
+        )
+    return selections
+
+
+def configured_embedded_sheet_settings(config: dict[str, Any], enabled: bool) -> dict[str, Any] | None:
+    """Return an explicit, bounded policy for Sheet blocks embedded in documents."""
+    if not enabled:
+        return None
+    settings = nested(config, "sync", "embedded_sheets", default={})
+    if not isinstance(settings, dict):
+        raise SystemExit("sync.embedded_sheets must be a mapping")
+    all_docx = bool(settings.get("all_docx", False))
+    raw_node_tokens = settings.get("node_tokens", [])
+    if not isinstance(raw_node_tokens, list) or any(not isinstance(item, str) for item in raw_node_tokens):
+        raise SystemExit("sync.embedded_sheets.node_tokens must be a list of node tokens")
+    node_tokens = {item.strip() for item in raw_node_tokens if item.strip()}
+    if not all_docx and not node_tokens:
+        raise SystemExit(
+            "sync.embedded_sheets requires all_docx=true or at least one explicit node_tokens entry"
+        )
+
+    def bounded_int(name: str, default: int, hard_limit: int) -> int:
+        try:
+            value = int(settings.get(name, default))
+        except (TypeError, ValueError):
+            value = default
+        return max(1, min(value, hard_limit))
+
+    max_cells = bounded_int("max_cells", DEFAULT_SHEET_MAX_CELLS, 100_000)
+    max_rows = bounded_int("max_rows", DEFAULT_EMBEDDED_SHEET_MAX_ROWS, 100_000)
+    max_columns = bounded_int("max_columns", DEFAULT_EMBEDDED_SHEET_MAX_COLUMNS, 702)
+    if max_rows * max_columns > max_cells:
+        raise SystemExit("sync.embedded_sheets.max_rows * max_columns exceeds max_cells")
+    max_chars = bounded_int("max_chars", DEFAULT_SHEET_MAX_CHARS, 500_000)
+    max_sheets = bounded_int("max_sheets_per_document", DEFAULT_EMBEDDED_SHEET_MAX_PER_DOCUMENT, 500)
+    preserve_enabled, preserve_options = sheet_preservation_options(settings)
+    return {
+        "all_docx": all_docx,
+        "node_tokens": node_tokens,
+        "max_cells": max_cells,
+        "max_rows": max_rows,
+        "max_columns": max_columns,
+        "max_chars": max_chars,
+        "max_sheets_per_document": max_sheets,
+        "skip_hidden": bool(settings.get("skip_hidden", False)),
+        "preserve": preserve_enabled,
+        "preserve_options": preserve_options,
+    }
+
+
+def embedded_sheet_references(content: str, *, max_count: int) -> list[dict[str, str]]:
+    """Extract unique workbook and worksheet identifiers from document XML."""
+    references: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for match in re.finditer(r"<sheet\b([^>]*)/?>", content, flags=re.IGNORECASE):
+        attrs = html_attributes(match.group(1))
+        workbook_token = attrs.get("token", "").strip()
+        sheet_id = attrs.get("sheet-id", "").strip()
+        if not workbook_token or not sheet_id:
+            raise RuntimeError("embedded Sheet tag is missing a workbook token or sheet id")
+        key = (workbook_token, sheet_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        references.append({"workbook_token": workbook_token, "sheet_id": sheet_id})
+        if len(references) > max_count:
+            raise RuntimeError("embedded Sheet reference count exceeds the configured document limit")
+    return references
+
+
+def embedded_sheet_selection(settings: dict[str, Any], sheet: dict[str, Any]) -> dict[str, Any]:
+    """Constrain one embedded worksheet to an A1 range before reading its values."""
+    try:
+        source_rows = max(1, int(sheet.get("row_count") or settings["max_rows"]))
+    except (TypeError, ValueError):
+        source_rows = int(settings["max_rows"])
+    try:
+        source_columns = max(1, int(sheet.get("column_count") or settings["max_columns"]))
+    except (TypeError, ValueError):
+        source_columns = int(settings["max_columns"])
+    width = min(source_columns, int(settings["max_columns"]))
+    height = min(source_rows, int(settings["max_rows"]), int(settings["max_cells"]) // width)
+    if height < 1:
+        raise RuntimeError("embedded Sheet bounds leave no readable cells")
+    return {
+        "sheet_id": str(sheet["sheet_id"]),
+        "range": f"A1:{a1_column_label(width)}{height}",
+        "max_chars": int(settings["max_chars"]),
+        "skip_hidden": bool(settings["skip_hidden"]),
+        "preserve": bool(settings["preserve"]),
+        "preserve_options": dict(settings["preserve_options"]),
+    }
+
+
+def embedded_sheet_sync_applies(node: dict[str, Any], settings: dict[str, Any] | None) -> bool:
+    """Limit XML reads to the document nodes explicitly authorised in private config."""
+    if settings is None or str(node.get("obj_type", "")) not in {"docx", "doc"}:
+        return False
+    return bool(settings["all_docx"] or str(node.get("node_token", "")) in settings["node_tokens"])
+
+
+def trim_sheet_rows(rows: list[list[str]]) -> list[list[str]]:
+    """Keep meaningful Sheet cells while preserving internal blank rows and columns."""
+    normalized = [[str(value) for value in row] for row in rows]
+    while normalized and not any(cell.strip() for cell in normalized[-1]):
+        normalized.pop()
+    if not normalized:
+        return []
+    width = max(len(row) for row in normalized)
+    for row in normalized:
+        row.extend("" for _ in range(width - len(row)))
+    while width and not any(row[width - 1].strip() for row in normalized):
+        width -= 1
+    return [row[:width] for row in normalized]
+
+
+def markdown_table_from_csv(value: str) -> str:
+    """Convert a bounded CSV value snapshot into portable Markdown table syntax."""
+    rows = trim_sheet_rows(list(csv.reader(io.StringIO(value))))
+    if not rows or not rows[0]:
+        return "（所选工作表范围没有可同步的单元格。）"
+    header = [cell.strip() or f"列 {index}" for index, cell in enumerate(rows[0], start=1)]
+
+    def cell(value: str) -> str:
+        return value.replace("\\r\\n", "<br>").replace("\\n", "<br>").replace("\\r", "<br>").replace("|", "\\\\|")
+
+    lines = [
+        "| " + " | ".join(cell(value) for value in header) + " |",
+        "| " + " | ".join("---" for _ in header) + " |",
+    ]
+    lines.extend("| " + " | ".join(cell(value) for value in row) + " |" for row in rows[1:])
+    return "\n".join(lines)
+
+
+def fetch_sheet_markdown(
+    config: dict[str, Any],
+    obj_token: str,
+    title: str,
+    selections: list[dict[str, Any]],
+    *,
+    snapshot_root: Path | None = None,
+    node_token: str = "",
+    workbook_sheets: list[dict[str, Any]] | None = None,
+    include_document_heading: bool = True,
+    section_heading_level: int = 2,
+) -> tuple[str, str]:
+    """Read explicitly selected Sheet ranges through lark-cli and render Markdown tables."""
+    if workbook_sheets is None:
+        workbook_payload = run_cli(
+            config,
+            "sheets",
+            "+workbook-info",
+            "--as",
+            "bot",
+            "--spreadsheet-token",
+            obj_token,
+            "--format",
+            "json",
+        )
+        workbook_sheets = nested(workbook_payload, "data", "sheets", default=[])
+    if not isinstance(workbook_sheets, list):
+        raise RuntimeError("sheets +workbook-info payload has no data.sheets list")
+    sheets_by_id = {
+        str(item.get("sheet_id", "")): item
+        for item in workbook_sheets
+        if isinstance(item, dict) and item.get("sheet_id")
+    }
+    sections = [f"# {title}", "", "> 已按私有配置读取指定飞书电子表格范围。"] if include_document_heading else []
+    heading = "#" * max(1, min(section_heading_level, 6))
+    for selection in selections:
+        sheet_id = str(selection["sheet_id"])
+        sheet = sheets_by_id.get(sheet_id)
+        if sheet is None:
+            raise RuntimeError("configured Sheet selection was not found in workbook metadata")
+        if str(sheet.get("resource_type", "sheet")) != "sheet":
+            raise RuntimeError("configured Sheet selection is not a grid worksheet")
+        payload = run_cli(
+            config,
+            "sheets",
+            "+csv-get",
+            "--as",
+            "bot",
+            "--spreadsheet-token",
+            obj_token,
+            "--sheet-id",
+            sheet_id,
+            "--range",
+            str(selection["range"]),
+            "--include-row-prefix=false",
+            "--skip-hidden=true" if selection["skip_hidden"] else "--skip-hidden=false",
+            "--max-chars",
+            str(selection["max_chars"]),
+            "--format",
+            "json",
+        )
+        data = nested(payload, "data", default={})
+        if not isinstance(data, dict):
+            raise RuntimeError("sheets +csv-get payload has no data object")
+        if data.get("has_more"):
+            raise RuntimeError("configured Sheet range was truncated; reduce the range or increase max_chars")
+        csv_value = data.get("annotated_csv", data.get("csv", ""))
+        if not isinstance(csv_value, str):
+            raise RuntimeError("sheets +csv-get payload has no CSV value")
+        sheet_title = str(sheet.get("title") or sheet.get("sheet_name") or sheet_id).strip()
+        preservation_note = ""
+        if selection.get("preserve"):
+            if snapshot_root is None:
+                raise RuntimeError("Sheet preservation requires a local snapshot directory")
+            options = selection.get("preserve_options", {})
+            if not isinstance(options, dict):
+                raise RuntimeError("Sheet preservation options must be a mapping")
+            cells_payload = run_cli(
+                config,
+                "sheets",
+                "+cells-get",
+                "--as",
+                "bot",
+                "--spreadsheet-token",
+                obj_token,
+                "--sheet-id",
+                sheet_id,
+                "--range",
+                str(selection["range"]),
+                "--include",
+                ",".join(
+                    item
+                    for item, enabled in (
+                        ("value", True),
+                        ("formula", bool(options.get("formulas"))),
+                        ("style", bool(options.get("styles"))),
+                        ("comment", bool(options.get("comments"))),
+                    )
+                    if enabled
+                ),
+                "--skip-hidden=true" if selection["skip_hidden"] else "--skip-hidden=false",
+                "--max-chars",
+                str(selection["max_chars"]),
+                "--format",
+                "json",
+            )
+            cells_data = nested(cells_payload, "data", default={})
+            if not isinstance(cells_data, dict) or cells_data.get("has_more") or cells_data.get("truncated"):
+                raise RuntimeError("configured Sheet preservation range was truncated")
+            snapshot: dict[str, Any] = {
+                "schema_version": 1,
+                "kind": "feishu_sheet_snapshot",
+                "sheet_id": sheet_id,
+                "sheet_title": sheet_title,
+                "range": selection["range"],
+                "cells": cells_data,
+            }
+            if options.get("layout"):
+                snapshot["layout"] = nested(
+                    run_cli(config, "sheets", "+sheet-info", "--as", "bot", "--spreadsheet-token", obj_token,
+                            "--sheet-id", sheet_id, "--range", str(selection["range"]),
+                            "--include", "merges,row_heights,col_widths,hidden_rows,hidden_cols,groups,frozen",
+                            "--format", "json"),
+                    "data", default={},
+                )
+            if options.get("charts"):
+                snapshot["charts"] = nested(
+                    run_cli(config, "sheets", "+chart-list", "--as", "bot", "--spreadsheet-token", obj_token,
+                            "--sheet-id", sheet_id, "--format", "json"),
+                    "data", default={},
+                )
+            if options.get("floating_images"):
+                snapshot["floating_images"] = nested(
+                    run_cli(config, "sheets", "+float-image-list", "--as", "bot", "--spreadsheet-token", obj_token,
+                            "--sheet-id", sheet_id, "--format", "json"),
+                    "data", default={},
+                )
+            report_queries = (
+                ("pivots", "+pivot-list", "pivot_tables"),
+                ("filters", "+filter-list", "filters"),
+                ("conditional_formats", "+cond-format-list", "conditional_formats"),
+                ("sparklines", "+sparkline-list", "sparklines"),
+            )
+            for option, command, field in report_queries:
+                if options.get(option):
+                    snapshot[field] = nested(
+                        run_cli(
+                            config, "sheets", command, "--as", "bot",
+                            "--spreadsheet-token", obj_token, "--sheet-id", sheet_id,
+                            "--format", "json",
+                        ),
+                        "data", default={},
+                    )
+            snapshot_root.mkdir(parents=True, exist_ok=True)
+            filename = f"{(node_token or obj_token)[:16]}--{sheet_id[:16]}.sheet.json"
+            write_text(snapshot_root / filename, json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n")
+            labels = {
+                "formulas": "公式",
+                "styles": "样式",
+                "comments": "批注",
+                "layout": "布局",
+                "charts": "图表",
+                "floating_images": "浮动图片",
+                "pivots": "透视表",
+                "filters": "筛选器",
+                "conditional_formats": "条件格式",
+                "sparklines": "迷你图",
+            }
+            preserved = "、".join(label for key, label in labels.items() if options.get(key))
+            preservation_note = f"已保存{preserved or '单元格'}的本地保真快照。"
+        sections.extend(
+            [
+                "",
+                f"{heading} {sheet_title}",
+                "",
+                f"范围：`{selection['range']}`",
+                *(["", preservation_note] if preservation_note else []),
+                "",
+                markdown_table_from_csv(csv_value),
+            ]
+        )
+    return "\n".join(sections).rstrip() + "\n", ""
+
+
+def fetch_embedded_sheet_markdown(
+    config: dict[str, Any],
+    document_xml: str,
+    settings: dict[str, Any],
+    *,
+    snapshot_root: Path | None,
+    node_token: str,
+) -> tuple[str, int]:
+    """Render opted-in Sheet blocks found in one document XML as bounded local tables."""
+    references = embedded_sheet_references(
+        document_xml,
+        max_count=int(settings["max_sheets_per_document"]),
+    )
+    if not references:
+        return "", 0
+    workbook_cache: dict[str, list[dict[str, Any]]] = {}
+    sections: list[str] = []
+    for reference in references:
+        workbook_token = reference["workbook_token"]
+        workbook_sheets = workbook_cache.get(workbook_token)
+        if workbook_sheets is None:
+            payload = run_cli(
+                config,
+                "sheets",
+                "+workbook-info",
+                "--as",
+                "bot",
+                "--spreadsheet-token",
+                workbook_token,
+                "--format",
+                "json",
+            )
+            workbook_sheets = nested(payload, "data", "sheets", default=[])
+            if not isinstance(workbook_sheets, list):
+                raise RuntimeError("embedded Sheet workbook metadata has no data.sheets list")
+            workbook_cache[workbook_token] = workbook_sheets
+        sheet = next(
+            (
+                item
+                for item in workbook_sheets
+                if isinstance(item, dict) and str(item.get("sheet_id", "")) == reference["sheet_id"]
+            ),
+            None,
+        )
+        if sheet is None:
+            raise RuntimeError("embedded Sheet reference was not found in workbook metadata")
+        if str(sheet.get("resource_type", "sheet")) != "sheet":
+            raise RuntimeError("embedded Sheet reference is not a grid worksheet")
+        selection = embedded_sheet_selection(settings, sheet)
+        rendered, _ = fetch_sheet_markdown(
+            config,
+            workbook_token,
+            "嵌入式表格",
+            [selection],
+            snapshot_root=snapshot_root,
+            node_token=node_token,
+            workbook_sheets=workbook_sheets,
+            include_document_heading=False,
+            section_heading_level=3,
+        )
+        sections.extend([EMBEDDED_SHEET_RENDER_MARKER, rendered.rstrip()])
+    return "\n\n".join(sections).rstrip(), len(references)
+
+
+def configured_bitable_selections(config: dict[str, Any], enabled: bool) -> dict[str, list[dict[str, Any]]]:
+    """Return explicitly authorised, record-bounded Base table selections."""
+    if not enabled:
+        return {}
+    settings = nested(config, "sync", "bitables", default={})
+    if not isinstance(settings, dict):
+        raise SystemExit("sync.bitables must be a mapping")
+    raw_selections = settings.get("selections", [])
+    if not isinstance(raw_selections, list) or not raw_selections:
+        raise SystemExit("sync.bitables.selections is required when Base mirroring is enabled")
+    try:
+        default_max_records = max(1, min(int(settings.get("max_records", DEFAULT_BITABLE_MAX_RECORDS)), 5_000))
+    except (TypeError, ValueError):
+        default_max_records = DEFAULT_BITABLE_MAX_RECORDS
+    download_attachments = bool(settings.get("download_attachments", False))
+    selections: dict[str, list[dict[str, Any]]] = {}
+    seen: set[tuple[str, str]] = set()
+    for raw in raw_selections:
+        if not isinstance(raw, dict):
+            raise SystemExit("each sync.bitables.selections item must be a mapping")
+        node_token = str(raw.get("node_token", "")).strip()
+        table_id = str(raw.get("table_id", "")).strip()
+        if not node_token or not table_id:
+            raise SystemExit("each Base selection requires node_token and table_id")
+        try:
+            max_records = max(1, min(int(raw.get("max_records", default_max_records)), 5_000))
+        except (TypeError, ValueError):
+            raise SystemExit("each Base selection max_records must be an integer")
+        key = (node_token, table_id)
+        if key in seen:
+            raise SystemExit("sync.bitables.selections contains a duplicate node_token and table_id")
+        seen.add(key)
+        selections.setdefault(node_token, []).append(
+            {
+                "table_id": table_id,
+                "view_id": str(raw.get("view_id", "")).strip(),
+                "max_records": max_records,
+                "include_views": bool(raw.get("include_views", False)),
+                "include_dashboards": bool(raw.get("include_dashboards", False)),
+                "download_attachments": bool(raw.get("download_attachments", download_attachments)),
+            }
+        )
+    return selections
+
+
+def markdown_table_from_rows(rows: list[list[Any]]) -> str:
+    stream = io.StringIO()
+    csv.writer(stream).writerows([["" if value is None else str(value) for value in row] for row in rows])
+    return markdown_table_from_csv(stream.getvalue())
+
+
+def bitable_cell_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        names = [str(item.get("name", "")) for item in value if isinstance(item, dict) and item.get("name")]
+        if names:
+            return ", ".join(names)
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value)
+
+
+def bitable_attachment_tokens(value: Any) -> list[str]:
+    """Find Base attachment file tokens without exposing them in rendered Markdown."""
+    tokens: list[str] = []
+    if isinstance(value, dict):
+        token = value.get("file_token")
+        if isinstance(token, str) and token:
+            tokens.append(token)
+        for child in value.values():
+            tokens.extend(bitable_attachment_tokens(child))
+    elif isinstance(value, list):
+        for child in value:
+            tokens.extend(bitable_attachment_tokens(child))
+    return list(dict.fromkeys(tokens))
+
+
+def download_bitable_record_attachments(
+    config: dict[str, Any],
+    *,
+    base_token: str,
+    table_id: str,
+    record_id: str,
+    file_tokens: list[str],
+    mirror_dir: Path,
+) -> list[str]:
+    """Download explicitly selected Base attachments into a hashed local asset folder."""
+    asset_dir = str(nested(config, "sync", "asset_dir", default=DEFAULT_ASSET_DIR)).strip("/\\")
+    if not asset_dir or Path(asset_dir).is_absolute() or ".." in Path(asset_dir).parts:
+        raise SystemExit("sync.asset_dir must be a relative directory without '..'")
+    try:
+        max_bytes = max(1, int(nested(config, "sync", "max_asset_bytes", default=DEFAULT_MAX_ASSET_BYTES)))
+    except (TypeError, ValueError):
+        max_bytes = DEFAULT_MAX_ASSET_BYTES
+    bucket = hashlib.sha256(f"{base_token}\0{table_id}\0{record_id}".encode("utf-8")).hexdigest()[:24]
+    relative_dir = Path(asset_dir) / "bitables" / bucket
+    destination = mirror_dir / relative_dir
+    destination.mkdir(parents=True, exist_ok=True)
+    for token in file_tokens:
+        command = cli_command(
+            config,
+            "base",
+            "+record-download-attachment",
+            "--as",
+            "bot",
+            "--base-token",
+            base_token,
+            "--table-id",
+            table_id,
+            "--record-id",
+            record_id,
+            "--file-token",
+            token,
+            "--output",
+            relative_dir.as_posix(),
+            "--format",
+            "json",
+        )
+        REQUEST_LIMITER.acquire()
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=mirror_dir,
+            env=command_env(config),
+        )
+        if result.returncode != 0:
+            detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+            info = cli_error_info(detail)
+            raise CliCommandError(
+                f"lark-cli Base attachment request failed category={info['category']}",
+                category=str(info["category"]),
+                code=str(info["code"]),
+                retryable=bool(info["retryable"]),
+            )
+    files: list[str] = []
+    for candidate in sorted(destination.rglob("*")):
+        if not candidate.is_file():
+            continue
+        if candidate.stat().st_size > max_bytes:
+            candidate.unlink()
+            raise RuntimeError(f"Base attachment exceeds max_asset_bytes={max_bytes}")
+        files.append(candidate.relative_to(mirror_dir).as_posix())
+    if file_tokens and not files:
+        raise RuntimeError("base +record-download-attachment returned no local file")
+    return files
+
+
+def paged_base_items(config: dict[str, Any], *args: str) -> list[dict[str, Any]]:
+    """Read a bounded Base paginated list without silently dropping reports."""
+    page_token = ""
+    items: list[dict[str, Any]] = []
+    for _page in range(100):
+        command = [*args, "--page-size", "100"]
+        if page_token:
+            command.extend(["--page-token", page_token])
+        payload = run_cli(config, *command)
+        data = nested(payload, "data", default={})
+        if not isinstance(data, dict):
+            raise RuntimeError("Base paginated payload has no data object")
+        page_items = data.get("items", [])
+        if not isinstance(page_items, list):
+            raise RuntimeError("Base paginated payload has no items list")
+        items.extend(item for item in page_items if isinstance(item, dict))
+        page_token = str(data.get("page_token") or "")
+        if not data.get("has_more"):
+            return items
+        if not page_token:
+            raise RuntimeError("Base paginated payload reports has_more without page_token")
+    raise RuntimeError("Base paginated list exceeded 100 pages")
+
+
+def fetch_bitable_dashboards(config: dict[str, Any], base_token: str) -> list[dict[str, Any]]:
+    """Capture Base dashboard definitions and their report blocks as JSON metadata."""
+    dashboards = paged_base_items(
+        config, "base", "+dashboard-list", "--as", "bot", "--base-token", base_token, "--format", "json"
+    )
+    result: list[dict[str, Any]] = []
+    for dashboard in dashboards:
+        dashboard_id = str(dashboard.get("dashboard_id", "")).strip()
+        entry = dict(dashboard)
+        if dashboard_id:
+            entry["blocks"] = paged_base_items(
+                config, "base", "+dashboard-block-list", "--as", "bot", "--base-token", base_token,
+                "--dashboard-id", dashboard_id, "--format", "json",
+            )
+        result.append(entry)
+    return result
+
+
+def fetch_bitable_markdown(
+    config: dict[str, Any],
+    obj_token: str,
+    title: str,
+    selections: list[dict[str, Any]],
+    *,
+    snapshot_root: Path,
+    node_token: str,
+    mirror_dir: Path | None = None,
+) -> tuple[str, str]:
+    """Mirror selected Base tables, schemas, records and optional view metadata."""
+    sections = [f"# {title}", "", "> 已按私有配置读取指定多维表格。"]
+    snapshot_root.mkdir(parents=True, exist_ok=True)
+    for selection in selections:
+        table_id = str(selection["table_id"])
+        fields_payload = run_cli(
+            config, "base", "+field-list", "--as", "bot", "--base-token", obj_token,
+            "--table-id", table_id, "--limit", "200", "--format", "json",
+        )
+        fields_data = nested(fields_payload, "data", default={})
+        fields = fields_data.get("items", fields_data.get("fields", [])) if isinstance(fields_data, dict) else []
+        if not isinstance(fields, list):
+            raise RuntimeError("base +field-list payload has no fields list")
+        name_by_id = {
+            str(field.get("field_id", "")): str(field.get("field_name") or field.get("name") or field.get("field_id"))
+            for field in fields if isinstance(field, dict) and field.get("field_id")
+        }
+        rows: list[dict[str, Any]] = []
+        offset = 0
+        while len(rows) < int(selection["max_records"]):
+            limit = min(200, int(selection["max_records"]) - len(rows))
+            command = [
+                "base", "+record-list", "--as", "bot", "--base-token", obj_token,
+                "--table-id", table_id, "--limit", str(limit), "--offset", str(offset), "--format", "json",
+            ]
+            if selection.get("view_id"):
+                command.extend(["--view-id", str(selection["view_id"])])
+            payload = run_cli(config, *command)
+            data = nested(payload, "data", default={})
+            items = data.get("items", data.get("records", [])) if isinstance(data, dict) else []
+            if not isinstance(items, list):
+                raise RuntimeError("base +record-list payload has no records list")
+            rows.extend(item for item in items if isinstance(item, dict))
+            if not items or not isinstance(data, dict) or not data.get("has_more"):
+                break
+            offset += len(items)
+        columns = [name_by_id.get(str(field.get("field_id", "")), "字段") for field in fields if isinstance(field, dict)]
+        rendered_rows = [columns]
+        for record in rows:
+            values = record.get("fields", {})
+            values = values if isinstance(values, dict) else {}
+            rendered_rows.append([
+                bitable_cell_text(values.get(field_id, values.get(name, "")))
+                for field_id, name in name_by_id.items()
+            ])
+        snapshot: dict[str, Any] = {
+            "schema_version": 1,
+            "kind": "feishu_bitable_snapshot",
+            "base_token": obj_token,
+            "table_id": table_id,
+            "fields": fields,
+            "records": rows,
+        }
+        attachment_errors: dict[str, str] = {}
+        attachment_files: dict[str, list[str]] = {}
+        if selection.get("download_attachments"):
+            if mirror_dir is None:
+                raise RuntimeError("Base attachment download requires the local mirror directory")
+            for record in rows:
+                record_id = str(record.get("record_id", "")).strip()
+                fields_value = record.get("fields", {})
+                tokens = bitable_attachment_tokens(fields_value)
+                if not record_id or not tokens:
+                    continue
+                try:
+                    attachment_files[record_id] = download_bitable_record_attachments(
+                        config,
+                        base_token=obj_token,
+                        table_id=table_id,
+                        record_id=record_id,
+                        file_tokens=tokens,
+                        mirror_dir=mirror_dir,
+                    )
+                except Exception as exc:
+                    attachment_errors[record_id] = safe_error_category(exc)
+        if attachment_files:
+            snapshot["local_attachment_paths"] = attachment_files
+        if attachment_errors:
+            snapshot["attachment_errors"] = attachment_errors
+        if selection.get("include_views"):
+            snapshot["views"] = nested(
+                run_cli(config, "base", "+view-list", "--as", "bot", "--base-token", obj_token,
+                        "--table-id", table_id, "--limit", "200", "--format", "json"),
+                "data", default={},
+            )
+        if selection.get("include_dashboards"):
+            snapshot["dashboards"] = fetch_bitable_dashboards(config, obj_token)
+        write_text(snapshot_root / f"{node_token[:16]}--{table_id[:16]}.bitable.json", json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n")
+        attachment_note = ""
+        if attachment_files:
+            attachment_note = "已按显式配置下载该表记录中的附件；本地路径写入保真快照。"
+        elif attachment_errors:
+            attachment_note = "部分附件未能下载；失败类别已写入保真快照。"
+        sections.extend(
+            ["", f"## {table_id}", *(["", attachment_note] if attachment_note else []), "", markdown_table_from_rows(rendered_rows)]
+        )
+    return "\n".join(sections).rstrip() + "\n", ""
+
+
+def relative_safe_directory(value: Any, *, setting: str) -> Path:
+    """Validate a generated-resource directory before passing it to lark-cli."""
+    directory = str(value or "").strip("/\\")
+    path = Path(directory)
+    if not directory or path.is_absolute() or ".." in path.parts:
+        raise SystemExit(f"{setting} must be a relative directory without '..'")
+    return path
+
+
+def resource_initialization_settings(
+    config: dict[str, Any],
+    *,
+    section: str,
+    key: str,
+) -> dict[str, Any] | None:
+    """Return an explicit whole-resource initialization policy, or None.
+
+    A plain ``enabled`` switch is deliberately insufficient here: these routes
+    download complete workbooks, Bases, or Drive files.  Requiring both flags
+    records the user's whole-resource approval in the private config.
+    """
+    settings = nested(config, "sync", section, key, default={})
+    if not isinstance(settings, dict):
+        raise SystemExit(f"sync.{section}.{key} must be a mapping")
+    if not bool(settings.get("enabled", False)):
+        return None
+    if not bool(settings.get("all_nodes", False)):
+        raise SystemExit(
+            f"sync.{section}.{key}.all_nodes=true is required for complete resource initialization"
+        )
+    directory = relative_safe_directory(
+        settings.get("output_dir", f"{DEFAULT_RESOURCE_EXPORT_DIR}/{section}"),
+        setting=f"sync.{section}.{key}.output_dir",
+    )
+    try:
+        batch_size = max(1, min(int(settings.get("batch_size", DEFAULT_RESOURCE_BATCH_SIZE)), 100))
+    except (TypeError, ValueError):
+        raise SystemExit(f"sync.{section}.{key}.batch_size must be an integer from 1 to 100")
+    try:
+        timeout_seconds = max(10, min(int(settings.get("timeout_seconds", DEFAULT_RESOURCE_TIMEOUT_SECONDS)), 900))
+    except (TypeError, ValueError):
+        raise SystemExit(f"sync.{section}.{key}.timeout_seconds must be an integer from 10 to 900")
+    return {
+        "output_dir": directory,
+        "batch_size": batch_size,
+        "timeout_seconds": timeout_seconds,
+    }
+
+
+def safe_file_extension(title: Any, fallback: str = ".bin") -> str:
+    """Keep a harmless filename suffix so opaque binary assets stay identifiable."""
+    suffix = Path(str(title or "")).suffix.lower()
+    if re.fullmatch(r"\.[a-z0-9]{1,12}", suffix):
+        return suffix
+    return fallback
+
+
+def resource_export_path(node: dict[str, Any], output_dir: Path, suffix: str) -> Path:
+    """Return a stable local resource target without exposing remote tokens in names."""
+    seed = f"{node.get('obj_token', '')}\0{node.get('node_token', '')}"
+    name = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:24] + suffix
+    return output_dir / name
+
+
+def export_file_token(payload: Any) -> str:
+    """Find the file token returned by a completed/pending export task."""
+    if isinstance(payload, dict):
+        token = payload.get("file_token")
+        if isinstance(token, str) and token.strip():
+            return token.strip()
+        for value in payload.values():
+            token = export_file_token(value)
+            if token:
+                return token
+    elif isinstance(payload, list):
+        for value in payload:
+            token = export_file_token(value)
+            if token:
+                return token
+    return ""
+
+
+def export_task_reference(stdout: str) -> tuple[str, str] | None:
+    """Return an async export ticket and its source file token, when present."""
+    try:
+        payload = parse_cli_json(stdout)
+    except RuntimeError:
+        return None
+    data = nested(payload, "data", default={})
+    if not isinstance(data, dict):
+        return None
+    ticket = str(data.get("ticket") or "").strip()
+    source_file_token = str(data.get("token") or "").strip()
+    return (ticket, source_file_token) if ticket and source_file_token else None
+
+
+def download_export_file(
+    config: dict[str, Any],
+    mirror_dir: Path,
+    target: Path,
+    timeout_seconds: int,
+    file_token: str,
+) -> subprocess.CompletedProcess[str]:
+    """Download a completed Drive export through its dedicated endpoint."""
+    REQUEST_LIMITER.acquire()
+    return subprocess.run(
+        cli_command(
+            config,
+            "drive", "+export-download", "--as", "bot", "--file-token", file_token,
+            "--output-dir", target.parent.relative_to(mirror_dir).as_posix(),
+            "--file-name", target.name, "--overwrite", "--format", "json",
+        ),
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=mirror_dir,
+        env=command_env(config),
+        timeout=timeout_seconds,
+    )
+
+
+def resume_export_download(
+    config: dict[str, Any],
+    mirror_dir: Path,
+    target: Path,
+    timeout_seconds: int,
+    stdout: str,
+) -> subprocess.CompletedProcess[str] | None:
+    """Download a ready export file when the async exporter returned its token."""
+    try:
+        token = export_file_token(parse_cli_json(stdout))
+    except RuntimeError:
+        return None
+    if not token:
+        return None
+    return download_export_file(config, mirror_dir, target, timeout_seconds, token)
+
+
+def poll_sheet_export_task(
+    config: dict[str, Any],
+    mirror_dir: Path,
+    target: Path,
+    timeout_seconds: int,
+    *,
+    ticket: str,
+    source_file_token: str,
+) -> bool:
+    """Poll one saved Sheet export task once, downloading it only when ready."""
+    REQUEST_LIMITER.acquire()
+    result = subprocess.run(
+        cli_command(
+            config,
+            "drive", "+task_result", "--as", "bot", "--scenario", "export",
+            "--ticket", ticket, "--file-token", source_file_token, "--format", "json",
+        ),
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=mirror_dir,
+        env=command_env(config),
+        timeout=timeout_seconds,
+    )
+    if result.returncode != 0:
+        detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+        info = cli_error_info(detail)
+        raise CliCommandError(
+            f"lark-cli export task poll failed category={info['category']}",
+            category=str(info["category"]),
+            code=str(info["code"]),
+            retryable=bool(info["retryable"]),
+        )
+    payload = parse_cli_json(result.stdout)
+    data = nested(payload, "data", default={})
+    if not isinstance(data, dict):
+        raise CliCommandError("lark-cli export task returned no data", category="invalid_response")
+    if data.get("failed") is True:
+        raise CliCommandError("lark-cli export task reported failure", category="cli_error")
+    if not data.get("ready"):
+        return False
+    file_token = export_file_token(data)
+    if not file_token:
+        raise CliCommandError("ready export task returned no exported file token", category="invalid_response")
+    download = download_export_file(config, mirror_dir, target, timeout_seconds, file_token)
+    if download.returncode == 0 and target.is_file() and target.stat().st_size > 0:
+        return True
+    detail = " ".join(part.strip() for part in (download.stderr, download.stdout) if part.strip())
+    info = cli_error_info(detail)
+    raise CliCommandError(
+        f"lark-cli export download failed category={info['category']}",
+        category=str(info["category"]),
+        code=str(info["code"]),
+        retryable=bool(info["retryable"]),
+    )
+
+
+def run_cli_to_local_path(
+    config: dict[str, Any],
+    mirror_dir: Path,
+    target: Path,
+    timeout_seconds: int,
+    *args: str,
+) -> None:
+    """Run a read-only CLI download/export and require the requested local file."""
+    command = cli_command(config, *args)
+    for attempt in range(5):
+        REQUEST_LIMITER.acquire()
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=mirror_dir,
+                env=command_env(config),
+                timeout=timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            if attempt < 4:
+                REQUEST_LIMITER.cooldown(min(30, 2**attempt))
+                continue
+            raise CliCommandError(
+                "lark-cli resource export timed out",
+                category="temporary_network",
+                retryable=True,
+            ) from exc
+        if result.returncode == 0:
+            if target.is_file() and target.stat().st_size > 0:
+                return
+            # A pending export response may contain the source document's
+            # file token.  Persist its ticket before attempting any generic
+            # file-token download, otherwise that source token can be
+            # mistaken for a completed export artifact.
+            reference = export_task_reference(result.stdout)
+            if reference is not None:
+                raise ExportPending(*reference)
+            try:
+                resumed = resume_export_download(
+                    config, mirror_dir, target, timeout_seconds, result.stdout
+                )
+            except subprocess.TimeoutExpired:
+                resumed = None
+            if resumed is not None:
+                result = resumed
+                if result.returncode == 0 and target.is_file() and target.stat().st_size > 0:
+                    return
+        detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+        # `sheets +workbook-export` can successfully create/poll an async
+        # task yet return before its requested local file is available.  Its
+        # JSON status is not an API error, so classify every zero-exit/missing
+        # target case as retryable rather than leaking it as `cli_error`.
+        info = (
+            {"category": "export_incomplete", "code": "", "retryable": True}
+            if result.returncode == 0
+            else cli_error_info(detail)
+        )
+        if info["retryable"] and attempt < 4:
+            REQUEST_LIMITER.cooldown(min(30, 2**attempt))
+            continue
+        code_suffix = f" code={info['code']}" if info["code"] else ""
+        raise CliCommandError(
+            f"lark-cli resource export failed category={info['category']}{code_suffix}",
+            category=str(info["category"]),
+            code=str(info["code"]),
+            retryable=bool(info["retryable"]),
+        )
+
+
+def initialize_complete_resources(
+    config: dict[str, Any],
+    nodes: list[dict[str, Any]],
+    mirror_dir: Path,
+    *,
+    obj_type: str,
+    section: str,
+    key: str,
+) -> tuple[dict[str, str], dict[str, str], dict[str, int]]:
+    """Export/download a bounded batch of whole resources with explicit approval.
+
+    The returned paths are relative to the generated mirror so caller-created
+    Markdown can link to the offline original without leaking tokens.
+    """
+    settings = resource_initialization_settings(config, section=section, key=key)
+    stats = {"downloaded": 0, "reused": 0, "failed": 0, "pending": 0, "deferred": 0}
+    if settings is None:
+        return {}, {}, stats
+    candidates = [node for node in nodes if str(node.get("obj_type", "")) == obj_type]
+    target_dir = mirror_dir / settings["output_dir"]
+    ready: dict[str, str] = {}
+    pending: list[tuple[dict[str, Any], Path]] = []
+    task_state_path = mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR / "sheet-export-tasks.json"
+    task_state = load_json(task_state_path, {"version": 1, "tasks": {}}) if obj_type == "sheet" else {}
+    tasks = task_state.get("tasks", {}) if isinstance(task_state, dict) else {}
+    tasks = dict(tasks) if isinstance(tasks, dict) else {}
+    for node in candidates:
+        suffix = (
+            ".xlsx" if obj_type == "sheet" else ".base" if obj_type == "bitable" else safe_file_extension(node.get("title"))
+        )
+        target = resource_export_path(node, target_dir, suffix)
+        token = str(node.get("node_token", ""))
+        if target.is_file() and target.stat().st_size > 0:
+            ready[token] = target.relative_to(mirror_dir).as_posix()
+            stats["reused"] += 1
+            tasks.pop(token, None)
+        else:
+            pending.append((node, target))
+    selected, deferred = pending[: settings["batch_size"]], pending[settings["batch_size"] :]
+    stats["deferred"] = len(deferred)
+    errors: dict[str, str] = {}
+    for node, target in selected:
+        token = str(node.get("node_token", ""))
+        relative_target = target.relative_to(mirror_dir).as_posix()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            if obj_type == "sheet":
+                saved_task = tasks.get(token)
+                if isinstance(saved_task, dict):
+                    ticket = str(saved_task.get("ticket") or "").strip()
+                    source_file_token = str(saved_task.get("source_file_token") or "").strip()
+                    if ticket and source_file_token:
+                        if not poll_sheet_export_task(
+                            config, mirror_dir, target, settings["timeout_seconds"],
+                            ticket=ticket, source_file_token=source_file_token,
+                        ):
+                            errors[token] = "export_pending"
+                            stats["pending"] += 1
+                            continue
+                    else:
+                        tasks.pop(token, None)
+                if not target.is_file() or target.stat().st_size == 0:
+                    run_cli_to_local_path(
+                        config, mirror_dir, target, settings["timeout_seconds"],
+                        "drive", "+export", "--as", "bot", "--doc-type", "sheet",
+                        "--token", str(node.get("obj_token", "")), "--file-extension", "xlsx",
+                        "--output-dir", settings["output_dir"].as_posix(), "--file-name", target.name,
+                        "--overwrite", "--format", "json",
+                    )
+            elif obj_type == "bitable":
+                run_cli_to_local_path(
+                    config, mirror_dir, target, settings["timeout_seconds"],
+                    "drive", "+export", "--as", "bot", "--doc-type", "bitable",
+                    "--token", str(node.get("obj_token", "")), "--file-extension", "base",
+                    "--output-dir", settings["output_dir"].as_posix(), "--file-name", target.name,
+                    "--overwrite", "--format", "json",
+                )
+            else:
+                run_cli_to_local_path(
+                    config, mirror_dir, target, settings["timeout_seconds"],
+                    "drive", "+download", "--as", "bot", "--file-token", str(node.get("obj_token", "")),
+                    "--output", relative_target, "--overwrite", "--format", "json",
+                )
+            ready[token] = relative_target
+            stats["downloaded"] += 1
+            tasks.pop(token, None)
+        except ExportPending as exc:
+            tasks[token] = {
+                "ticket": exc.ticket,
+                "source_file_token": exc.source_file_token,
+                "created_at": utc_now(),
+            }
+            errors[token] = "export_pending"
+            stats["pending"] += 1
+        except Exception as exc:
+            errors[token] = safe_error_category(exc)
+            stats["failed"] += 1
+    if obj_type == "sheet":
+        write_text(task_state_path, json.dumps({"version": 1, "tasks": tasks}, ensure_ascii=False, indent=2) + "\n")
+    return ready, errors, stats
+
+
 def clean_title(title: Any, fallback: str) -> str:
     value = str(title or fallback).strip()
     value = re.sub(r"[\\/:*?\"<>|]", "_", value)
@@ -535,25 +1781,107 @@ def unique_path(
     return candidate
 
 
-def normalize_content(content: str, title: str, cite_links: dict[str, str] | None = None) -> str:
+def html_attributes(value: str) -> dict[str, str]:
+    """Parse the small quoted-attribute subset emitted by Feishu Markdown exports."""
+    return {key.lower(): item for key, _quote, item in HTML_ATTRIBUTE_PATTERN.findall(value)}
+
+
+def markdown_link(label: str, target: str) -> str:
+    """Render a portable Markdown link while preserving local paths with spaces."""
+    visible = (label or target).replace("[", "\\[").replace("]", "\\]")
+    if not target:
+        return visible
+    if target.startswith(("http://", "https://", "feishu-media://")):
+        return f"[{visible}]({target})"
+    return f"[{visible}](<{target}>)"
+
+
+def document_target_for_url(url: str, document_links: dict[str, str]) -> str:
+    """Resolve a Feishu Wiki/doc URL to a configured local or remote document target."""
+    lowered = url.lower()
+    if "feishu" not in lowered and "larksuite" not in lowered:
+        return ""
+    for identifier in sorted(document_links, key=len, reverse=True):
+        if identifier and identifier in url:
+            return document_links[identifier]
+    return ""
+
+
+def rewrite_feishu_document_urls(content: str, document_links: dict[str, str]) -> str:
+    """Replace known Feishu document URLs without touching media or unrelated web links."""
+    def replace_markdown_link(match: re.Match[str]) -> str:
+        label = match.group(1)
+        url = match.group(2).strip()
+        target = document_target_for_url(url, document_links)
+        return markdown_link(label or url, target) if target else match.group(0)
+
+    value = MARKDOWN_LINK_PATTERN.sub(replace_markdown_link, content)
+
+    def replace_bare_url(match: re.Match[str]) -> str:
+        url = match.group(0)
+        target = document_target_for_url(url, document_links)
+        return markdown_link(url, target) if target else url
+
+    return BARE_FEISHU_DOCUMENT_URL_PATTERN.sub(replace_bare_url, value)
+
+
+def normalize_content(
+    content: str,
+    title: str,
+    cite_links: dict[str, str] | None = None,
+    *,
+    render_sub_page_navigation: bool = False,
+    localize_document_links: bool = False,
+) -> str:
     value = content.replace("\r\n", "\n").replace("\r", "\n")
     value = re.sub(r"^\s*<title>.*?</title>\s*", "", value, count=1, flags=re.IGNORECASE | re.DOTALL)
     value = value.replace("<wiki_recent_update></wiki_recent_update>", "")
 
     def replace_attachment_source(match: re.Match[str]) -> str:
-        attrs = match.group(1)
-        href_match = re.search(r'\bhref="([^"]+)"', attrs, flags=re.IGNORECASE)
-        token_match = re.search(r'\btoken="([^"]+)"', attrs, flags=re.IGNORECASE)
-        if href_match:
-            return f"[飞书附件]({href_match.group(1)})"
-        if token_match:
-            return f"[飞书附件](feishu-media://{token_match.group(1)})"
+        attrs = html_attributes(match.group(1))
+        href = attrs.get("href", "")
+        token = attrs.get("token", "")
+        mime = attrs.get("mime", "")
+        if mime.lower().startswith("image/"):
+            source = href or (f"feishu-media://{token}" if token else "")
+            if source:
+                token_attr = f' data-feishu-token="{html_escape(token, quote=True)}"' if token else ""
+                return f'<img src="{html_escape(source, quote=True)}" alt="飞书图片"{token_attr}>'
+        if href and token:
+            return (
+                f'<a href="{html_escape(href, quote=True)}" data-feishu-attachment="true" '
+                f'data-feishu-token="{html_escape(token, quote=True)}" '
+                f'data-feishu-mime="{html_escape(mime, quote=True)}">飞书附件</a>'
+            )
+        if href:
+            return f"[飞书附件]({href})"
+        if token:
+            return f"[飞书附件](feishu-media://{token})"
         return "（飞书附件）"
 
     # Feishu exports custom figure/grid/source tags. VitePress' Vue parser
     # treats these as components and can reject otherwise valid Markdown; keep
     # the attachment URL while removing the non-standard wrapper tags.
     value = re.sub(r"<source\b([^>]*)/?>", replace_attachment_source, value, flags=re.IGNORECASE)
+
+    if render_sub_page_navigation:
+        def render_sub_page_list(match: re.Match[str]) -> str:
+            pages: list[str] = []
+            for page in SUB_PAGE_PATTERN.finditer(match.group(0)):
+                attrs = html_attributes(page.group(1))
+                page_title = attrs.get("title", "").strip() or "未命名子页面"
+                identifier = (
+                    attrs.get("doc-id", "").strip()
+                    or attrs.get("wiki-token", "").strip()
+                    or attrs.get("node-token", "").strip()
+                )
+                target = cite_links.get(identifier, "") if identifier and cite_links else ""
+                pages.append(f"- {markdown_link(page_title, target)}")
+            if not pages:
+                return ""
+            return "## 子页面导航\n\n" + "\n".join(pages)
+
+        value = SUB_PAGE_LIST_PATTERN.sub(render_sub_page_list, value)
     value = re.sub(
         r"</?(?:figure|grid|column|callout|sub-page-list|sub-page|sheet|readonly-block)\b[^>]*>",
         "",
@@ -562,24 +1890,25 @@ def normalize_content(content: str, title: str, cite_links: dict[str, str] | Non
     )
 
     def replace_feishu_image(match: re.Match[str]) -> str:
-        attrs = match.group(1)
-        href_match = re.search(r'\bhref="([^"]+)"', attrs, flags=re.IGNORECASE)
-        src_match = re.search(r'\bsrc="([^"]+)"', attrs, flags=re.IGNORECASE)
-        token_match = re.search(r'\btoken="([^"]+)"', attrs, flags=re.IGNORECASE)
-        alt_match = re.search(r'\balt="([^"]*)"', attrs, flags=re.IGNORECASE)
+        attrs = html_attributes(match.group(1))
+        href = attrs.get("href", "")
+        src = attrs.get("src", "")
+        token = attrs.get("token", "")
+        alt_value = attrs.get("alt", "")
         image_url = (
-            href_match.group(1)
-            if href_match
-            else src_match.group(1)
-            if src_match
-            else f"feishu-media://{token_match.group(1)}"
-            if token_match
+            href
+            if href
+            else src
+            if src
+            else f"feishu-media://{token}"
+            if token
             else ""
         )
         if not image_url:
             return "（飞书图片）"
-        alt = (alt_match.group(1) if alt_match else "飞书图片").replace('"', "'")
-        return f'<img src="{image_url}" alt="{alt}">'
+        alt = (alt_value or "飞书图片").replace('"', "'")
+        token_attr = f' data-feishu-token="{html_escape(token, quote=True)}"' if token else ""
+        return f'<img src="{html_escape(image_url, quote=True)}" alt="{html_escape(alt, quote=True)}"{token_attr}>'
 
     # The Feishu exporter sometimes puts an opaque media token in img[src] and
     # the authenticated URL in img[href]. VitePress would treat the token as a
@@ -603,21 +1932,31 @@ def normalize_content(content: str, title: str, cite_links: dict[str, str] | Non
             return f"@{user_label}" if user_label else "@飞书用户"
         label = (title_match.group(1) if title_match else "飞书文档").strip() or "飞书文档"
         target = cite_links.get(doc_match.group(1), "") if doc_match and cite_links else ""
-        return f"[{label}]({target})" if target else label
+        return markdown_link(label, target) if target else label
 
     # Resolve citations before generic XML escaping; cite is a Feishu export
     # construct, not an HTML tag that should be shown literally.
     value = re.sub(r"<cite\s+([^>]*)></cite>", replace_cite, value, flags=re.IGNORECASE)
     value = re.sub(r"<cite\s+([^>]*)/>", replace_cite, value, flags=re.IGNORECASE)
+    if localize_document_links and cite_links:
+        value = rewrite_feishu_document_urls(value, cite_links)
 
-    # Some Feishu image descriptions contain copied HTML such as
-    # ``<a href=...``. If it remains in the Markdown image label, the Vue
-    # compiler can mistake it for a real tag and report a missing end tag.
-    def escape_image_alt(match: re.Match[str]) -> str:
-        alt = match.group(1).replace("<", "&lt;").replace(">", "&gt;")
-        return f"![{alt}]({match.group(2)})"
+    # Feishu occasionally exports a very long image description as a Markdown
+    # image label.  Markdown renderers disagree on those labels (especially
+    # when they contain copied punctuation), and some degrade them into a
+    # visible hyperlink instead of an image.  Use one portable HTML form for
+    # every ordinary image, with a compact escaped alt value.  Asset discovery
+    # and local URL rewriting both support this form.
+    def render_markdown_image(match: re.Match[str]) -> str:
+        alt = re.sub(r"\s+", " ", match.group(1)).strip() or "飞书图片"
+        source = match.group(2).strip()
+        if source.startswith("<") and source.endswith(">"):
+            source = source[1:-1].strip()
+        if not source:
+            return "（飞书图片）"
+        return f'<img src="{html_escape(source, quote=True)}" alt="{html_escape(alt, quote=True)}">'
 
-    value = re.sub(r"!\[([^\]\n]*)\]\(([^)\n]+)\)", escape_image_alt, value)
+    value = re.sub(r"!\[([^\]\n]*)\]\(\s*(<[^>\n]+>|[^)\n]+)\s*\)", render_markdown_image, value)
 
     # A few exports escape only the opening/closing table tags while keeping
     # the inner HTML. Restore the block boundary and remove paragraph wrappers
@@ -643,6 +1982,10 @@ def normalize_content(content: str, title: str, cite_links: dict[str, str] | Non
 
     def escape_unknown_html(match: re.Match[str]) -> str:
         tag_name = match.group(1).lower()
+        if match.string[max(0, match.start() - 2) : match.start()] == "](":
+            # Markdown permits angle-wrapped local destinations so paths with
+            # spaces, parentheses, or non-ASCII characters remain portable.
+            return match.group(0)
         return match.group(0) if tag_name in known_html_tags else match.group(0).replace("<", "&lt;").replace(">", "&gt;")
 
     # Raw XML/code snippets such as #include <iostream> and Maven XML are
@@ -662,10 +2005,58 @@ def normalize_content(content: str, title: str, cite_links: dict[str, str] | Non
     return value or f"# {title}\n\n（飞书文档当前没有可转换的正文内容。）"
 
 
+def render_document_content(
+    config: dict[str, Any],
+    obj_token: str,
+    title: str,
+    cite_links: dict[str, str] | None,
+    *,
+    render_sub_page_navigation: bool,
+    localize_document_links: bool,
+    embedded_sheet_settings: dict[str, Any] | None = None,
+    snapshot_root: Path | None = None,
+    node_token: str = "",
+) -> tuple[str, str]:
+    """Fetch Markdown and, when explicitly enabled, append bounded embedded Sheet snapshots."""
+    raw_content, revision_id = fetch_doc(config, obj_token)
+    content = normalize_content(
+        raw_content,
+        title,
+        cite_links,
+        render_sub_page_navigation=render_sub_page_navigation,
+        localize_document_links=localize_document_links,
+    )
+    if embedded_sheet_settings is None:
+        return content, revision_id
+    document_xml = fetch_doc_xml(config, obj_token)
+    embedded_content, _ = fetch_embedded_sheet_markdown(
+        config,
+        document_xml,
+        embedded_sheet_settings,
+        snapshot_root=snapshot_root,
+        node_token=node_token,
+    )
+    appendix = [EMBEDDED_SHEET_SCAN_MARKER]
+    if embedded_content:
+        appendix.extend(["", "## 嵌入式表格", "", embedded_content])
+    return content.rstrip() + "\n\n" + "\n".join(appendix), revision_id
+
+
 def extract_image_urls(content: str) -> list[str]:
-    """Return remote image URLs from Markdown images and raw HTML img tags."""
+    """Return remote image URLs from Markdown images and raw HTML img tags.
+
+    Feishu's Markdown exporter may wrap a URL destination in ``<...>``.  That
+    is valid CommonMark (and protects signed query strings), but it used to
+    bypass the asset queue because the older matcher expected ``(https://``
+    directly.  Accept both forms so a valid image never becomes an accidental
+    offline placeholder merely because of its Markdown delimiter.
+    """
     urls = set(
-        re.findall(r"!\[[^\]]*\]\((https?://[^)\s]+)", content, flags=re.IGNORECASE)
+        re.findall(
+            r"!\[[^\]]*\]\(\s*<?(https?://[^)\s>]+)>?",
+            content,
+            flags=re.IGNORECASE,
+        )
     )
     urls.update(
         re.findall(r"<img\b[^>]*\bsrc=[\"'](https?://[^\"']+)", content, flags=re.IGNORECASE)
@@ -674,21 +2065,41 @@ def extract_image_urls(content: str) -> list[str]:
 
 
 def extract_attachment_urls(content: str) -> list[str]:
-    """Return remote URLs currently used by normalized Feishu attachments."""
-    return sorted(
-        set(
-            re.findall(
-                r"\[飞书附件\]\((https?://[^)\s]+)",
-                content,
-                flags=re.IGNORECASE,
-            )
+    """Return remote URLs from both legacy Markdown and normalized attachment links."""
+    urls = set(
+        re.findall(
+            r"\[飞书附件\]\(\s*<?(https?://[^)\s>]+)>?",
+            content,
+            flags=re.IGNORECASE,
         )
     )
+    for match in re.finditer(r"<a\b([^>]*)>", content, flags=re.IGNORECASE):
+        attrs = html_attributes(match.group(1))
+        href = attrs.get("href", "").strip()
+        if attrs.get("data-feishu-attachment", "").lower() == "true" and href.startswith(("http://", "https://")):
+            urls.add(href)
+    return sorted(urls)
 
 
 def extract_media_tokens(content: str) -> list[str]:
     """Return media tokens carried through normalization for local download."""
     return sorted(set(re.findall(r"feishu-media://([A-Za-z0-9_-]+)", content)))
+
+
+def asset_identities(content: str) -> dict[str, str]:
+    """Prefer stable Feishu media tokens over short-lived signed URLs for deduplication."""
+    identities: dict[str, str] = {}
+    for match in re.finditer(r"<(?:img|a)\b([^>]*)>", content, flags=re.IGNORECASE):
+        attrs = html_attributes(match.group(1))
+        token = attrs.get("data-feishu-token", "").strip()
+        reference = attrs.get("src", "").strip()
+        if not reference and attrs.get("data-feishu-attachment", "").lower() == "true":
+            reference = attrs.get("href", "").strip()
+        if reference and token:
+            identities[reference] = f"feishu-token:{token}"
+    for token in extract_media_tokens(content):
+        identities[f"feishu-media://{token}"] = f"feishu-token:{token}"
+    return identities
 
 
 def extract_asset_references(content: str) -> list[str]:
@@ -700,8 +2111,33 @@ def extract_asset_references(content: str) -> list[str]:
     )
 
 
+def asset_contents_for_sync(
+    fetched: dict[str, tuple[str, str, str, str]],
+    fresh_tokens: set[str],
+    *,
+    targeted: bool,
+) -> list[str]:
+    """Keep event and pilot asset downloads within the documents fetched in this run."""
+    tokens = fresh_tokens if targeted else set(fetched)
+    return [
+        fetched[token][1]
+        for token in sorted(tokens)
+        if token in fetched and isinstance(fetched[token], tuple) and len(fetched[token]) > 1
+    ]
+
+
 def image_extension(content_type: str, data: bytes, url: str) -> str:
-    """Infer a browser-renderable extension without trusting Feishu's URL path."""
+    """Infer a browser-renderable extension from bytes before response metadata."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return ".jpg"
+    if data.startswith((b"GIF87a", b"GIF89a")):
+        return ".gif"
+    if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        return ".webp"
+    if data.lstrip().startswith(b"<svg") or b"<svg" in data[:512]:
+        return ".svg"
     header = (content_type or "").split(";", 1)[0].lower().strip()
     by_type = {
         "image/jpeg": ".jpg",
@@ -713,18 +2149,23 @@ def image_extension(content_type: str, data: bytes, url: str) -> str:
     }
     if header in by_type:
         return by_type[header]
-    if data.startswith(b"\x89PNG\r\n\x1a\n"):
-        return ".png"
-    if data.startswith(b"\xff\xd8\xff"):
-        return ".jpg"
-    if data.startswith((b"GIF87a", b"GIF89a")):
-        return ".gif"
-    if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
-        return ".webp"
-    if data.lstrip().startswith(b"<svg") or b"<svg" in data[:512]:
-        return ".svg"
     guessed = Path(urlparse(url).path).suffix.lower()
     return guessed if guessed in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp"} else ".bin"
+
+
+def repair_cached_image_extension(existing: Path, url: str) -> Path:
+    """Correct a legacy image suffix when server headers disagreed with file bytes."""
+    try:
+        detected = image_extension("", existing.read_bytes()[:512], url)
+    except OSError:
+        return existing
+    if detected == ".bin" or existing.suffix.lower() == detected:
+        return existing
+    corrected = existing.with_suffix(detected)
+    if corrected.exists():
+        return corrected if corrected.is_file() and corrected.stat().st_size else existing
+    existing.rename(corrected)
+    return corrected
 
 
 def download_one_asset(
@@ -733,11 +2174,14 @@ def download_one_asset(
     timeout_seconds: float,
     max_bytes: int,
     require_image: bool = True,
+    identity: str | None = None,
 ) -> tuple[str, str, str]:
     """Download one remote asset into a content-addressed local asset path."""
-    digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:24]
+    digest = hashlib.sha256((identity or url).encode("utf-8")).hexdigest()[:24]
     existing = next(iter(sorted(asset_root.glob(f"{digest}.*"))), None)
     if existing and existing.is_file() and existing.stat().st_size:
+        if require_image:
+            existing = repair_cached_image_extension(existing, url)
         return url, existing.name, "reused"
 
     request = Request(url, headers={"User-Agent": "soia-cwork-feishu-doc-git-sync/1"})
@@ -745,7 +2189,7 @@ def download_one_asset(
         content_type = response.headers.get("Content-Type", "")
         data = response.read(max_bytes + 1)
     if len(data) > max_bytes:
-        raise RuntimeError(f"asset exceeds max_asset_bytes={max_bytes}")
+        raise AssetSizeLimitError()
     extension = image_extension(content_type, data, url)
     if extension == ".bin" and require_image:
         raise RuntimeError(f"remote response is not a recognized image: {content_type or 'unknown content type'}")
@@ -765,12 +2209,26 @@ def download_one_media(
     mirror_dir: Path,
     asset_dir: str,
     max_bytes: int,
+    timeout_seconds: float,
+    *,
+    attempts: int = DEFAULT_ASSET_DOWNLOAD_ATTEMPTS,
 ) -> tuple[str, str, str]:
-    """Download a token-backed document media resource through lark-cli."""
+    """Download token-backed media with bounded retries for transient CLI failures."""
     reference = f"feishu-media://{token}"
     digest = hashlib.sha256(reference.encode("utf-8")).hexdigest()[:24]
     asset_root = mirror_dir / asset_dir
-    existing = next(iter(sorted(asset_root.glob(f"{digest}.*"))), None) if asset_root.is_dir() else None
+    existing = (
+        next(
+            (
+                candidate
+                for candidate in sorted(asset_root.glob(f"{digest}.*"))
+                if candidate.is_file() and candidate.stat().st_size > 0
+            ),
+            None,
+        )
+        if asset_root.is_dir()
+        else None
+    )
     if existing and existing.is_file() and existing.stat().st_size:
         return reference, existing.name, "reused"
     asset_root.mkdir(parents=True, exist_ok=True)
@@ -789,43 +2247,93 @@ def download_one_media(
         "--format",
         "json",
     )
-    REQUEST_LIMITER.acquire()
-    result = subprocess.run(
-        command,
-        check=False,
-        capture_output=True,
-        text=True,
-        cwd=mirror_dir,
-        env=command_env(config),
-    )
-    if result.returncode != 0:
-        detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
-        info = cli_error_info(detail)
+    attempts = max(1, min(int(attempts), 5))
+    for attempt in range(attempts):
+        REQUEST_LIMITER.acquire()
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=mirror_dir,
+                env=command_env(config),
+                timeout=timeout_seconds,
+            )
+        except subprocess.TimeoutExpired as exc:
+            info = {"category": "temporary_network", "code": "", "retryable": True}
+            failure: Exception | None = exc
+        else:
+            failure = None
+            if result.returncode == 0:
+                target = next(
+                    (
+                        candidate
+                        for candidate in sorted(asset_root.glob(f"{digest}.*"))
+                        if candidate.is_file() and candidate.stat().st_size > 0
+                    ),
+                    None,
+                )
+                if target is not None:
+                    if target.stat().st_size > max_bytes:
+                        target.unlink()
+                        raise AssetSizeLimitError()
+                    return reference, target.name, "downloaded"
+                info = {"category": "invalid_response", "code": "", "retryable": True}
+            else:
+                detail = " ".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+                info = cli_error_info(detail)
+
+        # Some Feishu media calls fail once with an unclassified CLI response
+        # even though the same stable token is immediately downloadable.  Retry
+        # that bounded case, but never retry a confirmed permission or not-found
+        # response that requires user action instead.
+        retryable = bool(info["retryable"]) or str(info["category"]) in {"cli_error", "invalid_response"}
+        if retryable and attempt < attempts - 1:
+            REQUEST_LIMITER.cooldown(min(30, 2**attempt))
+            continue
+        code_suffix = f" code={info['code']}" if info["code"] else ""
         raise CliCommandError(
-            f"lark-cli media request failed category={info['category']}",
+            f"lark-cli media request failed category={info['category']}{code_suffix}",
             category=str(info["category"]),
             code=str(info["code"]),
-            retryable=bool(info["retryable"]),
-        )
-    candidates = sorted(asset_root.glob(f"{digest}.*"))
-    if not candidates:
-        raise RuntimeError("docs +media-download returned no local file")
-    target = candidates[0]
-    if target.stat().st_size > max_bytes:
-        target.unlink()
-        raise RuntimeError(f"asset exceeds max_asset_bytes={max_bytes}")
-    return reference, target.name, "downloaded"
+            retryable=retryable,
+        ) from failure
+
+    raise AssertionError("unreachable media download retry state")
+
+
+def cached_asset_filename(identity: str, asset_root: Path) -> str:
+    """Return the content-addressed asset filename already present for an identity."""
+    cache_key = (
+        f"feishu-media://{identity.removeprefix('feishu-token:')}"
+        if identity.startswith("feishu-token:")
+        else identity
+    )
+    digest = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()[:24]
+    existing = next(iter(sorted(asset_root.glob(f"{digest}.*"))), None) if asset_root.is_dir() else None
+    return existing.name if existing and existing.is_file() and existing.stat().st_size else ""
+
+
+def is_short_lived_feishu_asset_url(reference: str) -> bool:
+    """Identify Feishu drive/stream URLs that should be refreshed before download."""
+    parsed = urlparse(reference)
+    host = (parsed.hostname or "").lower()
+    return host.endswith(".feishu.cn") and ("drive" in host or "stream" in host)
 
 
 def materialize_assets(
     contents: list[str],
     mirror_dir: Path,
     config: dict[str, Any],
-) -> tuple[dict[str, str], dict[str, str], int, int]:
-    """Download all remote images once and return URL->mirror-relative asset paths."""
+    *,
+    refresh_short_lived_urls: bool = False,
+    batch_size_override: int | None = None,
+) -> tuple[dict[str, str], dict[str, str], int, int, int]:
+    """Download assets once per stable media token or URL and return local paths."""
     references = sorted({ref for content in contents for ref in extract_asset_references(content)})
     if not references:
-        return {}, {}, 0, 0
+        return {}, {}, 0, 0, 0
     asset_dir = str(nested(config, "sync", "asset_dir", default=DEFAULT_ASSET_DIR)).strip("/\\")
     if not asset_dir or Path(asset_dir).is_absolute() or ".." in Path(asset_dir).parts:
         raise SystemExit("sync.asset_dir must be a relative directory without '..'")
@@ -842,9 +2350,40 @@ def materialize_assets(
     except (TypeError, ValueError):
         timeout_seconds = DEFAULT_ASSET_TIMEOUT_SECONDS
     try:
+        media_attempts = max(
+            1,
+            min(
+                int(
+                    nested(
+                        config,
+                        "sync",
+                        "asset_download_attempts",
+                        default=DEFAULT_ASSET_DOWNLOAD_ATTEMPTS,
+                    )
+                ),
+                5,
+            ),
+        )
+    except (TypeError, ValueError):
+        media_attempts = DEFAULT_ASSET_DOWNLOAD_ATTEMPTS
+    try:
         max_bytes = max(1024, int(nested(config, "sync", "max_asset_bytes", default=DEFAULT_MAX_ASSET_BYTES)))
     except (TypeError, ValueError):
         max_bytes = DEFAULT_MAX_ASSET_BYTES
+    try:
+        batch_size = max(0, int(nested(config, "sync", "asset_batch_size", default=0)))
+    except (TypeError, ValueError):
+        batch_size = 0
+    if batch_size_override is not None:
+        batch_size = max(0, batch_size_override)
+
+    identity_by_reference: dict[str, str] = {}
+    for content in contents:
+        identity_by_reference.update(asset_identities(content))
+    grouped_references: dict[str, list[str]] = {}
+    for reference in references:
+        identity = identity_by_reference.get(reference, reference)
+        grouped_references.setdefault(identity, []).append(reference)
 
     asset_map: dict[str, str] = {}
     errors: dict[str, str] = {}
@@ -853,41 +2392,94 @@ def materialize_assets(
 
     image_references = {url for content in contents for url in extract_image_urls(content)}
 
-    def download(reference: str) -> tuple[str, str, str, str]:
-        try:
-            if reference.startswith("feishu-media://"):
-                source, filename, status = download_one_media(
+    def download(identity: str, candidates: list[str]) -> tuple[list[str], str, str, str]:
+        last_error = ""
+        media_token = identity.removeprefix("feishu-token:") if identity.startswith("feishu-token:") else ""
+        if media_token:
+            try:
+                _source, filename, status = download_one_media(
                     config,
-                    reference.removeprefix("feishu-media://"),
+                    media_token,
                     mirror_dir,
                     asset_dir,
                     max_bytes,
-                )
-            else:
-                source, filename, status = download_one_asset(
-                    reference,
-                    asset_root,
                     timeout_seconds,
-                    max_bytes,
-                    require_image=reference in image_references,
+                    attempts=media_attempts,
                 )
-            return source, filename, status, ""
-        except Exception as exc:  # keep the original URL when one image fails
-            return reference, "", "failed", str(exc)
+                return candidates, filename, status, ""
+            except Exception as exc:  # Signed URLs are a best-effort fallback for token download failures.
+                last_error = f"asset download failed category={safe_error_category(exc)}"
+        for reference in candidates:
+            # The stable-token attempt above already covered this exact source.
+            if reference == f"feishu-media://{media_token}":
+                continue
+            try:
+                if reference.startswith("feishu-media://"):
+                    _source, filename, status = download_one_media(
+                        config,
+                        reference.removeprefix("feishu-media://"),
+                        mirror_dir,
+                        asset_dir,
+                        max_bytes,
+                        timeout_seconds,
+                        attempts=media_attempts,
+                    )
+                else:
+                    _source, filename, status = download_one_asset(
+                        reference,
+                        asset_root,
+                        timeout_seconds,
+                        max_bytes,
+                        require_image=reference in image_references,
+                        identity=identity,
+                    )
+                return candidates, filename, status, ""
+            except Exception as exc:  # try a refreshed signed URL for the same media token
+                last_error = f"asset download failed category={safe_error_category(exc)}"
+        return candidates, "", "failed", last_error
+
+    pending_groups: list[tuple[str, list[str]]] = []
+    for identity, candidates in grouped_references.items():
+        filename = cached_asset_filename(identity, asset_root)
+        if filename:
+            for source in candidates:
+                asset_map[source] = (Path(asset_dir) / filename).as_posix()
+            reused += 1
+        else:
+            pending_groups.append((identity, candidates))
+    deferred = max(0, len(pending_groups) - batch_size) if batch_size else 0
+    if batch_size:
+        pending_groups = pending_groups[:batch_size]
+    download_groups: list[tuple[str, list[str]]] = []
+    for identity, candidates in pending_groups:
+        if (
+            refresh_short_lived_urls
+            and not identity.startswith("feishu-token:")
+            and any(is_short_lived_feishu_asset_url(reference) for reference in candidates)
+        ):
+            for source in candidates:
+                errors[source] = "refresh_required"
+            continue
+        download_groups.append((identity, candidates))
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(download, reference) for reference in references]
+        futures = [
+            executor.submit(download, identity, candidates)
+            for identity, candidates in download_groups
+        ]
         for future in as_completed(futures):
-            url, filename, status, error = future.result()
+            sources, filename, status, error = future.result()
             if status == "failed":
-                errors[url] = error
+                for source in sources:
+                    errors[source] = error
                 continue
-            asset_map[url] = (Path(asset_dir) / filename).as_posix()
+            for source in sources:
+                asset_map[source] = (Path(asset_dir) / filename).as_posix()
             if status == "downloaded":
                 downloaded += 1
             else:
                 reused += 1
-    return asset_map, errors, downloaded, reused
+    return asset_map, errors, downloaded, reused, deferred
 
 
 def rewrite_asset_urls(
@@ -896,12 +2488,97 @@ def rewrite_asset_urls(
     mirror_dir: Path,
     asset_map: dict[str, str],
 ) -> str:
-    """Rewrite downloaded image URLs to paths relative to the generated Markdown."""
+    """Rewrite downloaded media URLs to portable links relative to the Markdown."""
     for url, mirror_relative in asset_map.items():
         local_path = mirror_dir / mirror_relative
         relative = Path(os.path.relpath(local_path, target.parent)).as_posix()
         content = content.replace(url, relative)
-    return content
+
+    def rewrite_local_attachment_card(match: re.Match[str]) -> str:
+        attrs = html_attributes(match.group(1))
+        href = attrs.get("href", "").strip()
+        if (
+            attrs.get("data-feishu-attachment", "").lower() != "true"
+            or not href
+            or href.startswith(("http://", "https://", "feishu-media://"))
+        ):
+            return match.group(0)
+        # Obsidian reliably intercepts Markdown links inside a vault, while a
+        # relative raw HTML anchor can be delegated to the renderer's app URL
+        # and appear unclickable.  Once an attachment is local there is no
+        # need to retain its Feishu-only card attributes.
+        label = re.sub(r"<[^>]+>", "", match.group(2)).strip() or "飞书附件"
+        return markdown_link(label, href)
+
+    content = re.sub(
+        r"<a\b([^>]*)>(.*?)</a>",
+        rewrite_local_attachment_card,
+        content,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    # Markdown is not parsed inside an HTML block by Obsidian.  Feishu often
+    # wraps a source card in a paragraph, so remove only a paragraph whose
+    # complete content is a now-local attachment link.  Do not touch normal
+    # prose paragraphs or HTML table cells.
+    return re.sub(
+        r"<p\b[^>]*>\s*(\[飞书附件\]\(<[^>]+>\))\s*</p>",
+        r"\1",
+        content,
+        flags=re.IGNORECASE,
+    )
+
+
+def merge_asset_results(
+    previous_map: dict[str, str],
+    previous_errors: dict[str, str],
+    refreshed_map: dict[str, str],
+    refreshed_errors: dict[str, str],
+    final_contents: list[str],
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Keep successful first-pass mappings when only some documents refresh."""
+    merged_map = {**previous_map, **refreshed_map}
+    all_errors = {**previous_errors, **refreshed_errors}
+    retained_errors = {
+        reference: error
+        for reference, error in all_errors.items()
+        if any(reference in content for content in final_contents)
+    }
+    return merged_map, retained_errors
+
+
+def summarize_asset_errors(errors: dict[str, str]) -> dict[str, int]:
+    """Count only safe asset failure categories, never signed URLs or messages."""
+    categories: dict[str, int] = {}
+    for detail in errors.values():
+        marker = re.search(
+            r"\bcategory=(asset_too_large|rate_limit|permission_denied|not_found|temporary_network|invalid_response|cli_error)\b",
+            detail,
+        )
+        category = (
+            "refresh_required"
+            if detail == "refresh_required"
+            else marker.group(1)
+            if marker
+            else safe_error_category(detail)
+        )
+        categories[category] = categories.get(category, 0) + 1
+    return dict(sorted(categories.items()))
+
+
+def nodes_requiring_asset_refresh(
+    nodes: list[dict[str, Any]],
+    fetched: dict[str, tuple[str, str, str, str]],
+    asset_errors: dict[str, str],
+) -> list[dict[str, Any]]:
+    """Refresh only documents that still carry a failed resource reference."""
+    failed_references = set(asset_errors)
+    return [
+        node
+        for node in nodes
+        if str(node.get("obj_type", "")) in {"docx", "doc"}
+        and str(node.get("node_token")) in fetched
+        and any(reference in fetched[str(node["node_token"])][1] for reference in failed_references)
+    ]
 
 
 def source_url(config: dict[str, Any], node_token: str) -> str:
@@ -1028,13 +2705,15 @@ def sidebar_path(path: str) -> str:
 
 def build_sidebar(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     by_parent: dict[str | None, list[dict[str, Any]]] = {}
+    node_tokens = {str(node.get("node_token")) for node in nodes if node.get("node_token")}
     for node in nodes:
-        by_parent.setdefault(node.get("parent_node_token"), []).append(node)
+        parent = node.get("parent_node_token")
+        by_parent.setdefault(parent if parent in node_tokens else None, []).append(node)
 
     def build(parent: str | None) -> list[dict[str, Any]]:
         entries = []
         candidates = by_parent.get(parent, [])
-        if parent is None:
+        if parent is None and "" in by_parent:
             candidates += by_parent.get("", [])
         for node in candidates:
             item: dict[str, Any] = {
@@ -1060,6 +2739,146 @@ def build_sidebar(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def document_body(raw: str) -> str:
+    """Exclude generated frontmatter from change details so diffs show document content."""
+    if raw.startswith("---\n"):
+        end = raw.find("\n---", 4)
+        if end >= 0:
+            return raw[end + 4 :].lstrip("\n")
+    return raw
+
+
+def relative_markdown_link(from_path: Path, target: Path, label: str) -> str:
+    relative = Path(os.path.relpath(target, from_path.parent)).as_posix()
+    return markdown_link(label, relative)
+
+
+def classify_changes(
+    old_nodes: dict[str, Any],
+    records: list[dict[str, Any]],
+    deleted: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Classify the current run without treating unchanged files as report entries."""
+    changes = {"added": [], "modified": [], "moved": [], "deleted": list(deleted)}
+    for record in records:
+        token = str(record.get("node_token", ""))
+        old = old_nodes.get(token, {}) if isinstance(old_nodes.get(token), dict) else {}
+        if not old:
+            changes["added"].append(record)
+            continue
+        moved = old.get("relative_path") != record.get("relative_path")
+        content_changed = (
+            old.get("content_hash") != record.get("content_hash")
+            or old.get("sync_status") != record.get("sync_status")
+        )
+        if moved:
+            changes["moved"].append(dict(record, previous_relative_path=old.get("relative_path", ""), content_changed=content_changed))
+        elif content_changed:
+            changes["modified"].append(record)
+    return changes
+
+
+def write_change_ledger(
+    output_dir: Path,
+    metadata_dir: Path,
+    ledger_dir: str,
+    changes: dict[str, list[dict[str, Any]]],
+    previous_bodies: dict[str, str],
+    sync_started: str,
+    max_diff_lines: int,
+) -> Path:
+    """Write a private run ledger and bounded Markdown diffs without changing the mirror tree."""
+    run_date = sync_started[:10] or "unknown-date"
+    run_time = re.sub(r"[^0-9]", "", sync_started[11:19]) or "run"
+    base = metadata_dir / ledger_dir / run_date
+    report_dir = base / run_time
+    suffix = 2
+    while report_dir.exists():
+        report_dir = base / f"{run_time}-{suffix}"
+        suffix += 1
+    details_dir = report_dir / "details"
+    summary_path = report_dir / "summary.md"
+    lines = [
+        "# Feishu mirror change ledger",
+        "",
+        f"- Synced at: {sync_started}",
+        f"- Added: **{len(changes['added'])}**",
+        f"- Modified: **{len(changes['modified'])}**",
+        f"- Moved or renamed: **{len(changes['moved'])}**",
+        f"- Deleted remotely: **{len(changes['deleted'])}**",
+        "",
+    ]
+
+    def entry_link(record: dict[str, Any]) -> str:
+        target = output_dir / str(record.get("relative_path", ""))
+        title = str(record.get("title", "document"))
+        return relative_markdown_link(summary_path, target, title) if target.is_file() else title
+
+    def append_entries(heading: str, entries: list[dict[str, Any]]) -> None:
+        if not entries:
+            return
+        lines.extend([f"## {heading}", ""])
+        for record in entries:
+            lines.append(f"- {entry_link(record)}")
+        lines.append("")
+
+    append_entries("Added", changes["added"])
+    if changes["modified"]:
+        lines.extend(["## Modified", ""])
+        for index, record in enumerate(changes["modified"], start=1):
+            token = str(record.get("node_token", ""))
+            before = previous_bodies.get(token, "")
+            target = output_dir / str(record.get("relative_path", ""))
+            after = document_body(target.read_text(encoding="utf-8")) if target.is_file() else ""
+            detail_link = ""
+            if before and after:
+                diff = list(
+                    difflib.unified_diff(
+                        document_body(before).splitlines(),
+                        after.splitlines(),
+                        fromfile="before",
+                        tofile="after",
+                        lineterm="",
+                        n=3,
+                    )
+                )
+                if diff:
+                    if len(diff) > max_diff_lines:
+                        diff = diff[:max_diff_lines] + ["... diff truncated ..."]
+                    detail_path = details_dir / f"change-{index:03d}.md"
+                    write_text(
+                        detail_path,
+                        "\n".join(
+                            [
+                                "# Document change detail",
+                                "",
+                                f"- Document: {record.get('title', 'document')}",
+                                "",
+                                "```diff",
+                                *diff,
+                                "```",
+                                "",
+                            ]
+                        ),
+                    )
+                    detail_link = " · " + relative_markdown_link(summary_path, detail_path, "diff")
+            lines.append(f"- {entry_link(record)}{detail_link}")
+        lines.append("")
+    if changes["moved"]:
+        lines.extend(["## Moved or renamed", ""])
+        for record in changes["moved"]:
+            content_note = " (content also changed)" if record.get("content_changed") else ""
+            lines.append(f"- {entry_link(record)}{content_note}")
+        lines.append("")
+    if changes["deleted"]:
+        lines.extend(["## Deleted remotely", ""])
+        for record in changes["deleted"]:
+            lines.append(f"- {record.get('title', 'document')} (preserved locally; marked deleted in the manifest)")
+        lines.append("")
+    write_text(summary_path, "\n".join(lines))
+    return summary_path
 
 
 def frontmatter_fields(raw: str) -> dict[str, str]:
@@ -1160,6 +2979,7 @@ def validate_mirror(
         raw_category = str(record.get("error", "") or "")
         if raw_category:
             known_categories = {
+                "asset_too_large",
                 "rate_limit",
                 "permission_denied",
                 "not_found",
@@ -1313,7 +3133,20 @@ def sync(args: argparse.Namespace) -> int:
     sync_started = utc_now()
     print("started space_id=<configured-space> identity=bot config=<private-config> output=<private-location>")
     previous_manifest = load_json(output_dir / METADATA_DIR / MANIFEST_FILE, {})
-    if (args.retry_failed or args.rebuild_tree_only) and isinstance(previous_manifest, dict) and isinstance(previous_manifest.get("nodes"), list):
+    pilot_node_tokens = {str(token).strip() for token in args.pilot_node_token if str(token).strip()}
+    if pilot_node_tokens:
+        if args.retry_failed or args.rebuild_tree_only or args.refresh_tree_only:
+            raise SystemExit("--pilot-node-token cannot be combined with retry or tree-rebuild modes")
+        nodes = []
+        for token in sorted(pilot_node_tokens):
+            node = node_get(config, token, space_id)
+            node["node_token"] = str(node.get("node_token") or token)
+            node.setdefault("parent_node_token", "")
+            node.setdefault("depth", 0)
+            node.setdefault("has_child", False)
+            nodes.append(node)
+        print(f"pilot_scope selected_nodes={len(nodes)} source=wiki_node_get", flush=True)
+    elif (args.retry_failed or args.rebuild_tree_only) and isinstance(previous_manifest, dict) and isinstance(previous_manifest.get("nodes"), list):
         nodes = [node for node in previous_manifest["nodes"] if isinstance(node, dict)]
         mode = "retry_failed" if args.retry_failed else "tree_rebuild"
         print(f"structure source=previous_manifest mode={mode}", flush=True)
@@ -1322,7 +3155,10 @@ def sync(args: argparse.Namespace) -> int:
     print(f"processed nodes_discovered={len(nodes)}")
     if args.dry_run:
         for node in nodes[:10]:
-            print(f"node title={clean_title(node.get('title'), node['node_token'])} token={node['node_token']}")
+            print(
+                f"node title={clean_title(node.get('title'), node['node_token'])} "
+                f"type={str(node.get('obj_type', 'unknown'))}"
+            )
         if len(nodes) > 10:
             print(f"node ... and {len(nodes) - 10} more")
         print("completed dry_run=true files_written=0")
@@ -1366,7 +3202,9 @@ def sync(args: argparse.Namespace) -> int:
         if node.get("obj_token") and node.get("node_token")
     }
     changed_node_tokens.update(node_by_obj[obj] for obj in changed_obj_tokens if obj in node_by_obj)
-    event_driven = bool(event_file or explicit_node_targets or explicit_obj_targets or only_node_tokens)
+    event_driven = bool(
+        event_file or explicit_node_targets or explicit_obj_targets or only_node_tokens or pilot_node_tokens
+    )
     probe_remote_metadata = bool(
         incremental
         and not args.rebuild_tree_only
@@ -1389,6 +3227,8 @@ def sync(args: argparse.Namespace) -> int:
             f"tree_event={tree_event}",
             flush=True,
         )
+    # Keep the remote node order stable while planning local paths and links.
+    ordered = list(nodes)
     used_paths: set[str] = set()
     path_by_token: dict[str, Path] = {}
     children_by_parent: dict[str, list[dict[str, Any]]] = {}
@@ -1422,13 +3262,6 @@ def sync(args: argparse.Namespace) -> int:
                     counter += 1
             used_directory_names.add(directory)
             expandable_directory_by_token[token] = directory
-    cite_links: dict[str, str] = {}
-    for node in nodes:
-        target = source_url(config, str(node.get("node_token")))
-        for identifier in (node.get("node_token"), node.get("obj_token")):
-            if identifier:
-                cite_links[str(identifier)] = target
-
     def path_for(node: dict[str, Any]) -> Path:
         node_key = node["node_token"]
         old = old_nodes.get(node_key, {}) if isinstance(old_nodes, dict) else {}
@@ -1482,6 +3315,117 @@ def sync(args: argparse.Namespace) -> int:
             file_stem=file_stem,
         )
 
+    planned_paths: dict[str, Path] = {}
+    for node in ordered:
+        token = str(node["node_token"])
+        planned_paths[token] = path_for(node)
+        path_by_token[token] = planned_paths[token]
+
+    sheet_sync_enabled = bool(
+        getattr(args, "sync_sheets", False)
+        or nested(config, "sync", "sheets", "enabled", default=False)
+    )
+    sheet_selections = configured_sheet_selections(config, sheet_sync_enabled)
+    embedded_sheet_sync_enabled = bool(
+        getattr(args, "sync_embedded_sheets", False)
+        or nested(config, "sync", "embedded_sheets", "enabled", default=False)
+    )
+    embedded_sheet_settings = configured_embedded_sheet_settings(
+        config,
+        embedded_sheet_sync_enabled,
+    )
+    bitable_sync_enabled = bool(
+        getattr(args, "sync_bitables", False)
+        or nested(config, "sync", "bitables", "enabled", default=False)
+    )
+    bitable_selections = configured_bitable_selections(config, bitable_sync_enabled)
+    configured_sheet_nodes = set(sheet_selections)
+    available_sheet_nodes = {
+        str(node.get("node_token"))
+        for node in ordered
+        if str(node.get("obj_type", "")) == "sheet"
+    }
+    missing_sheet_nodes = configured_sheet_nodes - available_sheet_nodes
+    if missing_sheet_nodes:
+        raise SystemExit("sync.sheets.selections references a node that is not a Sheet in this Wiki")
+    available_bitable_nodes = {
+        str(node.get("node_token")) for node in ordered if str(node.get("obj_type", "")) == "bitable"
+    }
+    if set(bitable_selections) - available_bitable_nodes:
+        raise SystemExit("sync.bitables.selections references a node that is not a Base in this Wiki")
+
+    def reads_sync_content(node: dict[str, Any]) -> bool:
+        obj_type = str(node.get("obj_type", ""))
+        return obj_type in {"docx", "doc"} or (
+            obj_type == "sheet" and str(node.get("node_token")) in sheet_selections
+        ) or (obj_type == "bitable" and str(node.get("node_token")) in bitable_selections)
+
+    content_nodes = [node for node in ordered if reads_sync_content(node)]
+
+    localize_document_links = bool(
+        nested(config, "sync", "localize_internal_links", default=False)
+    )
+    render_sub_page_navigation = bool(
+        nested(config, "sync", "render_sub_page_navigation", default=False)
+    )
+    change_ledger_enabled = bool(nested(config, "sync", "change_ledger", default=False))
+    change_ledger_dir = str(
+        nested(config, "sync", "change_ledger_dir", default=DEFAULT_CHANGE_LEDGER_DIR)
+    ).strip("/\\")
+    if (
+        not change_ledger_dir
+        or Path(change_ledger_dir).is_absolute()
+        or ".." in Path(change_ledger_dir).parts
+    ):
+        raise SystemExit("sync.change_ledger_dir must be a relative directory without '..'")
+    try:
+        change_ledger_max_diff_lines = max(
+            20,
+            int(
+                nested(
+                    config,
+                    "sync",
+                    "change_ledger_max_diff_lines",
+                    default=DEFAULT_CHANGE_LEDGER_MAX_DIFF_LINES,
+                )
+            ),
+        )
+    except (TypeError, ValueError):
+        change_ledger_max_diff_lines = DEFAULT_CHANGE_LEDGER_MAX_DIFF_LINES
+
+    def document_links_for(node_token: str) -> dict[str, str]:
+        links: dict[str, str] = {}
+        current_path = mirror_dir / planned_paths[node_token]
+        for candidate in ordered:
+            candidate_token = str(candidate["node_token"])
+            if localize_document_links:
+                target = Path(
+                    os.path.relpath(
+                        mirror_dir / planned_paths[candidate_token],
+                        current_path.parent,
+                    )
+                ).as_posix()
+            else:
+                target = source_url(config, candidate_token)
+            for identifier in (candidate.get("node_token"), candidate.get("obj_token")):
+                if identifier:
+                    links[str(identifier)] = target
+        return links
+
+    def has_embedded_sheet_scan(node: dict[str, Any], old: dict[str, Any]) -> bool:
+        if not embedded_sheet_sync_applies(node, embedded_sheet_settings):
+            return True
+        old_path = old.get("relative_path") if isinstance(old, dict) else None
+        if not isinstance(old_path, str):
+            return False
+        existing = output_dir / old_path
+        if not existing.is_file():
+            return False
+        try:
+            return EMBEDDED_SHEET_SCAN_MARKER in existing.read_text(encoding="utf-8")
+        except OSError:
+            return False
+
     records: list[dict[str, Any]] = []
     counts = {
         "created": 0,
@@ -1494,26 +3438,40 @@ def sync(args: argparse.Namespace) -> int:
         "assets_downloaded": 0,
         "assets_reused": 0,
         "assets_failed": 0,
+        "assets_deferred": 0,
+        "asset_error_categories": {},
         "asset_content_refreshed": 0,
         "asset_content_refresh_failed": 0,
         "moved_deleted": 0,
         "content_fetched": 0,
         "content_reused": 0,
+        "sheets_mirrored": 0,
+        "sheet_tabs_mirrored": 0,
+        "embedded_sheet_documents_scanned": 0,
+        "embedded_sheets_mirrored": 0,
+        "bitables_mirrored": 0,
+        "bitable_tables_mirrored": 0,
+        "sheet_workbooks_downloaded": 0,
+        "sheet_workbooks_reused": 0,
+        "sheet_workbooks_failed": 0,
+        "sheet_workbooks_deferred": 0,
+        "bitable_exports_downloaded": 0,
+        "bitable_exports_reused": 0,
+        "bitable_exports_failed": 0,
+        "bitable_exports_deferred": 0,
+        "wiki_files_downloaded": 0,
+        "wiki_files_reused": 0,
+        "wiki_files_failed": 0,
+        "wiki_files_deferred": 0,
         "error_categories": {},
     }
-    # `wiki +node-list` returns siblings in the order configured in Feishu.
-    # Keep that order all the way through records and sidebar generation.  A
-    # title sort makes the local tree look tidy but silently changes the
-    # knowledge owner's information architecture.
-    ordered = list(nodes)
-
     fetched: dict[str, tuple[str, str, str, str]] = {}
+    fresh_content_tokens: set[str] = set()
+    previous_bodies: dict[str, str] = {}
     remote_metadata: dict[str, dict[str, Any]] = {}
     metadata_probe_errors: dict[str, str] = {}
     if probe_remote_metadata:
-        metadata_nodes = [
-            node for node in ordered if str(node.get("obj_type", "")) in {"docx", "doc"}
-        ]
+        metadata_nodes = content_nodes
         metadata_workers_value = nested(
             config,
             "sync",
@@ -1558,19 +3516,21 @@ def sync(args: argparse.Namespace) -> int:
     if not args.skip_content and not args.refresh_tree_only and (
         not args.rebuild_tree_only or only_node_tokens
     ):
-        all_doc_nodes = [node for node in ordered if str(node.get("obj_type", "")) in {"docx", "doc"}]
+        all_content_nodes = content_nodes
         if only_node_tokens:
-            missing_only_nodes = only_node_tokens - {str(node["node_token"]) for node in all_doc_nodes}
+            missing_only_nodes = only_node_tokens - {str(node["node_token"]) for node in all_content_nodes}
             if missing_only_nodes:
                 raise SystemExit(
                     "--only-node-token not found in the current manifest/tree: "
                     + ",".join(sorted(missing_only_nodes))
                 )
-            doc_nodes = [node for node in all_doc_nodes if str(node["node_token"]) in only_node_tokens]
+            content_nodes_to_fetch = [
+                node for node in all_content_nodes if str(node["node_token"]) in only_node_tokens
+            ]
         elif args.retry_failed:
             retry_candidates = [
                 node
-                for node in all_doc_nodes
+                for node in all_content_nodes
                 if (
                     not isinstance(old_nodes.get(str(node["node_token"])), dict)
                     or old_nodes[str(node["node_token"])].get("sync_status") != "ok"
@@ -1582,18 +3542,18 @@ def sync(args: argparse.Namespace) -> int:
             if args.retry_batch_size is not None:
                 if args.retry_batch_size <= 0:
                     raise SystemExit("--retry-batch-size must be greater than zero")
-                doc_nodes = retry_candidates[: args.retry_batch_size]
+                content_nodes_to_fetch = retry_candidates[: args.retry_batch_size]
                 print(
-                    f"retry_batch selected={len(doc_nodes)} candidates={len(retry_candidates)}",
+                    f"retry_batch selected={len(content_nodes_to_fetch)} candidates={len(retry_candidates)}",
                     flush=True,
                 )
             else:
-                doc_nodes = retry_candidates
+                content_nodes_to_fetch = retry_candidates
         elif args.full_content or not incremental:
-            doc_nodes = all_doc_nodes
+            content_nodes_to_fetch = all_content_nodes
         else:
-            doc_nodes = []
-            for node in all_doc_nodes:
+            content_nodes_to_fetch = []
+            for node in all_content_nodes:
                 token = str(node["node_token"])
                 old = old_nodes.get(token, {}) if isinstance(old_nodes, dict) else {}
                 old_status = str(old.get("sync_status", "")) if isinstance(old, dict) else ""
@@ -1614,6 +3574,7 @@ def sync(args: argparse.Namespace) -> int:
                 )
                 missing_baseline = not old_marker and not has_local_success
                 probe_failed = token in metadata_probe_errors
+                needs_embedded_sheet_scan = not has_embedded_sheet_scan(node, old)
                 if (
                     token in changed_node_tokens
                     or not isinstance(old, dict)
@@ -1621,11 +3582,12 @@ def sync(args: argparse.Namespace) -> int:
                     or changed_remotely
                     or missing_baseline
                     or probe_failed
+                    or needs_embedded_sheet_scan
                 ):
-                    doc_nodes.append(node)
+                    content_nodes_to_fetch.append(node)
             print(
-                f"incremental_selection candidates={len(all_doc_nodes)} fetch={len(doc_nodes)} "
-                f"reuse={len(all_doc_nodes) - len(doc_nodes)}",
+                f"incremental_selection candidates={len(all_content_nodes)} fetch={len(content_nodes_to_fetch)} "
+                f"reuse={len(all_content_nodes) - len(content_nodes_to_fetch)}",
                 flush=True,
             )
         workers_value = nested(
@@ -1655,8 +3617,16 @@ def sync(args: argparse.Namespace) -> int:
             raw = existing.read_text(encoding="utf-8")
             parts = raw.split("---", 2)
             body = parts[2].lstrip("\n") if len(parts) == 3 else raw
+            if str(node.get("obj_type", "")) in {"sheet", "bitable"}:
+                return body.rstrip("\n"), str(old.get("revision_id", ""))
             return (
-                normalize_content(body.rstrip("\n"), clean_title(node.get("title"), token), cite_links),
+                normalize_content(
+                    body.rstrip("\n"),
+                    clean_title(node.get("title"), token),
+                    document_links_for(token),
+                    render_sub_page_navigation=render_sub_page_navigation,
+                    localize_document_links=localize_document_links,
+                ),
                 str(old.get("revision_id", "")),
             )
 
@@ -1671,8 +3641,41 @@ def sync(args: argparse.Namespace) -> int:
                     delay = 0.0
                 if delay:
                     time.sleep(delay)
-                raw_content, revision_id = fetch_doc(config, str(node.get("obj_token", "")))
-                content = normalize_content(raw_content, title, cite_links)
+                if str(node.get("obj_type", "")) == "sheet":
+                    content, revision_id = fetch_sheet_markdown(
+                        config,
+                        str(node.get("obj_token", "")),
+                        title,
+                        sheet_selections[token],
+                        snapshot_root=mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR,
+                        node_token=token,
+                    )
+                elif str(node.get("obj_type", "")) == "bitable":
+                    content, revision_id = fetch_bitable_markdown(
+                        config,
+                        str(node.get("obj_token", "")),
+                        title,
+                        bitable_selections[token],
+                        snapshot_root=mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR,
+                        node_token=token,
+                        mirror_dir=mirror_dir,
+                    )
+                else:
+                    content, revision_id = render_document_content(
+                        config,
+                        str(node.get("obj_token", "")),
+                        title,
+                        document_links_for(token),
+                        render_sub_page_navigation=render_sub_page_navigation,
+                        localize_document_links=localize_document_links,
+                        embedded_sheet_settings=(
+                            embedded_sheet_settings
+                            if embedded_sheet_sync_applies(node, embedded_sheet_settings)
+                            else None
+                        ),
+                        snapshot_root=mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR,
+                        node_token=token,
+                    )
                 return token, "ok", content, "", revision_id
             except Exception as exc:  # keep inventory even when one document is unavailable
                 details = error_info(exc)
@@ -1691,14 +3694,17 @@ def sync(args: argparse.Namespace) -> int:
                 return token, "failed", content, category, ""
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = [executor.submit(fetch_one, node) for node in doc_nodes]
+            futures = [executor.submit(fetch_one, node) for node in content_nodes_to_fetch]
             for completed, future in enumerate(as_completed(futures), start=1):
                 token, status, content, error, revision_id = future.result()
                 fetched[token] = (status, content, error, revision_id)
                 if completed == 1 or completed % 100 == 0 or completed == len(futures):
                     print(f"content_fetch progress={completed}/{len(futures)}", flush=True)
-        counts["content_fetched"] = len(doc_nodes)
-        print(f"content_fetch completed={len(fetched)} fetched_now={len(doc_nodes)} workers={workers}")
+        counts["content_fetched"] = len(content_nodes_to_fetch)
+        fresh_content_tokens.update(fetched)
+        print(
+            f"content_fetch completed={len(fetched)} fetched_now={len(content_nodes_to_fetch)} workers={workers}"
+        )
 
     def reuse_existing(node: dict[str, Any]) -> bool:
         token = str(node["node_token"])
@@ -1712,7 +3718,14 @@ def sync(args: argparse.Namespace) -> int:
         raw = existing.read_text(encoding="utf-8")
         parts = raw.split("---", 2)
         body = parts[2].lstrip("\n") if len(parts) == 3 else raw
-        body = normalize_content(body.rstrip("\n"), clean_title(node.get("title"), token), cite_links)
+        if str(node.get("obj_type", "")) not in {"sheet", "bitable"}:
+            body = normalize_content(
+                body.rstrip("\n"),
+                clean_title(node.get("title"), token),
+                document_links_for(token),
+                render_sub_page_navigation=render_sub_page_navigation,
+                localize_document_links=localize_document_links,
+            )
         fetched[token] = (
             str(old.get("sync_status", "ok")),
             body.rstrip("\n"),
@@ -1722,10 +3735,7 @@ def sync(args: argparse.Namespace) -> int:
         return True
 
     if incremental or args.retry_failed or args.refresh_tree_only:
-        doc_nodes_for_reuse = [
-            node for node in ordered if str(node.get("obj_type", "")) in {"docx", "doc"}
-        ]
-        for node in doc_nodes_for_reuse:
+        for node in content_nodes:
             token = str(node["node_token"])
             if token in fetched:
                 continue
@@ -1749,17 +3759,25 @@ def sync(args: argparse.Namespace) -> int:
     asset_map: dict[str, str] = {}
     asset_errors: dict[str, str] = {}
     if download_assets_enabled:
-        asset_map, asset_errors, assets_downloaded, assets_reused = materialize_assets(
-            [value[1] for value in fetched.values() if isinstance(value, tuple) and len(value) > 1],
+        asset_contents = asset_contents_for_sync(
+            fetched,
+            fresh_content_tokens,
+            targeted=event_driven,
+        )
+        asset_map, asset_errors, assets_downloaded, assets_reused, assets_deferred = materialize_assets(
+            asset_contents,
             mirror_dir,
             config,
+            refresh_short_lived_urls=refresh_asset_urls_enabled,
         )
         counts["assets_downloaded"] = assets_downloaded
         counts["assets_reused"] = assets_reused
         counts["assets_failed"] = len(asset_errors)
+        counts["asset_error_categories"] = summarize_asset_errors(asset_errors)
+        counts["assets_deferred"] = assets_deferred
         print(
             f"asset_download completed={len(asset_map)} downloaded={assets_downloaded} "
-            f"reused={assets_reused} failed={len(asset_errors)}",
+            f"reused={assets_reused} failed={len(asset_errors)} deferred={assets_deferred}",
             flush=True,
         )
 
@@ -1770,13 +3788,7 @@ def sync(args: argparse.Namespace) -> int:
     # documents that still contain unresolved assets, then download fresh URLs
     # or token-backed media through the official CLI.
     if download_assets_enabled and asset_errors and refresh_asset_urls_enabled:
-        asset_nodes = [
-            node
-            for node in ordered
-            if str(node.get("obj_type", "")) in {"docx", "doc"}
-            and str(node.get("node_token")) in fetched
-            and extract_asset_references(fetched[str(node["node_token"])][1])
-        ]
+        asset_nodes = nodes_requiring_asset_refresh(ordered, fetched, asset_errors)
         refresh_workers_value = nested(
             config,
             "sync",
@@ -1799,8 +3811,28 @@ def sync(args: argparse.Namespace) -> int:
                     delay = 0.0
                 if delay:
                     time.sleep(delay)
-                raw_content, revision_id = fetch_doc(config, str(node.get("obj_token", "")))
-                return token, "ok", normalize_content(raw_content, title, cite_links), "", revision_id
+                content, revision_id = render_document_content(
+                    config,
+                    str(node.get("obj_token", "")),
+                    title,
+                    document_links_for(token),
+                    render_sub_page_navigation=render_sub_page_navigation,
+                    localize_document_links=localize_document_links,
+                    embedded_sheet_settings=(
+                        embedded_sheet_settings
+                        if embedded_sheet_sync_applies(node, embedded_sheet_settings)
+                        else None
+                    ),
+                    snapshot_root=mirror_dir / DEFAULT_SHEET_SNAPSHOT_DIR,
+                    node_token=token,
+                )
+                return (
+                    token,
+                    "ok",
+                    content,
+                    "",
+                    revision_id,
+                )
             except Exception as exc:
                 return token, "failed", "", str(exc), ""
 
@@ -1822,24 +3854,86 @@ def sync(args: argparse.Namespace) -> int:
             flush=True,
         )
         if refreshed_contents:
-            asset_map, asset_errors, assets_downloaded, assets_reused = materialize_assets(
+            try:
+                refreshed_batch_size = max(
+                    0,
+                    int(nested(config, "sync", "asset_refreshed_batch_size", default=0)),
+                )
+            except (TypeError, ValueError):
+                refreshed_batch_size = 0
+            refreshed_map, refreshed_errors, assets_downloaded, assets_reused, assets_deferred = materialize_assets(
                 refreshed_contents,
                 mirror_dir,
                 config,
+                batch_size_override=refreshed_batch_size,
             )
-            counts["assets_downloaded"] = assets_downloaded
-            counts["assets_reused"] = assets_reused
+            final_contents = asset_contents_for_sync(
+                fetched,
+                fresh_content_tokens,
+                targeted=event_driven,
+            )
+            asset_map, asset_errors = merge_asset_results(
+                asset_map,
+                asset_errors,
+                refreshed_map,
+                refreshed_errors,
+                final_contents,
+            )
+            counts["assets_downloaded"] += assets_downloaded
+            counts["assets_reused"] += assets_reused
             counts["assets_failed"] = len(asset_errors)
+            counts["asset_error_categories"] = summarize_asset_errors(asset_errors)
+            counts["assets_deferred"] += assets_deferred
             print(
                 f"asset_download refreshed={len(asset_map)} downloaded={assets_downloaded} "
-                f"reused={assets_reused} failed={len(asset_errors)}",
+                f"reused={assets_reused} failed={len(asset_errors)} deferred={assets_deferred}",
                 flush=True,
             )
+            if asset_errors:
+                print(
+                    "asset_download error_categories="
+                    f"{json.dumps(counts['asset_error_categories'], ensure_ascii=False, sort_keys=True)}",
+                    flush=True,
+                )
+
+    complete_sheet_exports: dict[str, str] = {}
+    complete_bitable_exports: dict[str, str] = {}
+    complete_file_downloads: dict[str, str] = {}
+    resource_init_errors: dict[str, str] = {}
+    if not args.skip_content:
+        complete_sheet_exports, sheet_export_errors, sheet_export_stats = initialize_complete_resources(
+            config, ordered, mirror_dir, obj_type="sheet", section="sheets", key="workbook_exports"
+        )
+        complete_bitable_exports, bitable_export_errors, bitable_export_stats = initialize_complete_resources(
+            config, ordered, mirror_dir, obj_type="bitable", section="bitables", key="base_exports"
+        )
+        complete_file_downloads, file_download_errors, file_download_stats = initialize_complete_resources(
+            config, ordered, mirror_dir, obj_type="file", section="files", key="downloads"
+        )
+        resource_init_errors = {
+            **sheet_export_errors,
+            **bitable_export_errors,
+            **file_download_errors,
+        }
+        for prefix, stats in (
+            ("sheet_workbooks", sheet_export_stats),
+            ("bitable_exports", bitable_export_stats),
+            ("wiki_files", file_download_stats),
+        ):
+            for name, value in stats.items():
+                counts[f"{prefix}_{name}"] = value
+        print(
+            "resource_initialization "
+            f"sheets_downloaded={sheet_export_stats['downloaded']} sheets_deferred={sheet_export_stats['deferred']} "
+            f"bitables_downloaded={bitable_export_stats['downloaded']} bitables_deferred={bitable_export_stats['deferred']} "
+            f"files_downloaded={file_download_stats['downloaded']} files_deferred={file_download_stats['deferred']}",
+            flush=True,
+        )
 
     for node in ordered:
         token = str(node["node_token"])
-        relative = path_for(node)
-        path_by_token[token] = relative
+        relative = planned_paths[token]
+        target = output_dir / MIRROR_DIR / relative
         title = clean_title(node.get("title"), token)
         obj_type = str(node.get("obj_type", ""))
         status = "ok"
@@ -1849,7 +3943,7 @@ def sync(args: argparse.Namespace) -> int:
         if args.skip_content:
             status = "metadata_only"
             content = f"# {title}\n\n（本次运行使用了 --skip-content，未读取正文。）"
-        elif obj_type in {"docx", "doc"}:
+        elif reads_sync_content(node):
             status, content, error, revision_id = fetched.get(
                 token,
                 (
@@ -1866,6 +3960,34 @@ def sync(args: argparse.Namespace) -> int:
                 if error:
                     categories = counts["error_categories"]
                     categories[error] = categories.get(error, 0) + 1
+            elif embedded_sheet_sync_applies(node, embedded_sheet_settings):
+                if EMBEDDED_SHEET_SCAN_MARKER in content:
+                    counts["embedded_sheet_documents_scanned"] += 1
+                counts["embedded_sheets_mirrored"] += content.count(EMBEDDED_SHEET_RENDER_MARKER)
+            elif obj_type == "sheet":
+                counts["sheets_mirrored"] += 1
+                counts["sheet_tabs_mirrored"] += len(sheet_selections.get(token, []))
+            elif obj_type == "bitable":
+                counts["bitables_mirrored"] += 1
+                counts["bitable_tables_mirrored"] += len(bitable_selections.get(token, []))
+        elif obj_type == "sheet" and token in complete_sheet_exports:
+            status = "ok"
+            content = (
+                f"# {title}\n\n"
+                "> 已初始化完整 Sheet 工作簿的本地保真副本；公式、样式、批注、图表、透视与单元格图片以 .xlsx 为准。\n"
+            )
+        elif obj_type == "bitable" and token in complete_bitable_exports:
+            status = "ok"
+            content = (
+                f"# {title}\n\n"
+                "> 已初始化完整多维表格的本地保真副本；表、视图、仪表盘/报表及附件关联以 .base 为准。\n"
+            )
+        elif obj_type == "file" and token in complete_file_downloads:
+            status = "ok"
+            content = (
+                f"# {title}\n\n"
+                "> 已下载知识库文件的原始二进制副本；文件仅保存，不会执行、挂载、解压或解析。\n"
+            )
         else:
             status = "metadata_stub"
             counts["stub"] += 1
@@ -1874,7 +3996,30 @@ def sync(args: argparse.Namespace) -> int:
                 f"该知识库节点类型为 `{obj_type or 'unknown'}`，当前同步器只读取文档正文。\n\n"
                 f"如需转换该类型，请单独设计对应的导出策略。\n"
             )
-        target = output_dir / MIRROR_DIR / relative
+        local_resource = (
+            complete_sheet_exports.get(token)
+            or complete_bitable_exports.get(token)
+            or complete_file_downloads.get(token)
+        )
+        if local_resource:
+            resource_target = mirror_dir / local_resource
+            label = (
+                "本地完整工作簿 (.xlsx)"
+                if obj_type == "sheet"
+                else "本地完整多维表格 (.base)"
+                if obj_type == "bitable"
+                else "本地原始附件（二进制）"
+            )
+            content = content.rstrip() + "\n\n" + relative_markdown_link(target, resource_target, label) + "\n"
+        resource_error = resource_init_errors.get(token)
+        if resource_error:
+            if status not in {"failed", "stale"}:
+                counts["failed"] += 1
+                categories = counts["error_categories"]
+                categories[resource_error] = categories.get(resource_error, 0) + 1
+            status = "failed"
+            error = resource_error
+            content = content.rstrip() + "\n\n> 完整本地资源初始化未完成；可按同一私有配置重试。\n"
         counts["remote_images"] += len(extract_image_urls(content))
         if download_assets_enabled:
             content = rewrite_asset_urls(content, target, mirror_dir, asset_map)
@@ -1938,6 +4083,8 @@ def sync(args: argparse.Namespace) -> int:
             counts.setdefault("unchanged", 0)
             counts["unchanged"] += 1
         else:
+            if before_exists:
+                previous_bodies[token] = target.read_text(encoding="utf-8")
             write_text(target, frontmatter(metadata, sync_started, content_hash) + content + "\n")
             counts["updated" if before_exists else "created"] += 1
 
@@ -1947,6 +4094,8 @@ def sync(args: argparse.Namespace) -> int:
         deleted = [dict(value, deleted_at=sync_started) for key, value in old_nodes.items() if key not in current_tokens]
     for record in deleted:
         record["sync_status"] = "deleted"
+    changes = classify_changes(old_nodes, records, deleted)
+    change_stats = {name: len(entries) for name, entries in changes.items()}
     manifest = {
         "version": 2,
         "space_id": space_id,
@@ -1965,6 +4114,8 @@ def sync(args: argparse.Namespace) -> int:
         "event_names": event_names,
         "source_url_template": nested(config, "space", "source_url_template", default=""),
         "stats": {**counts, "deleted": len(deleted), "total": len(records)},
+        "changes": change_stats,
+        "change_ledger": {"enabled": change_ledger_enabled},
         "nodes": records,
         "deleted_nodes": deleted,
     }
@@ -2013,6 +4164,22 @@ def sync(args: argparse.Namespace) -> int:
     write_text(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     write_text(state_path, json.dumps(state, ensure_ascii=False, indent=2) + "\n")
     write_text(sidebar_path_file, json.dumps(sidebar, ensure_ascii=False, indent=2) + "\n")
+    if change_ledger_enabled:
+        write_change_ledger(
+            output_dir,
+            metadata_dir,
+            change_ledger_dir,
+            changes,
+            previous_bodies,
+            sync_started,
+            change_ledger_max_diff_lines,
+        )
+        print(
+            "change_ledger "
+            f"added={change_stats['added']} modified={change_stats['modified']} "
+            f"moved={change_stats['moved']} deleted={change_stats['deleted']}",
+            flush=True,
+        )
     readme = output_dir / "00_同步说明.md"
     if not readme.exists():
         write_text(
@@ -2030,6 +4197,12 @@ def sync(args: argparse.Namespace) -> int:
         sidebar_file=sidebar_path_file,
         require_local_assets=download_assets_enabled,
     )
+    if download_assets_enabled:
+        # A refreshed document can replace one old signed URL with several
+        # current URLs. Report the post-write validation count rather than
+        # adding intermediate queue sizes from both passes.
+        counts["assets_deferred"] = int(validation["stats"].get("unresolved_assets", 0))
+        manifest["stats"] = {**counts, "deleted": len(deleted), "total": len(records)}
     manifest["validation"] = {
         "ok": validation["ok"],
         "errors": validation["errors"],
@@ -2041,7 +4214,9 @@ def sync(args: argparse.Namespace) -> int:
         "completed "
         f"created={counts['created']} updated={counts['updated']} failed={counts['failed']} "
         f"stale={counts['stale']} stubs={counts['stub']} unchanged={counts['unchanged']} moved_deleted={counts['moved_deleted']} "
-        f"deleted_marked={len(deleted)} remote_images={counts['remote_images']}"
+        f"deleted_marked={len(deleted)} remote_images={counts['remote_images']} "
+        f"sheets_mirrored={counts['sheets_mirrored']} sheet_tabs={counts['sheet_tabs_mirrored']} "
+        f"bitables_mirrored={counts['bitables_mirrored']} bitable_tables={counts['bitable_tables_mirrored']}"
     )
     print_validation(validation)
     result = 0 if counts["failed"] == 0 and validation["ok"] else 2

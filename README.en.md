@@ -152,7 +152,7 @@ Open Design setup: copy [`config.example.yml`](./skills/soia-dev-open-design-ops
 | Skill | What it does | Ready now? | Dependencies |
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | Uses the official `lark-cli` with app credentials (bot identity) to inventory Feishu drives, cloud documents, wikis, comments, permissions, and metadata in read-only mode | ✅ Usable (configure Feishu app credentials and grant access to target resources) | Official Feishu `lark-cli`; app credentials; target docs/wikis must be visible to the app |
-| [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | Mirrors a Feishu wiki by stable `node_token` while preserving hierarchy, using incremental Markdown sync for Git, Obsidian, and VitePress; event targets are optional and write-back is not enabled by default | ✅ Usable (run a dry-run and establish a baseline first; grant the target space document read scopes) | `soia-cwork-feishu-cli`; `lark-cli`; Python 3.10+; PyYAML; Git/VitePress/Obsidian optional |
+| [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | Mirrors a Feishu wiki by stable `node_token` while preserving hierarchy, using incremental Markdown sync for Git, Obsidian, and VitePress; explicitly configured Sheet ranges and Base tables can become Markdown plus fidelity snapshots, with no default write-back | ✅ Usable (run a dry-run and establish a baseline first; tabular reads need explicit scope and read permission) | `soia-cwork-feishu-cli`; `lark-cli`; Python 3.10+; PyYAML; Git/VitePress/Obsidian optional |
 | [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | Reuses the customer's authenticated browser to inventory ProcessOn team spaces, preview and export diagrams, then validate and finalize browser downloads into configured delivery directories | ✅ Usable (browser inventory and local finalization verified; customers enter credentials and complete security challenges manually) | ProcessOn account and resource access; browser control; Python 3.10+; PyYAML only for config files |
 
 #### Minimal Feishu setup
@@ -172,14 +172,14 @@ Then copy [`assets/config.example.yml`](./skills/soia-cwork-feishu-cli/assets/co
 
 ### soia-cwork-feishu-doc-git-sync
 
-Syncs a Feishu knowledge base into local Markdown so the same content can be backed up in Git and viewed in Obsidian or VitePress. The default direction is read-only “Feishu → local”; `10_knowledge-base/` is generated, while `20_本地补录/` is preserved for local additions.
+Syncs a Feishu knowledge base into local Markdown so the same content can be backed up in Git and viewed in Obsidian or VitePress. The default direction is read-only “Feishu → local”; `10_knowledge-base/` is generated, while `20_本地补录/` is preserved for local additions. Explicit Sheet ranges can mirror display values as Markdown tables plus formula/style/chart metadata snapshots; explicitly selected Base tables can produce bounded Markdown and JSON snapshots.
 
 ```text
 Mirror my Feishu wiki to Git/Obsidian/VitePress
 Run a dry-run first, then sync after checking node counts, permissions, and output paths
 ```
 
-See [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) for the config template, permission layers, ID-based incremental flow, and event boundary. Bidirectional sync requires an explicit ownership model, conflict policy, and Feishu write scopes.
+See [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) for the config template, permission layers, ID-based incremental flow, tabular mirroring, and event boundary. Tabular reads are disabled by default; binary attachment download and workbook export require separate confirmation. Bidirectional sync requires an explicit ownership model, conflict policy, and Feishu write scopes.
 
 ### soia-cwork-processon-diagrams
 
