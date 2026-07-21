@@ -42,9 +42,22 @@ sync:
   # explicitly authorised a bounded range to be mirrored into Markdown.
   sheets:
     enabled: false
+    # Set true only after approving bounded Markdown snapshots for every
+    # standalone Wiki Sheet node. The synchronizer discovers grid tabs through
+    # workbook-info; explicit selections below remain supported as overrides.
+    all_nodes: false
+    max_rows: 200
+    max_columns: 50
+    max_sheets_per_workbook: 500
+    # Mixed workbooks can contain Base tabs. Keep this false unless those
+    # records are also approved for bounded local mirroring.
+    include_bitable_tabs: false
+    max_bitable_records: 1000
+    download_bitable_attachments: false
     # Maximum cells across one configured A1 range; hard-capped at 100000.
     max_cells: 10000
-    # Stop instead of accepting a truncated lark-cli CSV response.
+    # Continue by row when a response reaches this character limit; stop only
+    # if the provider cannot report forward progress.
     max_chars: 100000
     skip_hidden: false
     # Each item must name one Wiki Sheet node, its stable sheet_id obtained
@@ -78,10 +91,11 @@ sync:
       batch_size: 10
       timeout_seconds: 120
       output_dir: "_exports/sheets"
-  # Embedded Sheet blocks inside Docx/Wiki documents are not present in the
-  # Markdown fetch result. Enable this separately after approving the document
-  # scope; the synchronizer reads the XML block metadata, then mirrors only a
-  # bounded top-left range from each referenced grid worksheet.
+  # Markdown may expose only a <sheet> reference, never its cell values. If this
+  # remains disabled, the synchronizer preserves an unresolved marker and
+  # validation reports the mirror as incomplete instead of silently dropping
+  # the block. After approving the document scope, enable XML discovery and a
+  # bounded top-left snapshot from each referenced grid worksheet.
   embedded_sheets:
     enabled: false
     # Set all_docx true only after approving every readable Docx/Wiki page.

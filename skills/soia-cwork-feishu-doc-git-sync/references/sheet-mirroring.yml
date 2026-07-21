@@ -7,16 +7,16 @@ default:
 embedded_document_sheet:
   status: supported_when_opted_in
   discovery: "docs +fetch --doc-format xml, then extract <sheet token=... sheet-id=...>"
-  markdown_fetch_limitation: "The normal Markdown payload omits embedded Sheet blocks, so XML is read only for the approved document scope."
+  markdown_fetch_limitation: "The normal Markdown payload may expose only a <sheet> reference and never includes cell values; XML remains the source of truth for the approved document scope."
   private_config:
     enabled: "sync.embedded_sheets.enabled=true"
     scope: "all_docx=true, or a non-empty node_tokens list"
     bounds: [max_sheets_per_document, max_rows, max_columns, max_cells, max_chars]
   rendering:
-    placement: "A clearly labelled '嵌入式表格' appendix is added after the document body because the Markdown payload has no stable inline marker."
+    placement: "When Markdown exposes a <sheet> marker, replace it with a pointer and append a clearly labelled '嵌入式表格' snapshot after the document body; XML-only references still use the appendix."
     format: markdown_table
     marker: "HTML comments distinguish a completed scan from each mirrored table and make incremental repair deterministic."
-  failure_policy: "Do not write a partial table. Missing worksheet metadata, non-grid resources, configured bound overflow, or truncated reads fail the document for retry."
+  failure_policy: "Never silently delete a <sheet> reference. Without an authorised snapshot, retain an incompleteness marker and fail mirror validation. In all_docx mode, every historical document must carry a completed XML scan marker before the mirror can pass. Missing worksheet metadata, non-grid resources, configured bound overflow, or a truncated response that makes no forward row progress fails the document for retry."
 
 provider:
   identity: bot
@@ -29,6 +29,12 @@ provider:
     - "lark-cli sheets +float-image-list"
 
 selection:
+  automatic_scope:
+    opt_in: "sync.sheets.enabled=true and sync.sheets.all_nodes=true"
+    discovery: "For every standalone Wiki sheet node, call workbook-info and select every grid worksheet."
+    bounds: [max_sheets_per_workbook, max_rows, max_columns, max_cells, max_chars]
+    response_pagination: "When csv-get returns has_more, continue from actual_range's next row until the bounded selection is complete."
+    mixed_workbook_policy: "With include_bitable_tabs=true, route embedded Base tabs through bounded field-list/record-list reads; otherwise fail the node instead of silently skipping the tab."
   required_fields:
     - node_token
     - sheet_id
@@ -38,7 +44,7 @@ selection:
   max_cells_default: 10000
   max_cells_hard_limit: 100000
   max_chars_default: 100000
-  partial_response_policy: fail_without_writing_partial_table
+  partial_response_policy: "continue_by_actual_range_row; fail_without_writing if the provider makes no forward progress"
 
 rendering:
   format: markdown_table
@@ -59,6 +65,7 @@ rendering:
 safety:
   explicit_user_approval: required_before_local_mirror_write
   private_config_opt_in: sync.sheets.enabled
+  all_standalone_nodes_opt_in: sync.sheets.all_nodes
   embedded_document_opt_in: sync.embedded_sheets.enabled with an explicit document scope
   no_file_export: "unless sync.sheets.workbook_exports explicitly records whole-workbook approval"
   no_media_download: true

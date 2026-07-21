@@ -241,6 +241,76 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertNotIn("workbook-token", content)
         self.assertNotIn("sheet-1", content)
 
+    def test_normalization_never_silently_discards_an_unmirrored_embedded_sheet(self) -> None:
+        content = sync.normalize_content(
+            '<title>任务</title>\n# 清单\n<sheet token="workbook-token" sheet-id="sheet-1"></sheet>',
+            "任务",
+        )
+
+        self.assertIn(sync.EMBEDDED_SHEET_UNMIRRORED_MARKER, content)
+        self.assertIn("尚未归档", content)
+        self.assertNotIn("workbook-token", content)
+
+    def test_enabled_embedded_sheet_replaces_gap_marker_and_appends_values(self) -> None:
+        settings = sync.configured_embedded_sheet_settings(
+            {"sync": {"embedded_sheets": {"node_tokens": ["doc-node"]}}},
+            True,
+        )
+
+        def fake_run_cli(_config, *args):
+            if args[:2] == ("docs", "+fetch") and "markdown" in args:
+                return {
+                    "data": {
+                        "document": {
+                            "content": '<title>任务</title>\n# 清单\n<sheet token="workbook-token" sheet-id="sheet-1"></sheet>',
+                            "revision_id": 7,
+                        }
+                    }
+                }
+            if args[:2] == ("docs", "+fetch") and "xml" in args:
+                return {
+                    "data": {
+                        "document": {
+                            "content": '<title>任务</title><sheet token="workbook-token" sheet-id="sheet-1"></sheet>'
+                        }
+                    }
+                }
+            if args[:2] == ("sheets", "+workbook-info"):
+                return {
+                    "data": {
+                        "sheets": [
+                            {
+                                "sheet_id": "sheet-1",
+                                "title": "任务",
+                                "resource_type": "sheet",
+                                "row_count": 2,
+                                "column_count": 2,
+                            }
+                        ]
+                    }
+                }
+            if args[:2] == ("sheets", "+csv-get"):
+                return {"data": {"annotated_csv": "任务,负责人\n开发,张三\n", "has_more": False}}
+            raise AssertionError(args)
+
+        with mock.patch.object(sync, "run_cli", side_effect=fake_run_cli):
+            content, revision_id = sync.render_document_content(
+                {},
+                "doc-object",
+                "任务",
+                {},
+                render_sub_page_navigation=False,
+                localize_document_links=False,
+                embedded_sheet_settings=settings,
+                node_token="doc-node",
+            )
+
+        self.assertEqual(revision_id, "7")
+        self.assertNotIn(sync.EMBEDDED_SHEET_UNMIRRORED_MARKER, content)
+        self.assertIn(sync.EMBEDDED_SHEET_RENDER_MARKER, content)
+        self.assertIn("| 任务 | 负责人 |", content)
+        self.assertIn("| 开发 | 张三 |", content)
+
     def test_sheet_sync_requires_an_explicit_bounded_selection(self) -> None:
         with self.assertRaises(SystemExit):
             sync.configured_sheet_selections({"sync": {"sheets": {}}}, True)
@@ -271,6 +341,68 @@ class FeishuDocSyncTests(unittest.TestCase):
             True,
         )
         self.assertEqual(selections["node-sheet"][0]["range"], "A1:C4")
+
+    def test_all_sheet_nodes_uses_bounded_automatic_discovery(self) -> None:
+        config = {
+            "sync": {
+                "sheets": {
+                    "enabled": True,
+                    "all_nodes": True,
+                    "max_rows": 20,
+                    "max_columns": 3,
+                    "max_cells": 60,
+                    "max_chars": 2000,
+                    "selections": [],
+                }
+            }
+        }
+
+        self.assertEqual(sync.configured_sheet_selections(config, True), {})
+        settings = sync.configured_all_sheet_settings(config, True)
+        self.assertIsNotNone(settings)
+        selections = sync.automatic_sheet_selections(
+            settings,
+            [
+                {
+                    "sheet_id": "sheet-1",
+                    "title": "人员",
+                    "resource_type": "sheet",
+                    "row_count": 80,
+                    "column_count": 8,
+                }
+            ],
+        )
+        self.assertEqual(selections[0]["range"], "A1:C20")
+
+    def test_all_sheet_nodes_routes_bitable_tabs_only_when_explicitly_enabled(self) -> None:
+        settings = sync.configured_all_sheet_settings(
+            {
+                "sync": {
+                    "sheets": {
+                        "all_nodes": True,
+                        "max_rows": 10,
+                        "max_columns": 10,
+                        "max_cells": 100,
+                    }
+                }
+            },
+            True,
+        )
+        with self.assertRaises(RuntimeError):
+            sync.automatic_sheet_bitable_selections(
+                settings,
+                [{"sheet_id": "base-tab", "resource_type": "bitable",
+                  "bitable_app_token": "base-1", "bitable_table_id": "table-1"}],
+            )
+        enabled_settings = dict(settings)
+        enabled_settings["include_bitable_tabs"] = True
+        routed = sync.automatic_sheet_bitable_selections(
+            enabled_settings,
+            [{"sheet_id": "base-tab", "resource_type": "bitable",
+              "bitable_app_token": "base-1", "bitable_table_id": "table-1"}],
+        )
+        self.assertEqual(routed[0][0], "base-1")
+        self.assertEqual(routed[0][1]["table_id"], "table-1")
 
     def test_asset_refresh_keeps_first_pass_mappings_for_unrefreshed_documents(self) -> None:
         asset_map, errors = sync.merge_asset_results(
@@ -552,6 +684,56 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertIn("A1:B20", csv_call)
         self.assertIn("--sheet-id", csv_call)
 
+    def test_fetch_sheet_markdown_continues_after_character_truncation(self) -> None:
+        calls = []
+
+        def fake_run_cli(_config, *args):
+            calls.append(args)
+            if args[:2] == ("sheets", "+workbook-info"):
+                return {
+                    "data": {
+                        "sheets": [
+                            {"sheet_id": "sheet-1", "title": "人员", "resource_type": "sheet"}
+                        ]
+                    }
+                }
+            if args[:2] == ("sheets", "+csv-get"):
+                requested = args[args.index("--range") + 1]
+                if requested == "A1:B4":
+                    return {
+                        "data": {
+                            "annotated_csv": "姓名,岗位\n张三,后端\n",
+                            "has_more": True,
+                            "actual_range": "A1:B2",
+                        }
+                    }
+                if requested == "A3:B4":
+                    return {
+                        "data": {
+                            "annotated_csv": "李四,测试\n王五,产品\n",
+                            "has_more": False,
+                            "actual_range": "A3:B4",
+                        }
+                    }
+            raise AssertionError(args)
+
+        with mock.patch.object(sync, "run_cli", side_effect=fake_run_cli):
+            content, _ = sync.fetch_sheet_markdown(
+                {},
+                "spreadsheet-1",
+                "九安人员名单",
+                [{"sheet_id": "sheet-1", "range": "A1:B4", "max_chars": 20,
+                  "skip_hidden": False}],
+            )
+
+        csv_ranges = [
+            call[call.index("--range") + 1]
+            for call in calls
+            if call[:2] == ("sheets", "+csv-get")
+        ]
+        self.assertEqual(csv_ranges, ["A1:B4", "A3:B4"])
+        self.assertIn("| 王五 | 产品 |", content)
+
     def test_sheet_preservation_writes_a_bounded_local_snapshot(self) -> None:
         def fake_run_cli(_config, *args):
             if args[:2] == ("sheets", "+workbook-info"):
@@ -693,6 +875,87 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertEqual(manifest["nodes"][0]["sync_status"], "ok")
         self.assertEqual(manifest["stats"]["sheets_mirrored"], 1)
         self.assertIn("| 姓名 | 岗位 |", generated)
+
+    def test_all_sheet_nodes_mirrors_discovered_tabs_without_manual_selections(self) -> None:
+        nodes = [
+            {
+                "node_token": "node-sheet",
+                "obj_token": "spreadsheet-1",
+                "obj_type": "sheet",
+                "title": "人员名单",
+                "parent_node_token": "",
+                "depth": 0,
+                "has_child": False,
+            }
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "docs"
+            config = root / "config.yml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "version: 1",
+                        "provider:",
+                        "  cli: lark-cli",
+                        "space:",
+                        '  id: "space-1"',
+                        '  source_url_template: "https://example.test/wiki/{node_token}"',
+                        "paths:",
+                        f'  output_dir: "{output}"',
+                        '  generated_dir: "10_knowledge-base"',
+                        "sync:",
+                        "  mode: mirror",
+                        "  workers: 1",
+                        "  metadata_workers: 1",
+                        "  sheets:",
+                        "    enabled: true",
+                        "    all_nodes: true",
+                        "    max_rows: 20",
+                        "    max_columns: 2",
+                        "    max_cells: 40",
+                        "    selections: []",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            def fake_run_cli(_config, *args):
+                if args[:2] == ("wiki", "+node-get"):
+                    return {"data": {"obj_edit_time": "1", "updated_at": "1970-01-01T00:00:01Z"}}
+                if args[:2] == ("sheets", "+workbook-info"):
+                    return {
+                        "data": {
+                            "sheets": [
+                                {
+                                    "sheet_id": "sheet-1",
+                                    "title": "成员",
+                                    "resource_type": "sheet",
+                                    "row_count": 2,
+                                    "column_count": 2,
+                                }
+                            ]
+                        }
+                    }
+                if args[:2] == ("sheets", "+csv-get"):
+                    self.assertIn("A1:B2", args)
+                    return {"data": {"annotated_csv": "姓名,岗位\n张三,后端\n", "has_more": False}}
+                raise AssertionError(args)
+
+            with mock.patch.object(sync, "walk_nodes", return_value=nodes), mock.patch.object(
+                sync, "run_cli", side_effect=fake_run_cli
+            ):
+                result = sync.sync(self.sync_args(config))
+
+            manifest = json.loads((output / "90_同步元数据" / "manifest.json").read_text(encoding="utf-8"))
+            generated = (output / "10_knowledge-base" / "人员名单.md").read_text(encoding="utf-8")
+
+        self.assertEqual(result, 0)
+        self.assertTrue(manifest["validation"]["ok"])
+        self.assertEqual(manifest["validation"]["stats"]["unmirrored_sheet_nodes"], 0)
+        self.assertIn(sync.SHEET_MIRROR_MARKER, generated)
+        self.assertIn("| 张三 | 后端 |", generated)
 
     def test_enabled_bitable_node_is_mirrored_as_a_markdown_table(self) -> None:
         nodes = [
@@ -903,6 +1166,161 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertIn("failed_records", result["errors"])
         self.assertEqual(result["error_categories"], {"rate_limit": 1})
         self.assertEqual(result["stats"]["failed_records"], 1)
+
+    def test_validation_rejects_silently_unmirrored_embedded_sheets(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "docs"
+            mirror = output / "10_knowledge-base"
+            metadata = output / "90_同步元数据"
+            mirror.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            document = mirror / "任务.md"
+            document.write_text(
+                '---\nnode_token: "node-task"\nsync_status: "ok"\n---\n\n# 清单\n\n'
+                + sync.EMBEDDED_SHEET_UNMIRRORED_BLOCK
+                + "\n",
+                encoding="utf-8",
+            )
+            nodes = [
+                {
+                    "node_token": "node-task",
+                    "title": "任务",
+                    "obj_type": "docx",
+                    "sync_status": "ok",
+                    "relative_path": "10_knowledge-base/任务.md",
+                    "parent_node_token": "",
+                }
+            ]
+            sidebar_file = metadata / "sidebar.json"
+            sidebar_file.write_text(
+                json.dumps(sync.build_sidebar(nodes), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            result = sync.validate_mirror(output, {"nodes": nodes}, sidebar_file=sidebar_file)
+
+        self.assertFalse(result["ok"])
+        self.assertIn("unresolved_embedded_sheets", result["errors"])
+        self.assertEqual(result["stats"]["unresolved_embedded_sheets"], 1)
+
+    def test_validation_requires_a_semantic_scan_marker_for_all_docx_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "docs"
+            mirror = output / "10_knowledge-base"
+            metadata = output / "90_同步元数据"
+            mirror.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            document = mirror / "历史文档.md"
+            document.write_text(
+                '---\nnode_token: "node-old"\nsync_status: "ok"\n---\n\n# 历史文档\n',
+                encoding="utf-8",
+            )
+            nodes = [
+                {
+                    "node_token": "node-old",
+                    "title": "历史文档",
+                    "obj_type": "docx",
+                    "sync_status": "ok",
+                    "relative_path": "10_knowledge-base/历史文档.md",
+                    "parent_node_token": "",
+                }
+            ]
+            sidebar_file = metadata / "sidebar.json"
+            sidebar_file.write_text(
+                json.dumps(sync.build_sidebar(nodes), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            result = sync.validate_mirror(
+                output,
+                {"nodes": nodes},
+                sidebar_file=sidebar_file,
+                require_embedded_sheet_scan=True,
+            )
+
+        self.assertFalse(result["ok"])
+        self.assertIn("unscanned_embedded_sheet_documents", result["errors"])
+        self.assertEqual(result["stats"]["unscanned_embedded_sheet_documents"], 1)
+
+    def test_validation_rejects_sheet_metadata_stub_in_all_nodes_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "docs"
+            mirror = output / "10_knowledge-base"
+            metadata = output / "90_同步元数据"
+            mirror.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            document = mirror / "人员名单.md"
+            document.write_text(
+                '---\nnode_token: "node-sheet"\nsync_status: "metadata_stub"\n---\n\n'
+                "该知识库节点类型为 `sheet`，当前同步器只读取文档正文。\n",
+                encoding="utf-8",
+            )
+            nodes = [
+                {
+                    "node_token": "node-sheet",
+                    "title": "人员名单",
+                    "obj_type": "sheet",
+                    "sync_status": "metadata_stub",
+                    "relative_path": "10_knowledge-base/人员名单.md",
+                    "parent_node_token": "",
+                }
+            ]
+            sidebar_file = metadata / "sidebar.json"
+            sidebar_file.write_text(
+                json.dumps(sync.build_sidebar(nodes), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            result = sync.validate_mirror(
+                output,
+                {"nodes": nodes},
+                sidebar_file=sidebar_file,
+                require_all_sheet_nodes=True,
+            )
+
+        self.assertFalse(result["ok"])
+        self.assertIn("unmirrored_sheet_nodes", result["errors"])
+        self.assertEqual(result["stats"]["unmirrored_sheet_nodes"], 1)
+
+    def test_validation_rejects_unmirrored_base_tab_in_sheet_workbook(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "docs"
+            mirror = output / "10_knowledge-base"
+            metadata = output / "90_同步元数据"
+            mirror.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            document = mirror / "混合工作簿.md"
+            document.write_text(
+                '---\nnode_token: "node-sheet"\nsync_status: "failed"\n---\n\n'
+                + sync.SHEET_MIRROR_MARKER
+                + "\n\n| 列 |\n| --- |\n| 值 |\n\n"
+                + sync.SHEET_BITABLE_UNMIRRORED_MARKER
+                + "\n",
+                encoding="utf-8",
+            )
+            nodes = [
+                {
+                    "node_token": "node-sheet",
+                    "title": "混合工作簿",
+                    "obj_type": "sheet",
+                    "sync_status": "failed",
+                    "error": "permission_denied",
+                    "relative_path": "10_knowledge-base/混合工作簿.md",
+                    "parent_node_token": "",
+                }
+            ]
+            sidebar_file = metadata / "sidebar.json"
+            sidebar_file.write_text(
+                json.dumps(sync.build_sidebar(nodes), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            result = sync.validate_mirror(
+                output,
+                {"nodes": nodes},
+                sidebar_file=sidebar_file,
+                require_all_sheet_nodes=True,
+            )
+
+        self.assertFalse(result["ok"])
+        self.assertIn("unresolved_sheet_bitable_tabs", result["errors"])
+        self.assertEqual(result["stats"]["unresolved_sheet_bitable_tabs"], 1)
 
     def test_failed_refresh_keeps_body_as_stale_and_is_retryable(self) -> None:
         nodes = [
