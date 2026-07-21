@@ -1,9 +1,9 @@
 ---
 name: soia-cwork-processon-diagrams
 description: 递归浏览和盘点 ProcessOn 个人/团队空间到叶子文件，预览流程图与思维导图，按授权对流程图默认导出 Visio VSDX、对思维导图默认导出 XMind，将未知类型列入待确认清单，并通过可配置的临时/交付/审计目录完成下载校验与归档；适用于“读取 ProcessOn 文件”“导出架构图”“盘点全部子目录”“从 POS/VSDX/XMind 提取结构”“整理浏览器下载”等请求。
-version: 1.7.1
+version: 1.7.2
 created_at: 2026-07-20 18:57:53
-updated_at: 2026-07-21 20:15:00
+updated_at: 2026-07-21 20:55:00
 created_by: gpt-5.6-sol
 updated_by: gpt-5.6-sol
 dependencies:
@@ -188,7 +188,7 @@ python3 scripts/processon_archive_state.py next \
    - 思维导图默认选 `Xmind文件`/`.xmind`；
    - 无法确认类型的文件加入“待人工确认”清单，不自动打开下载菜单。
    默认格式不可用、会员/权限阻断或下载失败时回退 POS，并明确记录“原请求格式、实际格式、降级原因”，不得静默替换。列表页点击无文件时进入官方编辑器重试 XMind/POS/POSM；若这些原生格式均无文件、但 Markdown 能下载，只能把 Markdown 作为诊断证据并将 artifact 标为 `blocked`，不能把 Markdown 冒充 XMind/POS 完成。格式选择见 [ProcessOn 能力与格式](references/processon-capabilities.md)。
-2. 首次需要受管临时目录时运行 `paths --ensure`；用浏览器下载事件或下载列表确认真实文件落地，不凭 Toast 判断成功。先 dry-run，再归档。受管临时目录可显式 `--move`；否则默认复制并保留浏览器原文件：
+2. 首次需要受管临时目录时运行 `paths --ensure`；用浏览器下载事件或下载列表确认真实文件落地，不凭 Toast 判断成功。ProcessOn 导出是异步任务：同一浏览器标签一次只能发起一个 artifact，必须等该文件真实落地、大小稳定并完成结构/语义校验后，才能切换选中项或发起下一份；固定 `sleep`、点击成功和短时下载事件超时都不能替代落盘信号。先 dry-run，再归档。受管临时目录可显式 `--move`；否则默认复制并保留浏览器原文件：
 
 ```bash
 python3 scripts/finalize_processon_download.py paths --ensure
@@ -196,7 +196,7 @@ python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file
 python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file>
 ```
 
-3. 核对文件非空、扩展名与内容类型一致；VSDX 必须是有效 ZIP/OOXML 且包含 `visio/document.xml`，图像核对尺寸，POS/XMind 核对标题和可提取文字，所有文件记录 SHA-256。批量下载只能逐个执行；官网未明确支持时不声称存在批量 API。清理临时目录必须先 `cleanup --dry-run`，再由客户确认。
+3. 核对文件非空、扩展名与内容类型一致；VSDX 必须是有效 ZIP/OOXML 且包含 `visio/document.xml`，图像核对尺寸，POS/XMind 核对标题和可提取文字，所有文件记录 SHA-256。文件名只能作为候选证据：若异步队列产生 `(1)` 后缀、标题漂移或同名不同 SHA，调用 `soia-dev-drawio-visio-diagrams` 提取 VSDX 页面文字反证来源；无法唯一对应 artifact 时保持 pending，不移动、不改名、不调用 `record`。批量下载只能逐个执行；官网未明确支持时不声称存在批量 API。清理临时目录必须先 `cleanup --dry-run`，再由客户确认。
 
 4. `finalize` 成功后立即把 artifact、实际交付文件和 finalizer manifest 绑定到进度；下载事件未被浏览器观察到但真实文件已校验时，使用 `not_observed_verified_file`，不能误写成浏览器事件成功：
 
