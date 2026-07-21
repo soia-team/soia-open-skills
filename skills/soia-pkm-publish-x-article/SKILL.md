@@ -1,9 +1,9 @@
 ---
 name: soia-pkm-publish-x-article
 description: 把成文草稿（Markdown）直传 X/Twitter Articles 草稿箱：解析标题/封面/正文图与分割线，富文本粘贴保格式，倒序插图，机械校验后只存草稿、绝不点发布。需已登录浏览器且订阅含「撰写文章」权益。Triggers：「发成 X Article」「上传到 X 文章」「推到 X 草稿箱」「X Articles draft」「把这篇发 X 长文」
-version: 1.0.1
+version: 1.0.2
 created_at: 2026-07-20 19:30:00
-updated_at: 2026-07-21 09:40:00
+updated_at: 2026-07-21 10:05:00
 created_by: claude fable 5
 updated_by: claude fable 5
 ---
@@ -55,6 +55,7 @@ npx skills add soia-team/soia-open-skills -g -s soia-pkm-publish-x-article -y
 |---|---|
 | 「发成 X Article」「上传 X 文章」「推到 X 草稿箱」 | 完整流程（解析 → 上传 → 校验） |
 | 「先看看这篇能不能发 X」 | 只跑解析 dry-run，汇报不动浏览器 |
+| 「发条 X/发个推」（普通短帖） | **不归本技能**：短帖/thread 文本用 `soia-pkm-publish-x-thread`；本技能只做 Articles 长文草稿 |
 
 ## 工作流
 
@@ -75,7 +76,8 @@ JSON 字段：`title` / `cover_image`（仅当文章以图片开头）/ `content
 
 1. 浏览器面选择：优先 claude-in-chrome（真实 Chrome 已登录）；否则 Browser pane（未登录则让用户登录，**不代输凭据**）。
 2. 导航 `https://x.com/compose/articles`——落地是**草稿列表**页，不是编辑器；直接点「create/撰写」按钮进编辑器（不要等「添加标题」出现，它在点击后才渲染）。
-3. 跳到登录页 = 未登录；`/compose/articles` 404 或创作者工作室无「文章」入口 = 账号无 Articles 权益（实测未订阅账号点侧栏 Premium 会直接进购买页）。都停下来告知用户，**绝不代为订阅**。
+3. 跳到登录页 = 未登录；`/compose/articles` 404 或创作者工作室无「文章」入口 = 账号无 Articles 权益。停下并按固定话术提醒（**绝不代为订阅**）：
+   > 当前账号未开通含「撰写文章」权益的 X Premium，请到 <https://x.com/i/premium_sign_up> 开通（2026-07 实测 US$4/月的 Premium 档即含此权益）后再试。
 
 ### 第 3 步：封面 + 标题
 
@@ -135,7 +137,7 @@ python3 scripts/clipboard_x.py image <path> --max-bytes 3000000
 | 场景 | 处理 |
 |---|---|
 | 跳登录页 | 停，让用户在浏览器登录后重试；不碰凭据 |
-| 无 Articles 入口（/compose/articles 404） | 停，提示需含「撰写文章」权益的 Premium 订阅；绝不代为订阅 |
+| 无 Articles 入口（/compose/articles 404） | 停，按第 2 步固定话术提醒并给开通直链 <https://x.com/i/premium_sign_up>；绝不代为订阅 |
 | 缺图 | 第 1 步闸门拦截，给清单 |
 | 无封面 | 闸门提醒，明确同意才继续 |
 | 粘贴后格式丢失 | 检查剪贴板脚本输出；重试一次；仍失败则报告实际效果，不硬说成功 |
