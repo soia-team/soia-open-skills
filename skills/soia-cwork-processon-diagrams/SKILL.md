@@ -1,9 +1,9 @@
 ---
 name: soia-cwork-processon-diagrams
 description: 递归浏览和盘点 ProcessOn 个人/团队空间到叶子文件，预览流程图与思维导图，按授权对流程图默认导出 Visio VSDX、对思维导图默认导出 XMind，将未知类型列入待确认清单，并通过可配置的临时/交付/审计目录完成下载校验与归档；适用于“读取 ProcessOn 文件”“导出架构图”“盘点全部子目录”“从 POS/VSDX/XMind 提取结构”“整理浏览器下载”等请求。
-version: 1.6.0
+version: 1.7.0
 created_at: 2026-07-20 18:57:53
-updated_at: 2026-07-21 18:59:47
+updated_at: 2026-07-21 19:32:10
 created_by: gpt-5.6-sol
 updated_by: gpt-5.6-sol
 dependencies:
@@ -24,6 +24,7 @@ dependencies:
 | 看图里有什么 | 进入“浏览”视图读取可访问文字，并用截图核对视觉布局 | 内容摘要、关键文字与截图 |
 | 导出图表 | 按客户授权选择 VSDX、POS、PNG、SVG、PDF、XMind 或 Office 格式 | 下载文件、格式/大小/SHA-256 验收 |
 | 归档浏览器下载 | 解析 CLI、环境变量和私有 YAML 中的路径，把下载文件校验后复制/移动到交付目录 | 最终路径、碰撞策略、SHA-256 和审计 manifest |
+| 批量续跑归档 | 从归档计划初始化下载队列，逐项领取、记录成功/失败/阻断并重放审计 | `download-progress.json`、下一批列表和机械验收结果 |
 | 解析已有导出 | 读取本地 POS/XMind/SVG/图片；VSDX 可交给可选 draw.io/Visio 技能 | 标题、图表类型、节点文字、尺寸与校验值 |
 
 ### 客户如何使用
@@ -79,6 +80,7 @@ SOIA_CWORK_PROCESSON_DIAGRAMS_CONFIG_FILE=<custom-config-path>
 - 完成回执必须来自 `audit` 重放全部不可变批次后的机械结果；不能仅凭 checkpoint 统计或浏览器页面宣称完成。
 - 目录盘点和源文件归档必须分阶段报告：`inventory_completed_asset_archive_pending` 不是“知识库归档完成”。
 - 资产归档前必须从最终 checkpoint 生成归档计划；`ready_for_known_artifacts` 控制已确认类型的下载，`ready_for_archive` 只有在未知类型也清零后才为 `true`。
+- 正式下载必须先初始化 `download-progress.json`，每份 artifact 完成或受阻后立即 `record`/`mark`；不得只在对话、浏览器下载列表或知识库 Markdown 中维护唯一进度。
 - 增量盘点必须报告两份完整快照的 SHA-256、added、changed、removed candidates；它不是 ProcessOn 事件/API 增量。没有稳定 `remote_id/id` 时不得声称文件“移动”，只报告新增/移除候选。
 - 最终回复给出交付目录、验证方式和未完成项；不输出账号、Cookie、Token 或浏览器内部状态。
 
@@ -99,6 +101,7 @@ SOIA_CWORK_PROCESSON_DIAGRAMS_CONFIG_FILE=<custom-config-path>
 - 用户名、密码、短信码、Cookie、Token、Local Storage 和浏览器 profile 交给浏览器/提供商自身保存，本技能不读取、不复制、不记录。
 - 临时下载使用操作系统临时目录下的技能受管子目录；交付物放客户指定目录，审计 manifest 放用户 state 目录。保留期和路径解析见 [下载归档工作流](references/download-workflow.md)。
 - 浏览器长任务按系统/一级目录分批，默认在 `${XDG_STATE_HOME:-~/.local/state}/soia-cwork-processon-diagrams/runs/<run-id>/` 建立运行包；每批立即持久化原始批次和检查点。会话中断后从 `pending_paths` 续跑，不依赖易失内存保存唯一盘点结果。
+- 资产归档进度固定写入运行包的 `artifacts/download-progress.json`；状态脚本用独占锁保证单写入者，记录已完成、失败、阻断和待确认队列，并从同一计划指纹恢复。
 - 运行包是中间控制面，不是知识库正文；知识库只接收冻结清单、最终 artifact manifest 和已校验交付文件。
 
 ## 本次执行固化的失败门禁
@@ -166,6 +169,20 @@ python3 scripts/build_processon_archive_plan.py verify \
 
 校验失败时停止下载，先重新生成计划；不要把陈旧计划中的成功数合并到新一轮报告。然后按计划逐项执行：
 
+先初始化或恢复正式下载队列，并按计划顺序领取下一小批：
+
+```bash
+python3 scripts/processon_archive_state.py init \
+  --plan <run-dir>/artifacts/archive-plan.json \
+  --progress <run-dir>/artifacts/download-progress.json
+python3 scripts/processon_archive_state.py next \
+  --plan <run-dir>/artifacts/archive-plan.json \
+  --progress <run-dir>/artifacts/download-progress.json \
+  --limit 10
+```
+
+`init` 在进度文件已存在时只接受相同计划 SHA-256，保留既有成功/失败/阻断证据并机械刷新计数；计划变更时 fail closed。`next` 默认跳过已完成、失败和阻断项，显式重试时才使用 `--include-failed` 或 `--include-blocked`。
+
 1. 根据最新页面快照定位目标的“下载/导出”，不依赖固定坐标或私有 CSS。按已确认类型选择：
    - 流程图默认选当前账号菜单中的 `VISIO文件`/`.vsdx`；多画布优先 `导出全部画布 (.vsdx)`；
    - 思维导图默认选 `Xmind文件`/`.xmind`；
@@ -180,6 +197,28 @@ python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file
 ```
 
 3. 核对文件非空、扩展名与内容类型一致；VSDX 必须是有效 ZIP/OOXML 且包含 `visio/document.xml`，图像核对尺寸，POS/XMind 核对标题和可提取文字，所有文件记录 SHA-256。批量下载只能逐个执行；官网未明确支持时不声称存在批量 API。清理临时目录必须先 `cleanup --dry-run`，再由客户确认。
+
+4. `finalize` 成功后立即把 artifact、实际交付文件和 finalizer manifest 绑定到进度；下载事件未被浏览器观察到但真实文件已校验时，使用 `not_observed_verified_file`，不能误写成浏览器事件成功：
+
+```bash
+python3 scripts/processon_archive_state.py record \
+  --plan <run-dir>/artifacts/archive-plan.json \
+  --progress <run-dir>/artifacts/download-progress.json \
+  --artifact-id <artifact-id> \
+  --download-source <browser-downloaded-file> \
+  --destination <archived-file> \
+  --manifest <finalizer-manifest.json> \
+  --actual-format vsdx \
+  --download-event not_observed_verified_file
+```
+
+会员限制、真实可见验证码、权限或格式失败用 `mark --outcome blocked|failed --reason <reason>` 落盘；不得混入未开始项。每批结束运行 `audit`，重新检查计划指纹、计数、交付文件、SHA-256 和 finalizer manifest：
+
+```bash
+python3 scripts/processon_archive_state.py audit \
+  --plan <run-dir>/artifacts/archive-plan.json \
+  --progress <run-dir>/artifacts/download-progress.json
+```
 
 ### 3. `analyze`：询问后才解析、转换或升级
 
@@ -227,6 +266,12 @@ python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file
 - 输出每个条目的稳定 `artifact_id`、默认导出格式、POS 回退策略、unknown 确认队列和同名风险，并区分 `ready_for_known_artifacts` 与全量 `ready_for_archive`。
 - 在归档前验证 checkpoint SHA-256、条目内容和阶段标志，防止目录盘点更新或计划被改写后继续使用旧计划。
 
+`scripts/processon_archive_state.py`：
+
+- 从已验证的归档计划初始化或恢复单写入者下载队列，计划 SHA-256 不一致时拒绝合并旧进度。
+- `next` 给出下一批可执行 artifact；`record` 将实际文件、finalizer manifest、大小和 SHA-256 绑定到稳定 artifact_id；`mark` 单列失败和阻断。
+- `audit` 重放已完成证据并重新计算计数；进度文件原子写入、权限为 `0600`，未知类型只进入人工确认队列。
+
 `scripts/diff_processon_inventory.py`：
 
 - 对两个完整 checkpoint 做 fail-closed 的本地快照差分，不访问 ProcessOn、不读取凭据，也不宣称事件/API 增量。
@@ -235,14 +280,15 @@ python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file
 
 ## 验证
 
-- 静态：`python3 -m py_compile scripts/inspect_processon_export.py scripts/finalize_processon_download.py scripts/processon_inventory_state.py scripts/build_processon_archive_plan.py scripts/diff_processon_inventory.py`
-- 单测：`python3 -m unittest tests.test_processon_downloads tests.test_processon_inventory_state tests.test_processon_archive_plan tests.test_processon_inventory_delta -v`，覆盖配置优先级、安全默认路径、原子复制、同名改名、受管移动、保留期清理、中间状态、归档计划以及完整快照的增量差分门禁。
+- 静态：`python3 -m py_compile scripts/inspect_processon_export.py scripts/finalize_processon_download.py scripts/processon_inventory_state.py scripts/build_processon_archive_plan.py scripts/processon_archive_state.py scripts/diff_processon_inventory.py`
+- 单测：`python3 -m unittest tests.test_processon_downloads tests.test_processon_inventory_state tests.test_processon_archive_plan tests.test_processon_archive_state tests.test_processon_inventory_delta -v`，覆盖配置优先级、安全默认路径、原子复制、同名改名、受管移动、保留期清理、目录与资产中间状态、计划漂移拒绝、失败/阻断续跑以及完整快照的增量差分门禁。
 - POS：用一份流程图和一份思维导图 POS 运行 `--format json`，确认标题、category、节点文字和元素数。
 - 图片：用 PNG/JPEG 运行脚本，确认宽高与 SHA-256。
 - 归档：用真实导出文件依次运行 `finalize --dry-run` 和 `finalize`，核对交付文件 SHA-256 与 manifest；不要把 fixture 路径写入公共文档。
 - 远端：至少验证一次“打开团队空间 → 读取文件列表 → 右键看到浏览/下载”；若安全验证阻断导出，结论必须写成“远端读取已验证，完整导出待人工验证后继续”。
 - 递归：用至少三级目录验证 discovered/visited 差集为 0；模拟会话中断后从持久化恢复点继续。
 - 计划：用真实 checkpoint 运行 `build` 和 `verify`；人为修改 checkpoint 或计划条目后，`verify` 必须失败；含 `unknown` 时计划必须标记待确认，允许已确认类型分阶段下载但不可宣称全量归档就绪。
+- 下载队列：对真实计划运行 `init` 和 `next`；记录一份真实归档文件后运行 `record` 与 `audit`，确认重启后不会重复领取、计数可重算、修改文件或计划后审计失败。
 - 增量：用两份完整审计 checkpoint 运行差分；修改、移动、重命名、添加和移除候选必须可复现。将其中一份变为 pending/blocked 或注入重复稳定 ID 后，命令必须失败；重复无 ID 身份必须隔离，不能产出伪变更。
 - VSDX：真实下载或公开样本通过 ZIP/OOXML 检查；装有可选 draw.io 技能时再跑一次 VSDX → `.drawio` → PNG 前向验证。
 - 结构：运行仓库 `scripts/audit_skills.py --strict`、支持本仓库版本字段的 skill validator 和 `git diff --check`。
