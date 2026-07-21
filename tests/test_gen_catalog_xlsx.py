@@ -23,6 +23,7 @@ from catalog_xlsx.cache import (  # noqa: E402
     parse_catalog,
     parse_search_markdown,
     prepare_incremental,
+    normalize_release_metadata,
 )
 from gen_catalog_xlsx import (  # noqa: E402
     cleanup_inspection_sidecars,
@@ -91,6 +92,24 @@ for output in outputs:
             cleanup_inspection_sidecars([workbook])
             self.assertTrue(workbook.exists())
             self.assertFalse(sidecar.exists())
+
+    def test_release_metadata_rejects_snapshot_after_publish_time(self) -> None:
+        with self.assertRaisesRegex(ValueError, "不能晚于"):
+            normalize_release_metadata({
+                "catalog_release_id": "catalog-20260721.1",
+                "index_updated_at": "2026-07-21T09:00:00+08:00",
+                "snapshot_at": "2026-07-21T09:01:00+08:00",
+                "catalog_schema_version": "2026-07",
+                "source_fingerprint": "sha256:abc123",
+            })
+
+    def test_cross_sheet_formulas_quote_numeric_sheet_names(self) -> None:
+        builder = (SCRIPTS / "catalog_xlsx" / "build_workbooks.mjs").read_text(encoding="utf-8")
+        self.assertIn("=SUM('02_明细入口'!", builder)
+        self.assertIn("=COUNTA('01_目录索引'!", builder)
+        self.assertIn("/'00_使用说明'!", builder)
+        self.assertNotIn("=SUM(02_明细入口!", builder)
+        self.assertNotIn("=COUNTA(01_目录索引!", builder)
 
     def test_parser_checks_declared_count(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -285,6 +304,94 @@ for output in outputs:
                 [item["partition"] for item in third["partitions"] if not item["changed"]],
                 ["20_阅读"],
             )
+
+    def test_release_metadata_rebuilds_once_and_then_is_unchanged(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            search_dir = root / "search"
+            search_dir.mkdir()
+            catalog = root / "00_馆藏总览.md"
+            catalog.write_text(catalog_markdown(), encoding="utf-8")
+            for partition, folder, name in [
+                ("10_孩子", "10_孩子/10_英语", "a.mp4"),
+                ("20_阅读", "20_阅读/10_书籍", "b.pdf"),
+            ]:
+                (search_dir / f"{partition}.md").write_text(
+                    search_markdown(partition, folder, [(name, "1MB")]),
+                    encoding="utf-8",
+                )
+            output = root / "00_阿里云盘馆藏总索引.xlsx"
+            cache_dir = root / "cache"
+            metadata = {
+                "catalog_release_id": "catalog-20260721.1",
+                "index_updated_at": "2026-07-21T09:30:00+08:00",
+                "snapshot_at": "2026-07-21T09:00:00+08:00",
+                "catalog_schema_version": "2026-07",
+                "source_fingerprint": "sha256:abc123",
+            }
+
+            initial = prepare_incremental(
+                catalog_path=catalog,
+                search_dir=search_dir,
+                output_path=output,
+                cache_dir=cache_dir,
+            )
+            output.touch()
+            for item in initial["partitions"]:
+                Path(item["output"]).parent.mkdir(parents=True, exist_ok=True)
+                Path(item["output"]).touch()
+            commit_manifest(initial)
+
+            released = prepare_incremental(
+                catalog_path=catalog,
+                search_dir=search_dir,
+                output_path=output,
+                cache_dir=cache_dir,
+                release_metadata=metadata,
+            )
+            self.assertTrue(released["buildMaster"])
+            self.assertEqual(released["changedPartitions"], ["10_孩子", "20_阅读"])
+            self.assertEqual(released["releaseMetadata"], metadata)
+            self.assertIn("releaseMetadataFingerprint", released["nextManifest"])
+            for item in released["partitions"]:
+                self.assertEqual(load_json(Path(item["cache"]))["releaseMetadata"], metadata)
+            commit_manifest(released)
+
+            unchanged = prepare_incremental(
+                catalog_path=catalog,
+                search_dir=search_dir,
+                output_path=output,
+                cache_dir=cache_dir,
+                release_metadata=metadata,
+            )
+            self.assertFalse(unchanged["buildMaster"])
+            self.assertEqual(unchanged["changedPartitions"], [])
+
+    def test_release_metadata_requires_all_fields_and_timezone(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            search_dir = root / "search"
+            search_dir.mkdir()
+            catalog = root / "00_馆藏总览.md"
+            catalog.write_text(catalog_markdown(), encoding="utf-8")
+            (search_dir / "10_孩子.md").write_text(
+                search_markdown("10_孩子", "10_孩子/10_英语", [("a.mp4", "1MB")]),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "snapshot_at"):
+                prepare_incremental(
+                    catalog_path=catalog,
+                    search_dir=search_dir,
+                    output_path=root / "catalog.xlsx",
+                    cache_dir=root / "cache",
+                    release_metadata={
+                        "catalog_release_id": "catalog-20260721.1",
+                        "index_updated_at": "2026-07-21T09:30:00+08:00",
+                        "snapshot_at": "2026-07-21T09:00:00",
+                        "catalog_schema_version": "2026-07",
+                        "source_fingerprint": "sha256:abc123",
+                    },
+                )
 
     def test_removed_partition_rebuilds_master_and_cleans_stale_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

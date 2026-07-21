@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import audit_migration_conservation
+import audit_catalog_publish
 import preflight_gate
 
 
@@ -32,6 +33,7 @@ REQUIRED_AI_CHECKS = {
     "numbering-guides",
     "consumer-links",
     "count-conservation",
+    "catalog-publication",
 }
 
 
@@ -336,6 +338,72 @@ def append_migration_conservation_violations(
     ) else "failed"
 
 
+def append_catalog_publish_violations(
+    violations: list[dict],
+    run_dir: Path,
+    manifest: dict,
+) -> str:
+    """Require a current, passing catalog publication report after cloud writes."""
+
+    configured_files = manifest.get("files")
+    if not isinstance(configured_files, dict):
+        violations.append({"kind": "catalog_publish_files_invalid"})
+        return "failed"
+    required = (
+        "catalog_release_metadata",
+        "catalog_publish_manifest",
+        "catalog_publish_audit",
+    )
+    paths: dict[str, Path] = {}
+    for key in required:
+        if key not in configured_files:
+            violations.append({"kind": "catalog_publish_file_not_registered", "file": key})
+            continue
+        try:
+            path = resolve_member(run_dir, configured_files[key], f"run.files.{key}")
+        except ValueError as error:
+            violations.append({"kind": "catalog_publish_file_path_invalid", "file": key, "detail": str(error)})
+            continue
+        paths[key] = path
+        if not path.is_file():
+            violations.append({"kind": "catalog_publish_file_missing", "file": key, "path": configured_files[key]})
+    if set(paths) != set(required) or any(not path.is_file() for path in paths.values()):
+        return "failed"
+
+    try:
+        release_metadata = read_json(paths["catalog_release_metadata"])
+        publication_manifest = read_json(paths["catalog_publish_manifest"])
+        stored_report = read_json(paths["catalog_publish_audit"])
+    except ValueError as error:
+        violations.append({"kind": "catalog_publish_evidence_invalid", "detail": str(error)})
+        return "failed"
+
+    release_fields = {
+        field: publication_manifest.get(field)
+        for field in audit_catalog_publish.RELEASE_FIELDS
+    }
+    if release_metadata != release_fields:
+        violations.append({
+            "kind": "catalog_release_metadata_mismatch",
+            "expected": release_metadata,
+            "actual": release_fields,
+        })
+
+    current_report = audit_catalog_publish.audit_catalog_publication(
+        run_dir,
+        str(configured_files["catalog_publish_manifest"]),
+        final=True,
+    )
+    if current_report.get("status") != "passed":
+        violations.append({
+            "kind": "catalog_publish_not_passed",
+            "violations": current_report.get("violations", []),
+        })
+    if stored_report != current_report:
+        violations.append({"kind": "catalog_publish_audit_stale_or_mismatched"})
+    return "passed" if current_report.get("status") == "passed" and stored_report == current_report and release_metadata == release_fields else "failed"
+
+
 def audit_bundle(run_dir: Path, *, final: bool, require_preflight: bool | None = None) -> dict:
     violations: list[dict] = []
     if require_preflight is None:
@@ -614,12 +682,19 @@ def audit_bundle(run_dir: Path, *, final: bool, require_preflight: bool | None =
         violations.append({"kind": "receipt_empty"})
 
     migration_conservation_status = None
+    catalog_publish_status = "not_required"
     if final:
         migration_conservation_status = append_migration_conservation_violations(
             violations,
             run_dir,
             manifest,
         )
+        if batches or cleanup_batches or manifest.get("catalog_publish_required") is True:
+            catalog_publish_status = append_catalog_publish_violations(
+                violations,
+                run_dir,
+                manifest,
+            )
 
     checked = {
         "initial_scan_rows": len(initial_rows),
@@ -634,6 +709,7 @@ def audit_bundle(run_dir: Path, *, final: bool, require_preflight: bool | None =
     }
     if final:
         checked["migration_conservation_report"] = migration_conservation_status
+        checked["catalog_publish"] = catalog_publish_status
     return {"status": "passed" if not violations else "failed", "checked": checked, "violations": violations}
 
 

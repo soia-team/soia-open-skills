@@ -139,6 +139,17 @@ async function exportWorkbook(SpreadsheetFile, workbook, outputPath) {
 }
 
 
+function releaseMetadataRows(releaseMetadata) {
+  return [
+    ["catalog_release_id", releaseMetadata.catalog_release_id],
+    ["index_updated_at", releaseMetadata.index_updated_at],
+    ["snapshot_at", releaseMetadata.snapshot_at],
+    ["catalog_schema_version", releaseMetadata.catalog_schema_version],
+    ["source_fingerprint", releaseMetadata.source_fingerprint],
+  ];
+}
+
+
 function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   const workbook = Workbook.create();
   const usage = workbook.worksheets.add("00_使用说明");
@@ -190,13 +201,22 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   usage.getRange("A19:B23").values = [["字段", "值"], ["生成时间", generatedAt], ["云盘入口", "见目录索引与分区统计中的链接"], ["Bytes/MB", MB], ["Bytes/GB", GB]];
   styleHeader(usage.getRange("A19:B19"));
   usage.getRange("B22:B23").format.numberFormat = "#,##0";
-  usage.getRange("A25:J25").merge();
-  usage.getRange("A25:J25").values = [["数据源"]];
-  usage.getRange("A25:J25").format = { fill: COLORS.teal, font: { bold: true, color: COLORS.white } };
+  const sourceStart = plan.releaseMetadata ? 32 : 25;
+  if (plan.releaseMetadata) {
+    usage.getRange("A25:J25").merge();
+    usage.getRange("A25:J25").values = [["发布元数据（调用方提供）"]];
+    usage.getRange("A25:J25").format = { fill: COLORS.teal, font: { bold: true, color: COLORS.white } };
+    usage.getRange("A26:B30").values = releaseMetadataRows(plan.releaseMetadata);
+    styleHeader(usage.getRange("A26:A30"));
+    usage.getRange("B26:B30").format = { wrapText: true };
+  }
+  usage.getRange(`A${sourceStart}:J${sourceStart}`).merge();
+  usage.getRange(`A${sourceStart}:J${sourceStart}`).values = [["数据源"]];
+  usage.getRange(`A${sourceStart}:J${sourceStart}`).format = { fill: COLORS.teal, font: { bold: true, color: COLORS.white } };
   const sourceRows = [[catalog.sourceName, "馆藏总览"], ...plan.partitions.map((item) => [path.basename(item.source), "分区全文检索"] )];
-  usage.getRange(`A26:B${25 + sourceRows.length}`).values = sourceRows;
+  usage.getRange(`A${sourceStart + 1}:B${sourceStart + sourceRows.length}`).values = sourceRows;
   usage.freezePanes.freezeRows(2);
-  setColumnWidths(usage, { A: 16, B: 30, C: 22, D: 15, E: 15, F: 15, G: 15, H: 15, I: 15, J: 15 }, 33);
+  setColumnWidths(usage, { A: 24, B: 42, C: 22, D: 15, E: 15, F: 15, G: 15, H: 15, I: 15, J: 15 }, sourceStart + sourceRows.length + 1);
 
   titleBand(directoriesSheet, "A1:P1", "目录索引");
   noteBand(directoriesSheet, "A2:P2", `共 ${directories.length.toLocaleString()} 行：由 ${partitionStats.length} 份分区缓存反推目录树；可按分区、层级、主要类型、完整路径组合筛选。`);
@@ -318,7 +338,7 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   return {
     workbook,
     previews: [
-      ["00_使用说明", "A1:J32", "00_usage.png"],
+      ["00_使用说明", "A1:J40", "00_usage.png"],
       ["01_目录索引", "A1:P18", "01_directories.png"],
       ["02_明细入口", "A1:M10", "02_entries.png"],
       ["03_类型统计", `A1:G${typeStats.length + 4}`, "03_types.png"],
@@ -365,8 +385,16 @@ function buildPartitionWorkbook(Workbook, partitionCache, generatedAt) {
   usage.getRange("A12:H12").values = [["使用建议：先在 02_类型统计或 03_扩展名统计判断资源分布，再回到 01_文件明细筛选；“点击直达云盘”进入文件所在文件夹。"]];
   usage.getRange("A12:H12").format = { fill: COLORS.pale, font: { color: COLORS.navy }, wrapText: true };
   usage.getRange("A15:B16").values = [["源文件", sourceName], ["云盘入口", "见文件明细中的文件夹URL"]];
+  if (partitionCache.releaseMetadata) {
+    usage.getRange("A18:H18").merge();
+    usage.getRange("A18:H18").values = [["发布元数据（调用方提供）"]];
+    usage.getRange("A18:H18").format = { fill: COLORS.teal, font: { bold: true, color: COLORS.white } };
+    usage.getRange("A19:B23").values = releaseMetadataRows(partitionCache.releaseMetadata);
+    styleHeader(usage.getRange("A19:A23"));
+    usage.getRange("B19:B23").format = { wrapText: true };
+  }
   usage.freezePanes.freezeRows(2);
-  setColumnWidths(usage, { A: 20, B: 16, C: 18, D: 16, E: 16, F: 20, G: 24, H: 22 }, 16);
+  setColumnWidths(usage, { A: 24, B: 42, C: 18, D: 16, E: 16, F: 20, G: 24, H: 22 }, partitionCache.releaseMetadata ? 23 : 16);
 
   const fileHeaders = ["序号", "分区", ...categoryHeaders, "文件类型", "扩展名", "文件名", "大小原文", "估算大小(Bytes)", "估算大小(MB)", "文件夹路径", "完整文件路径", "文件夹URL", "点击直达云盘", "来源Markdown"];
   const lastFileColumn = excelColumn(fileHeaders.length - 1);
@@ -460,7 +488,7 @@ function buildPartitionWorkbook(Workbook, partitionCache, generatedAt) {
   return {
     workbook,
     previews: [
-      ["00_使用说明", "A1:H16", "00_usage.png"],
+      ["00_使用说明", "A1:H25", "00_usage.png"],
       ["01_文件明细", `A1:${lastFileColumn}18`, "01_files.png"],
       ["02_类型统计", `A1:G${typeStats.length + 4}`, "02_types.png"],
       ["03_扩展名统计", "A1:G22", "03_extensions.png"],
@@ -478,7 +506,8 @@ async function main() {
   const dateTimeOptions = { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false };
   const configuredTimeZone = process.env.SOIA_CATALOG_TIME_ZONE?.trim();
   if (configuredTimeZone) dateTimeOptions.timeZone = configuredTimeZone;
-  const generatedAt = new Intl.DateTimeFormat("sv-SE", dateTimeOptions).format(new Date());
+  const generatedAt = plan.releaseMetadata?.index_updated_at
+    || new Intl.DateTimeFormat("sv-SE", dateTimeOptions).format(new Date());
   const results = [];
 
   if (plan.buildMaster) {
