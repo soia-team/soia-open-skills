@@ -1,9 +1,9 @@
 ---
 name: soia-dev-drawio-visio-diagrams
 description: 读取和盘点 Microsoft Visio VSDX，使用 draw.io Desktop 将 VSDX 转为可编辑的 .drawio 真源，理解页面、图形、文字与连接关系，按受控计划更新标签、样式、几何与页面名，并导出 PNG、SVG、PDF 或 JPG；适用于“读懂 ProcessOn 导出的 Visio”“把 VSDX 转成 draw.io”“升级现有架构图/流程图”“批量校验图表”等请求。
-version: 1.0.0
+version: 1.0.1
 created_at: 2026-07-21 10:01:24
-updated_at: 2026-07-21 10:01:24
+updated_at: 2026-07-21 10:29:06
 created_by: gpt-5.6-sol
 updated_by: gpt-5.6-sol
 ---
@@ -107,7 +107,7 @@ python3 scripts/drawio_cli.py export <diagram-upgraded.drawio> --format png --ou
 
 1. 对升级后的 `.drawio` 再运行结构盘点。
 2. 导出 PNG 或 SVG；多页图另导出 PDF `--all-pages`。
-3. 视觉检查裁切、重叠、乱码、断线、箭头方向、层级和关键文字。
+3. 视觉检查裁切、文字溢出、节点/文字重叠、乱码、断线、无意义交叉线、箭头方向、间距、层级和关键文字。改宽高或位置时要检查相邻节点和连线，不能只验证被改节点本身。
 4. 对照升级清单逐项给证据，并明确 VSDX 回写未执行。
 
 ## 本地脚本
