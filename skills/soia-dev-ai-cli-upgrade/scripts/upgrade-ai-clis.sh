@@ -2,10 +2,10 @@
 # @created_by  unknown
 # @created_at  unknown
 # @modified_by openai/gpt-5
-# @modified_at 2026-07-11 12:00:00
-# @version     0.2.0
+# @modified_at 2026-07-21 13:32:00
+# @version     0.3.0
 # @description Audit and safely upgrade supported AI/developer CLIs.
-# @changelog   Make agy the consumer-safe default while keeping Gemini CLI as an explicit non-consumer lane.
+# @changelog   Detect relative Homebrew formula symlinks and gate Claude @latest channel migration.
 set -euo pipefail
 
 # Public, reusable AI CLI upgrade helper. Keep machine-specific choices in env
@@ -63,6 +63,15 @@ log_file="$log_dir/cli-upgrade-$(date +"%Y-%m-%d_%H-%M-%S")-$$.log"
 npm_prefix="${NPM_PREFIX:-$HOME/.npm-global}"
 agy_install_dir="${AGY_INSTALL_DIR:-$HOME/.local/bin}"
 agy_install="${AGY_INSTALL:-0}"
+claude_channel="${CLAUDE_CHANNEL:-preserve}"
+
+case "$claude_channel" in
+  preserve|latest) ;;
+  *)
+    printf 'invalid CLAUDE_CHANNEL=%s; expected preserve or latest\n' "$claude_channel" >&2
+    exit 2
+    ;;
+esac
 
 dry_run="${DRY_RUN:-0}"
 run_mode="LIVE"
@@ -250,6 +259,29 @@ detect_brew_claude_cask() {
   fi
 }
 
+# Safely move the Homebrew Claude installation from the stable cask to the
+# @latest cask. Fetch before uninstalling and restore the stable cask if the
+# target install fails. The caller must gate this behind CLAUDE_CHANNEL=latest.
+migrate_brew_claude_to_latest() {
+  local current_cask="$1"
+  [[ "$current_cask" == "claude-code@latest" ]] && return 0
+  [[ "$current_cask" == "claude-code" ]] || return 1
+
+  if ! brew fetch --cask claude-code@latest >>"$log_file" 2>&1; then
+    return 1
+  fi
+  if ! brew uninstall --cask claude-code >>"$log_file" 2>&1; then
+    return 1
+  fi
+  if brew install --cask claude-code@latest >>"$log_file" 2>&1; then
+    return 0
+  fi
+
+  printf '%s\n' 'claude @latest install failed; restoring stable cask' >>"$log_file"
+  brew install --cask claude-code >>"$log_file" 2>&1 || true
+  return 1
+}
+
 # Returns 0 if the binary was installed via npm (under npm prefix or symlink
 # through node_modules), 1 otherwise.
 is_npm_install() {
@@ -302,12 +334,29 @@ detect_brew_formula_from_bin() {
   local bin="$1"
   command -v brew >/dev/null 2>&1 || return 1
 
-  local link_target homebrew_prefix
+  local link_target resolved_target homebrew_prefix
   link_target="$(readlink "$bin" 2>/dev/null || true)"
   homebrew_prefix="$(brew --prefix 2>/dev/null)" || return 1
+  homebrew_prefix="$(cd "$homebrew_prefix" 2>/dev/null && pwd -P)" || return 1
+
+  # Homebrew bin links are normally relative (for example
+  # ../Cellar/kimi-code/0.27.0/bin/kimi). Resolve the parent directory before
+  # matching so a valid formula install is not mistaken for a native install.
+  resolved_target="$link_target"
+  if [[ -n "$link_target" ]]; then
+    local target_path target_dir target_base physical_dir
+    target_path="$link_target"
+    [[ "$target_path" == /* ]] || target_path="$(dirname "$bin")/$target_path"
+    target_dir="$(dirname "$target_path")"
+    target_base="$(basename "$target_path")"
+    physical_dir="$(cd "$target_dir" 2>/dev/null && pwd -P || true)"
+    if [[ -n "$physical_dir" ]]; then
+      resolved_target="$physical_dir/$target_base"
+    fi
+  fi
 
   local check formula
-  for check in "$link_target" "$bin"; do
+  for check in "$resolved_target" "$link_target" "$bin"; do
     [[ -z "$check" ]] && continue
     case "$check" in
       "$homebrew_prefix"/Cellar/*)
@@ -426,6 +475,18 @@ upgrade_tool() {
   if [[ "$dry_run" == "1" ]]; then
     local _dry_note
     _dry_note="$(binary_note "$tool" "$cmd" "$bin"); no upgrade"
+    if [[ "$tool" == "claude" && "$(detect_claude_method "$bin")" == "brew" ]]; then
+      local _dry_cask
+      _dry_cask="$(detect_brew_claude_cask || true)"
+      if [[ -n "$_dry_cask" ]]; then
+        _dry_note="$_dry_note; channel=$_dry_cask"
+        if [[ "$_dry_cask" == "claude-code" && "$claude_channel" == "latest" ]]; then
+          _dry_note="$_dry_note; would switch to claude-code@latest"
+        elif [[ "$_dry_cask" == "claude-code" ]]; then
+          _dry_note="$_dry_note; preserved (set CLAUDE_CHANNEL=latest only with channel-switch authorization)"
+        fi
+      fi
+    fi
     [[ -n "$_rec_note" ]] && _dry_note="$_dry_note; $_rec_note"
     print_result "$tool" "$cmd" "$old_version" "N/A" "SKIP_DRY_RUN" "$_dry_note"
     return
@@ -444,7 +505,11 @@ upgrade_tool() {
       local brew_formula=""
       brew_formula="$(detect_brew_formula_from_bin "$bin")" || true
       if [[ -n "$brew_formula" ]]; then
-        brew upgrade "$brew_formula" >>"$log_file" 2>&1 || true
+        if ! brew upgrade "$brew_formula" >>"$log_file" 2>&1; then
+          print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+            "brew upgrade $brew_formula failed; path=$bin"
+          return
+        fi
       elif is_npm_install "$bin"; then
         if ! ensure_npm; then
           print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" "npm not found for $package"
@@ -498,7 +563,18 @@ upgrade_tool() {
               "brew cask detection failed; path=$bin"
             return
           fi
-          brew upgrade --cask "$cask" >>"$log_file" 2>&1 || true
+          if [[ "$cask" == "claude-code" && "$claude_channel" == "latest" ]]; then
+            if ! migrate_brew_claude_to_latest "$cask"; then
+              print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+                "Claude channel switch to claude-code@latest failed; stable cask restore attempted"
+              return
+            fi
+            cask="claude-code@latest"
+          elif ! brew upgrade --cask "$cask" >>"$log_file" 2>&1; then
+            print_result "$tool" "$cmd" "$old_version" "$old_version" "FAILED" \
+              "brew upgrade --cask $cask failed; path=$bin"
+            return
+          fi
           ;;
         npm)
           if ! ensure_npm; then
@@ -569,6 +645,14 @@ upgrade_tool() {
     fi
   fi
   [[ -n "$_rec_note" ]] && note="$note; $_rec_note"
+  if [[ "$tool" == "claude" && "$(detect_claude_method "$bin")" == "brew" ]]; then
+    local final_cask
+    final_cask="$(detect_brew_claude_cask || true)"
+    [[ -n "$final_cask" ]] && note="$note; channel=$final_cask"
+    if [[ "$final_cask" == "claude-code" && "$claude_channel" == "preserve" ]]; then
+      note="$note; stable channel preserved"
+    fi
+  fi
 
   print_result "$tool" "$cmd" "$old_version" "$new_version" "$status" "$note"
 }

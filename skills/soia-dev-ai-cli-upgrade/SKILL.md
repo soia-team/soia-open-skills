@@ -1,11 +1,11 @@
 ---
 name: soia-dev-ai-cli-upgrade
-description: Audit and upgrade AI CLIs with dry-run logs; use agy for consumer Google login and keep gemini opt-in for enterprise/API Key/Vertex. Triggers：「升级 AI CLI」「更新 agy/gemini」「检查 CLI 版本」
-version: 1.0.0
+description: Audit and upgrade AI CLIs with dry-run logs, Homebrew detection, and an explicit Claude @latest gate; keep agy consumer-safe and Gemini opt-in. Triggers：「升级 AI CLI」「更新 Claude/Kimi」「检查 CLI 版本」
+version: 1.1.0
 created_at: 2026-07-09 07:45:34
-updated_at: 2026-07-15 14:21:31
+updated_at: 2026-07-21 13:32:00
 created_by: claude opus 4.6
-updated_by: claude opus 4.6
+updated_by: gpt-5
 ---
 
 # soia-dev-ai-cli-upgrade
@@ -87,12 +87,12 @@ SOIA_DEV_AI_CLI_UPGRADE_CONFIG_FILE=<custom-config-path>
 | Tool | Command | Default upgrade method |
 |---|---|---|
 | Codex | `codex` | `codex update` (auto-detects native/brew-cask/npm internally); installs via `curl https://chatgpt.com/codex/install.sh`, `brew install --cask codex`, or `npm install -g @openai/codex`; **⚑ npm path**: NOTE column shows curl recommendation |
-| Claude Code | `claude` | auto-detected: native → `claude update`; brew cask → `brew upgrade --cask claude-code[@@latest]`; npm (legacy) → `npm install -g @anthropic-ai/claude-code`; Desktop-managed → skip (MANUAL); **⚑ npm path**: NOTE column shows native-installer recommendation |
+| Claude Code | `claude` | auto-detected: native → `claude update`; Homebrew defaults to preserving the installed cask, while authorized `CLAUDE_CHANNEL=latest` safely migrates `claude-code` → `claude-code@latest` with prefetch and rollback; npm (legacy) → `npm install -g @anthropic-ai/claude-code`; Desktop-managed → skip (MANUAL) |
 | Antigravity CLI (consumer Google accounts) | `agy` | Official successor to Gemini CLI consumer Google login; native `agy update`; missing-command install is gated by `AGY_INSTALL=1` |
 | Gemini CLI (non-consumer lanes) | `gemini` | auto-detected: brew formula (`brew install gemini-cli`) → `brew upgrade <formula>`; npm → `npm install -g @google/gemini-cli`; native → `gemini update`; explicit opt-in with `TOOLS=gemini` |
 | Qwen Code | `qwen` | auto-detected: brew formula (`brew install qwen-code`) → `brew upgrade <formula>`; npm → `npm install -g @qwen-code/qwen-code`; native (curl) → `qwen update`; **⚑ npm path**: NOTE column shows curl recommendation |
 | MiniMax CLI | `mmx` | `mmx update` (wraps npm internally); npm-only: `npm install -g mmx-cli` |
-| Kimi Code | `kimi` | auto-detected: brew formula (`brew install kimi-code`) → `brew upgrade <formula>`; npm → `npm install -g @moonshot-ai/kimi-code`; native (curl) → `kimi upgrade`; **⚑ npm path**: NOTE column shows `brew install kimi-code` recommendation |
+| Kimi Code | `kimi` | auto-detected: Homebrew formula, including relative `bin` symlinks, → `brew upgrade <formula>`; npm → `npm install -g @moonshot-ai/kimi-code`; native (curl) → `kimi upgrade`; Homebrew failures are reported instead of being treated as “already latest” |
 | OpenCode | `opencode` | auto-detected: brew formula (`brew install opencode`) → `brew upgrade <formula>`; npm → `npm install -g opencode-ai`; native (curl) → MANUAL (re-run `curl -fsSL https://opencode.ai/install \| bash`); **⚑ npm path**: NOTE column shows curl recommendation |
 | Qoder CLI | `qodercli` | `qodercli update` |
 | Cursor | `cursor` | version audit only unless `CURSOR_UPGRADE_CMD` is set |
@@ -105,6 +105,10 @@ longer part of the default batch.
 ## Safety Model
 
 - Start with `DRY_RUN=1` unless the user explicitly asked to upgrade.
+- Preserve Claude's installed Homebrew cask by default. Set
+  `CLAUDE_CHANNEL=latest` only after the user separately authorizes changing
+  from `claude-code` to `claude-code@latest`; fetch the target before removing
+  the stable cask and attempt restoration if installation fails.
 - Never edit shell profiles or PATH files automatically.
 - Missing `agy` is installed only when `AGY_INSTALL=1`. The helper downloads
   Google's HTTPS installer to a temporary directory, syntax-checks it, and runs
@@ -163,6 +167,7 @@ env:
   LOG_DIR: "$HOME/.local/state/soia-dev-ai-cli-upgrade/logs"
   TOOLS: "codex,claude,agy"
   NPM_PREFIX: "$HOME/.npm-global"
+  CLAUDE_CHANNEL: "preserve"
   AGY_INSTALL: "0"
   AGY_INSTALL_DIR: "$HOME/.local/bin"
 ```
@@ -175,6 +180,7 @@ Supported variables:
 | `TOOLS="codex,claude,agy"` | Limit the tool list | consumer-safe default set; `gemini` is opt-in |
 | `NPM_PACKAGES="codex,claude"` | Backward-compatible alias for `TOOLS`; ignored when `TOOLS` is set | unset |
 | `NPM_PREFIX=<path>` | npm global prefix for npm-based CLIs | `$HOME/.npm-global` |
+| `CLAUDE_CHANNEL=preserve|latest` | Preserve the installed Claude Homebrew cask, or explicitly migrate the stable cask to `claude-code@latest` | `preserve` |
 | `AGY_INSTALL=1` | Allow a missing `agy` to be installed from Google's fixed official HTTPS endpoint | `0` |
 | `AGY_INSTALL_DIR=<path>` | Native `agy` installation and fallback detection directory | `$HOME/.local/bin` |
 | `LOG_DIR=<path>` | Upgrade log directory | `${TMPDIR:-/tmp}/soia-dev-ai-cli-upgrade/logs` |
@@ -193,6 +199,10 @@ bash skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
 
 # Upgrade a consumer-safe subset
 TOOLS="codex,claude,agy" \
+  bash skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
+
+# After separate channel-switch authorization, migrate Homebrew Claude to @latest
+CLAUDE_CHANNEL=latest TOOLS="claude" \
   bash skills/soia-dev-ai-cli-upgrade/scripts/upgrade-ai-clis.sh
 
 # Upgrade Gemini CLI only after confirming a supported non-consumer lane
@@ -287,6 +297,9 @@ Before final response:
 - Include the log file path.
 - Summarize each tool status.
 - Call out any `FAILED`, `MANUAL`, or interactive-login blockers.
+- For Homebrew Claude, report the actual cask channel. Treat
+  `ALREADY_LATEST` as “latest in the preserved channel,” not proof that another
+  authorized channel has no newer build.
 - Treat a non-zero script exit as at least one true `FAILED` row; the script
   still processes the remaining selected tools before returning failure.
 - State that authentication was not checked unless an explicit PTY login flow

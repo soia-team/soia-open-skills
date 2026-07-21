@@ -2,10 +2,10 @@
 # @created_by  openai/gpt-5
 # @created_at  2026-07-11 00:15:52
 # @modified_by openai/gpt-5
-# @modified_at 2026-07-11 12:00:00
-# @version     0.2.0
+# @modified_at 2026-07-21 13:32:00
+# @version     0.3.0
 # @description Offline regression tests for the AI CLI upgrade helper.
-# @changelog   Cover agy dry-run/update/install plus explicit-only Gemini upgrade isolation.
+# @changelog   Cover relative Homebrew links, visible failures, and authorized Claude channel switching.
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -498,6 +498,176 @@ run_case "$case17" \
   "NPM_PREFIX=$case17/prefix" "NPM_BIN=$case17/fake-npm"
 check "opencode npm note: live upgrade contains recommendation" \
   contains "$run_output" "recommend"
+
+# 18. Homebrew normally creates a relative bin symlink. Kimi must still be
+# recognized as a formula install and upgraded through brew, not `kimi upgrade`.
+case18="$test_root/kimi-brew-relative-link"
+mkdir -p "$case18/homebrew/Cellar/kimi-code/0.27.0/bin" "$case18/homebrew/bin" "$case18/bin"
+printf '0.27.0\n' >"$case18/kimi-state"
+cat >"$case18/homebrew/Cellar/kimi-code/0.27.0/bin/kimi" <<'SH'
+#!/usr/bin/env bash
+case "${1:-}" in
+  --version|version) cat "$FAKE_KIMI_STATE" ;;
+  upgrade) printf 'called\n' >>"$FAKE_KIMI_SELF_UPDATE_MARKER" ;;
+  *) exit 2 ;;
+esac
+SH
+chmod +x "$case18/homebrew/Cellar/kimi-code/0.27.0/bin/kimi"
+ln -sf "../Cellar/kimi-code/0.27.0/bin/kimi" "$case18/homebrew/bin/kimi"
+cat >"$case18/bin/brew" <<'SH'
+#!/usr/bin/env bash
+case "${1:-}" in
+  --prefix) printf '%s\n' "$FAKE_HOMEBREW_PREFIX" ;;
+  upgrade)
+    printf '%s\n' "$*" >>"$FAKE_BREW_ARGS"
+    if [[ "${FAKE_BREW_UPGRADE_RC:-0}" != "0" ]]; then
+      exit "$FAKE_BREW_UPGRADE_RC"
+    fi
+    printf '%s\n' "${FAKE_KIMI_AFTER_VERSION:-0.28.0}" >"$FAKE_KIMI_STATE"
+    ;;
+  *) exit 1 ;;
+esac
+SH
+chmod +x "$case18/bin/brew"
+run_case "$case18" \
+  "PATH=$case18/homebrew/bin:$case18/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=kimi" "DRY_RUN=0" "NPM_BIN=$case18/missing-npm" \
+  "FAKE_HOMEBREW_PREFIX=$case18/homebrew" \
+  "FAKE_BREW_ARGS=$case18/brew-args" \
+  "FAKE_KIMI_STATE=$case18/kimi-state" \
+  "FAKE_KIMI_SELF_UPDATE_MARKER=$case18/kimi-self-update.marker"
+check "brew kimi relative link: run exits zero" test "$run_rc" -eq 0
+check "brew kimi relative link: formula name is detected" \
+  contains "$(cat "$case18/brew-args" || true)" "upgrade kimi-code"
+check "brew kimi relative link: self updater is not called" \
+  test ! -e "$case18/kimi-self-update.marker"
+check "brew kimi relative link: reports UPDATED" contains "$run_output" "UPDATED"
+
+# 19. A brew failure is a real failure; it must not be swallowed and reported
+# as ALREADY_LATEST.
+printf '0.27.0\n' >"$case18/kimi-state"
+run_case "$case18" \
+  "PATH=$case18/homebrew/bin:$case18/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=kimi" "DRY_RUN=0" "NPM_BIN=$case18/missing-npm" \
+  "FAKE_HOMEBREW_PREFIX=$case18/homebrew" \
+  "FAKE_BREW_ARGS=$case18/brew-failure-args" \
+  "FAKE_BREW_UPGRADE_RC=9" \
+  "FAKE_KIMI_STATE=$case18/kimi-state" \
+  "FAKE_KIMI_SELF_UPDATE_MARKER=$case18/kimi-self-update-failure.marker"
+check "brew kimi failure: run returns non-zero" test "$run_rc" -eq 1
+check "brew kimi failure: reports FAILED" contains "$run_output" "FAILED"
+check "brew kimi failure: does not claim ALREADY_LATEST" \
+  test "$(grep -c 'ALREADY_LATEST' <<<"$run_output" || true)" -eq 0
+
+# 20/21/22. Claude Homebrew defaults to preserving the installed cask. An
+# explicit CLAUDE_CHANNEL=latest performs fetch -> uninstall -> install and
+# restores the stable cask when the target install fails.
+case20="$test_root/claude-brew-channel"
+mkdir -p "$case20/homebrew/bin" "$case20/bin"
+printf 'stable\n' >"$case20/cask-state"
+printf '2.1.206\n' >"$case20/claude-state"
+cat >"$case20/homebrew/bin/claude" <<'SH'
+#!/usr/bin/env bash
+case "${1:-}" in
+  --version|version) cat "$FAKE_CLAUDE_STATE" ;;
+  update) printf 'called\n' >>"$FAKE_CLAUDE_MARKER" ;;
+  *) exit 2 ;;
+esac
+SH
+chmod +x "$case20/homebrew/bin/claude"
+cat >"$case20/bin/brew" <<'SH'
+#!/usr/bin/env bash
+current="$(cat "$FAKE_CLAUDE_CASK_STATE")"
+case "${1:-}" in
+  list)
+    [[ "${2:-}" == "--cask" ]] || exit 1
+    case "${3:-}:$current" in
+      claude-code:stable|claude-code@latest:latest) exit 0 ;;
+      *) exit 1 ;;
+    esac
+    ;;
+  upgrade)
+    printf '%s\n' "$*" >>"$FAKE_BREW_ARGS"
+    printf '%s\n' "${FAKE_CLAUDE_STABLE_AFTER_VERSION:-2.1.210}" >"$FAKE_CLAUDE_STATE"
+    ;;
+  fetch)
+    printf '%s\n' "$*" >>"$FAKE_BREW_ARGS"
+    exit "${FAKE_CLAUDE_FETCH_RC:-0}"
+    ;;
+  uninstall)
+    printf '%s\n' "$*" >>"$FAKE_BREW_ARGS"
+    printf 'none\n' >"$FAKE_CLAUDE_CASK_STATE"
+    ;;
+  install)
+    printf '%s\n' "$*" >>"$FAKE_BREW_ARGS"
+    if [[ "${3:-}" == "claude-code@latest" ]]; then
+      if [[ "${FAKE_CLAUDE_LATEST_INSTALL_RC:-0}" != "0" ]]; then
+        exit "$FAKE_CLAUDE_LATEST_INSTALL_RC"
+      fi
+      printf 'latest\n' >"$FAKE_CLAUDE_CASK_STATE"
+      printf '%s\n' "${FAKE_CLAUDE_LATEST_VERSION:-2.1.216}" >"$FAKE_CLAUDE_STATE"
+    else
+      printf 'stable\n' >"$FAKE_CLAUDE_CASK_STATE"
+      printf '%s\n' "${FAKE_CLAUDE_ROLLBACK_VERSION:-2.1.206}" >"$FAKE_CLAUDE_STATE"
+    fi
+    ;;
+  *) exit 1 ;;
+esac
+SH
+chmod +x "$case20/bin/brew"
+
+run_case "$case20" \
+  "PATH=$case20/homebrew/bin:$case20/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=claude" "DRY_RUN=0" "CLAUDE_CHANNEL=preserve" \
+  "NPM_BIN=$case20/missing-npm" \
+  "FAKE_CLAUDE_CASK_STATE=$case20/cask-state" \
+  "FAKE_CLAUDE_STATE=$case20/claude-state" \
+  "FAKE_CLAUDE_MARKER=$case20/claude-update.marker" \
+  "FAKE_BREW_ARGS=$case20/brew-preserve-args"
+check "Claude stable channel: run exits zero" test "$run_rc" -eq 0
+check "Claude stable channel: upgrades installed cask" \
+  contains "$(cat "$case20/brew-preserve-args" || true)" "upgrade --cask claude-code"
+check "Claude stable channel: reports preserved channel" \
+  contains "$run_output" "stable channel preserved"
+check "Claude stable channel: does not install @latest" \
+  test "$(grep -c '^install --cask claude-code@latest$' "$case20/brew-preserve-args" || true)" -eq 0
+
+printf 'stable\n' >"$case20/cask-state"
+printf '2.1.206\n' >"$case20/claude-state"
+run_case "$case20" \
+  "PATH=$case20/homebrew/bin:$case20/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=claude" "DRY_RUN=0" "CLAUDE_CHANNEL=latest" \
+  "NPM_BIN=$case20/missing-npm" \
+  "FAKE_CLAUDE_CASK_STATE=$case20/cask-state" \
+  "FAKE_CLAUDE_STATE=$case20/claude-state" \
+  "FAKE_CLAUDE_MARKER=$case20/claude-update-latest.marker" \
+  "FAKE_BREW_ARGS=$case20/brew-latest-args"
+check "Claude latest channel: run exits zero" test "$run_rc" -eq 0
+check "Claude latest channel: prefetches target" \
+  contains "$(cat "$case20/brew-latest-args" || true)" "fetch --cask claude-code@latest"
+check "Claude latest channel: installs target cask" \
+  contains "$(cat "$case20/brew-latest-args" || true)" "install --cask claude-code@latest"
+check "Claude latest channel: reports target channel" \
+  contains "$run_output" "channel=claude-code@latest"
+check "Claude latest channel: reports UPDATED" contains "$run_output" "UPDATED"
+
+printf 'stable\n' >"$case20/cask-state"
+printf '2.1.206\n' >"$case20/claude-state"
+run_case "$case20" \
+  "PATH=$case20/homebrew/bin:$case20/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  "TOOLS=claude" "DRY_RUN=0" "CLAUDE_CHANNEL=latest" \
+  "NPM_BIN=$case20/missing-npm" \
+  "FAKE_CLAUDE_CASK_STATE=$case20/cask-state" \
+  "FAKE_CLAUDE_STATE=$case20/claude-state" \
+  "FAKE_CLAUDE_MARKER=$case20/claude-update-rollback.marker" \
+  "FAKE_BREW_ARGS=$case20/brew-rollback-args" \
+  "FAKE_CLAUDE_LATEST_INSTALL_RC=9"
+check "Claude latest rollback: run returns non-zero" test "$run_rc" -eq 1
+check "Claude latest rollback: reports FAILED" contains "$run_output" "FAILED"
+check "Claude latest rollback: restores stable cask" \
+  test "$(cat "$case20/cask-state")" = "stable"
+check "Claude latest rollback: restore command was called" \
+  contains "$(cat "$case20/brew-rollback-args" || true)" "install --cask claude-code"
 
 printf '%s\n' "=== test_upgrade_ai_clis.sh: $passed passed, $failed failed ==="
 [[ "$failed" -eq 0 ]]
