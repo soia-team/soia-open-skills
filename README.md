@@ -57,6 +57,7 @@ npx skills add soia-team/soia-open-skills
         soia-dev-github-ops / soia-dev-ai-cli-upgrade（公共开发工具线）
         soia-dev-open-design-ops（Open Design 原子层：daemon / 目录 / 设计系统 / 导出 / resume）
         soia-cwork-feishu-cli（企业协作线：飞书 CLI 只读调研云盘、文档、知识库）
+        soia-cwork-processon-diagrams（企业协作线：盘点、预览和导出 ProcessOn 图表）
 ```
 
 **核心理念**：收藏 ≠ 吸收。大多数人的知识库是"信息坟场"——囤了一大堆，从不回看。`soia-pkm` 把「收藏 → 观点 → 成文 → 发布」这条**从消费到创造**的链路，拆成职责单一、可组合的 skill，让 AI 帮你把囤积的信息真正变成**你自己的**作品。
@@ -138,6 +139,7 @@ npx skills add soia-team/soia-open-skills
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify 图表工作流：架构图 / 数据流 / 工作流 / 时序 / 生命周期图，维护 JSON IR 并导出 README/docs PNG | ✅ 可用（脚本齐全；需本机可用 Archify）| `ARCHIFY_BIN` 或 `ARCHIFY_ROOT`，可选 Playwright/Chrome 导出 PNG |
 | [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release，默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY` |
 | [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | AI/开发 CLI 批量盘点与升级：Codex / Claude / Antigravity (`agy`，消费者 Google 登录后继) / Gemini（仅企业、API Key、Vertex）/ Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ 可用（脚本齐全；支持 dry-run 和日志）| Node/npm；部分工具使用官方 installer、Homebrew 或自身 updater |
+| [`soia-dev-skill-release`](./skills/soia-dev-skill-release/) | 技能 PR merge 后的发布收尾：安装/更新、旧名清理、Codex 补链、消费者同步、lock 与版本对账 | ✅ 可用（支持 dry-run；六列回执） | Python 3、`npx skills`、`soia-dev-sync-skills` |
 | [`soia-dev-prompt-clarity`](./skills/soia-dev-prompt-clarity/) | 中英文提示词技能：从零起草 / 六维诊断优化 / 防误伤改写 / 模糊需求规格化四模式；支持英文原生编写、双语交付和按需精选领域框架 | ✅ 可用（纯方法论输出，无脚本无第三方强依赖）| 无 |
 | [`soia-dev-agent-md-advisor`](./skills/soia-dev-agent-md-advisor/) | AGENTS.md / CLAUDE.md / `.claude` 配置设计顾问：审查诊断 / 新项目起草 / 最佳实践问答三模式，六维度体检（长度预算/可执行性/分区路由/重复矛盾/入口一致性/时效）| ✅ 可用（纯方法论诊断，无脚本无强依赖）| 无 |
 | [`soia-dev-agent-cli-dispatch`](./skills/soia-dev-agent-cli-dispatch/) | 受控派发任务给外部编码 CLI（codex/agy/gemini/kimi/opencode/qwen 等）：任务边界拆分、防注入 prompt 写法、模型分级矩阵、Anti-Fake-Fix 三步验证 | ✅ 可用（命令模板 + 分级矩阵齐全）| 目标编码 CLI（按需 codex/agy/gemini/kimi/opencode/qwen 等）已安装登录 |
@@ -157,7 +159,7 @@ Open Design 配置：复制 [`config.example.yml`](./skills/soia-dev-open-design
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | 通过官方 `lark-cli` 以应用凭证（bot）只读盘点飞书云盘、云文档、知识库、评论、权限和元数据 | ✅ 可用（需配置飞书应用凭据并授予目标资源权限） | 飞书官方 `lark-cli`；应用凭证；目标文档/知识库需对应用可见 |
 | [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | 将飞书知识库按 `node_token` 保留树形结构并增量镜像为 Markdown，接入 Git、Obsidian 与 VitePress；可将明确配置的 Sheet 与多维表格转为 Markdown/保真快照，不默认写回飞书 | ✅ 可用（先执行 dry-run，再建立基线；表格读取需额外授予只读权限并明确范围） | `soia-cwork-feishu-cli`；`lark-cli`；Python 3.10+；PyYAML；Git/VitePress/Obsidian 可选 |
-
+| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | 复用用户浏览器登录态盘点 ProcessOn 团队空间，预览图表，按授权导出，并把浏览器下载校验归档到可配置的交付目录 | ✅ 可用（浏览/目录读取与本地归档已验证；登录和安全验证需用户手动完成） | ProcessOn 账号与资源权限；浏览器控制；Python 3.10+；PyYAML 仅配置文件需要 |
 #### 飞书技能最小上手
 
 ```bash
@@ -183,6 +185,19 @@ npx skills add larksuite/cli -g -y
 ```
 
 配置模板、权限分层、按 ID 增量同步、表格/多维表格镜像和事件边界见 [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/)。表格默认不读取，附件二进制下载须单独确认；工作簿导出仍需另行确认。双向同步需要另行确定文档归属、冲突策略和飞书写权限，不能把只读镜像当作双向同步。
+
+### soia-cwork-processon-diagrams
+
+使用客户已登录的 ProcessOn 浏览器盘点个人/团队空间、读取图表标题与可见内容，并通过官方“浏览/下载”菜单导出。客户在浏览器中手动输入用户名、密码和验证码；技能不保存凭据。下载后按 CLI → 环境变量 → 私有 YAML → 安全默认值解析临时、交付和审计目录，校验后原子归档并生成 manifest。
+
+```text
+盘点这个 ProcessOn 团队空间：<team-url>
+把“系统架构”文件夹中的 3 张图导出为 POS 和高清 PNG
+把浏览器下载的文件校验后归档到配置的交付目录
+解析这些 ProcessOn POS 文件并整理图中文字
+```
+
+ProcessOn 面向普通账号没有公开的团队文件 REST API；企业 API 服务属于另行购买的嵌入/格式转换能力。格式矩阵、浏览器执行边界、路径配置、下载归档和本地 POS/XMind 检查脚本见 [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/)。
 
 ---
 
@@ -336,6 +351,7 @@ npx skills add soia-team/soia-open-skills
 | `启动 Open Design daemon` / `把这个 deck 导出 PPTX` | soia-dev-open-design-ops |
 | `调研飞书云盘/知识库` / `读取飞书工作文档` | soia-cwork-feishu-cli |
 | `同步飞书知识库到 Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
+| `盘点 ProcessOn 团队空间` / `导出 ProcessOn 架构图` | soia-cwork-processon-diagrams |
 
 Antigravity CLI 的命令是 `agy`：全局技能目录为
 `~/.gemini/antigravity-cli/skills/`，workspace 技能目录为 `.agents/skills/`。
@@ -450,7 +466,8 @@ soia-open-skills/
     ├── soia-dev-terminal-ops/
     ├── soia-dev-design-explorer/
     ├── soia-dev-open-design-ops/
-    └── soia-cwork-feishu-cli/
+    ├── soia-cwork-feishu-cli/
+    └── soia-cwork-processon-diagrams/
 ```
 
 每个 skill 一个文件夹，独立 `SKILL.md`（frontmatter 含 `name` + `description`）+ 自己的 `scripts/`。

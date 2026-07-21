@@ -1,10 +1,18 @@
 # THIRD_PARTY_NOTICES
 
-> Last updated: 2026-07-20
+> Last updated: 2026-07-20（新增 ProcessOn 路径配置的可选 PyYAML 依赖）
 > 本文件集中声明本仓库各 skill 引用、依赖或参考的第三方项目与服务。
-> 本仓库**未复制或改编任何第三方源代码**——所有引用属于以下三类之一：接口口径的源码级参考（只读其源码核对参数，不搬运实现）、运行时调用的外部工具/库/skill、在线 API 服务。因此不设 `licenses/` 本地副本目录；若未来出现真正的代码改编，改编处必须携带上游 license 副本并在本文件登记。
+> 除 §0 明确登记的代码改编（携带 `licenses/` 上游 license 副本）外，其余引用属于以下三类之一：接口口径的源码级参考（只读其源码核对参数，不搬运实现）、运行时调用的外部工具/库/skill、在线 API 服务。
 >
 > 列入标准：仓库文档（`SKILL.md`、README、references）中出现**显式上游链接或安装指令**的第三方。协议列为 GitHub / PyPI / Homebrew 元数据快照（快照日期 2026-07-20），复用前请重新核对上游实时协议。
+
+## 0. 代码改编（携带上游 license 副本）
+
+| 上游 | 协议 | 改编处 | 说明 |
+|---|---|---|---|
+| [wshuyi/x-article-publisher-skill](https://github.com/wshuyi/x-article-publisher-skill) | MIT（副本：`licenses/wshuyi-x-article-publisher-skill-LICENSE.txt`） | `soia-pkm-publish-x-article/scripts/parse_x_article.py` | Markdown 解析/block_index 定位/HTML 转换逻辑改编自其 `parse_markdown.py`；文件头已注明出处。剪贴板脚本为本仓库独立实现（osascript 路线），未取自上游 |
+
+工作流设计参考（无代码复制）：[mcncarl/yichen-skills](https://github.com/mcncarl/yichen-skills)（非商业协议）的 `yichen-x-article-draft-uploader` —— 借鉴其「封面缺失先中断询问」「上传后机械校验清单」「只存草稿不发布」的流程设计；其代码未阅读复制，自动化路线（agent 驱动浏览器 vs 独立 Playwright + cookie 导出）也与其不同。
 
 ## 1. 接口口径参考（源码级阅读，无代码复制）
 
@@ -38,6 +46,7 @@
 | [trafilatura](https://pypi.org/project/trafilatura/) | Apache-2.0 | `soia-pkm-clip-web` | 正文抽取，运行时调用（与 readability-lxml 互为兜底） |
 | [readability-lxml](https://pypi.org/project/readability-lxml/) | Apache-2.0 | `soia-pkm-clip-web` | 正文抽取，运行时调用 |
 | [Telethon](https://github.com/LonamiWebs/Telethon) | MIT | `soia-pkm-clip-x` | 可选依赖，仅 Telegram MTProto 收藏同步路线使用 |
+| [PyYAML](https://pypi.org/project/PyYAML/) | MIT | `soia-cwork-processon-diagrams` | 可选依赖，仅在读取私有 `config.yml` 路径配置时调用 |
 
 ### 2.3 第三方 skill
 
@@ -59,6 +68,7 @@
 | `cdn.syndication.twimg.com` | Twitter/X 公开 syndication 端点 | — | `soia-pkm-clip-x` | fxtwitter 失败时的兜底端点 |
 | 微信公众号后台接口（`mp.weixin.qq.com/cgi-bin/*`) | 腾讯 | — | `soia-pkm-clip-wechat-account` | 用户以自己账号的登录态读取自己的数据；接口口径参考见 §1 |
 | 微信读书 API | 腾讯 | — | `soia-pkm-library-weread-sync` 等 | 经官方 `weread-skills` 与用户 API Key 调用 |
+| ProcessOn Web 与 API 服务 | 北京大麦地信息技术有限公司 | — | `soia-cwork-processon-diagrams` | 通过用户已授权的 Web 登录态浏览/导出；企业 API 服务仅作官方能力说明，不逆向私有接口 |
 
 ## 4. 维护规则
 

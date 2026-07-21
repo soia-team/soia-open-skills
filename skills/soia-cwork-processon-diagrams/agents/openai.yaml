@@ -1,0 +1,4 @@
+interface:
+  display_name: "ProcessOn 图表助手"
+  short_description: "浏览、导出并校验归档 ProcessOn 图表。"
+  default_prompt: "Use $soia-cwork-processon-diagrams to inventory this ProcessOn team space, inspect selected diagrams, export approved files without changing remote content, and finalize browser-reported downloads into configured delivery and manifest directories."

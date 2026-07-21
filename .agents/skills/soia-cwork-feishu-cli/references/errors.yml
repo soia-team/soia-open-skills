@@ -1,0 +1,104 @@
+schema_version: 1
+kind: feishu_cli_error_catalog
+
+# Machine-readable diagnosis and recovery hints for common lark-cli failures.
+# Never store credentials, access tokens, private URLs, or customer-specific IDs here.
+errors:
+  invalid_client_20140:
+    match:
+      type: config
+      subtype: invalid_client
+      code: 20140
+    stage: authentication
+    summary: 应用凭证或 lark-cli profile 无法被飞书认证
+    not_a_scope_error: true
+    signals:
+      - auth status 显示 bot.status=not_configured
+      - wiki、drive 等命令在返回资源列表前失败
+      - error.message 包含“The auth method is not supported.”
+    recovery:
+      - 检查私有配置中的 LARK_APP_ID、LARK_APP_SECRET、LARK_PROFILE、LARK_BRAND 是否已填写
+      - 首次初始化运行 setup_app_credentials.py --use
+      - 已有 profile 需要更新凭证时，确认私有配置无误后显式运行 setup_app_credentials.py --replace --use
+      - lark-cli 不允许同一个 App ID 同时存在于两个 profile，刷新会先删除旧 profile；如果写入失败，检查配置后重新运行初始化
+      - 重新运行 auth status --json --verify、whoami 和代表性只读命令
+    do_not:
+      - 不要先申请更多 scope；当前请求尚未进入权限校验阶段
+      - 不要用 auth login 代替应用凭证；那是 user OAuth
+      - 不要把 App Secret 放入命令行参数、日志或聊天
+
+  missing_scope:
+    match:
+      type: api
+      subtypes:
+        - missing_scopes
+        - permission
+    stage: authorization
+    summary: 应用已经完成认证，但缺少当前 API 所需的 tenant scope
+    recovery:
+      - 只申请错误返回的最小 scope
+      - 保存权限配置并发布应用版本
+      - 重新运行 auth status --json --verify 和代表性只读命令
+    do_not:
+      - 不要切换到 user OAuth 绕过 bot 权限
+      - 不要默认申请写入、删除、上传或成员管理权限
+
+  permission_denied:
+    match:
+      type: api
+      subtypes:
+        - permission_denied
+        - forbidden
+    stage: resource_authorization
+    summary: 应用已认证且具备部分权限，但目标资源未授权给应用
+    recovery:
+      - 让知识库管理员、文档所有者或租户管理员把应用加入目标资源
+      - 核对应用数据权限和资源可见范围
+      - 在同一 bot 身份下重试代表性只读命令
+    do_not:
+      - 不要把 bot 看不到的个人云盘或个人知识库误报为空
+      - 不要静默切换到用户身份
+
+  oauth_scope_review_pending:
+    match:
+      browser_signal:
+        - "open.feishu.cn/page/scope-authorization"
+        - "已提交申请，正在审核中"
+      cli_context: lark-cli auth login device flow
+    stage: application_permission_review
+    summary: CLI 用户 OAuth 被应用权限或版本审核拦截，尚未建立 user_access_token
+    recovery:
+      - 在开放平台权限管理中检查用户身份权限页签的最小 scope
+      - 检查应用版本是否已提交并经企业管理员审核、正式发布
+      - 审核通过后重新运行 lark-cli auth login --no-wait --json，不复用旧的 device URL
+      - 用户完成授权后由 agent 执行 --device-code，并用 auth status --json --verify 确认 user=ready
+    do_not:
+      - 不要把“审核中”当作用户 OAuth 已完成
+      - 不要把 authen/v1/user_info 当作登录入口；它需要已有 user_access_token
+      - 不要为了绕过应用审核切换成 bot 或申请无关写权限
+
+  rate_limit:
+    match:
+      type: api
+      subtypes:
+        - rate_limit
+        - too_many_requests
+    stage: request
+    summary: 飞书接口触发限流
+    recovery:
+      - 使用退避重试并降低并发
+      - 若走 soia-cwork-feishu-doc-git-sync 的 sync_feishu_wiki.py 同步，大型空间可用其 --retry-failed --retry-batch-size N 分批补偿
+      - 该脚本 --validate-only 的 failed_records=0、stale_records=0 可作为完成条件（lark-cli 本身无此参数）
+
+  not_found:
+    match:
+      type: api
+      subtypes:
+        - not_found
+        - object_not_found
+    stage: resource_resolution
+    summary: token、space_id 或资源已失效，或当前身份不可见
+    recovery:
+      - 先重新 inspect URL 或列出当前身份可见的资源
+      - 使用 API 返回的真实 space_id、node_token 或 file_token
+      - 核对资源是否已移动、删除或改为仅用户可见

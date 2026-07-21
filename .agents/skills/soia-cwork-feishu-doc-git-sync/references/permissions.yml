@@ -1,0 +1,76 @@
+version: 1
+
+permission_policy:
+  default: read_only
+  app_identity: tenant_access_token
+  user_identity: not_required_for_default_mirror
+  write_permissions: never_default
+
+capabilities:
+  wiki_structure_read:
+    purpose: "读取知识空间、节点层级和文档 token"
+    scopes:
+      - wiki:wiki:readonly
+      - wiki:space:read
+      - wiki:space:retrieve
+      - wiki:node:read
+      - wiki:node:retrieve
+  document_content_read:
+    purpose: "读取 docx 文档内容并转换为 Markdown"
+    scopes:
+      - docs:doc:readonly
+      - docx:document:readonly
+      - docs:document.content:read
+  document_change_events:
+    purpose: "接收云文档编辑、标题、创建、回收站和删除事件，驱动按 ID 增量同步"
+    optional: true
+    default: disabled
+    scopes:
+      - space:document.event:read
+    notes:
+      - "需在开放平台事件订阅中配置具体 drive.file.* 事件"
+      - "事件订阅配置后仍需创建版本并发布应用"
+      - "tenant_access_token 只覆盖应用拥有或管理员范围内的文档"
+  attachment_download_optional:
+    purpose: "把图片和附件下载到本地镜像"
+    optional: true
+    scopes:
+      - docs:document.media:download
+      - drive:file:download
+    notes:
+      - "只有用户明确启用本地资源下载时才使用；不等同于表格导出授权"
+  tabular_export_optional:
+    purpose: "在用户确认范围后，将电子表格或多维表格导出为本地 xlsx/csv/base"
+    optional: true
+    default: disabled
+    requires_explicit_confirmation: true
+    scopes:
+      - drive:export:readonly
+      - drive:file:download
+    notes:
+      - "能力探查、drive +inspect 和 dry-run 不代表已经授权导出"
+      - "不得因为 include_non_docx=true 或同步发现 sheet/bitable 就自动导出"
+      - "导出文件应写入临时目录或用户确认的导出目录，不应自动进入生成镜像目录"
+  wiki_write:
+    purpose: "创建或更新飞书知识库节点"
+    optional: true
+    default: disabled
+    scopes:
+      - wiki:node:create
+      - wiki:node:update
+  document_write:
+    purpose: "把本地 Markdown 写回飞书文档"
+    optional: true
+    default: disabled
+    scopes:
+      - docs:doc
+      - docx:document:write_only
+
+application_setup:
+  steps:
+    - "在飞书开放平台创建或选择自建应用"
+    - "添加机器人能力"
+    - "按 capability 分类申请最小权限"
+    - "发布应用版本，使权限变更生效"
+    - "把应用加入目标知识库并确认成员/资源可见性"
+    - "使用 lark-cli auth status --verify 检查 bot 身份"

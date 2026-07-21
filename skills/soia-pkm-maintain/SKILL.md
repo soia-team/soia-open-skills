@@ -3,11 +3,11 @@ name: soia-pkm-maintain
 description: Obsidian vault 维护技能（支撑类）——三个工作流：①周维护（lint 四类体检 + 周简报）②全库地图重生成 ③AI 会话日志接入（Claude Code / Codex 双平台）。底层机械脚本纯 Python stdlib / bash，参数化支持任意 vault 路径，不硬编码具体库。Triggers：「vault 周维护」「跑周维护」「重建全库地图」「更新知识库地图」「接入会话日志」「配置会话日志」
 dependencies:
   optional: [soia-pkm-organize-article-moc]
-version: 1.0.0
+version: 1.0.1
 created_at: 2026-07-07 13:32:04
-updated_at: 2026-07-15 18:27:15
+updated_at: 2026-07-20 19:05:00
 created_by: claude opus 4.6
-updated_by: claude opus 4.6
+updated_by: claude fable 5
 ---
 
 # soia-pkm-maintain

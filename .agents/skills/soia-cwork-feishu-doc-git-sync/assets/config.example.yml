@@ -1,0 +1,56 @@
+# Copy to:
+# ~/.config/soia-skills/soia-open-skills/cwork/soia-cwork-feishu-doc-git-sync/config.yml
+# Never commit real credentials, tenant URLs, private paths, or tokens.
+
+version: 1
+
+provider:
+  cli: lark-cli
+  profile: "<configured-cli-profile>"
+  brand: feishu
+  identity: bot
+
+space:
+  id: "<wiki-space-id>"
+  source_url_template: "https://<tenant>.feishu.cn/wiki/{node_token}"
+
+paths:
+  output_dir: "<git-repository>/docs/feishu-knowledge"
+  # Use the exact knowledge-base name, not a generic duplicate directory.
+  generated_dir: "10_knowledge-base"
+
+sync:
+  mode: mirror
+  prune: false
+  include_non_docx: true
+  keep_remote_assets: true
+  workers: 4
+  retry_workers: 1
+  structure_workers: 2
+  metadata_workers: 2
+  incremental: true
+  # Without an event target, compare wiki +node-get obj_edit_time/updated_at
+  # before fetching document bodies. Set false only when an external event
+  # pipeline always supplies --event-file/--changed-*-token.
+  probe_remote_metadata: true
+  # Optional: download remote Feishu image URLs into the local mirror and
+  # rewrite Markdown links to 10_knowledge-base/_assets/. Keep false in the public
+  # example; enable it in the private config after granting media/download
+  # permissions or when the signed image URL is directly readable.
+  download_assets: false
+  # Refresh documents with expired signed image URLs before downloading.
+  refresh_asset_urls: true
+  asset_refresh_workers: 4
+  asset_dir: "_assets"
+  asset_workers: 4
+  asset_timeout_seconds: 30
+  max_asset_bytes: 20971520
+  request_delay_seconds: 0.2
+  # Global minimum interval between lark-cli request starts. This is shared
+  # across all workers and prevents a large space from triggering 99991400.
+  min_request_interval_seconds: 0.5
+  metadata_request_delay_seconds: 0.2
+  event_file: "<optional-event-ndjson-path>"
+
+vitepress:
+  sidebar_file: "90_同步元数据/sidebar.json"

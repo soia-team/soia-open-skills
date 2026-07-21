@@ -438,3 +438,14 @@ source fields instead of adding `metadata.json`:
 ```bash
 python3 scripts/generate_skill_catalog.py --registry-out <soia-repo>/runtime/registry/skills
 ```
+
+## 命名规范（机械审计强制，2026-07-20 起）
+
+- 形式：`soia-<domain>-<kebab-name>`；domain ∈ `pkm | dev | gov | cwork | design | env | meta`。
+- 域语义：`dev`=通用工程工具；`gov`=仅 SOIA 产品 workspace 的治理层（产品绑定技能一律归 gov，不得在 dev 域二次加 soia 段）；`design`=设计职能；`pkm`=个人知识管理；`cwork`=协同办公；`env`=环境安装排查；`meta`=技能自我进化。
+- 禁止：相邻 token 重复（如 `soia-dev-soia-*` 反模式）；`soia` 在域段之后再次出现。
+- 迁移/拆分时的域归属复核由 `scripts/audit_skills.py` 的 `audit_skill_name` 机械执行，CI strict 模式违规即红。
+
+## 私密数据与中间数据存储
+
+所有技能的凭据、配置、审计状态、缓存、临时数据与交付物的存放位置、保留期与脱敏要求，以本仓 [DATA_STORAGE_SPEC.md](DATA_STORAGE_SPEC.md) 为准（本仓独立维护）。新技能必须包含「私密信息与中间数据」客户可读段；存量技能随下一次实质修改补齐。参考实现见 `templates/skill-template/scripts/resolve_storage.py`。
