@@ -1,11 +1,13 @@
 ---
 name: soia-dev-github-ops
 description: Use gh CLI for GitHub issue/PR/checks/review/run/release/collaborator-permission ops, plus pre-merge rule review. Triggers：「看下这个 PR」「查 CI 挂了」「合并/评审 PR」「发 release」「加协作者权限」「审核 PR 该不该合」
-version: 1.1.0
+version: 2.0.0
 created_at: 2026-07-09 07:45:34
-updated_at: 2026-07-21 18:10:00
+updated_at: 2026-07-21 19:04:05
 created_by: claude opus 4.6
 updated_by: claude fable 5
+dependencies:
+  hard: [soia-dev-review-panel]
 ---
 
 # soia-dev-github-ops
@@ -238,9 +240,9 @@ gh pr checks <number> --repo <owner>/<repo> --json name,state,bucket
 
 ### Step 2 — Find this repo's own rules (do not borrow another repo's)
 
-Look for these files at the root of the PR's repo, in this order, skipping
-any that do not exist — do not assume a rule file exists because a similar
-repo you know has one:
+These four are the common ones, but they aren't the full list for every repo —
+list the actual root directory and check for any `*_SPEC.md`/`*.md` rule file
+by name, not just these:
 
 - `CLAUDE.md` / `AGENTS.md` — agent behavior conventions
 - `CONTRIBUTING.md`
@@ -250,63 +252,44 @@ repo you know has one:
   `AGENTS.md`/`README.md` (common in this org's repos: "read the zone's own
   rules before touching it"), read that too
 
+This org's skill repos in particular also carry `SKILL_SPEC.md` (skill
+authoring rules — version bump discipline, frontmatter requirements),
+`DATA_STORAGE_SPEC.md` (where credentials/config/cache may and may not live),
+and `THIRD_PARTY_NOTICES.md` (any new adapted code or dependency must be
+registered there) — check for these by name specifically when the PR's repo
+is one of the `soia-*-skills` repos, since a diff that skips registering a
+new third-party adaptation is a real, previously-seen failure mode here, not
+a hypothetical one.
+
 If no rule file exists, say so plainly in the final report instead of
 inventing rules from memory of other repositories.
 
-### Step 3 — Cross-check the diff against the rules
+### Step 3 — Hand off to soia-dev-review-panel for the actual cross-check
 
-For each changed area, check against what Step 2 turned up. These are
-recurring failure classes worth specifically looking for, not an exhaustive
-checklist:
+Do not re-derive a review checklist here. Use `soia-dev-review-panel`'s code
+lens group (correctness/self-verification, security, test coverage & anti-fake-fix,
+scope & consistency) against the diff from Step 1, with the rule files from
+Step 2 as its "rules" input for the scope/consistency lens. That skill also
+owns the "open the real file, don't trust the diff snippet" discipline and
+the graded-confidence (seen/inferred/unconfirmed) finding format — this
+procedure doesn't maintain a second copy of either.
 
-- Scope creep: does the diff touch files outside what the title/body claims?
-- Cross-repo/host conventions: if the rules say "no cross-repo code
-  sharing" or "must be host-agnostic" (not tied to one AI CLI's proprietary
-  tools) or similar hard constraints, check the diff against them specifically
-- Security: new external input (URL/path/user data) without validation;
-  hardcoded secrets/tokens; credentials or private data landing in logs or
-  commit history
-- Test coverage: behavior changed but tests didn't; or a test exists but
-  its assertions don't actually verify the claimed behavior ("it ran without
-  throwing" is not verification)
-- Doc sync: user-facing behavior changed but README/SKILL.md/CHANGELOG
-  wasn't updated, where the repo has that convention
-- Third-party notices: new adapted code or dependency added without the
-  registration the repo's rules require (e.g. a `THIRD_PARTY_NOTICES.md`)
+If `soia-dev-review-panel` isn't installed, stop and tell the user to install
+it (`npx skills add soia-team/soia-open-skills -g -a '*' -s soia-dev-review-panel -y`)
+rather than falling back to an ad-hoc checklist.
 
-When the diff view looks suspicious, open the real file before reporting it
-as a finding — a unified diff shows changed lines plus a few lines of
-context, which easily misrepresents things like a function's full signature:
+### Step 4 — Report
 
-```bash
-gh api repos/<owner>/<repo>/contents/<path>?ref=<headRefName> --jq '.content' | base64 -d
-# or, if this repo is already cloned locally:
-git show <headRefName>:<path>
-```
+Use `soia-dev-review-panel`'s Step 5 output as the body of the reply (verdict
+first, findings by tier, coverage notes), plus these two additions that are
+specific to this GitHub procedure and not part of the generic methodology:
 
-### Step 4 — Report with graded confidence, ranked by severity
-
-Tag each finding by its evidence: seen (cite the diff/file line),
-inferred (state the reasoning), or unconfirmed (say so, and name what
-would confirm it). Do not let a guess read like a fact.
-
-| Tier | Meaning | Recommended action |
-|---|---|---|
-| 🔴 Blocking | Violates a hard rule, security issue, clear bug | Recommend not merging; list what must change |
-| 🟡 Should-fix | Not blocking but worth addressing (style, test gaps, docs) | Recommend fixing before or shortly after merge |
-| 🟢 Clean | Checked, nothing found | Say which checks were run |
-
-The final reply must lead with:
-
-1. One-line verdict: recommend merge / recommend fix-first / recommend
-   don't-merge — first sentence, not buried in a long report.
-2. Findings, grouped by tier above, each with file + line where locatable.
-3. CI/mergeable status from Step 1 — report what was actually observed,
-   don't re-guess it.
-4. Explicit handoff: "the merge decision is yours" — never follow this
-   report with `gh pr merge` in the same turn, even if the original request
-   pre-authorized merging; wait for the user's next message after they have
-   seen the findings.
+- CI/mergeable status from Step 1 — report what was actually observed, don't
+  re-guess it.
+- Explicit handoff: "the merge decision is yours" — never follow this report
+  with `gh pr merge` in the same turn, even if the original request
+  pre-authorized merging; wait for the user's next message after they have
+  seen the findings.
 
 ## CI Failure Triage
 
