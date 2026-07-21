@@ -47,6 +47,12 @@
 
 目录阶段完成后先运行 `build_processon_archive_plan.py`，生成每个文件的稳定 `artifact_id`、默认格式和待确认队列。计划中的 `ready_for_known_artifacts=true` 允许已确认类型分阶段下载；`ready_for_archive=true` 只有在 unknown 清零后才代表全量条目均可归档。每个下载文件仍需经过 `finalize_processon_download.py`，不能用浏览器 Toast 代替落盘证据。
 
+### 增量不等于一次局部扫描
+
+**错误表现**：只检查一级目录、按修改时间猜变更，或把没有 ID 的同名文件判断为“移动”；不完整的当前扫描直接把历史条目写成“已删除”。
+
+**纠偏规则**：先完成并审计新的全量 checkpoint，再用 `diff_processon_inventory.py` 与同范围历史 checkpoint 比较。它只产生本地快照差分，明确写出两份 SHA-256；当前或历史任一快照有 pending/blocked 都 fail closed。没有 `remote_id/id` 时只保留新增和移除候选，绝不声称移动；同目录完全相同的无 ID 条目隔离为不可判定项。候选也不会自动删除源文件或已归档文件。
+
 ## 6. 类型选择必须有证据
 
 **错误表现**：根据颜色、文件名或单一图标猜流程图/思维导图；把未知项静默下载为 VSDX。

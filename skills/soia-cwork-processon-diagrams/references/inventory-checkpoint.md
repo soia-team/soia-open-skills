@@ -108,7 +108,20 @@ python3 scripts/processon_inventory_state.py audit --run-dir <run-dir>
 
 完整性通过但仍有待访问目录时，运行状态继续保持 `inventory_running`。只有审计通过且 `pending_count=0、blocked_count=0` 时，状态才变为 `completed` 并生成 `handoff/receipt.md`。任何哈希、重放或索引不一致都 fail closed 为 `inventory_audit_failed`，不得发布完成结论。
 
-## 5. 与知识库归档的关系
+## 5. 增量盘点：两次完整快照的差分
+
+普通 ProcessOn 团队空间的“增量盘点”不是事件订阅、接口爬取或仅扫描最近目录，而是先完成一份新的全量、审计通过的 checkpoint，再与同范围的上一份完整 checkpoint 比较：
+
+```bash
+python3 scripts/diff_processon_inventory.py \
+  --previous <previous-run>/inventory/checkpoint.json \
+  --current <current-run>/inventory/checkpoint.json \
+  --output <current-run>/analysis/inventory-delta.json
+```
+
+脚本会拒绝 `pending_paths` 或 `blocked_paths` 非空的输入、不同 root/source URL、符号链接和重复的稳定 ID。报告固定包含前后 checkpoint 的 SHA-256、`added`、`changed` 与 `removed_candidates`。只有 ProcessOn 页面明确提供稳定 `remote_id/id` 时才标记 `moved` 或 `renamed`；其余条目不能推断移动，保持新增/移除候选。若同目录中存在多个无 ID 的完全相同条目，脚本将其隔离到 `ambiguous_entries`，不为它们产生变更结论。`removed_candidates` 只供人工核对和后续归档计划使用，绝不触发自动删除。
+
+## 6. 与知识库归档的关系
 
 - XDG state 运行包是控制面：持续更新，可以续跑，并保留原始批次证据。
 - Markdown 盘点报告是阶段性快照：从状态文件生成或核对，不反向充当唯一队列。
