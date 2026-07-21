@@ -64,12 +64,21 @@ def launch(profile_dir: Path, playwright):
     profile_dir.mkdir(parents=True, exist_ok=True)
     # Headed on purpose: X throttles headless fingerprints, and login is
     # interactive anyway.
-    return playwright.chromium.launch_persistent_context(
-        str(profile_dir),
+    kwargs = dict(
         headless=False,
         viewport={"width": 1280, "height": 900},
         args=["--disable-blink-features=AutomationControlled"],
     )
+    # Prefer the system Chrome binary: familiar UI, and Google sign-in blocks
+    # bundled Chromium more often. Chrome >=136 forbids automating the user's
+    # DEFAULT profile, so a dedicated profile dir is mandatory either way —
+    # the login there is a one-time cost, persisted forever after.
+    try:
+        return playwright.chromium.launch_persistent_context(
+            str(profile_dir), channel="chrome", **kwargs
+        )
+    except Exception:
+        return playwright.chromium.launch_persistent_context(str(profile_dir), **kwargs)
 
 
 def is_logged_in(page, timeout_ms: int = 8000) -> bool:
