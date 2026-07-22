@@ -39,6 +39,7 @@ def write_skill(
     root: Path,
     name: str,
     *,
+    description: str = "测试技能",
     omit: frozenset[str] = frozenset(),
     created_at: str = "2026-07-22 12:00:00",
     updated_at: str = "2026-07-22 12:00:00",
@@ -46,7 +47,7 @@ def write_skill(
 ) -> Path:
     values = {
         "name": name,
-        "description": "测试技能",
+        "description": description,
         "version": "1.0.0",
         "created_at": created_at,
         "updated_at": updated_at,
@@ -123,6 +124,37 @@ class FrontmatterDatetimeTests(unittest.TestCase):
             with patch.object(audit_skills, "GRANDFATHER_INVALID_DATETIME", frozenset({name})):
                 findings = findings_for(root, name)
             hit = next(f for f in findings if "grandfathered frontmatter created_at" in f.message)
+            self.assertEqual(hit.severity, "WARN")
+            self.assertFalse(hit.strict_blocking)
+
+
+class DescriptionLengthTests(unittest.TestCase):
+    def test_description_at_limit_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            name = "soia-dev-test-description"
+            write_skill(root, name, description="a" * audit_skills.MAX_DESCRIPTION_CHARS)
+            findings = findings_for(root, name)
+            self.assertFalse(any("description is long" in finding.message for finding in findings))
+
+    def test_long_description_is_error_for_new_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            name = "soia-dev-test-description"
+            write_skill(root, name, description="a" * (audit_skills.MAX_DESCRIPTION_CHARS + 1))
+            findings = findings_for(root, name)
+            hit = next(f for f in findings if "description is long" in f.message)
+            self.assertEqual(hit.severity, "ERROR")
+            self.assertTrue(hit.strict_blocking)
+
+    def test_long_description_is_nonblocking_warn_when_grandfathered(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            name = "soia-dev-test-description"
+            write_skill(root, name, description="a" * (audit_skills.MAX_DESCRIPTION_CHARS + 1))
+            with patch.object(audit_skills, "GRANDFATHER_LONG_DESCRIPTION", frozenset({name})):
+                findings = findings_for(root, name)
+            hit = next(f for f in findings if "grandfathered description is long" in f.message)
             self.assertEqual(hit.severity, "WARN")
             self.assertFalse(hit.strict_blocking)
 

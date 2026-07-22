@@ -30,17 +30,24 @@ class MetaPromptClaritySkillTests(unittest.TestCase):
                 self.assertIn(marker, text)
         self.assertLess(len(text.splitlines()), 500)
 
-    def test_english_and_bilingual_triggers_are_discoverable(self) -> None:
+    def test_description_keeps_identity_and_three_distinct_trigger_groups(self) -> None:
         text = SKILL.read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1]
+        description = re.search(r"^description: (.+)$", frontmatter, re.MULTILINE)
+        self.assertIsNotNone(description)
+        value = description.group(1)
+        self.assertLessEqual(len(value), 150)
         for marker in [
-            "写英文提示词",
-            "中英双语提示词",
+            "中英文提示词",
+            "用户意图",
+            "安全边界",
             "write a prompt",
             "improve this prompt",
+            "扩展成可验证规格",
         ]:
             with self.subTest(marker=marker):
-                self.assertIn(marker, frontmatter)
+                self.assertIn(marker, value)
+        self.assertEqual(len(re.findall(r"「[^」]+」", value)), 3)
 
     def test_language_contract_separates_prompt_and_explanation(self) -> None:
         text = SKILL.read_text(encoding="utf-8")

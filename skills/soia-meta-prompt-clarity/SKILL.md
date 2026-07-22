@@ -1,9 +1,9 @@
 ---
 name: soia-meta-prompt-clarity
-description: 中英文通用提示词技能：A 从零起草、B 诊断优化、C 正当请求防误伤改写、D 复杂需求编译成可验证规格；支持英文原生编写、双语交付与按需领域框架。默认只产出，信息不足先澄清。含模型能力适配策略。Triggers：「写提示词」「写英文提示词」「优化英文 prompt」「中英双语提示词」「write a prompt」「improve this prompt」「扩展成规格」「写完就执行」
-version: 2.0.0
+description: 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界。触发：「写提示词 / write a prompt」「优化 prompt / improve this prompt」「扩展成可验证规格」
+version: 2.0.1
 created_at: 2026-07-09 19:52:22
-updated_at: 2026-07-22 21:16:13
+updated_at: 2026-07-23 07:19:34
 created_by: claude opus 4.6
 updated_by: gpt-5.6-luna
 ---
