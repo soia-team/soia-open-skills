@@ -367,7 +367,54 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
                 review = MODULE.legacy_flat_download_review(progress)
             self.assertEqual(review["flat_downloads_completed_count"], 2)
             self.assertEqual(review["numbered_suffix_review_count"], 1)
+            self.assertEqual(review["trusted_completed_count"], 2)
+            self.assertEqual(review["claim_status"], "revalidation_required")
             self.assertEqual(review["numbered_suffix_items"][0]["artifact_id"], "a")
+
+    def test_progress_mirror_excludes_legacy_numbered_download_from_trusted_completed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            downloads = home / "Downloads"
+            downloads.mkdir()
+            mirror = home / "archive-progress.yml"
+            plan = {"entries": [], "counts": {"total_entries": 2}}
+            progress = {
+                "plan": {"sha256": "abc"},
+                "counts": {
+                    "planned_known": 2,
+                    "completed": 2,
+                    "failed": 0,
+                    "blocked": 0,
+                    "remaining_known": 0,
+                    "unknown_pending_confirmation": 0,
+                },
+                "completed": [
+                    {
+                        "artifact_id": "unsafe",
+                        "source_path": "root/unsafe",
+                        "actual_format": "vsdx",
+                        "download_source": str(downloads / "未命名文件 (2).vsdx"),
+                        "archive_destination": str(home / "archive" / "unsafe.vsdx"),
+                    },
+                    {
+                        "artifact_id": "safe",
+                        "source_path": "root/safe",
+                        "actual_format": "vsdx",
+                        "download_source": str(home / "managed" / "safe" / "同名.vsdx"),
+                        "archive_destination": str(home / "archive" / "safe.vsdx"),
+                    },
+                ],
+                "blocked": [],
+            }
+            with patch.object(Path, "home", return_value=home):
+                MODULE.write_progress_mirror(mirror, plan=plan, progress=progress, run_id="run")
+            text = mirror.read_text(encoding="utf-8")
+            self.assertIn("completed: 1", text)
+            self.assertIn("completed_recorded: 2", text)
+            self.assertIn("legacy_flat_revalidation_pending: 1", text)
+            self.assertIn("remaining_known: 1", text)
+            self.assertIn("remaining_known_recorded: 0", text)
+            self.assertIn('artifact_id: "unsafe"', text)
 
     def test_provider_title_suffix_is_deliberately_narrow(self):
         title = "企业知识库"

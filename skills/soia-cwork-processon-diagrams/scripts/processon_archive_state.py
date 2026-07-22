@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import tempfile
 import zipfile
@@ -18,6 +19,7 @@ from typing import Any, Iterator
 
 STATE_SCHEMA_VERSION = 1
 KNOWN_TYPES = {"flowchart", "mindmap"}
+NUMBERED_DOWNLOAD_SUFFIX = re.compile(r" \(\d+\)$")
 
 
 class ArchiveStateError(RuntimeError):
@@ -345,6 +347,14 @@ def inspect_artifact(path: Path, actual_format: str) -> dict[str, Any]:
     return inspection
 
 
+def is_unsafe_flat_numbered_download(path: Path) -> bool:
+    """Return true for browser-renamed files in the personal flat Downloads root."""
+
+    resolved = path.expanduser().resolve(strict=False)
+    downloads_root = (Path.home() / "Downloads").resolve(strict=False)
+    return resolved.parent == downloads_root and bool(NUMBERED_DOWNLOAD_SUFFIX.search(resolved.stem))
+
+
 def validate_finalizer_manifest(
     manifest_path: Path, destination: Path, inspection: dict[str, Any]
 ) -> dict[str, Any]:
@@ -371,6 +381,11 @@ def record_completed(
     actual_format: str,
     download_event: str,
 ) -> tuple[dict[str, Any], str]:
+    if is_unsafe_flat_numbered_download(download_source):
+        raise ArchiveStateError(
+            "refusing a numbered file from the flat personal Downloads directory; "
+            "redownload it into an artifact_id-scoped managed staging directory"
+        )
     plan = load_json(plan_path, "archive plan")
     validate_plan(plan)
     item = get_plan_item(plan, artifact_id)

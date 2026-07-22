@@ -388,9 +388,12 @@ def legacy_flat_download_review(progress: dict[str, Any]) -> dict[str, Any]:
         flat.append(summary)
         if re.search(r" \(\d+\)$", source.stem):
             numbered.append(summary)
+    completed_count = len(progress.get("completed", []))
     return {
         "flat_downloads_completed_count": len(flat),
         "numbered_suffix_review_count": len(numbered),
+        "trusted_completed_count": max(completed_count - len(numbered), 0),
+        "claim_status": "revalidation_required" if numbered else "trusted",
         "numbered_suffix_items": numbered,
     }
 
@@ -1175,7 +1178,14 @@ def write_progress_mirror(
     if path.is_symlink():
         raise BatchError(f"progress mirror must not be a symlink: {path}")
     counts = progress.get("counts", {})
-    remaining_known = int(counts.get("remaining_known", 0))
+    legacy_review = legacy_flat_download_review(progress)
+    legacy_revalidation_ids = {
+        str(item.get("artifact_id", ""))
+        for item in legacy_review["numbered_suffix_items"]
+    }
+    recorded_remaining_known = int(counts.get("remaining_known", 0))
+    legacy_revalidation_count = int(legacy_review["numbered_suffix_review_count"])
+    remaining_known = recorded_remaining_known + legacy_revalidation_count
     blocked = int(counts.get("blocked", 0))
     failed = int(counts.get("failed", 0))
     unknown = int(counts.get("unknown_pending_confirmation", 0))
@@ -1203,15 +1213,20 @@ def write_progress_mirror(
         f"  total_inventory_entries: {int(plan.get('counts', {}).get('total_entries', len(plan.get('entries', []))))}",
         f"  planned_known: {int(counts.get('planned_known', 0))}",
         f"  unknown_pending_confirmation: {unknown}",
-        f"  completed: {int(counts.get('completed', 0))}",
+        f"  completed: {int(legacy_review['trusted_completed_count'])}",
+        f"  completed_recorded: {int(counts.get('completed', 0))}",
+        f"  legacy_flat_revalidation_pending: {legacy_revalidation_count}",
         f"  failed: {failed}",
         f"  blocked: {blocked}",
         f"  remaining_known: {remaining_known}",
+        f"  remaining_known_recorded: {recorded_remaining_known}",
         f"  collision_identity_pending: {collision_pending}",
         f"  automatic_remaining: {automatic_remaining}",
         "completed:",
     ]
     for item in progress.get("completed", []):
+        if str(item.get("artifact_id", "")) in legacy_revalidation_ids:
+            continue
         destination = Path(str(item.get("archive_destination", "")))
         metadata = destination.parent / "metadata.yml"
         lines.extend(
@@ -1221,6 +1236,17 @@ def write_progress_mirror(
                 f"    format: {yaml_string(item.get('actual_format', ''))}",
                 f"    file: {yaml_string(os.path.relpath(destination, path.parent))}",
                 f"    metadata: {yaml_string(os.path.relpath(metadata, path.parent))}",
+            ]
+        )
+    lines.append("legacy_flat_revalidation_pending:")
+    for item in legacy_review["numbered_suffix_items"]:
+        lines.extend(
+            [
+                f"  - artifact_id: {yaml_string(item.get('artifact_id', ''))}",
+                f"    source_path: {yaml_string(item.get('source_path', ''))}",
+                f"    download_source: {yaml_string(item.get('download_source', ''))}",
+                f"    archive_destination: {yaml_string(item.get('archive_destination', ''))}",
+                '    reason: "个人 Downloads 平铺下载产生编号后缀，无法仅凭文件名唯一绑定来源；须按 artifact_id 隔离重下。"',
             ]
         )
     lines.append("blocked:")

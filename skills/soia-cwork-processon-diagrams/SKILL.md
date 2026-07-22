@@ -1,9 +1,9 @@
 ---
 name: soia-cwork-processon-diagrams
 description: 通过宿主无关的专用浏览器 profile 和可恢复队列，递归盘点 ProcessOn 个人/团队空间到叶子文件；按授权对流程图默认导出 Visio VSDX、对思维导图默认导出 XMind，将未知类型列入待确认清单，并完成下载校验与归档；适用于“读取 ProcessOn 文件”“导出架构图”“盘点全部子目录”“批量下载但不要影响我的 Chrome”“从 POS/VSDX/XMind 提取结构”等请求。
-version: 1.9.2
+version: 1.9.3
 created_at: 2026-07-20 18:57:53
-updated_at: 2026-07-22 16:02:00
+updated_at: 2026-07-22 16:35:00
 created_by: gpt-5.6-sol
 updated_by: gpt-5.6-sol
 dependencies:
@@ -225,7 +225,7 @@ python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file
 python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file>
 ```
 
-3. 核对文件非空、扩展名与内容类型一致；VSDX 必须是有效 ZIP/OOXML 且包含 `visio/document.xml`，图像核对尺寸，POS/XMind 核对标题和可提取文字，所有文件记录 SHA-256。文件名只能作为候选证据：若异步队列产生 `(1)` 后缀、标题漂移或同名不同 SHA，调用 `soia-dev-drawio-visio-diagrams` 提取 VSDX 页面文字反证来源；无法唯一对应 artifact 时保持 pending，不移动、不改名、不调用 `record`。批量下载只能逐个执行；官网未明确支持时不声称存在批量 API。清理临时目录必须先 `cleanup --dry-run`，再由客户确认。
+3. 核对文件非空、扩展名与内容类型一致；VSDX 必须是有效 ZIP/OOXML 且包含 `visio/document.xml`，图像核对尺寸，POS/XMind 核对标题和可提取文字，所有文件记录 SHA-256。文件名只能作为候选证据：若异步队列产生 `(1)` 后缀、标题漂移或同名不同 SHA，调用 `soia-dev-drawio-visio-diagrams` 提取 VSDX 页面文字反证来源；无法唯一对应 artifact 时保持 pending，不移动、不改名、不调用 `record`。状态脚本会直接拒绝把个人 `~/Downloads` 根目录中带 `(n)` 后缀的文件登记为完成；历史状态中的此类记录在进度镜像中从可信 `completed` 排除、保留为 `completed_recorded`，并列入 `legacy_flat_revalidation_pending`。批量下载只能逐个执行；官网未明确支持时不声称存在批量 API。清理临时目录必须先 `cleanup --dry-run`，再由客户确认。
 
 4. `finalize` 成功后立即把 artifact、实际交付文件和 finalizer manifest 绑定到进度；下载事件未被浏览器观察到但真实文件已校验时，使用 `not_observed_verified_file`，不能误写成浏览器事件成功：
 

@@ -7,6 +7,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -264,6 +265,30 @@ class ProcessOnArchiveStateTests(unittest.TestCase):
             result = self.module.audit_state(plan_path, progress_path)
             self.assertEqual(result["status"], "failed")
             self.assertTrue(result["errors"])
+
+    def test_record_rejects_numbered_file_from_flat_personal_downloads(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            downloads = home / "Downloads"
+            downloads.mkdir()
+            source = downloads / "未命名文件 (2).vsdx"
+            write_vsdx(source)
+            with patch.object(Path, "home", return_value=home):
+                self.assertTrue(self.module.is_unsafe_flat_numbered_download(source))
+                with self.assertRaisesRegex(
+                    self.module.ArchiveStateError, "artifact_id-scoped managed staging"
+                ):
+                    self.module.record_completed(
+                        home / "unused-plan.json",
+                        home / "unused-progress.json",
+                        "flow-1",
+                        source,
+                        source,
+                        home / "unused-manifest.json",
+                        "vsdx",
+                        "vsdx",
+                        "observed",
+                    )
 
 
 if __name__ == "__main__":
