@@ -142,10 +142,11 @@ npx skills add soia-team/soia-open-skills
 | [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | 云盘资源顾问：盘点核对（inventory）/规范整理（organize）/OB 索引与两类 Excel（catalog）/学习计划（plan）| ✅ 可用（分区缓存式总索引 + 家庭课程导航）| `soia-pkm-alipan-drive-ops`（原子层）；Excel 需宿主 `@oai/artifact-tool` |
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify 图表工作流：架构图 / 数据流 / 工作流 / 时序 / 生命周期图，维护 JSON IR 并导出 README/docs PNG | ✅ 可用（脚本齐全；需本机可用 Archify）| `ARCHIFY_BIN` 或 `ARCHIFY_ROOT`，可选 Playwright/Chrome 导出 PNG |
 | [`soia-dev-drawio-visio-diagrams`](./skills/soia-dev-drawio-visio-diagrams/) | 安全盘点 VSDX，转成可编辑 `.drawio` 真源，按受控计划修改页面/文字/样式/几何并导出 PNG/SVG/PDF/JPG | ✅ 可用（stdlib 脚本 + draw.io 30.x 前向验证） | Python 3.10+；转换/渲染需要 draw.io Desktop；MCP 可选 |
-| [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release，默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY` |
+| [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release / 协作者权限管理，含 PR 合并前对照仓库自身规则的结构化审查（审查者侧，只出建议不自动合并）和「贴评审 URL 帮我修复」作者侧流程（拉评审→修→push→请求重审，不自动合并），默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY`；强依赖 `soia-dev-review-panel`（审查者侧）与 `soia-dev-fix-loop`（作者侧），未安装则停止不降级 |
 | [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | AI/开发 CLI 批量盘点与升级：Codex / Claude / Antigravity (`agy`，消费者 Google 登录后继) / Gemini（仅企业、API Key、Vertex）/ Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ 可用（脚本齐全；支持 dry-run 和日志）| Node/npm；部分工具使用官方 installer、Homebrew 或自身 updater |
 | [`soia-dev-project-scaffold`](./skills/soia-dev-project-scaffold/) | 为新建 Git 项目生成最小 AI 协作基线：可编辑的 `AGENTS.md` + docs 导航目录，写入前确认目标路径 | ✅ 可用（`shells/init-project-baseline.sh` 脚本齐全）| POSIX shell、`mkdir`、`git`（仅检查，不初始化仓库）|
 | [`soia-dev-coding-protocol`](./skills/soia-dev-coding-protocol/) | 为工程代码改动建立最小范围、验证前置、anti-fake-fix 与写后复核契约，适用于修复/重构/实现/评审 | ✅ 可用（纯方法论协议，无脚本）| 目标仓库 + 与任务相称的验证手段（测试/lint/类型检查）|
+| [`soia-dev-review-panel`](./skills/soia-dev-review-panel/) | 多视角 + 对抗式复核的审查方法论：代码 diff 或技能包都能审，独立视角先各自出候选发现，再逐条尝试推翻，只保留经得住反驳的 | ✅ 可用（纯方法论，无脚本）| 强依赖 `soia-dev-coding-protocol`；可选与 `soia-dev-github-ops` 组合审 PR |
 | [`soia-dev-task-execute`](./skills/soia-dev-task-execute/) | 执行任意工程任务的通用闭环：定义边界、最小改动、验证、独立复核与回执 | ✅ 可用（纯方法论闭环，无脚本）| 目标工作区 + 可复现的验证入口 |
 | [`soia-dev-fix-loop`](./skills/soia-dev-fix-loop/) | 用五步闭环处理代码审查/测试发现：复现、决策、修复、回归复核与回执 | ✅ 可用（纯方法论闭环，无脚本）| findings + 目标工作区 + 相称的验证入口 |
 | [`soia-dev-doc-sync`](./skills/soia-dev-doc-sync/) | 审计并修复任意代码仓 docs/README/CHANGELOG/VERSION 与明确真源之间的事实漂移 | ✅ 可用（纯方法论审计流程，无脚本）| 目标仓库真源的只读访问；可选项目已有 lint/测试/生成器 |
@@ -170,7 +171,7 @@ Open Design 配置：复制 [`config.example.yml`](./skills/soia-dev-open-design
 |-------|------|----------|------|
 | [`soia-cwork-feishu-cli`](./skills/soia-cwork-feishu-cli/) | 通过官方 `lark-cli` 以应用凭证（bot）只读盘点飞书云盘、云文档、知识库、评论、权限和元数据 | ✅ 可用（需配置飞书应用凭据并授予目标资源权限） | 飞书官方 `lark-cli`；应用凭证；目标文档/知识库需对应用可见 |
 | [`soia-cwork-feishu-doc-git-sync`](./skills/soia-cwork-feishu-doc-git-sync/) | 将飞书知识库按 `node_token` 保留树形结构并增量镜像为 Markdown，接入 Git、Obsidian 与 VitePress；可将明确配置的 Sheet 与多维表格转为 Markdown/保真快照，不默认写回飞书 | ✅ 可用（先执行 dry-run，再建立基线；表格读取需额外授予只读权限并明确范围） | `soia-cwork-feishu-cli`；`lark-cli`；Python 3.10+；PyYAML；Git/VitePress/Obsidian 可选 |
-| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | 复用用户浏览器登录态递归盘点 ProcessOn 到叶子文件，预览图表，默认按 Visio VSDX 导出，并把下载校验归档到可配置目录 | ✅ 可用（递归与本地归档已验证；只有真实可见的安全验证才需用户接管） | ProcessOn 账号与资源权限；浏览器控制；Python 3.10+；draw.io/Visio 技能可选 |
+| [`soia-cwork-processon-diagrams`](./skills/soia-cwork-processon-diagrams/) | 复用用户浏览器登录态递归盘点 ProcessOn 到叶子文件，按 VSDX/XMind 默认格式导出，并用可恢复下载队列逐项校验归档 | ✅ 可用（递归、计划、严格串行异步导出、下载进度、同名隔离、阻断证据与本地归档已验证；只有真实可见的安全验证才需用户接管） | ProcessOn 账号与资源权限；浏览器控制；Python 3.10+；draw.io/Visio 技能可选 |
 #### 飞书技能最小上手
 
 ```bash
@@ -199,7 +200,7 @@ npx skills add larksuite/cli -g -y
 
 ### soia-cwork-processon-diagrams
 
-使用客户已登录的 ProcessOn 浏览器盘点个人/团队空间、读取图表标题与可见内容，并通过官方“浏览/下载”菜单导出。客户在浏览器中手动输入用户名、密码和验证码；技能不保存凭据。下载后按 CLI → 环境变量 → 私有 YAML → 安全默认值解析临时、交付和审计目录，校验后原子归档并生成 manifest。
+使用客户已登录的 ProcessOn 浏览器盘点个人/团队空间、读取图表标题与可见内容，并通过官方“浏览/下载”菜单导出。客户在浏览器中手动输入用户名、密码和验证码；技能不保存凭据。下载前从审计 checkpoint 生成计划并初始化 `download-progress.json`；每份下载经校验、原子归档和 manifest 后才 `record`，失败/阻断单列，重启后从 `next` 继续。
 
 ```text
 盘点这个 ProcessOn 团队空间：<team-url>
@@ -357,7 +358,8 @@ npx skills add soia-team/soia-open-skills
 | `接入 ima` / `同步到 ima 知识库` | soia-pkm-bootstrap-vault-ima |
 | `给 README 画一张架构图` / `用 Archify 重画流程图` | soia-dev-archify-diagrams |
 | `读懂这个 VSDX` / `把 Visio 转成 draw.io 并升级` | soia-dev-drawio-visio-diagrams |
-| `查这个 PR checks` / `看最近 GitHub Actions 失败原因` | soia-dev-github-ops |
+| `查这个 PR checks` / `看最近 GitHub Actions 失败原因` / `给 xxx 加协作者权限` / `审核这个 PR 该不该合` / `帮我修复这个 PR`（贴评审 URL）| soia-dev-github-ops |
+| `多角度审一下这个改动` / `用几个视角复查` / `对抗式复核一下` / `审一下这个技能包` | soia-dev-review-panel |
 | `升级本机 AI CLI` / `dry-run 看 codex/claude 版本` | soia-dev-ai-cli-upgrade |
 | `监控这个长任务` / `判断进程是否真的卡住` | soia-dev-terminal-ops |
 | `做高保真 HTML 原型` / `评审这个视觉方向` | soia-dev-design-explorer |
@@ -472,6 +474,7 @@ soia-open-skills/
     ├── soia-dev-open-design-ops/
     ├── soia-dev-project-scaffold/
     ├── soia-dev-prompt-clarity/
+    ├── soia-dev-review-panel/
     ├── soia-dev-skill-release/
     ├── soia-dev-sync-skills/
     ├── soia-dev-task-execute/
