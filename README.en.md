@@ -13,7 +13,7 @@
 
 <br>
 
-**A `soia-pkm-*` personal knowledge-management skill set for Obsidian + `soia-cwork-*` enterprise collaboration connectors + publicly reusable `soia-dev-*` dev helpers**
+**A `soia-pkm-*` personal knowledge-management skill set for Obsidian + `soia-cwork-*` enterprise collaboration connectors + `soia-safe-*` security workflows + publicly reusable `soia-dev-*` dev helpers**
 
 ```bash
 npx skills add soia-team/soia-open-skills
@@ -21,7 +21,7 @@ npx skills add soia-team/soia-open-skills
 
 Agent-agnostic — works with Claude Code, Cursor, Codex, Antigravity, Gemini, Kimi, and any [skills.sh](https://skills.sh)-compatible agent.
 
-[The loop](#pkm-loop-the-life-of-a-piece-of-content) · [Skills catalog](#skills-catalog) · [CWork · enterprise collaboration](#-cwork--enterprise-collaboration) · [Frequently used skills](#frequently-used-skills) · [Installation](#installation) · [Telegram sync](#telegram-saved-messages-sync-clip-x) · [Design philosophy](#design-philosophy)
+[The loop](#pkm-loop-the-life-of-a-piece-of-content) · [Skills catalog](#skills-catalog) · [Security](#-security) · [CWork · enterprise collaboration](#-cwork--enterprise-collaboration) · [Frequently used skills](#frequently-used-skills) · [Installation](#installation) · [Telegram sync](#telegram-saved-messages-sync-clip-x) · [Design philosophy](#design-philosophy)
 
 </div>
 
@@ -146,6 +146,15 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 | [`soia-dev-open-design-ops`](./skills/soia-dev-open-design-ops/) | Open Design atomic operations for environment/daemon control, design-system and project onboarding, functional-skill/template queries, HTML/PDF/PPTX/MP4 exports, and native session resume | ✅ Usable (stdlib scripts + upstream CLI/App) | Open Design checkout; Node 24.x, Corepack, pnpm 10.33.x; private `OPEN_DESIGN_HOME` |
 
 Open Design setup: copy [`config.example.yml`](./skills/soia-dev-open-design-ops/config.example.yml) to the skill-specific private config directory and set `OPEN_DESIGN_HOME`; never commit local checkout paths, product `DESIGN.md` paths, or port overrides.
+
+### 🛡️ Security
+
+`soia-safe-*` keeps vulnerability intelligence, code auditing, and controlled remediation local to the customer. Intelligence reports must disclose source coverage; code remains read-only until the customer confirms specific findings, files, and tests.
+
+| Skill | What it does | Ready now? | Dependencies |
+|-------|------|----------|------|
+| [`soia-safe-track-vulnerability-intel`](./skills/soia-safe-track-vulnerability-intel/) | Aggregates public NVD, CISA KEV, and GitHub Advisory records, deduplicates and verifies them, and produces evidence-backed professional reports with coverage gaps and action priorities | ✅ Usable (offline merge test plus GitHub API forward test; source failures remain visible) | Python 3.10+, internet; NVD/GitHub authentication optional |
+| [`soia-safe-audit-fix-codebase`](./skills/soia-safe-audit-fix-codebase/) | Accepts a code path, produces a read-only project security report first, then fixes confirmed batches with regression, rescanning, and independent review | ✅ Usable (read-only inventory and confirmation gate are automatically tested) | `soia-dev-fix-loop`, `soia-dev-coding-protocol`; vulnerability-intel skill optional |
 
 ### 🏢 CWork · enterprise collaboration
 
@@ -342,6 +351,8 @@ This installs every skill under `skills/` into your agent's skill directory — 
 | `Connect to ima` / `Sync to an ima knowledge base` | soia-pkm-bootstrap-vault-ima |
 | `Draw an architecture diagram for the README` / `Redraw this flow with Archify` | soia-dev-archify-diagrams |
 | `Understand this VSDX` / `Convert Visio to draw.io and upgrade it` | soia-dev-drawio-visio-diagrams |
+| `Collect recent security vulnerabilities` / `Prepare a vulnerability weekly report` | soia-safe-track-vulnerability-intel |
+| `Audit this code path` / `Fix confirmed findings and test them` | soia-safe-audit-fix-codebase |
 | `Check this PR's checks` / `Find out why the recent GitHub Actions run failed` | soia-dev-github-ops |
 | `Upgrade my local AI CLIs` / `Dry-run to check codex/claude versions` | soia-dev-ai-cli-upgrade |
 | `Monitor this long-running job` / `Check whether this process is truly stalled` | soia-dev-terminal-ops |
@@ -427,6 +438,7 @@ Use lowercase kebab-case with a domain prefix:
 - `soia-pkm-*`: personal knowledge management around an Obsidian vault — collect, organize, distill, compose, and publish.
 - `soia-cwork-*`: enterprise collaboration — connect to Feishu and other work systems for documents, drives, wikis, and collaboration metadata.
 - `soia-dev-*`: publicly reusable development and engineering tools.
+- `soia-safe-*`: vulnerability intelligence, code security auditing, and confirmed controlled remediation.
 - `soia-design-*` / `soia-gov-*` / `soia-meta-*`: design, governance, and meta-skill domains.
 
 ## Repository structure

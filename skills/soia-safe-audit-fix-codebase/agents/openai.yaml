@@ -1,0 +1,4 @@
+interface:
+  display_name: "代码安全审计与修复"
+  short_description: "只读审计完整代码库，经明确确认后修复代码并完成回归验证"
+  default_prompt: "使用 $soia-safe-audit-fix-codebase 审计这个代码路径，先只输出带证据的项目安全报告和修复预览，等我确认后再修改代码并测试。"

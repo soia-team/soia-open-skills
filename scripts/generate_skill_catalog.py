@@ -16,6 +16,7 @@ GROUPS = [
     ("soia-pkm-", "PKM", "content"),
     ("soia-cwork-", "CWork", "cwork"),
     ("soia-dev-", "Development", "development"),
+    ("soia-safe-", "Security", "security"),
     ("soia-gov-", "Governance", "governance"),
     ("soia-design-", "Design", "design"),
     ("soia-meta-", "Meta", "development"),

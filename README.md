@@ -13,7 +13,7 @@
 
 <br>
 
-**面向 Obsidian 的 `soia-pkm-*` 个人知识管理技能集 + `soia-cwork-*` 企业协作连接能力 + 可公开复用的 `soia-dev-*` 开发 helper**
+**面向 Obsidian 的 `soia-pkm-*` 个人知识管理技能集 + `soia-cwork-*` 企业协作连接能力 + `soia-safe-*` 安全能力 + 可公开复用的 `soia-dev-*` 开发 helper**
 
 ```bash
 npx skills add soia-team/soia-open-skills
@@ -21,7 +21,7 @@ npx skills add soia-team/soia-open-skills
 
 跨 agent 通用——Claude Code、Cursor、Codex、Antigravity、Gemini、Kimi 都能装。
 
-[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单) · [CWork · 企业协作](#-cwork--企业协作) · [高频技能速览](#高频技能速览) · [PR 协作闭环](#-pr-协作闭环审查--修复--合并) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
+[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单) · [Security · 安全](#-security--安全) · [CWork · 企业协作](#-cwork--企业协作) · [高频技能速览](#高频技能速览) · [PR 协作闭环](#-pr-协作闭环审查--修复--合并) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
 
 </div>
 
@@ -162,6 +162,15 @@ npx skills add soia-team/soia-open-skills
 Open Design 配置：复制 [`config.example.yml`](./skills/soia-dev-open-design-ops/config.example.yml) 到技能专属私有配置目录，填写 `OPEN_DESIGN_HOME`；本机 checkout、产品 `DESIGN.md` 路径与端口 override 不提交仓库。
 
 百度网盘技能配置：复制 [`config.example.yml`](./skills/soia-pkm-baidu-netdisk-ops/config.example.yml) 到技能专属私有配置目录，在 `provider` 中选择 `official` 或 `community`。社区模式填写百度开放平台的 AppKey、SecretKey、应用名称；不要把密钥提交仓库或发送到聊天。
+
+### 🛡️ Security · 安全
+
+`soia-safe-*` 在客户本地完成漏洞情报、代码审计与受控修复。情报报告必须声明来源覆盖；代码技能第一次运行严格只读，只有客户确认具体 Finding、文件和测试批次后才允许修改。
+
+| skill | 说明 | 现在能用? | 依赖 |
+|-------|------|----------|------|
+| [`soia-safe-track-vulnerability-intel`](./skills/soia-safe-track-vulnerability-intel/) | 聚合 NVD、CISA KEV、GitHub Advisory 等公开漏洞源，去重核验并生成带覆盖缺口、影响条件和行动优先级的专业报告 | ✅ 可用（离线去重自测 + GitHub API 前向验证；来源失败会形成覆盖回执） | Python 3.10+、互联网；NVD/GitHub 认证可选 |
+| [`soia-safe-audit-fix-codebase`](./skills/soia-safe-audit-fix-codebase/) | 接收代码路径，先只读审计完整项目并输出带证据报告；确认具体批次后再修复、回归、重扫和独立复核 | ✅ 可用（只读盘点与确认门有自动测试） | `soia-dev-fix-loop`、`soia-dev-coding-protocol`；漏洞情报技能可选 |
 
 ### 🏢 CWork · 企业协作
 
@@ -398,6 +407,8 @@ npx skills add soia-team/soia-open-skills
 | `接入 ima` / `同步到 ima 知识库` | soia-pkm-bootstrap-vault-ima |
 | `给 README 画一张架构图` / `用 Archify 重画流程图` | soia-dev-archify-diagrams |
 | `读懂这个 VSDX` / `把 Visio 转成 draw.io 并升级` | soia-dev-drawio-visio-diagrams |
+| `收录最近安全漏洞` / `给我一份漏洞周报` | soia-safe-track-vulnerability-intel |
+| `审计这个代码路径` / `确认后修复并测试` | soia-safe-audit-fix-codebase |
 | `查这个 PR checks` / `看最近 GitHub Actions 失败原因` / `给 xxx 加协作者权限` / `审核这个 PR 该不该合` / `帮我修复这个 PR`（贴评审 URL）| soia-dev-github-ops |
 | `多角度审一下这个改动` / `用几个视角复查` / `对抗式复核一下` / `审一下这个技能包` | soia-dev-review-panel |
 | `升级本机 AI CLI` / `dry-run 看 codex/claude 版本` | soia-dev-ai-cli-upgrade |
@@ -483,6 +494,7 @@ python3 ~/.claude/skills/soia-pkm-clip-x/scripts/sync_telegram_export.py \
 - `soia-pkm-*`：个人知识管理，围绕 Obsidian vault 的收集、整理、提炼、成文与发布。
 - `soia-cwork-*`：企业协作，连接飞书等工作系统，处理工作文档、云盘、知识库和协作元数据。
 - `soia-dev-*`：可公开复用的开发与工程工具。
+- `soia-safe-*`：漏洞情报、代码安全审计和经确认后的受控修复。
 - `soia-design-*` / `soia-gov-*` / `soia-meta-*`：设计、治理和元技能域。
 
 ## 仓库结构
