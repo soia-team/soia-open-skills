@@ -27,7 +27,7 @@ ${XDG_STATE_HOME:-~/.local/state}/soia-cwork-processon-diagrams/
 ```bash
 python3 scripts/processon_inventory_state.py init \
   --run-id '2026-07-21-backend-processon-inventory' \
-  --root-path '解决方案后端组' \
+  --root-path '示例团队空间' \
   --source-url 'https://www.processon.com/org/teams/<team-id>'
 ```
 
@@ -41,18 +41,18 @@ python3 scripts/processon_inventory_state.py init \
 {
   "directories": [
     {
-      "path": "解决方案后端组/01_系统架构",
+      "path": "示例团队空间/01_架构目录",
       "status": "visited",
       "captured_at": "2026-07-21T10:00:00+08:00",
       "folders": [
-        {"name": "规范", "path": "解决方案后端组/01_系统架构/规范"}
+        {"name": "子目录A", "path": "示例团队空间/01_架构目录/子目录A"}
       ],
       "files": [
         {
-          "title": "系统架构图",
+          "title": "示例流程图",
           "type": "flowchart",
-          "owner": "周鹏",
-          "remote_updated_at": "8月前"
+          "owner": "示例用户",
+          "remote_updated_at": "N月前"
         }
       ]
     }
