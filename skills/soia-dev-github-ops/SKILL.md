@@ -1,13 +1,13 @@
 ---
 name: soia-dev-github-ops
-description: Use gh CLI for GitHub issue/PR/checks/review/run/release/collaborator-permission ops, plus pre-merge rule review. Triggers：「看下这个 PR」「查 CI 挂了」「合并/评审 PR」「发 release」「加协作者权限」「审核 PR 该不该合」
-version: 2.0.0
+description: Use gh CLI for GitHub issue/PR/checks/review/run/release/collaborator ops, pre-merge rule review, and author-side fix-the-review. Triggers：「看下这个 PR」「查 CI 挂了」「合并/评审 PR」「发 release」「加协作者权限」「审核 PR 该不该合」「帮我修复这个 PR」
+version: 2.1.0
 created_at: 2026-07-09 07:45:34
-updated_at: 2026-07-21 19:04:05
+updated_at: 2026-07-22 11:53:19
 created_by: claude opus 4.6
 updated_by: claude fable 5
 dependencies:
-  hard: [soia-dev-review-panel]
+  hard: [soia-dev-review-panel, soia-dev-fix-loop]
 ---
 
 # soia-dev-github-ops
@@ -23,13 +23,14 @@ or worktree management unless a GitHub operation is also required.
 
 ### 这个技能可以做什么
 
-Use gh CLI for GitHub issue, PR, checks, review, workflow run, release, and collaborator-permission operations, plus a pre-merge rule-review procedure, with structured JSON output and safety gates
+Use gh CLI for GitHub issue, PR, checks, review, workflow run, release, and collaborator-permission operations, plus a pre-merge rule-review procedure and an author-side "address a review and fix it" procedure, with structured JSON output and safety gates
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
 | 完成本技能覆盖的工作 | 读取用户请求、必要上下文和本技能正文流程，执行最小可靠步骤 | 客户会看到执行计划、命令输出摘要、代码/文档变更、验证结果和风险说明。 |
 | 给某个人加/查/撤仓库协作者权限 | 先确认目标仓库、用户名、权限级别，再执行 `gh api` 写操作并核实生效 | 权限级别说明、确认清单、生效核实结果 |
 | 合并前想知道这个 PR 符不符合规则 | 拉 diff + 这个仓库自己的规则文件，交叉核对后给分档建议；不自动合并 | 一句话结论、按阻断/应改/无异议分档的发现清单、CI 与 mergeable 状态 |
+| 收到评审意见（贴 PR/评审 URL 说"帮我修复"）| 拉取评审（含行内 + 会话评论）→ checkout 分支 → 委托 fix-loop 逐条修 → push 回原分支并请求重审；不自动合并 | 每条意见的处理状态、验证证据、push 结果、请求重审回执 |
 | 缺少依赖、权限、配置或 key | 停止需要外部状态的动作，明确指出缺什么 | 安装命令、申请地址、配置路径或需要客户确认的问题 |
 | 执行完成 | 汇总成功、跳过、失败、文件变更和验证结果 | 一段可复制进工单/日志的完成回执 |
 
@@ -290,6 +291,124 @@ specific to this GitHub procedure and not part of the generic methodology:
   with `gh pr merge` in the same turn, even if the original request
   pre-authorized merging; wait for the user's next message after they have
   seen the findings.
+
+## Address Review Feedback (author side)
+
+Use when the user is the PR *author* and hands you a review to act on: "帮我修复
+这个 PR" / "把这个评审意见改了" / a PR or review URL with "按评审改一下" /
+"reviewer 要我改的都改了". This is the mirror image of Pre-Merge Rule Review:
+that one produces advice for a reviewer; this one consumes a reviewer's advice
+and turns it into pushed fixes. It never merges — see Step 5.
+
+### Step 0 — Resolve the PR and pull the review as findings
+
+From a PR URL, a review URL (`.../pull/<n>#pullrequestreview-<id>`), or a bare
+number, resolve `<owner>/<repo>` and `<n>`, then fetch the review text. The
+review body, inline diff comments, AND plain conversation-tab comments are all
+findings input — they live on three separate endpoints, so fetch all three
+(a reviewer's ask typed in the conversation box is an *issue* comment, not a
+PR review comment, and is easy to miss):
+
+```bash
+gh pr view <n> --repo <owner>/<repo> \
+  --json number,title,headRefName,baseRefName,state,reviewDecision,url,isCrossRepository,headRepositoryOwner,maintainerCanModify
+# review summaries (CHANGES_REQUESTED / COMMENTED / APPROVED), newest last:
+gh api --paginate repos/<owner>/<repo>/pulls/<n>/reviews \
+  --jq '.[] | {id, user: .user.login, state, body}'
+# inline diff comments (file + line + body), often where the real detail is:
+gh api --paginate repos/<owner>/<repo>/pulls/<n>/comments \
+  --jq '.[] | {path, line, user: .user.login, body}'
+# conversation-tab comments (no file/line) — a third, disjoint channel:
+gh api --paginate repos/<owner>/<repo>/issues/<n>/comments \
+  --jq '.[] | {user: .user.login, body}'
+```
+
+`--paginate` matters: without it `gh api` returns only the first 30 items, so a
+heavily-reviewed PR would silently drop later comments. Normalize every
+distinct point the reviewer raised into one finding with a stable id, severity
+(take the reviewer's tier if given), file:line, and the quoted ask. If a review
+URL was given, prioritize that specific review's body; still scan the other two
+channels, since detail and follow-up asks land there too.
+
+### Step 1 — Get onto the PR branch (do not fix on the wrong branch)
+
+Precondition: you must be inside a local clone of `<owner>/<repo>` — `gh pr
+checkout` checks out into the current repo, it does not clone. If cwd is not a
+clone of that repo, `cd` into one or clone it first; running `gh pr checkout`
+from an unrelated repo silently checks the PR out against the wrong remote.
+
+```bash
+gh pr checkout <n> --repo <owner>/<repo>
+git status -sb   # confirm you are on <headRefName>, clean tree
+```
+
+If the PR head is on a fork you cannot push to (`isCrossRepository: true` and
+`maintainerCanModify: false` when you are not the fork owner), stop and say so
+— the fix would have nowhere to go. If the local tree is dirty, stop and
+surface it rather than fixing on top of unrelated uncommitted work.
+
+### Step 2 — Hand the findings to soia-dev-fix-loop
+
+Do not invent a fix procedure here. Pass the normalized findings from Step 0 to
+`soia-dev-fix-loop`, which runs the reproduce → decide (fix/reject/defer) →
+minimal-fix → regression + independent recheck → receipt loop, applying
+`soia-dev-coding-protocol`'s anti-fake-fix discipline during the edits. This
+skill owns none of that — it only supplies the findings and the checked-out
+branch.
+
+If `soia-dev-fix-loop` isn't installed, stop and tell the user to install it
+(`npx skills add soia-team/soia-open-skills -g -a '*' -s soia-dev-fix-loop -y`)
+rather than hand-rolling a fix loop.
+
+A reviewer finding is a claim, not a verdict: fix-loop may legitimately
+`reject` one with evidence or `defer` it with a tracked follow-up. Do not
+silently skip any — every point the reviewer raised must end with a fix,
+reject, or defer that you can show.
+
+### Step 3 — Optional self-review before pushing
+
+If the fixes are non-trivial, run `soia-dev-review-panel` over your own diff
+(`git diff origin/<baseRefName>...HEAD` — use the remote-tracking base ref,
+which is present after checkout, rather than a bare `<baseRefName>` that may not
+exist locally) with its code lens group + adversarial verification, so you
+catch your own regressions before the reviewer does. Higher first-pass
+acceptance, fewer round-trips.
+
+### Step 4 — Push back to the PR branch
+
+Commit with a message that references which review points it addresses, then
+push — this updates the existing PR, never opens a new one:
+
+```bash
+git push
+```
+
+Use a bare `git push`, not `git push origin <headRefName>`: after `gh pr
+checkout` the branch is already configured to track the correct remote
+(the fork for a cross-repo PR, `origin` for a same-repo PR), and `git push
+origin ...` would push to the wrong repo for a fork PR — silently creating a
+stray branch on the base repo without updating the PR. Pushing to an open PR's
+branch is an externally visible update to shared work, so confirm the diff with
+the user before pushing if they haven't already told you to push in this
+exchange.
+
+### Step 5 — Request re-review, do NOT merge
+
+The author does not merge their own PR that a reviewer marked
+`CHANGES_REQUESTED` — that bypasses the exact gate the reviewer just raised.
+After pushing, re-request review and hand back:
+
+```bash
+gh pr edit <n> --repo <owner>/<repo> --add-reviewer <reviewer-login>
+# or leave a comment summarizing what was addressed:
+gh pr comment <n> --repo <owner>/<repo> --body "<per-finding: fixed / rejected+why / deferred+where>"
+```
+
+Report: fix-loop's receipt (each finding → fixed/rejected/deferred with
+evidence), the push result, and that re-review has been requested. State
+explicitly that merging is the reviewer's call, not this procedure's — even if
+the author has write/admin permission and could merge. Only merge if the user,
+in a later message after seeing this report, explicitly says to.
 
 ## CI Failure Triage
 
