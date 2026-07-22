@@ -1,0 +1,4 @@
+interface:
+  display_name: "Meta Skill Release"
+  short_description: "完成 merge 后技能的本机安装、软链、lock 与版本发布收尾。"
+  default_prompt: "Use $soia-meta-skill-release to finish local release cleanup for merged skill names from an owner/name repository."
