@@ -41,7 +41,7 @@ subtree_exclusions:
     - "record known historical members under manifest.excluded_nodes, never as remotely deleted"
   existing_generated_content:
     policy: "preserve unless the user explicitly runs --rebuild-tree"
-    validation: "report excluded files/directories that remain locally"
+    validation: "report excluded Markdown, directories, complete exports, and downloaded assets that remain locally"
   local_manual_dir: never_touched
 
 sheets:

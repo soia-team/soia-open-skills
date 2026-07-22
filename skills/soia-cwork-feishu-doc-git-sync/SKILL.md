@@ -3,9 +3,9 @@ name: soia-cwork-feishu-doc-git-sync
 description: 将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。
 dependencies:
   hard: [soia-cwork-feishu-cli]
-version: 1.7.0
+version: 1.7.1
 created_at: 2026-07-14 23:24:26
-updated_at: 2026-07-21 17:49:11
+updated_at: 2026-07-22 14:52:25
 created_by: claude opus 4.6
 updated_by: gpt-5.6-sol
 ---
@@ -43,7 +43,7 @@ updated_by: gpt-5.6-sol
 3. 首次使用先执行 dry-run，核对空间、节点数量和目标目录。
 4. 先用单节点隔离试点核对表格、资源和样式快照；`--pilot-node-token` 只写明确选择的节点到单独试点目录，不会给空目录补齐其他节点占位文件。
 5. 执行镜像同步。默认只写本地文件和同步元数据，不修改飞书内容，也不删除本地历史文件。
-6. 如需排除完整目录树，在私有配置设置 `sync.exclude_subtrees.enabled: true`，并在 `roots` 中优先填写稳定 `node_token`；首次清理既有生成文件时显式运行一次 `--rebuild-tree`，本地补录目录永不受影响。
+6. 如需排除完整目录树，在私有配置设置 `sync.exclude_subtrees.enabled: true`，并在 `roots` 中优先填写稳定 `node_token`；首次清理既有 Markdown、完整导出和已下载附件时显式运行一次 `--rebuild-tree`，本地补录目录永不受影响。
 7. 同步写入后会自动校验 manifest、文件存在性、frontmatter、失败占位、侧边栏覆盖范围、排除子树残留、资源引用、未归档的嵌入式 Sheet、未归档的 Sheet 内嵌 Base、`all_docx` 模式下尚未完成 XML 语义扫描的历史文档，以及 `all_nodes` 模式下仍未生成真实表格的独立 Sheet；发现 `failed`/`stale` 或语义缺口时返回非零结果，不能把空白占位或局部内容当作完整成功。
 8. 如需检查表格导出，先做 `drive +inspect`/帮助/schema 探查；能力探查不等于授权导出。
 9. 只有客户明确确认导出范围、格式、文件数和本地目录后，才调用 `drive +export` 或 `drive +export-download`。
@@ -84,7 +84,7 @@ python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --rebuild-tree
 # 从飞书刷新最新目录层级和兄弟节点顺序，但复用现有本地正文
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental \
   --rebuild-tree --refresh-tree-only
-# 应用私有配置中的整棵子树排除，并清理该子树既有生成 Markdown
+# 应用私有配置中的整棵子树排除，并清理该子树既有 Markdown、完整导出和已下载附件
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental \
   --rebuild-tree --refresh-tree-only --skip-assets
 # 下载图片到本地镜像并把正文中的远程 URL 改成相对路径
@@ -117,7 +117,7 @@ python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --validate-onl
 
 - `node_token` 是同步主键，`obj_token` 是正文读取和事件映射的对象键；标题变化、移动和重名都不应改变这两个 ID。
 - `sync.exclude_subtrees` 必须在私有配置中显式启用；优先按稳定 `node_token` 排除，`exact_title` 会排除所有精确同名根节点。同步器只在根节点的父级列表中识别它，不再枚举后代，并从正文、Sheet、Base、图片、附件、重试、活跃 manifest 和侧边栏中同时排除整棵子树。
-- 已生成的排除子树内容不会被普通增量同步静默删除；用户明确要求清理后运行 `--rebuild-tree`，同步器把已知成员记录为 `excluded` 而不是误报为远端删除，并校验生成目录中不再残留对应 Markdown 或目录；`20_本地补录/` 永不删除。
+- 已生成的排除子树内容不会被普通增量同步静默删除；用户明确要求清理后运行 `--rebuild-tree`，同步器把已知成员记录为 `excluded` 而不是误报为远端删除，并清理、校验对应 Markdown、目录、`_exports/` 完整导出和 `_assets/` 已下载附件均不残留；`20_本地补录/` 永不删除。
 - `--only-node-token` 是单文档修复开关；与 `--rebuild-tree-only` 一起使用时只从已有 manifest 定位节点，不重新遍历飞书树，也不会因为其他节点历史失败而重试它们。
 - 首次同步建立完整基线，记录 `obj_edit_time`/`remote_updated_at` 和 `docs +fetch` 返回的 `revision_id`。
 - 后续 `--incremental` 仍会先按 `parent_node_token` 重建树，但只读取新增、失败、事件命中或远端编辑时间变化的文档正文；未变化节点复用本地 Markdown。
@@ -192,7 +192,7 @@ sync:
 - 每次非 dry-run 同步结束都会运行本地验收；`--validate-only` 可单独复核最近一次结果。验收失败时退出码为 2，并在 manifest 的 `validation` 节点保留机器可读摘要。
 - `prune: false` 时不删除已消失节点对应的本地文件；节点会在 manifest 中标记为 deleted，避免一次权限或网络异常造成数据丢失。
 - `20_本地补录/` 与 `90_同步元数据/` 不会被知识库同步覆盖。
-- `--rebuild-tree` 只迁移 `paths.generated_dir` 内由同步器生成的旧扁平文件，不触碰 `20_本地补录/`。
+- `--rebuild-tree` 只处理 `paths.generated_dir` 内由同步器生成的旧扁平文件与已排除节点的已知资源，不触碰 `20_本地补录/`。
 - `--rebuild-tree-only` 仅复用已有 manifest 和生成文件做目录迁移，不发起飞书正文请求；如果同时启用资源本地化，仍可能只为刷新过期媒体 URL 读取含资源的文档。
 - `--refresh-tree-only` 会重新读取飞书节点树和兄弟顺序，按最新 `parent_node_token` 重建本地目录和侧边栏，但复用已有本地正文；启用资源本地化时，会额外刷新仍含未本地化资源的文档；必须与 `--rebuild-tree` 一起使用。
 - `manifest.json`/`sync-state.json` 的 `tree_order: feishu_node_list` 表示目录顺序来源于飞书节点列表，不是标题排序。
