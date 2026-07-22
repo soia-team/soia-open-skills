@@ -82,6 +82,50 @@ class RepositoryDocumentAuditTests(unittest.TestCase):
             )
 
 
+class DesensitizationGateTests(unittest.TestCase):
+    """Real private capture data must never reach the public skills repo. These
+    guard the class of leak found on 2026-07-22 (real cloud file_ids/URLs and a
+    real personal name in an example doc)."""
+
+    def _messages(self, body: str) -> list[str]:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_skill(root, "soia-test-desensitize", body)
+            return [f.message for f in audit_skills.collect_findings(root)]
+
+    def test_real_cloud_drive_url_is_flagged(self) -> None:
+        msgs = self._messages(
+            "见 https://www.alipan.com/drive/file/all/backup/6a6042d077c30982772e477ea54556b8a1fead14"
+        )
+        self.assertTrue(any("real cloud/drive/diagram URL" in m for m in msgs))
+
+    def test_real_processon_team_url_is_flagged(self) -> None:
+        msgs = self._messages("源: https://www.processon.com/org/teams/5f3a1b2c9d8e7f6a")
+        self.assertTrue(any("real cloud/drive/diagram URL" in m for m in msgs))
+
+    def test_real_file_id_is_flagged(self) -> None:
+        msgs = self._messages('```json\n{"file_id": "6a6035f49c8178d220d64172adc3398bcb214503"}\n```')
+        self.assertTrue(any("real 40-hex cloud file_id" in m for m in msgs))
+
+    def test_real_personal_name_in_owner_field_is_flagged(self) -> None:
+        msgs = self._messages('```json\n{"owner": "周鹏"}\n```')
+        self.assertTrue(any("possible real personal name" in m for m in msgs))
+
+    def test_placeholders_do_not_trigger_desensitization(self) -> None:
+        body = "\n".join([
+            "URL 模板: https://www.alipan.com/drive/file/all/backup/<40位file_id>",
+            "占位: `file_id: <file-id>`",
+            "团队: processon.com/org/teams/<team-id>",
+            '示例: `{"owner": "示例用户"}` `{"owner": "张三"}`',
+            "提交引用: 见 commit 6aec980 的改动",
+        ])
+        msgs = self._messages(body)
+        self.assertFalse(any(
+            "real cloud/drive/diagram URL" in m or "real 40-hex cloud file_id" in m
+            or "possible real personal name" in m for m in msgs
+        ), msgs)
+
+
 class FrontmatterYamlTests(unittest.TestCase):
     def test_folded_frontmatter_description_is_supported(self) -> None:
         text = "---\nname: soia-folded\ndescription: >\n  First line\n  second line\n---\n"

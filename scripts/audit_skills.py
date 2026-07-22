@@ -48,6 +48,19 @@ VAULT_SPECIFIC_RE = re.compile(
     r"(40_图书视频馆/10_文章摘抄|40_图书视频馆/40_孩子书库|50_写作与发布/10_草稿|"
     r"50_写作与发布/30_转化输出|10_工作台/00_Inbox)"
 )
+# Desensitization gate: real private capture data must never reach the public
+# skills repo. Placeholders (<...>, 示例*, example, YOUR_) never match these.
+CLOUD_REAL_ID_URL_RE = re.compile(
+    r"(?:alipan|aliyundrive)\.com/drive/file/[a-z]+/[a-z]+/[0-9a-f]{40}"
+    r"|processon\.com/(?:diagraming|mindmap|view|org/teams)/[0-9a-fA-F]{16,}"
+    r"|(?:feishu|larksuite)\.[a-z]+/(?:docx|wiki|sheets|base|file|drive)/[A-Za-z0-9]{22,}"
+)
+REAL_FILE_ID_RE = re.compile(r"(?i)file[_-]?id['\"]?\s*[:=]\s*['\"]?[0-9a-f]{40}\b")
+REAL_IDENTITY_FIELD_RE = re.compile(
+    r"""["'](?:owner|author|负责人|作者|创建人|所有者)["']\s*:\s*["']([一-鿿]{2,4})["']"""
+)
+IDENTITY_PLACEHOLDER_PREFIXES = ("示例", "匿名", "测试", "演示", "某", "占位")
+IDENTITY_PLACEHOLDER_NAMES = {"张三", "李四", "王五", "学习者", "用户", "作者", "所有者", "负责人"}
 LOCAL_NPX_INSTALL_RE = re.compile(r'npx\s+skills\s+add\s+(?:"\$PWD"|\$PWD|\.)(?:\s|$).*(?:-g|--all)')
 LOCAL_SOURCE_DIR_RE = re.compile(r"--source-dir\s+skills(?:\s|$)")
 DIRECT_SKILL_COPY_RE = re.compile(
@@ -365,6 +378,15 @@ def audit_text_file(root: Path, path: Path, findings: list[Finding]) -> None:
             add_line_finding(findings, "ERROR", root, path, i, "install acceptance must sync from ~/.agents/skills after npx, not repository-local skills/")
         if DIRECT_SKILL_COPY_RE.search(line):
             add_line_finding(findings, "ERROR", root, path, i, "do not copy local skill directories into AI skill targets; install via npx and symlink sync")
+        if CLOUD_REAL_ID_URL_RE.search(line):
+            add_line_finding(findings, "ERROR", root, path, i, "real cloud/drive/diagram URL with a literal id; use a <placeholder> instead of real private data")
+        if REAL_FILE_ID_RE.search(line):
+            add_line_finding(findings, "ERROR", root, path, i, "real 40-hex cloud file_id committed; use a <placeholder>")
+        identity_match = REAL_IDENTITY_FIELD_RE.search(line)
+        if identity_match:
+            captured_name = identity_match.group(1)
+            if not captured_name.startswith(IDENTITY_PLACEHOLDER_PREFIXES) and captured_name not in IDENTITY_PLACEHOLDER_NAMES:
+                add_line_finding(findings, "WARN", root, path, i, "possible real personal name in an example identity field; use a placeholder like 示例用户/张三")
 
 
 def collect_findings(root: Path) -> list[Finding]:
