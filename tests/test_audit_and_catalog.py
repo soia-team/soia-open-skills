@@ -154,6 +154,19 @@ class FrontmatterYamlTests(unittest.TestCase):
 
 
 class AuthoringQualityTests(unittest.TestCase):
+    def test_security_domain_is_valid_and_cataloged(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_skill(root, "soia-safe-audit-codebase", "安全审计。")
+            findings = audit_skills.collect_findings(root)
+            self.assertFalse(
+                any("unknown domain 'safe'" in finding.message for finding in findings)
+            )
+        self.assertEqual(
+            catalog.infer_group("soia-safe-audit-codebase"),
+            ("Security", "security"),
+        )
+
     def test_long_skill_is_flagged_for_refactoring(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

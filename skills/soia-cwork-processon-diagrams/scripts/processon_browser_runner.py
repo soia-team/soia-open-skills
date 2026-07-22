@@ -53,6 +53,8 @@ ALLOWED_ACTIONS = {
     "scroll",
     "wait_text",
     "snapshot",
+    "inspect_text",
+    "row_menu",
 }
 SENSITIVE_KEY = re.compile(
     r"(?:password|passwd|cookie|token|local[_-]?storage|session[_-]?storage|credential)",
@@ -66,6 +68,21 @@ REMOTE_MUTATION_LABEL = re.compile(
 
 class BrowserRunnerError(RuntimeError):
     """Safe, customer-readable runner failure."""
+
+
+class ManagedBrowserFailure(BrowserRunnerError):
+    """Browser failure carrying the post-cleanup lifecycle receipt."""
+
+    def __init__(self, original: BaseException, receipt: dict[str, Any]) -> None:
+        if isinstance(original, KeyboardInterrupt):
+            message = "interrupted; dedicated browser context was closed"
+        elif isinstance(original, BrowserRunnerError):
+            message = str(original)
+        else:
+            message = f"browser operation failed: {type(original).__name__}: {original}"
+        super().__init__(message)
+        self.receipt = receipt
+        self.original_type = type(original).__name__
 
 
 def config_root(home: Path | None = None, environ: dict[str, str] | None = None) -> Path:
@@ -301,6 +318,7 @@ def managed_context(
     else:
         context = launcher(profile, headless)
 
+    failure: BaseException | None = None
     try:
         pages = list(context.pages)
         receipt.pages_seen_at_start = len(pages)
@@ -309,6 +327,8 @@ def managed_context(
             if safe_close_page(stale):
                 receipt.stale_pages_closed += 1
         yield context, page, receipt
+    except BaseException as exc:
+        failure = exc
     finally:
         if context is not None:
             remaining = list(context.pages)
@@ -324,6 +344,8 @@ def managed_context(
                 playwright_manager.__exit__(None, None, None)
             except Exception:
                 pass
+    if failure is not None:
+        raise ManagedBrowserFailure(failure, receipt.as_dict()) from failure
 
 
 def bounded_snapshot(page: Any) -> dict[str, Any]:
@@ -334,7 +356,8 @@ def bounded_snapshot(page: Any) -> dict[str, Any]:
         visible_text = ""
     items: list[dict[str, str]] = []
     locator = page.locator(
-        "a,button,[role='button'],[role='menuitem'],[role='link'],input,textarea,[contenteditable='true']"
+        "a,button,[role='button'],[role='menuitem'],[role='link'],input,textarea,"
+        "[contenteditable='true'],[title],[aria-label],[data-title],[data-tooltip]"
     )
     try:
         count = min(locator.count(), MAX_INTERACTIVE)
@@ -348,6 +371,8 @@ def bounded_snapshot(page: Any) -> dict[str, Any]:
             label = (
                 item.get_attribute("aria-label")
                 or item.get_attribute("title")
+                or item.get_attribute("data-title")
+                or item.get_attribute("data-tooltip")
                 or item.inner_text(timeout=1_000)
                 or ""
             ).strip()[:500]
@@ -363,6 +388,56 @@ def bounded_snapshot(page: Any) -> dict[str, Any]:
         "interactive": items,
         "truncated": len(visible_text) >= MAX_VISIBLE_TEXT or len(items) >= MAX_INTERACTIVE,
     }
+
+
+def inspect_text_structure(page: Any, step: dict[str, Any], timeout: int) -> dict[str, Any]:
+    """Return a bounded, fixed DOM summary around visible text.
+
+    The caller supplies only text/nth. The JavaScript is fixed by the skill and
+    cannot be replaced through the action file.
+    """
+
+    text = str(step.get("text", ""))
+    if not text:
+        raise BrowserRunnerError("inspect_text requires text")
+    locator = page.get_by_text(text, exact=bool(step.get("exact", True))).nth(
+        int(step.get("nth", 0))
+    )
+    locator.wait_for(state="visible", timeout=timeout)
+    return locator.evaluate(
+        """
+        (target) => {
+          const keep = (element) => {
+            const attrs = {};
+            for (const attr of Array.from(element.attributes || [])) {
+              if (attr.name === 'class' || attr.name === 'role' || attr.name === 'title' ||
+                  attr.name === 'aria-label' || attr.name.startsWith('data-')) {
+                attrs[attr.name] = String(attr.value).slice(0, 300);
+              }
+            }
+            const children = Array.from(element.children || []).slice(0, 30).map((child) => ({
+              tag: child.tagName.toLowerCase(),
+              class: String(child.className || '').slice(0, 200),
+              title: String(child.getAttribute('title') || '').slice(0, 200),
+              aria_label: String(child.getAttribute('aria-label') || '').slice(0, 200),
+              text: String(child.innerText || '').trim().slice(0, 200)
+            }));
+            return {
+              tag: element.tagName.toLowerCase(),
+              attrs,
+              text: String(element.innerText || '').trim().slice(0, 500),
+              children
+            };
+          };
+          const ancestors = [];
+          let node = target;
+          for (let depth = 0; node && depth < 6; depth += 1, node = node.parentElement) {
+            ancestors.push({depth, ...keep(node)});
+          }
+          return {ancestors};
+        }
+        """
+    )
 
 
 def reject_sensitive_keys(value: Any, path: str = "actions") -> None:
@@ -431,8 +506,32 @@ def step_locator(page: Any, step: dict[str, Any]) -> Any:
         raise BrowserRunnerError(
             f"remote mutation control is forbidden by this read/download runner: {semantic_name!r}"
         )
+    if bool(step.get("visible", True)):
+        locator = locator.filter(visible=True)
     nth = int(step.get("nth", 0))
     return locator.nth(nth)
+
+
+def open_processon_row_menu(page: Any, step: dict[str, Any], timeout: int) -> None:
+    """Open the provider's confirmed per-row "more" menu without arbitrary CSS input."""
+
+    text = str(step.get("text", ""))
+    if not text:
+        raise BrowserRunnerError("row_menu requires a diagram title")
+    title = page.get_by_text(text, exact=bool(step.get("exact", True))).filter(
+        visible=True
+    ).nth(int(step.get("nth", 0)))
+    title.wait_for(state="visible", timeout=timeout)
+    row = title.locator(
+        "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' file_list_item ')][1]"
+    )
+    row.hover(timeout=timeout)
+    trigger = row.locator("span.more.icons.icon-gengduo").filter(visible=True)
+    if trigger.count() != 1:
+        raise BrowserRunnerError(
+            f"ProcessOn row menu trigger is ambiguous for {text!r}: {trigger.count()} visible matches"
+        )
+    trigger.click(timeout=timeout)
 
 
 def click_locator(locator: Any, step: dict[str, Any], timeout: int) -> None:
@@ -490,6 +589,7 @@ def execute_steps(
         if action == "goto":
             url = validate_processon_url(str(step.get("url", "")))
             page.goto(url, wait_until="domcontentloaded", timeout=timeout)
+            page.wait_for_timeout(int(step.get("settle_ms", 750)))
         elif action == "click":
             click_locator(step_locator(page, step), step, timeout)
             page.wait_for_timeout(int(step.get("settle_ms", 250)))
@@ -521,6 +621,7 @@ def execute_steps(
                 popup = popup_info.value
                 receipt.scoped_pages_opened += 1
                 popup.wait_for_load_state("domcontentloaded", timeout=timeout)
+                popup.wait_for_timeout(int(step.get("settle_ms", 1_000)))
                 result["steps"] = execute_steps(
                     context,
                     popup,
@@ -550,11 +651,17 @@ def execute_steps(
             text = str(step.get("text", ""))
             if not text:
                 raise BrowserRunnerError(f"step {index} wait_text requires text")
-            page.get_by_text(text, exact=bool(step.get("exact", False))).wait_for(
-                state="visible", timeout=timeout
-            )
+            page.get_by_text(text, exact=bool(step.get("exact", False))).filter(
+                visible=True
+            ).nth(int(step.get("nth", 0))).wait_for(state="visible", timeout=timeout)
         elif action == "snapshot":
             result["snapshot"] = bounded_snapshot(page)
+        elif action == "inspect_text":
+            result["structure"] = inspect_text_structure(page, step, timeout)
+        elif action == "row_menu":
+            open_processon_row_menu(page, step, timeout)
+            page.wait_for_timeout(int(step.get("settle_ms", 250)))
+            close_unexpected_pages(context, before, receipt)
 
         result["url"] = page.url
         results.append(result)
@@ -597,6 +704,7 @@ def cmd_status(args: argparse.Namespace) -> dict[str, Any]:
     receipt = None
     with managed_context(args.profile_dir, headless=not args.headed) as (_context, page, receipt):
         page.goto(url, wait_until="domcontentloaded", timeout=args.timeout_ms)
+        page.wait_for_timeout(args.settle_ms)
         accessible = target_accessible(page, url)
         reached_url = page.url
         title = page.title()
@@ -617,6 +725,7 @@ def cmd_snapshot(args: argparse.Namespace) -> dict[str, Any]:
     receipt = None
     with managed_context(args.profile_dir, headless=not args.headed) as (_context, page, receipt):
         page.goto(url, wait_until="domcontentloaded", timeout=args.timeout_ms)
+        page.wait_for_timeout(args.settle_ms)
         accessible = target_accessible(page, url)
         snapshot = bounded_snapshot(page)
     assert receipt is not None
@@ -633,6 +742,7 @@ def cmd_run(args: argparse.Namespace) -> dict[str, Any]:
     receipt = None
     with managed_context(args.profile_dir, headless=not args.headed) as (context, page, receipt):
         page.goto(payload["start_url"], wait_until="domcontentloaded", timeout=args.timeout_ms)
+        page.wait_for_timeout(args.settle_ms)
         if not target_accessible(page, payload["start_url"]):
             raise BrowserRunnerError("dedicated profile is not logged in for the requested ProcessOn URL")
         results = execute_steps(
@@ -655,6 +765,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile-dir", type=Path, default=default_profile_dir())
     parser.add_argument("--timeout-ms", type=int, default=30_000)
+    parser.add_argument(
+        "--settle-ms",
+        type=int,
+        default=2_000,
+        help="wait after initial navigation for ProcessOn SPA rendering (default: 2000)",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     login = sub.add_parser("login", help="one-time manual login in the dedicated profile")
@@ -695,8 +811,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.timeout_ms < 250 or args.timeout_ms > 300_000:
         print(json.dumps({"ok": False, "error": "timeout-ms must be 250..300000"}))
         return 2
+    if args.settle_ms < 0 or args.settle_ms > 30_000:
+        print(json.dumps({"ok": False, "error": "settle-ms must be 0..30000"}))
+        return 2
     try:
         result = args.func(args)
+    except ManagedBrowserFailure as exc:
+        result = {
+            "ok": False,
+            "error": str(exc),
+            "error_type": exc.original_type,
+            "receipt": exc.receipt,
+        }
     except KeyboardInterrupt:
         result = {"ok": False, "error": "interrupted; dedicated browser context was closed"}
     except BrowserRunnerError as exc:

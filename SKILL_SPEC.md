@@ -158,16 +158,22 @@ Rules:
 
 ### Naming convention
 
-Skill names use 4–5 kebab-case segments. Each segment has a fixed role:
+Skill names use 4–5 kebab-case segments. The second segment is the domain;
+later segments describe the action, object, and optional qualifier:
 
 ```
-soia-pkm-<action>-<object>[-<qualifier>]
+soia-<domain>-<action>-<object>[-<qualifier>]
 ```
+
+Current public domains include `pkm` (knowledge workflows), `cwork`
+(collaboration), `dev` (engineering helpers), and `safe` (security intelligence,
+auditing, and controlled remediation). Add a new domain to the catalog generator
+and repository audit before publishing a skill under it.
 
 | Segment | Role | Examples |
 |---------|------|----------|
-| `soia-pkm` | Org + domain prefix (fixed) | — |
-| `<action>` | Pipeline stage: `clip`, `organize`, `distill`, `transform`, `compose`, `publish`, or support verbs (`maintain`, `bootstrap`) | `clip`, `transform` |
+| `soia-<domain>` | Org + registered domain prefix | `soia-pkm`, `soia-safe` |
+| `<action>` | Domain action: PKM stages such as `clip`/`transform`, or verbs such as `audit`/`track`/`maintain` | `clip`, `audit` |
 | `<object>` | What the skill operates on, or where it operates | `x`, `web`, `wechat`, `article`, `obsidian` |
 | `<qualifier>` | (Optional) Output type or platform that disambiguates siblings | `pdf`, `slides`, `visual`, `notebooklm` |
 

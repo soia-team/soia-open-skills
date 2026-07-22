@@ -2,7 +2,7 @@
 
 > Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.
 > Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.
-> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 53 skills.
+> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 55 skills.
 
 ## Source Fields
 
@@ -78,6 +78,13 @@
 | [`soia-dev-sync-skills`](./soia-dev-sync-skills/) | 将共享技能目录以软链接同步到用户选择的 AI 工具目录。 | Use $soia-dev-sync-skills to preview and sync a shared skill source to explicitly selected AI tool directories. |
 | [`soia-dev-task-execute`](./soia-dev-task-execute/) | 执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务。 |  |
 | [`soia-dev-terminal-ops`](./soia-dev-terminal-ops/) | Monitor long-running POSIX jobs and recover stalled processes safely | Use $soia-dev-terminal-ops to monitor this long-running command, diagnose progress with multiple signals, and apply the TERM-to-KILL confirmation gates if recovery is needed. |
+
+## Security
+
+| Skill | Description | Default Prompt |
+|---|---|---|
+| [`soia-safe-audit-fix-codebase`](./soia-safe-audit-fix-codebase/) | 只读审计完整代码库，经明确确认后修复代码并完成回归验证 | 使用 $soia-safe-audit-fix-codebase 审计这个代码路径，先只输出带证据的项目安全报告和修复预览，等我确认后再修改代码并测试。 |
+| [`soia-safe-track-vulnerability-intel`](./soia-safe-track-vulnerability-intel/) | 聚合权威漏洞情报、去重核验并生成带证据的专业安全报告 | 使用 $soia-safe-track-vulnerability-intel 收集指定时间窗和技术栈的漏洞情报，去重核验后生成带覆盖范围、优先级和修复建议的专业报告。 |
 
 ## Registry Export
 

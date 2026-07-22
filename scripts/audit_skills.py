@@ -149,7 +149,7 @@ def add_line_finding(findings: list[Finding], severity: str, root: Path, path: P
     findings.append(Finding(severity, rel(path, root), message, line_no))
 
 
-VALID_DOMAINS = ("pkm", "dev", "gov", "cwork", "design", "env", "meta")
+VALID_DOMAINS = ("pkm", "dev", "safe", "gov", "cwork", "design", "env", "meta")
 
 
 def audit_skill_name(root: Path, skill_dir: Path, findings: list[Finding]) -> None:

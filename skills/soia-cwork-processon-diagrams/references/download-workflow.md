@@ -10,9 +10,11 @@ python3 scripts/processon_browser_runner.py status --url '<team-url>'
 python3 scripts/processon_browser_runner.py snapshot --url '<folder-url>'
 ```
 
+`status`、`snapshot` 和 `run` 默认在初始导航后等待 2000ms，让 ProcessOn SPA 完成首屏渲染；慢网络可在子命令前传 `--settle-ms <0..30000>`。若快照的 `visible_text` 与 `interactive` 同时为空，先增加 settle 或改用独立 headed 诊断，禁止从空快照生成盲点动作。
+
 默认 profile 位于用户私有 config 根的 `soia-skills/soia-open-skills/cwork/soia-cwork-processon-diagrams/browser-profile/`。可用 `--profile-dir` 或 `SOIA_CWORK_PROCESSON_BROWSER_PROFILE_DIR` 覆盖，但 runner 会拒绝系统默认 Chrome/Chromium profile、符号链接和非空无技能标记目录。profile 由浏览器保存登录态；技能不读取其 Cookie、Storage、密码或凭据文件。
 
-`run` 接收 schema 1 JSON。只允许 `goto`、有名称的语义 `click`/`hover`、`scroll`、`wait_text`、非激活型 `press`、`back`、`snapshot`、`download` 和嵌套 `popup`；URL 仅限 HTTPS ProcessOn。任意 CSS、无名称控件、删除/编辑/移动/分享/发布等远端变更标签会被拒绝；没有 `fill`、`evaluate`、Cookie/Storage 或网络拦截动作：
+`run` 接收 schema 1 JSON。只允许 `goto`、有名称的语义 `click`/`hover`、`scroll`、`wait_text`、非激活型 `press`、`back`、`snapshot`、固定只读 `inspect_text`、ProcessOn 专用 `row_menu`、`download` 和嵌套 `popup`；URL 仅限 HTTPS ProcessOn。任意 CSS、无名称控件、调用方 JavaScript、删除/编辑/移动/分享/发布等远端变更标签会被拒绝；没有 `fill`、Cookie/Storage 或网络拦截动作。`inspect_text` 只接收标题文字与 `nth`，用技能内固定代码返回最多六层祖先和直接子节点摘要。`row_menu` 只接收可见文件标题，在已验证的同行容器内打开“更多”；文本动作默认先过滤隐藏重复节点：
 
 ```json
 {
@@ -29,7 +31,7 @@ python3 scripts/processon_browser_runner.py snapshot --url '<folder-url>'
 
 页面结构不同时，先 `snapshot`，再根据实际可见 role/name/text 生成不超过 10 个 artifact 的小批次 action；不要把示例文案当固定选择器。流程图和思维导图格式仍由归档计划决定。
 
-标签生命周期是硬门禁：专用 context 启动时只保留一个父页面；确需新页面时必须用嵌套 `popup`，子步骤完成、失败或超时后都在 `finally` 中关闭；整次命令退出时关闭所有专用页面和 context。回执的 `scoped_pages_opened` 与 `scoped_pages_closed` 必须相等，且 `pages_closed_at_exit >= 1`。中断后先核对回执和下载目录，再恢复队列。
+标签生命周期是硬门禁：专用 context 启动时只保留一个父页面；确需新页面时必须用嵌套 `popup`，子步骤完成、失败或超时后都在 `finally` 中关闭；整次命令退出时关闭所有专用页面和 context。成功 JSON 与错误 JSON 都必须带 `receipt`；`scoped_pages_opened` 与 `scoped_pages_closed` 必须相等，且 `pages_closed_at_exit >= 1`。异常也必须返回关闭回执；缺少回执时停止下一份并按“清理未验证”处理。ProcessOn 同一标题可能对应多个 DOM 节点，`wait_text` 用 `nth` 明确选择（默认 `0`），不要把 strict mode 重复节点误判为文件缺失。中断后先核对回执和下载目录，再恢复队列。
 
 ## 配置优先级
 
