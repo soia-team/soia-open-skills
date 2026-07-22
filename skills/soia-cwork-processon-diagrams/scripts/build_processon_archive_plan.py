@@ -20,7 +20,7 @@ DEFAULT_EXPORTS = {
         "primary_format": "vsdx",
         "primary_menu": "VISIO文件",
         "fallback_formats": ["pos"],
-        "selection_rule": "single_canvas: VISIO文件; multi_canvas: 导出全部画布 (.vsdx)",
+        "selection_rule": "prefer: 导出全部画布 (.vsdx); fallback: VISIO文件",
     },
     "mindmap": {
         "primary_format": "xmind",

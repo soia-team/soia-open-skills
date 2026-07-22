@@ -87,6 +87,10 @@ class ProcessOnArchivePlanTests(unittest.TestCase):
         unknown = next(item for item in plan["entries"] if item["title"] == "unknown-diagram")
         self.assertEqual(flowchart["primary_format"], "vsdx")
         self.assertEqual(flowchart["fallback_formats"], ["pos"])
+        self.assertEqual(
+            flowchart["selection_rule"],
+            "prefer: 导出全部画布 (.vsdx); fallback: VISIO文件",
+        )
         self.assertEqual(unknown["status"], "pending_confirmation")
         self.assertIsNone(unknown["primary_format"])
 

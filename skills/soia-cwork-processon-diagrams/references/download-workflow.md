@@ -6,6 +6,8 @@
 
 已有归档计划时，优先使用 `scripts/processon_archive_batch.py`：一个专用 persistent context 固定复用 worker 页，不为每份 artifact 新建并遗留标签；浏览器下载可受控并发，最终归档与进度仍只有一个 writer。Playwright 直接 `download.save_as(<managed-root>/<run-id>/<artifact_id>/<原文件名>)`，不与其他同名文件共享 staging，也不经过个人 Downloads；结构/语义校验后在同一文件系统 no-copy move 到交付目录。`--workers 1` 不需要 proof；`--workers 2` 或 `3` 必须分别提供当前计划下真实样本生成的语义并发 proof。
 
+对 VSDX，批处理按 `导出全部画布 (.vsdx)` → `VISIO文件` → `VISIO文件 beta` 的顺序检查当前可见精确标签；不对每个不存在的候选各等一次完整超时。实际使用的标签写入下载回执和 `metadata.yml`。
+
 ```bash
 python3 scripts/processon_browser_runner.py login --url '<team-url>'
 python3 scripts/processon_browser_runner.py status --url '<team-url>'
