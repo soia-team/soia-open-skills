@@ -1,6 +1,11 @@
 ---
 name: your-skill-name
 description: 一句话说明这个 skill 做什么、何时触发。包含具体触发场景，保持简短，不写个人路径、账号或私有偏好。
+version: 0.1.0
+created_at: <YYYY-MM-DD HH:mm:ss>
+updated_at: <YYYY-MM-DD HH:mm:ss>
+created_by: <model-name>
+updated_by: <model-name>
 ---
 
 # your-skill-name
@@ -57,6 +62,11 @@ SOIA_<TYPE>_<SHORT>_CONFIG_FILE=<custom-config-path>
 - 如果本技能不需要私有配置，可以不创建 `config.yml`。
 - API key、cookie、session、provider home、本机路径只放私有 `config.yml`、进程环境或 provider 自己的登录态里。
 - 如果依赖第三方 skill，记录上游来源和安装方式，不直接修改第三方 skill 文件。
+
+### 私密信息与中间数据
+
+- 凭据只写入用户自有的私有配置、进程环境或 provider 登录态，不进入 skill、日志或交付物。
+- 中间产物按 [DATA_STORAGE_SPEC.md](../../DATA_STORAGE_SPEC.md) 约定落盘，并说明位置、保留期与脱敏要求。
 
 ### 日志与完成回执
 

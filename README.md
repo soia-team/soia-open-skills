@@ -494,11 +494,15 @@ python3 ~/.claude/skills/soia-pkm-clip-x/scripts/sync_telegram_export.py \
 
 命名使用 `<domain>-<对象>` 的全小写 kebab-case：
 
+- 域清单：`pkm | dev | cwork | design | env | meta | safe | gov`。
 - `soia-pkm-*`：个人知识管理，围绕 Obsidian vault 的收集、整理、提炼、成文与发布。
-- `soia-cwork-*`：企业协作，连接飞书等工作系统，处理工作文档、云盘、知识库和协作元数据。
 - `soia-dev-*`：可公开复用的开发与工程工具。
+- `soia-cwork-*`：企业协作，连接飞书等工作系统，处理工作文档、云盘、知识库和协作元数据。
+- `soia-design-*`：设计职能（私有域前缀）。
+- `soia-env-*`：环境安装与排查。
+- `soia-meta-*`：技能自我进化（私有域前缀）。
 - `soia-safe-*`：漏洞情报、代码安全审计和经确认后的受控修复。
-- `soia-design-*` / `soia-gov-*` / `soia-meta-*`：设计、治理和元技能域。
+- `soia-gov-*`：SOIA 产品 workspace 治理（私有域前缀）。
 
 ## 仓库结构
 
