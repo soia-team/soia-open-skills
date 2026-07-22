@@ -1,5 +1,36 @@
 # ProcessOn 下载归档工作流
 
+## 宿主无关浏览器主路线
+
+正式批量必须调用 `scripts/processon_browser_runner.py`，不得在客户正在使用的 Chrome 中用 browser/computer-use/扩展逐份开标签。runner 使用技能专用持久化 profile：首次 `login` 打开独立窗口让客户手动登录，后续 `status`、`snapshot`、`run` 默认 headless。任何 AI host 只需运行 Python 命令，不需要自己的浏览器工具。
+
+```bash
+python3 scripts/processon_browser_runner.py login --url '<team-url>'
+python3 scripts/processon_browser_runner.py status --url '<team-url>'
+python3 scripts/processon_browser_runner.py snapshot --url '<folder-url>'
+```
+
+默认 profile 位于用户私有 config 根的 `soia-skills/soia-open-skills/cwork/soia-cwork-processon-diagrams/browser-profile/`。可用 `--profile-dir` 或 `SOIA_CWORK_PROCESSON_BROWSER_PROFILE_DIR` 覆盖，但 runner 会拒绝系统默认 Chrome/Chromium profile、符号链接和非空无技能标记目录。profile 由浏览器保存登录态；技能不读取其 Cookie、Storage、密码或凭据文件。
+
+`run` 接收 schema 1 JSON。只允许 `goto`、有名称的语义 `click`/`hover`、`scroll`、`wait_text`、非激活型 `press`、`back`、`snapshot`、`download` 和嵌套 `popup`；URL 仅限 HTTPS ProcessOn。任意 CSS、无名称控件、删除/编辑/移动/分享/发布等远端变更标签会被拒绝；没有 `fill`、`evaluate`、Cookie/Storage 或网络拦截动作：
+
+```json
+{
+  "schema_version": 1,
+  "start_url": "https://www.processon.com/org/teams/<team-id>",
+  "steps": [
+    {"action": "snapshot"},
+    {"action": "click", "text": "<diagram-title>", "button": "right"},
+    {"action": "hover", "text": "下载"},
+    {"action": "download", "text": "VISIO文件"}
+  ]
+}
+```
+
+页面结构不同时，先 `snapshot`，再根据实际可见 role/name/text 生成不超过 10 个 artifact 的小批次 action；不要把示例文案当固定选择器。流程图和思维导图格式仍由归档计划决定。
+
+标签生命周期是硬门禁：专用 context 启动时只保留一个父页面；确需新页面时必须用嵌套 `popup`，子步骤完成、失败或超时后都在 `finally` 中关闭；整次命令退出时关闭所有专用页面和 context。回执的 `scoped_pages_opened` 与 `scoped_pages_closed` 必须相等，且 `pages_closed_at_exit >= 1`。中断后先核对回执和下载目录，再恢复队列。
+
 ## 配置优先级
 
 按以下顺序解析，先命中的值生效：
@@ -31,18 +62,18 @@ Windows 使用系统 `TEMP`、`APPDATA`、`LOCALAPPDATA`；macOS/Linux 使用 Py
 
 ## 登录交接
 
-1. Agent 打开 ProcessOn 官方登录页。
-2. 客户在受控浏览器里手动输入用户名、密码、短信码和验证码。
+1. Agent 运行 runner `login --url '<team-url>'`，打开技能专用 ProcessOn 窗口。
+2. 客户只在该独立窗口里手动输入用户名、密码、短信码和验证码。
 3. Agent 不读取输入值，不接收聊天中的密码，不访问 Cookie、Local Storage、密码文件或浏览器 profile。
-4. 客户确认登录完成后，Agent重新读取页面快照并继续盘点或下载。
+4. runner 检测目标页可访问后自动关闭独立窗口；Agent 用 headless `status`/`snapshot` 继续盘点或下载。
 
 账号密码只用于 ProcessOn 官方浏览器会话，不进入技能配置和 manifest。
 
 ### CDP 与浏览器扩展的边界
 
 - CDP（Chrome DevTools Protocol）是浏览器控制通道，不是凭据存储。不要通过 CDP 命令、环境变量或脚本参数传递用户名和密码。
-- 首次登录后，由浏览器自己的持久化 profile 保存登录会话；后续 Agent 复用已登录页面，不接触 Cookie 或密码。
-- 普通目录盘点、浏览和官方下载不需要另开发 Chrome 扩展。只有 ProcessOn 官方 UI 无法提供、且客户明确批准的新能力，才单独评估扩展或企业 API；扩展也不得读取或外传凭据。
+- 首次登录后，由 runner 的专用持久化 profile 保存登录会话；后续 Agent 复用登录态但不接触 Cookie 或密码。
+- 不附着客户主 Chrome 的 CDP，也不复制默认 profile。普通目录盘点、浏览和官方下载不需要另开发 Chrome 扩展。只有 ProcessOn 官方 UI 无法提供、且客户明确批准的新能力，才单独评估扩展或企业 API；扩展也不得读取或外传凭据。
 
 ## 初始化路径
 
