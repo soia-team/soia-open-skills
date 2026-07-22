@@ -142,7 +142,7 @@ npx skills add soia-team/soia-open-skills
 | [`soia-pkm-alipan-curator`](./skills/soia-pkm-alipan-curator/) | 云盘资源顾问：盘点核对（inventory）/规范整理（organize）/OB 索引与两类 Excel（catalog）/学习计划（plan）| ✅ 可用（分区缓存式总索引 + 家庭课程导航）| `soia-pkm-alipan-drive-ops`（原子层）；Excel 需宿主 `@oai/artifact-tool` |
 | [`soia-dev-archify-diagrams`](./skills/soia-dev-archify-diagrams/) | Archify 图表工作流：架构图 / 数据流 / 工作流 / 时序 / 生命周期图，维护 JSON IR 并导出 README/docs PNG | ✅ 可用（脚本齐全；需本机可用 Archify）| `ARCHIFY_BIN` 或 `ARCHIFY_ROOT`，可选 Playwright/Chrome 导出 PNG |
 | [`soia-dev-drawio-visio-diagrams`](./skills/soia-dev-drawio-visio-diagrams/) | 安全盘点 VSDX，转成可编辑 `.drawio` 真源，按受控计划修改页面/文字/样式/几何并导出 PNG/SVG/PDF/JPG | ✅ 可用（stdlib 脚本 + draw.io 30.x 前向验证） | Python 3.10+；转换/渲染需要 draw.io Desktop；MCP 可选 |
-| [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release / 协作者权限管理，含 PR 合并前对照仓库自身规则的结构化审查（只出建议、不自动合并），默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY`；强依赖 `soia-dev-review-panel`（Pre-Merge Rule Review 的视角审查步骤，未安装则停止不降级）|
+| [`soia-dev-github-ops`](./skills/soia-dev-github-ops/) | GitHub 操作工作流：issue / PR / checks / review / run log / release / 协作者权限管理，含 PR 合并前对照仓库自身规则的结构化审查（审查者侧，只出建议不自动合并）和「贴评审 URL 帮我修复」作者侧流程（拉评审→修→push→请求重审，不自动合并），默认走 `gh` 结构化查询和安全确认门 | ✅ 可用（无脚本；命令模板已公共化）| `gh` CLI 已登录；目标 repo 来自 `--repo` / 当前 git remote / `$GITHUB_REPOSITORY`；强依赖 `soia-dev-review-panel`（审查者侧）与 `soia-dev-fix-loop`（作者侧），未安装则停止不降级 |
 | [`soia-dev-ai-cli-upgrade`](./skills/soia-dev-ai-cli-upgrade/) | AI/开发 CLI 批量盘点与升级：Codex / Claude / Antigravity (`agy`，消费者 Google 登录后继) / Gemini（仅企业、API Key、Vertex）/ Kimi / Qwen / OpenCode / Cursor / qodercli / mmx | ✅ 可用（脚本齐全；支持 dry-run 和日志）| Node/npm；部分工具使用官方 installer、Homebrew 或自身 updater |
 | [`soia-dev-project-scaffold`](./skills/soia-dev-project-scaffold/) | 为新建 Git 项目生成最小 AI 协作基线：可编辑的 `AGENTS.md` + docs 导航目录，写入前确认目标路径 | ✅ 可用（`shells/init-project-baseline.sh` 脚本齐全）| POSIX shell、`mkdir`、`git`（仅检查，不初始化仓库）|
 | [`soia-dev-coding-protocol`](./skills/soia-dev-coding-protocol/) | 为工程代码改动建立最小范围、验证前置、anti-fake-fix 与写后复核契约，适用于修复/重构/实现/评审 | ✅ 可用（纯方法论协议，无脚本）| 目标仓库 + 与任务相称的验证手段（测试/lint/类型检查）|
@@ -358,7 +358,7 @@ npx skills add soia-team/soia-open-skills
 | `接入 ima` / `同步到 ima 知识库` | soia-pkm-bootstrap-vault-ima |
 | `给 README 画一张架构图` / `用 Archify 重画流程图` | soia-dev-archify-diagrams |
 | `读懂这个 VSDX` / `把 Visio 转成 draw.io 并升级` | soia-dev-drawio-visio-diagrams |
-| `查这个 PR checks` / `看最近 GitHub Actions 失败原因` / `给 xxx 加协作者权限` / `审核这个 PR 该不该合` | soia-dev-github-ops |
+| `查这个 PR checks` / `看最近 GitHub Actions 失败原因` / `给 xxx 加协作者权限` / `审核这个 PR 该不该合` / `帮我修复这个 PR`（贴评审 URL）| soia-dev-github-ops |
 | `多角度审一下这个改动` / `用几个视角复查` / `对抗式复核一下` / `审一下这个技能包` | soia-dev-review-panel |
 | `升级本机 AI CLI` / `dry-run 看 codex/claude 版本` | soia-dev-ai-cli-upgrade |
 | `监控这个长任务` / `判断进程是否真的卡住` | soia-dev-terminal-ops |
