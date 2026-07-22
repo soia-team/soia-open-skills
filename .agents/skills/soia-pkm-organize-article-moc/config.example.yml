@@ -1,5 +1,0 @@
-# soia-pkm-organize-article-moc private config example.
-# Copy to ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-organize-article-moc/config.yml.
-
-env:
-  OBSIDIAN_VAULT: "<vault-path>"

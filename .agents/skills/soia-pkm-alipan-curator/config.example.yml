@@ -1,9 +1,0 @@
-# soia-pkm-alipan-curator 私有配置样例。
-# 复制到 ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-alipan-curator/config.yml。
-# 这是 C 类用户交付物目录；请使用绝对路径，不要指向 vault 根 outputs/。
-
-env:
-  # Excel 总索引、家庭导航和学习计划的交付目录。
-  # 未在用户请求或此处配置时，默认使用
-  # <用户家目录>/Downloads/soia-pkm-alipan-curator/（可被用户请求或环境变量覆盖）。
-  ALIPAN_CURATOR_OUTPUT_DIR: "<absolute-user-deliverable-directory>"
