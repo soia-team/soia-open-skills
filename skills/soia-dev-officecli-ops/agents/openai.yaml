@@ -1,0 +1,4 @@
+interface:
+  display_name: "OfficeCLI Ops"
+  short_description: "安全读取、修改并验证 Word、Excel 和 PowerPoint 文件。"
+  default_prompt: "检查这个 Office 文件，先给出问题和修改计划；我确认后在副本上修复并完成验证。"
