@@ -38,11 +38,11 @@
 | [`soia-open-dev-ts-skills`](https://github.com/soia-team/soia-open-dev-ts-skills) | 技术支持、终端长任务诊断与通用运维 | `npx skills add soia-team/soia-open-dev-ts-skills -g -a '*' -s soia-dev-terminal-ops -y` |
 | [`soia-open-safe-skills`](https://github.com/soia-team/soia-open-safe-skills) | 代码安全审计与公开漏洞情报跟踪 | `npx skills add soia-team/soia-open-safe-skills -g -a '*' -s soia-safe-audit-fix-codebase -y` |
 | [`soia-open-edu-course-skills`](https://github.com/soia-team/soia-open-edu-course-skills) | 课程大纲、教案讲义与测评技能孵化 | `npx skills add soia-team/soia-open-edu-course-skills -l --full-depth` |
-| [`soia-open-dev-ba-skills`](https://github.com/soia-team/soia-open-dev-ba-skills) | 通用需求调研、需求文档与评审宣讲技能孵化 | `npx skills add soia-team/soia-open-dev-ba-skills -l --full-depth` |
-| [`soia-open-dev-testing-skills`](https://github.com/soia-team/soia-open-dev-testing-skills) | 通用测试文档与用例生成技能孵化 | `npx skills add soia-team/soia-open-dev-testing-skills -l --full-depth` |
-| [`soia-open-dev-release-skills`](https://github.com/soia-team/soia-open-dev-release-skills) | 软件上线清单、发版申请与上线验证技能孵化 | `npx skills add soia-team/soia-open-dev-release-skills -l --full-depth` |
+| [`soia-open-dev-product-skills`](https://github.com/soia-team/soia-open-dev-product-skills) | 产品/产品经理语境的 PRD、用户故事与需求评审技能孵化 | `npx skills add soia-team/soia-open-dev-product-skills -l --full-depth` |
+| [`soia-open-dev-testing-skills`](https://github.com/soia-team/soia-open-dev-testing-skills) | 互联网通用的测试用例、测试文档与 QA 流程技能孵化 | `npx skills add soia-team/soia-open-dev-testing-skills -l --full-depth` |
+| [`soia-open-dev-release-skills`](https://github.com/soia-team/soia-open-dev-release-skills) | 互联网通用的软件发版清单与发布验证技能孵化 | `npx skills add soia-team/soia-open-dev-release-skills -l --full-depth` |
 
-前 12 个仓是当前路由生成器的公开输入；`dev-testing` 与 `dev-release` 在发布首个公开技能后加入。私有仓不进入公开清单；公司私有增量由 corp 仓自己的路由数据维护。
+全部 14 个公开仓都是当前路由生成器的输入；产品、测试与发版孵化仓在发布首个公开技能前不产生路由条目。私有仓不进入公开清单；公司私有增量由 corp 仓自己的路由数据维护。行业定制流程版（保险 BA/TS 等）由维护者私有仓承载，不开源。
 
 通用安装格式：
 

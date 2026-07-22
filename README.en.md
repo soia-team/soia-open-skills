@@ -19,7 +19,7 @@ The specification source of truth, cross-repository catalog, public routing mani
 - `soia-meta-sync-skills`, `soia-meta-skill-release`, and `soia-meta-prompt-clarity`;
 - the shared skill/storage specifications, template, and audit tools;
 - the topology of 14 public repositories;
-- the machine-readable manifest generated from 12 public routing sources.
+- the machine-readable manifest generated from 14 public routing sources.
 
 To find a skill, start with [`routing/routing-manifest.json`](routing/routing-manifest.json), then use its `repo` and `skillPath` fields to install or inspect the package.
 
@@ -38,11 +38,11 @@ To find a skill, start with [`routing/routing-manifest.json`](routing/routing-ma
 | [`soia-open-dev-ts-skills`](https://github.com/soia-team/soia-open-dev-ts-skills) | Technical support, long-running terminal diagnostics, and general operations | `npx skills add soia-team/soia-open-dev-ts-skills -g -a '*' -s soia-dev-terminal-ops -y` |
 | [`soia-open-safe-skills`](https://github.com/soia-team/soia-open-safe-skills) | Code security audits and public vulnerability-intelligence tracking | `npx skills add soia-team/soia-open-safe-skills -g -a '*' -s soia-safe-audit-fix-codebase -y` |
 | [`soia-open-edu-course-skills`](https://github.com/soia-team/soia-open-edu-course-skills) | Incubator for course outlines, teaching materials, and assessments | `npx skills add soia-team/soia-open-edu-course-skills -l --full-depth` |
-| [`soia-open-dev-ba-skills`](https://github.com/soia-team/soia-open-dev-ba-skills) | Incubator for general requirements research, specifications, and review presentations | `npx skills add soia-team/soia-open-dev-ba-skills -l --full-depth` |
-| [`soia-open-dev-testing-skills`](https://github.com/soia-team/soia-open-dev-testing-skills) | Incubator for general test documentation and test-case generation | `npx skills add soia-team/soia-open-dev-testing-skills -l --full-depth` |
-| [`soia-open-dev-release-skills`](https://github.com/soia-team/soia-open-dev-release-skills) | Incubator for software release checklists, requests, and post-release verification | `npx skills add soia-team/soia-open-dev-release-skills -l --full-depth` |
+| [`soia-open-dev-product-skills`](https://github.com/soia-team/soia-open-dev-product-skills) | Incubator for product-manager workflows: PRDs, user stories, and requirements reviews | `npx skills add soia-team/soia-open-dev-product-skills -l --full-depth` |
+| [`soia-open-dev-testing-skills`](https://github.com/soia-team/soia-open-dev-testing-skills) | Incubator for internet-standard test cases, test documentation, and QA workflows | `npx skills add soia-team/soia-open-dev-testing-skills -l --full-depth` |
+| [`soia-open-dev-release-skills`](https://github.com/soia-team/soia-open-dev-release-skills) | Incubator for internet-standard software release checklists and release verification | `npx skills add soia-team/soia-open-dev-release-skills -l --full-depth` |
 
-The first 12 repositories are the current public inputs to the routing generator; `dev-testing` and `dev-release` join after publishing their first public skill. Private repositories are excluded. Corp-specific increments are maintained in the corp repository's own routing data.
+All 14 public repositories are current inputs to the routing generator; the product, testing, and release incubators emit no routing entries until they publish their first public skill. Private repositories are excluded. Corp-specific increments are maintained in the corp repository's own routing data. Industry-customized workflows (including insurance BA/TS terminology) are maintained by the private maintainer repository and are not open sourced.
 
 Generic commands:
 

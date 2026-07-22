@@ -13,10 +13,10 @@ from typing import Any, Mapping, Sequence
 
 OWNER = "soia-team"
 
-# Public routing sources. The testing/release incubators remain visible in the
-# portal topology but join this list only after they publish their first skill.
-# Private skills never enter this manifest: corp/private incremental routing is
-# owned and published by the corresponding private repository.
+# Public routing sources, including empty incubators so the published topology
+# and routing inputs stay aligned. Private skills never enter this manifest:
+# corp/private incremental routing is owned and published by the corresponding
+# private repository.
 PUBLIC_REPOSITORIES = (
     "soia-open-skills",
     "soia-open-env-skills",
@@ -29,7 +29,9 @@ PUBLIC_REPOSITORIES = (
     "soia-open-dev-ts-skills",
     "soia-open-safe-skills",
     "soia-open-edu-course-skills",
-    "soia-open-dev-ba-skills",
+    "soia-open-dev-product-skills",
+    "soia-open-dev-testing-skills",
+    "soia-open-dev-release-skills",
 )
 
 PORTAL_REPOSITORY = "soia-open-skills"
