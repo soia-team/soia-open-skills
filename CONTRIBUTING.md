@@ -6,7 +6,7 @@
 
 2. **先读技能规范**：[SKILL_SPEC.md](./SKILL_SPEC.md)。所有 public skill 必须遵守其中的路径、配置、secret、个人信息和验证口径约束。
 
-3. **从模板复制一个新目录**，命名用小写连字符（如 `notion-to-obsidian`）：
+3. **从模板复制一个新目录**，命名用小写连字符（如 `soia-pkm-clip-notion`）：
 
    ```bash
    cp -R templates/skill-template skills/your-skill-name
@@ -19,10 +19,18 @@
    ---
    name: your-skill-name
    description: 一句话说明 skill 干什么 + 触发词清单（控制在 200 字符内）
+   version: 0.1.0
+   created_at: <YYYY-MM-DD HH:mm:ss>
+   updated_at: <YYYY-MM-DD HH:mm:ss>
+   created_by: <concrete-model-name>
+   updated_by: <concrete-model-name>
    ---
    ```
 
-   frontmatter 只放 `name` 和 `description`，不要新增 `version` 等字段。
+   frontmatter 必须包含 `name`、`description`、`version`（SemVer）、
+   `created_at`、`updated_at`、`created_by`、`updated_by`，并遵循
+   [SKILL_SPEC.md](./SKILL_SPEC.md) 的字段规范；`created_by` / `updated_by`
+   填写具体模型名。
    不要新增 `metadata.json`；公开仓使用 `SKILL.md` + 可选 `agents/openai.yaml`。
 
 5. **路径参数化**：
@@ -74,4 +82,4 @@
 
 ## 联系
 
-提 issue 或直接邮件 soia-team@xxx
+请在本仓 [GitHub Issues](https://github.com/soia-team/soia-open-skills/issues) 提 issue。

@@ -447,7 +447,7 @@ python3 scripts/generate_skill_catalog.py --registry-out <soia-repo>/runtime/reg
 
 ## 命名规范（机械审计强制，2026-07-20 起）
 
-- 形式：`soia-<domain>-<kebab-name>`；domain ∈ `pkm | dev | gov | cwork | design | env | meta`。
+- 形式：`soia-<domain>-<kebab-name>`；domain ∈ `pkm | dev | cwork | design | env | meta | safe | gov`。
 - 域语义：`dev`=通用工程工具；`gov`=仅 SOIA 产品 workspace 的治理层（产品绑定技能一律归 gov，不得在 dev 域二次加 soia 段）；`design`=设计职能；`pkm`=个人知识管理；`cwork`=协同办公；`env`=环境安装排查；`meta`=技能自我进化。
 - 禁止：相邻 token 重复（如 `soia-dev-soia-*` 反模式）；`soia` 在域段之后再次出现。
 - 迁移/拆分时的域归属复核由 `scripts/audit_skills.py` 的 `audit_skill_name` 机械执行，CI strict 模式违规即红。

@@ -435,11 +435,15 @@ The more advanced MTProto API path (not recommended if you're in mainland China 
 
 Use lowercase kebab-case with a domain prefix:
 
+- Domain list: `pkm | dev | cwork | design | env | meta | safe | gov`.
 - `soia-pkm-*`: personal knowledge management around an Obsidian vault — collect, organize, distill, compose, and publish.
-- `soia-cwork-*`: enterprise collaboration — connect to Feishu and other work systems for documents, drives, wikis, and collaboration metadata.
 - `soia-dev-*`: publicly reusable development and engineering tools.
+- `soia-cwork-*`: enterprise collaboration — connect to Feishu and other work systems for documents, drives, wikis, and collaboration metadata.
+- `soia-design-*`: design functions (private domain prefix).
+- `soia-env-*`: environment installation and troubleshooting.
+- `soia-meta-*`: skill self-evolution (private domain prefix).
 - `soia-safe-*`: vulnerability intelligence, code security auditing, and confirmed controlled remediation.
-- `soia-design-*` / `soia-gov-*` / `soia-meta-*`: design, governance, and meta-skill domains.
+- `soia-gov-*`: SOIA product-workspace governance (private domain prefix).
 
 ## Repository structure
 

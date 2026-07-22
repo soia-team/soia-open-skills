@@ -99,9 +99,9 @@ npx skills add soia-team/soia-open-skills -g --all
 
 ## Git Workflow
 
-- **Develop on `main` directly.** Do not create feature branches or long-lived
-  topic branches. Commit and push to `main` (or open a short-lived PR if branch
-  protection requires it).
+- Use short-lived branches with `feat/`, `fix/`, or `chore/` prefixes. Open a
+  PR, require CI to pass, then merge into the protected `main` branch. Do not
+  create long-lived branches or push directly to `main`.
 - **No worktrees.** Never run `git worktree add` in this repository. Worktrees
   lock branches and block deletion; they caused real cleanup incidents in this
   repo. If you need to inspect another ref, use `git show <ref>:<path>` or
@@ -148,7 +148,7 @@ shortcut with manual symlinks.
 ### 1. Create on a branch
 
 ```bash
-cd ~/owen/code/gitrepo/jiuan/server/v7/soia-open-skills
+cd <your-local-checkout>/soia-open-skills
 git checkout -b feat/<topic>
 # create skills/<new-skill-name>/SKILL.md, references/, scripts/ etc.
 git add skills/<new-skill-name>/
@@ -258,7 +258,7 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s <new-name-1> -s <new-name
 
 **Phase 4 — Update downstream docs**
 
-13. Update vault Skill架构与真身清单.md: skill count, listing, update log.
+13. Update your maintainer-local architecture notes (kept outside this repo).
 14. Grep for old name across both repos and the vault — zero hits before
     declaring done.
 
