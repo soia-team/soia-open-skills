@@ -165,6 +165,14 @@ Open Design 配置：复制 [`config.example.yml`](./skills/soia-dev-open-design
 
 百度网盘技能配置：复制 [`config.example.yml`](./skills/soia-pkm-baidu-netdisk-ops/config.example.yml) 到技能专属私有配置目录，在 `provider` 中选择 `official` 或 `community`。社区模式填写百度开放平台的 AppKey、SecretKey、应用名称；不要把密钥提交仓库或发送到聊天。
 
+### 🧬 Meta · 技能生态
+
+| skill | 说明 | 现在能用? | 依赖 |
+|-------|------|----------|------|
+| [`soia-meta-sync-skills`](./skills/soia-meta-sync-skills/) | 将共享技能源以软链接同步到用户明确选择的 AI 工具目录，支持预览、单项同步、依赖闭包和受限清理 | ✅ 可用 | Python 3；含 `SKILL.md` 子目录的源目录 |
+| [`soia-meta-skill-release`](./skills/soia-meta-skill-release/) | 技能 PR merge 后完成安装、旧名清理、AI 软链、lock 与版本对账 | ✅ 可用 | Python 3、`npx skills`、`soia-meta-sync-skills` |
+| [`soia-meta-prompt-clarity`](./skills/soia-meta-prompt-clarity/) | 中英文提示词：从零起草、诊断优化、防误伤改写与可验证规格化 | ✅ 可用 | 无 |
+
 ### 🛡️ Security · 安全
 
 `soia-safe-*` 在客户本地完成漏洞情报、代码审计与受控修复。情报报告必须声明来源覆盖；代码技能第一次运行严格只读，只有客户确认具体 Finding、文件和测试批次后才允许修改。

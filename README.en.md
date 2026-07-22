@@ -147,6 +147,14 @@ Core value: the infrastructure that keeps the loop running — bootstrapping the
 
 Open Design setup: copy [`config.example.yml`](./skills/soia-dev-open-design-ops/config.example.yml) to the skill-specific private config directory and set `OPEN_DESIGN_HOME`; never commit local checkout paths, product `DESIGN.md` paths, or port overrides.
 
+### 🧬 Meta · skill ecosystem
+
+| Skill | What it does | Ready now? | Dependencies |
+|-------|------|----------|------|
+| [`soia-meta-sync-skills`](./skills/soia-meta-sync-skills/) | Synchronizes a shared skill source into explicitly selected AI tool directories with symlinks, previews, single-skill sync, dependency closure, and bounded cleanup | ✅ Usable | Python 3; a source directory containing `SKILL.md` subdirectories |
+| [`soia-meta-skill-release`](./skills/soia-meta-skill-release/) | Finishes post-merge skill release work: installation, old-name cleanup, AI symlinks, and lock/version reconciliation | ✅ Usable | Python 3, `npx skills`, `soia-meta-sync-skills` |
+| [`soia-meta-prompt-clarity`](./skills/soia-meta-prompt-clarity/) | Bilingual prompt work: draft, diagnose and optimize, prevent false refusals, and compile verifiable specifications | ✅ Usable | None |
+
 ### 🛡️ Security
 
 `soia-safe-*` keeps vulnerability intelligence, code auditing, and controlled remediation local to the customer. Intelligence reports must disclose source coverage; code remains read-only until the customer confirms specific findings, files, and tests.

@@ -2,7 +2,7 @@
 
 > Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.
 > Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.
-> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 56 skills.
+> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 59 skills.
 
 ## Source Fields
 
@@ -86,6 +86,14 @@
 |---|---|---|
 | [`soia-safe-audit-fix-codebase`](./soia-safe-audit-fix-codebase/) | 只读审计完整代码库，经明确确认后修复代码并完成回归验证 | 使用 $soia-safe-audit-fix-codebase 审计这个代码路径，先只输出带证据的项目安全报告和修复预览，等我确认后再修改代码并测试。 |
 | [`soia-safe-track-vulnerability-intel`](./soia-safe-track-vulnerability-intel/) | 聚合权威漏洞情报、去重核验并生成带证据的专业安全报告 | 使用 $soia-safe-track-vulnerability-intel 收集指定时间窗和技术栈的漏洞情报，去重核验后生成带覆盖范围、优先级和修复建议的专业报告。 |
+
+## Meta
+
+| Skill | Description | Default Prompt |
+|---|---|---|
+| [`soia-meta-prompt-clarity`](./soia-meta-prompt-clarity/) | 中英文提示词编写、诊断、防误伤改写与可验证规格化 | Use $soia-meta-prompt-clarity to turn my request into a clear, directly usable prompt; preserve my chosen prompt and explanation languages, and use a named framework only when it materially improves the result. |
+| [`soia-meta-skill-release`](./soia-meta-skill-release/) | 完成 merge 后技能的本机安装、软链、lock 与版本发布收尾。 | Use $soia-meta-skill-release to finish local release cleanup for merged skill names from an owner/name repository. |
+| [`soia-meta-sync-skills`](./soia-meta-sync-skills/) | 将共享技能目录以软链接同步到用户选择的 AI 工具目录。 | Use $soia-meta-sync-skills to preview and sync a shared skill source to explicitly selected AI tool directories. |
 
 ## Registry Export
 

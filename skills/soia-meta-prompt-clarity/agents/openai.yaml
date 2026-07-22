@@ -1,0 +1,4 @@
+interface:
+  display_name: "Meta Prompt Clarity"
+  short_description: "中英文提示词编写、诊断、防误伤改写与可验证规格化"
+  default_prompt: "Use $soia-meta-prompt-clarity to turn my request into a clear, directly usable prompt; preserve my chosen prompt and explanation languages, and use a named framework only when it materially improves the result."
