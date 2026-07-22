@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -24,6 +25,7 @@ def load_module(name: str, relative_path: str):
 
 
 audit_skills = load_module("audit_skills_under_test", "scripts/audit_skills.py")
+catalog = load_module("generate_skill_catalog_under_test", "scripts/generate_skill_catalog.py")
 
 
 def write_skill(root: Path, name: str, body: str) -> Path:
@@ -259,6 +261,43 @@ class LinkAuditTests(unittest.TestCase):
                     for hit in findings
                 )
             )
+
+
+class RepoNameResolutionTest(unittest.TestCase):
+    """The catalog repo name must come from the git origin remote, not the
+    checkout directory name — otherwise generating from a worktree/clone whose
+    dir differs from the repo name bakes the wrong name into skills/README.md,
+    which then reads as stale in CI (whose checkout dir is always the real name).
+    """
+
+    def _git(self, root: Path, *args: str) -> None:
+        subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True)
+
+    def test_repo_name_comes_from_origin_remote_not_directory_name(self) -> None:
+        with tempfile.TemporaryDirectory(suffix="-a-wrong-dir-name") as tmp:
+            root = Path(tmp)
+            self._git(root, "init")
+            self._git(
+                root, "remote", "add", "origin",
+                "https://github.com/soia-team/soia-open-skills.git",
+            )
+            self.assertEqual(catalog.resolve_repo_name(root), "soia-open-skills")
+            self.assertEqual(catalog.repo_title("soia-open-skills"), "SOIA Open Skills Catalog")
+
+    def test_scp_style_remote_is_parsed(self) -> None:
+        with tempfile.TemporaryDirectory(suffix="-a-wrong-dir-name") as tmp:
+            root = Path(tmp)
+            self._git(root, "init")
+            self._git(
+                root, "remote", "add", "origin",
+                "git@github.com:soia-team/soia-private-skills.git",
+            )
+            self.assertEqual(catalog.resolve_repo_name(root), "soia-private-skills")
+
+    def test_falls_back_to_directory_name_without_git(self) -> None:
+        with tempfile.TemporaryDirectory(suffix="-soia-open-skills") as tmp:
+            root = Path(tmp)  # not a git repo → no origin remote
+            self.assertEqual(catalog.resolve_repo_name(root), root.name)
 
 
 if __name__ == "__main__":

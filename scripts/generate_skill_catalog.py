@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -216,18 +217,54 @@ def write_missing_openai(entries: list[SkillEntry]) -> int:
     return written
 
 
-def repo_title(root: Path) -> str:
-    if "private" in root.name:
+def resolve_repo_name(root: Path) -> str:
+    """Repo name used in catalog labels.
+
+    Prefer the git `origin` remote so the generated output is identical no
+    matter what the checkout directory is called — a worktree or a clone into
+    an arbitrarily-named directory must not bake the wrong name into
+    skills/README.md (which would then read as "stale" in CI, whose checkout
+    dir is always the real repo name). Fall back to the directory name only
+    when git or an origin remote is unavailable.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return root.name
+    if result.returncode != 0:
+        return root.name
+    url = result.stdout.strip()
+    if not url:
+        return root.name
+    # Take the last path component of either an https or scp-style remote URL:
+    # https://github.com/soia-team/soia-open-skills.git  -> soia-open-skills
+    # git@github.com:soia-team/soia-open-skills.git       -> soia-open-skills
+    tail = url.rstrip("/")
+    for sep in ("/", ":"):
+        if sep in tail:
+            tail = tail.rsplit(sep, 1)[-1]
+    if tail.endswith(".git"):
+        tail = tail[:-4]
+    return tail or root.name
+
+
+def repo_title(repo: str) -> str:
+    if "private" in repo:
         return "SOIA Private Skills Catalog"
-    if "open" in root.name:
+    if "open" in repo:
         return "SOIA Open Skills Catalog"
     return "SOIA Skills Catalog"
 
 
 def render_readme(root: Path, entries: list[SkillEntry]) -> str:
-    repo = root.name
+    repo = resolve_repo_name(root)
     lines = [
-        f"# {repo_title(root)}",
+        f"# {repo_title(repo)}",
         "",
         "> Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.",
         "> Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.",
