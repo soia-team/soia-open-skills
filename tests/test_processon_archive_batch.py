@@ -375,6 +375,16 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
         self.assertTrue(MODULE.source_title_matches(title, f"{title}-ProcessOn"))
         self.assertFalse(MODULE.source_title_matches(title, f"{title}-副本"))
 
+    def test_provider_filename_sanitization_is_deliberately_narrow(self):
+        title = "《蚁窠-中介/银保手续费/可用费用-系统交互图》"
+        self.assertEqual(
+            MODULE.provider_safe_filename_stem(title),
+            "《蚁窠-中介_银保手续费_可用费用-系统交互图》",
+        )
+        self.assertNotEqual(
+            MODULE.provider_safe_filename_stem(title), title.replace("中介", "中介平台")
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
