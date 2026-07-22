@@ -3,12 +3,16 @@
 
 from __future__ import annotations
 
+import argparse
+import importlib.util
+import json
 import sys
 import os
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -25,10 +29,14 @@ from catalog_xlsx.cache import (  # noqa: E402
     prepare_incremental,
     normalize_release_metadata,
 )
+import gen_catalog_xlsx  # noqa: E402
 from gen_catalog_xlsx import (  # noqa: E402
     cleanup_inspection_sidecars,
     cleanup_stale_partition_outputs,
+    resolve_renderer,
 )
+
+OPENPYXL_INSTALLED = importlib.util.find_spec("openpyxl") is not None
 
 
 def search_markdown(partition: str, folder: str, rows: list[tuple[str, str]]) -> str:
@@ -448,6 +456,159 @@ for output in outputs:
             self.assertFalse(stale_output.exists())
             self.assertFalse(unmanaged_output.exists())
             self.assertTrue((stale_output.parent / "10_孩子.xlsx").exists())
+
+
+class RendererSelectionTests(unittest.TestCase):
+    """gen_catalog_xlsx.py must not hard-require @oai/artifact-tool: other AIs/hosts
+    without access to that bespoke runtime still need to produce a valid catalog Excel
+    via the openpyxl fallback. See resolve_renderer()."""
+
+    @staticmethod
+    def make_artifact_runtime(root: Path) -> Path:
+        runtime = root / "runtime"
+        (runtime / "node_modules" / "@oai" / "artifact-tool").mkdir(parents=True)
+        return runtime
+
+    def test_auto_prefers_artifact_tool_when_fully_available(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = self.make_artifact_runtime(Path(temporary))
+            args = argparse.Namespace(renderer="auto", artifact_runtime=runtime, node="python3")
+            self.assertEqual(resolve_renderer(args), "artifact-tool")
+
+    def test_auto_falls_back_to_openpyxl_when_artifact_tool_missing(self) -> None:
+        args = argparse.Namespace(renderer="auto", artifact_runtime=None, node="python3")
+        with mock.patch.object(gen_catalog_xlsx, "openpyxl_available", return_value=True):
+            self.assertEqual(resolve_renderer(args), "openpyxl")
+
+    def test_auto_falls_back_to_openpyxl_when_node_missing_even_with_runtime_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = self.make_artifact_runtime(Path(temporary))
+            args = argparse.Namespace(renderer="auto", artifact_runtime=runtime, node="definitely-not-a-real-node-binary-xyz")
+            with mock.patch.object(gen_catalog_xlsx, "openpyxl_available", return_value=True):
+                self.assertEqual(resolve_renderer(args), "openpyxl")
+
+    def test_auto_raises_when_neither_backend_available(self) -> None:
+        args = argparse.Namespace(renderer="auto", artifact_runtime=None, node="definitely-not-a-real-node-binary-xyz")
+        with mock.patch.object(gen_catalog_xlsx, "openpyxl_available", return_value=False):
+            with self.assertRaisesRegex(SystemExit, "openpyxl"):
+                resolve_renderer(args)
+
+    def test_explicit_artifact_tool_requires_runtime(self) -> None:
+        args = argparse.Namespace(renderer="artifact-tool", artifact_runtime=None, node="python3")
+        with self.assertRaisesRegex(SystemExit, "artifact-runtime"):
+            resolve_renderer(args)
+
+    def test_explicit_artifact_tool_requires_package_present(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            empty_runtime = Path(temporary) / "runtime"
+            empty_runtime.mkdir()
+            args = argparse.Namespace(renderer="artifact-tool", artifact_runtime=empty_runtime, node="python3")
+            with self.assertRaisesRegex(SystemExit, "artifact-tool"):
+                resolve_renderer(args)
+
+    def test_explicit_openpyxl_requires_package_installed(self) -> None:
+        args = argparse.Namespace(renderer="openpyxl", artifact_runtime=None, node="python3")
+        with mock.patch.object(gen_catalog_xlsx, "openpyxl_available", return_value=False):
+            with self.assertRaisesRegex(SystemExit, "openpyxl 不可用"):
+                resolve_renderer(args)
+
+    def test_explicit_openpyxl_ignores_available_artifact_tool(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = self.make_artifact_runtime(Path(temporary))
+            args = argparse.Namespace(renderer="openpyxl", artifact_runtime=runtime, node="python3")
+            with mock.patch.object(gen_catalog_xlsx, "openpyxl_available", return_value=True):
+                self.assertEqual(resolve_renderer(args), "openpyxl")
+
+
+@unittest.skipUnless(OPENPYXL_INSTALLED, "openpyxl not installed in this test environment")
+class OpenpyxlFallbackIntegrationTests(unittest.TestCase):
+    """End-to-end coverage for the platform-agnostic renderer: no @oai/artifact-tool,
+    no Node.js — just gen_catalog_xlsx.py + openpyxl, so any AI/host can run it."""
+
+    def build(self, root: Path, *, verify: bool = False, extra_args: list[str] | None = None) -> dict:
+        search_dir = root / "search"
+        search_dir.mkdir(exist_ok=True)
+        catalog = root / "00_馆藏总览.md"
+        catalog.write_text(catalog_markdown(), encoding="utf-8")
+        (search_dir / "10_孩子.md").write_text(
+            search_markdown("10_孩子", "10_孩子/10_英语", [("a.mp4", "1MB"), ("b.pdf", "2MB")]),
+            encoding="utf-8",
+        )
+        (search_dir / "20_阅读.md").write_text(
+            search_markdown("20_阅读", "20_阅读/10_书籍", [("c.epub", "3MB")]),
+            encoding="utf-8",
+        )
+        command = [
+            "python3", str(SCRIPT),
+            "--catalog", str(catalog),
+            "--search-dir", str(search_dir),
+            "--output-dir", str(root / "output"),
+            "--cache-dir", str(root / "cache"),
+            "--renderer", "openpyxl",
+            "--json",
+        ]
+        if verify:
+            command.append("--verify")
+        if extra_args:
+            command.extend(extra_args)
+        env = {**os.environ}
+        for name in ("ALIPAN_CURATOR_OUTPUT_DIR", "SOIA_PKM_ALIPAN_CURATOR_CONFIG_FILE", "SOIA_ARTIFACT_RUNTIME"):
+            env.pop(name, None)
+        result = subprocess.run(command, check=False, capture_output=True, text=True, env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)
+
+    def test_openpyxl_renderer_produces_valid_workbooks_with_real_data(self) -> None:
+        from openpyxl import load_workbook
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            payload = self.build(root)
+            self.assertEqual(payload["status"], "updated")
+            self.assertEqual(payload["renderer"], "openpyxl")
+
+            master_path = Path(payload["master"])
+            self.assertTrue(master_path.is_file())
+            master = load_workbook(master_path)
+            self.assertEqual(
+                master.sheetnames,
+                ["00_使用说明", "01_目录索引", "02_明细入口", "03_类型统计", "04_分区统计", "05_扩展名统计"],
+            )
+            usage = master["00_使用说明"]
+            self.assertEqual(usage["A4"].value, 3)
+            entry = master["02_明细入口"]
+            self.assertEqual(entry["A5"].value, "10_孩子")
+            self.assertEqual(entry["D5"].value, 2)
+
+            detail_dir = Path(payload["detailDir"])
+            partition = load_workbook(detail_dir / "10_孩子.xlsx")
+            self.assertEqual(
+                partition.sheetnames, ["00_使用说明", "01_文件明细", "02_类型统计", "03_扩展名统计"]
+            )
+            files_sheet = partition["01_文件明细"]
+            header_row = {cell.value: cell.column for cell in files_sheet[4]}
+            self.assertEqual(files_sheet["A5"].value, 1)
+            self.assertEqual(files_sheet.cell(row=5, column=header_row["文件名"]).value, "a.mp4")
+            # HYPERLINK formula string, not just a bare url — must stay clickable.
+            link_cell = files_sheet.cell(row=5, column=header_row["点击直达云盘"])
+            self.assertTrue(str(link_cell.value).startswith("=IF("))
+
+    def test_openpyxl_renderer_second_run_is_unchanged(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first = self.build(root)
+            self.assertEqual(first["status"], "updated")
+            second = self.build(root)
+            self.assertEqual(second["status"], "unchanged")
+            self.assertEqual(second["rebuilt"], [])
+
+    def test_openpyxl_renderer_without_soffice_notes_qa_gap_instead_of_silently_passing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            payload = self.build(root, verify=True)
+            self.assertIsNotNone(payload["qa"])
+            self.assertIsNone(payload["qa"].get("formulaErrorCount"))
+            self.assertIn("soffice", payload["qa"]["note"])
 
 
 if __name__ == "__main__":
