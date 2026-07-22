@@ -70,6 +70,9 @@ class FakeContext:
 
 
 class FakeLocator:
+    def filter(self, **_kwargs):
+        return self
+
     def nth(self, _index):
         return self
 
@@ -135,7 +138,7 @@ class ProcessOnBrowserRunnerTests(unittest.TestCase):
             def launcher(_profile, _headless):
                 return context
 
-            with self.assertRaisesRegex(RuntimeError, "boom"):
+            with self.assertRaisesRegex(self.module.ManagedBrowserFailure, "boom") as raised:
                 with self.module.managed_context(
                     Path(temporary) / "profile", headless=True, launcher=launcher
                 ) as (_context, page, _receipt):
@@ -143,6 +146,8 @@ class ProcessOnBrowserRunnerTests(unittest.TestCase):
 
             self.assertTrue(context.closed)
             self.assertTrue(page.closed)
+            self.assertEqual(raised.exception.receipt["pages_closed_at_exit"], 1)
+            self.assertEqual(raised.exception.original_type, "RuntimeError")
 
     def test_action_contract_forbids_credentials_and_form_fill(self) -> None:
         with self.assertRaisesRegex(self.module.BrowserRunnerError, "unsupported action"):
@@ -180,6 +185,39 @@ class ProcessOnBrowserRunnerTests(unittest.TestCase):
             self.module.target_reached("https://www.processon.com/login", target)
         )
 
+    def test_wait_text_uses_nth_to_tolerate_duplicate_processon_nodes(self) -> None:
+        script = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn('elif action == "wait_text":', script)
+        self.assertIn('int(step.get("nth", 0))', script)
+
+    def test_snapshot_includes_semantically_labeled_non_button_icons(self) -> None:
+        script = SCRIPT.read_text(encoding="utf-8")
+        for marker in ["[data-title]", "[data-tooltip]", 'get_attribute("data-tooltip")']:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, script)
+
+    def test_inspect_text_is_fixed_and_does_not_accept_caller_javascript(self) -> None:
+        self.assertIn("inspect_text", self.module.ALLOWED_ACTIONS)
+        self.module.validate_steps(
+            [{"action": "inspect_text", "text": "<diagram-title>", "nth": 0}]
+        )
+        with self.assertRaisesRegex(self.module.BrowserRunnerError, "sensitive field"):
+            self.module.validate_steps(
+                [{"action": "inspect_text", "text": "x", "session_storage": "x"}]
+            )
+
+    def test_row_menu_is_provider_scoped_and_text_locators_prefer_visible_nodes(self) -> None:
+        self.assertIn("row_menu", self.module.ALLOWED_ACTIONS)
+        script = SCRIPT.read_text(encoding="utf-8")
+        for marker in [
+            "def open_processon_row_menu",
+            "file_list_item",
+            "span.more.icons.icon-gengduo",
+            "filter(visible=True)",
+        ]:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, script)
+
     def test_cli_has_bounded_spa_settle_delay(self) -> None:
         parser = self.module.build_parser()
         args = parser.parse_args(
@@ -212,6 +250,7 @@ class ProcessOnBrowserRunnerTests(unittest.TestCase):
             "禁止附着客户默认 Chrome profile",
             "pages_closed_at_exit",
             "settle",
+            "正常完成与异常退出都必须返回关闭回执",
         ]:
             with self.subTest(marker=marker):
                 self.assertIn(marker, skill)
