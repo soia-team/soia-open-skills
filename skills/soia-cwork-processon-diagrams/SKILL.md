@@ -1,9 +1,9 @@
 ---
 name: soia-cwork-processon-diagrams
-description: 递归浏览和盘点 ProcessOn 个人/团队空间到叶子文件，预览流程图与思维导图，按授权对流程图默认导出 Visio VSDX、对思维导图默认导出 XMind，将未知类型列入待确认清单，并通过可配置的临时/交付/审计目录完成下载校验与归档；适用于“读取 ProcessOn 文件”“导出架构图”“盘点全部子目录”“从 POS/VSDX/XMind 提取结构”“整理浏览器下载”等请求。
-version: 1.7.2
+description: 通过宿主无关的专用浏览器 profile 和可恢复队列，递归盘点 ProcessOn 个人/团队空间到叶子文件；按授权对流程图默认导出 Visio VSDX、对思维导图默认导出 XMind，将未知类型列入待确认清单，并完成下载校验与归档；适用于“读取 ProcessOn 文件”“导出架构图”“盘点全部子目录”“批量下载但不要影响我的 Chrome”“从 POS/VSDX/XMind 提取结构”等请求。
+version: 1.8.0
 created_at: 2026-07-20 18:57:53
-updated_at: 2026-07-21 20:55:00
+updated_at: 2026-07-22 13:43:52
 created_by: gpt-5.6-sol
 updated_by: gpt-5.6-sol
 dependencies:
@@ -12,7 +12,7 @@ dependencies:
 
 # ProcessOn 图表浏览与导出
 
-通过用户已经授权的 ProcessOn 账号和浏览器登录态，读取团队空间、文件夹、图表标题与可见内容；在用户指定范围内导出图表，把浏览器下载安全归档到交付目录，并对本地 POS、图片、SVG、PDF、XMind 文件生成可核验清单。默认只读，不修改、分享、移动或删除远端文件。
+通过技能自有的 ProcessOn 浏览器 profile 读取团队空间、文件夹、图表标题与可见内容；在用户指定范围内导出图表，把下载安全归档到交付目录，并对本地 POS、图片、SVG、PDF、XMind 文件生成可核验清单。默认只读，不修改、分享、移动或删除远端文件；正式批量任务不得接管客户正在使用的 Chrome。
 
 ## 客户可读说明
 
@@ -25,6 +25,7 @@ dependencies:
 | 导出图表 | 按客户授权选择 VSDX、POS、PNG、SVG、PDF、XMind 或 Office 格式 | 下载文件、格式/大小/SHA-256 验收 |
 | 归档浏览器下载 | 解析 CLI、环境变量和私有 YAML 中的路径，把下载文件校验后复制/移动到交付目录 | 最终路径、碰撞策略、SHA-256 和审计 manifest |
 | 批量续跑归档 | 从归档计划初始化下载队列，逐项领取、记录成功/失败/阻断并重放审计 | `download-progress.json`、下一批列表和机械验收结果 |
+| 不干扰地控制浏览器 | 从任意 AI/终端调用本地 Playwright runner，在技能专用 profile 中 headless 执行 | 独立登录态、页面关闭计数、下载回执；客户主 Chrome 不被接管 |
 | 解析已有导出 | 读取本地 POS/XMind/SVG/图片；VSDX 可交给可选 draw.io/Visio 技能 | 标题、图表类型、节点文字、尺寸与校验值 |
 
 ### 客户如何使用
@@ -34,7 +35,7 @@ dependencies:
 1. ProcessOn 团队、文件夹或图表 URL；也可以给出空间名和文件名。
 2. 目标动作：初始化盘点、增量盘点、下载归档，或解析/转换已有导出文件。
 3. 导出时指定文件范围、格式和交付目录；未指定格式时，流程图默认选择当前菜单可用的 Visio `.vsdx`，思维导图默认选择 `.xmind`。两类都建议同时保留 POS 作为 ProcessOn 原生结构备份。无法从图标、浏览视图或菜单确认类型时，只写入“待人工确认”清单，不猜测格式、不自动下载。视觉复用优先 SVG/高清 PNG，审阅交付优先 PDF。
-4. 客户在可控制的浏览器中手动输入用户名、密码、短信码或验证码；登录完成后告诉 Agent 继续。技能不读取、记录或保存 Cookie、Local Storage、密码文件、凭据或浏览器配置。
+4. 第一次使用时，客户只在 runner 弹出的**独立 ProcessOn 窗口**手动输入用户名、密码、短信码或验证码；成功后窗口自动关闭，后续批量默认 headless。技能不读取、记录或输出 Cookie、Local Storage、密码文件或凭据。
 5. 可选复制 [路径配置模板](assets/config.example.yml) 到私有配置目录，固定临时下载、最终交付、审计清单和保留天数。
 
 示例：
@@ -51,7 +52,8 @@ dependencies:
 | 依赖 | 类型 | 安装 / 配置 | 缺失时怎么处理 |
 |---|---|---|---|
 | ProcessOn 账号与目标资源权限 | 强依赖 | 客户在 ProcessOn 官方页面登录，并确保自己可见目标空间 | 停止远端读取，列出缺失权限 |
-| 可复用登录态的浏览器控制能力 | 远端操作强依赖 | 使用当前 Agent 已安装的浏览器/Chrome 控制能力 | 改为客户手动导出后解析本地文件 |
+| Playwright + Chrome/Chromium | 远端操作强依赖 | `pip install playwright && python -m playwright install chromium` | 改为客户手动导出后解析本地文件 |
+| Agent 自带 browser/computer-use | 可选诊断能力 | 只允许客户明确同意的一次性排障；禁止作为正式批量主路线 | 直接使用宿主无关 runner，不影响功能 |
 | Python 3.10+ | 本地解析与归档依赖 | 系统 Python 即可 | 只完成浏览器侧盘点/导出 |
 | PyYAML | 私有配置可选依赖 | 使用 `config.yml` 时安装：`python3 -m pip install pyyaml` | 改用 CLI 参数、环境变量或安全默认值 |
 | `soia-dev-drawio-visio-diagrams` | VSDX 理解/升级可选依赖 | 从同一 SOIA skills 仓安装 | 仍可下载和归档 VSDX，但不做 draw.io 转换与元素级升级 |
@@ -66,6 +68,18 @@ SOIA_CWORK_PROCESSON_DIAGRAMS_CONFIG_FILE=<custom-config-path>
 
 配置优先级为 CLI 参数 → 进程环境变量 → 私有 `config.yml` → 跨平台安全默认值。配置键、默认路径和命令见 [下载归档工作流](references/download-workflow.md)。私有配置只保存路径和保留策略，不保存用户名、密码、Cookie、Token 或浏览器 profile。
 
+正式远端操作先执行宿主无关 runner；任何 Claude Code、Codex、Gemini CLI、OpenCode 或普通终端都可调用：
+
+```bash
+python3 scripts/processon_browser_runner.py login --url '<team-url>'
+python3 scripts/processon_browser_runner.py status --url '<team-url>'
+python3 scripts/processon_browser_runner.py snapshot --url '<folder-url>'
+python3 scripts/processon_browser_runner.py run \
+  --actions <actions.json> --download-dir <managed-temp-dir>
+```
+
+runner 的 action 文件只允许导航、有名称的语义点击/悬停、滚动、等待、受控 popup 和下载；不接受任意 CSS/无名称控件，并机械拒绝删除、编辑、移动、分享、发布等远端变更入口；不提供填表、执行脚本、读取 Cookie/Storage 或注入凭据。动作格式和标签生命周期见 [下载归档工作流](references/download-workflow.md)。
+
 ### 日志与完成回执
 
 每次运行至少报告：
@@ -76,6 +90,7 @@ SOIA_CWORK_PROCESSON_DIAGRAMS_CONFIG_FILE=<custom-config-path>
 - 归档时报告浏览器实际下载路径、最终交付路径、复制/移动模式、同名处理、manifest 路径和 SHA-256。
 - 清理时先报告 dry-run 候选数；实际清理只处理带技能标记的临时目录，并生成删除审计 manifest。
 - 安全验证、会员格式限制、权限不足或页面结构变化必须单列，不得伪装成成功。
+- 每批报告浏览器模式、专用 profile、`pages_seen_at_start`、`stale_pages_closed`、`scoped_pages_opened/closed` 和 `pages_closed_at_exit`；关闭数异常时本批不得宣称完成。
 - 全量盘点必须报告“父目录声明的子目录集合 − 实际访问集合”；差集非空时只能写“部分完成”。
 - 完成回执必须来自 `audit` 重放全部不可变批次后的机械结果；不能仅凭 checkpoint 统计或浏览器页面宣称完成。
 - 目录盘点和源文件归档必须分阶段报告：`inventory_completed_asset_archive_pending` 不是“知识库归档完成”。
@@ -87,6 +102,8 @@ SOIA_CWORK_PROCESSON_DIAGRAMS_CONFIG_FILE=<custom-config-path>
 ## 运行边界
 
 - 默认只读。浏览、搜索、截图和下载属于允许动作；编辑、重命名、复制、移动、删除、锁定、邀请协作、公开分享必须由客户在当前请求中明确授权。
+- 正式批量只能使用技能专用 profile；禁止附着客户默认 Chrome profile，禁止用 Codex/Claude 的 browser、computer-use 或扩展在客户主 Chrome 中循环开关标签。专用 runner 默认 headless；只有首次登录、真实可见验证码或客户明确要求观察时才使用 headed。
+- 专用 context 启动时只保留一个父页面；临时 popup 最多一个并必须在嵌套动作 `finally` 中关闭；成功、失败、超时、Ctrl-C 与 SIGTERM 都必须关闭全部专用页面和 context。软中断后先核对关闭回执再续跑。
 - 下载前确认目标文件、格式和交付位置。客户已经在当前请求中明确要求导出时，无需重复确认相同范围。
 - 只处理客户有权访问的文件。不要通过猜测 URL、内部接口、Cookie 或未公开端点扩大可见范围。
 - 优先使用 ProcessOn 官方 UI 和官方文档。普通账号没有公开的团队文件 REST API 时，不得把逆向接口包装成稳定 API。
@@ -99,6 +116,7 @@ SOIA_CWORK_PROCESSON_DIAGRAMS_CONFIG_FILE=<custom-config-path>
 
 - ProcessOn 图表、目录名、作者和导出文件均可能包含企业内部信息；盘点默认只在 stdout/客户指定报告中出现，不写入公共技能仓库。
 - 用户名、密码、短信码、Cookie、Token、Local Storage 和浏览器 profile 交给浏览器/提供商自身保存，本技能不读取、不复制、不记录。
+- 技能专用 profile 默认位于用户私有 config 根下；它是 ProcessOn/浏览器持有的本地登录态，不进入公共仓库、运行包或知识库。runner 拒绝默认 Chrome/Chromium profile 及非空无技能标记的目录。
 - 临时下载使用操作系统临时目录下的技能受管子目录；交付物放客户指定目录，审计 manifest 放用户 state 目录。保留期和路径解析见 [下载归档工作流](references/download-workflow.md)。
 - 浏览器长任务按系统/一级目录分批，默认在 `${XDG_STATE_HOME:-~/.local/state}/soia-cwork-processon-diagrams/runs/<run-id>/` 建立运行包；每批立即持久化原始批次和检查点。会话中断后从 `pending_paths` 续跑，不依赖易失内存保存唯一盘点结果。
 - 资产归档进度固定写入运行包的 `artifacts/download-progress.json`；状态脚本用独占锁保证单写入者，记录已完成、失败、阻断和待确认队列，并从同一计划指纹恢复。
@@ -114,6 +132,7 @@ SOIA_CWORK_PROCESSON_DIAGRAMS_CONFIG_FILE=<custom-config-path>
 4. 用户手动登录，Agent 不接收密码、不读 Cookie/Token/profile，也不通过 CDP 或扩展注入凭据。
 5. 图表类型无法被卡片、浏览视图或菜单证实时保留 `unknown`，进入人工确认队列。
 6. 目录审计通过只代表 `inventory` 阶段完成；下载、格式校验、SHA-256、manifest、draw.io 转换和预览属于独立的 `artifact_archive` 阶段。
+7. 宿主浏览器能力不是主执行器；批量任务必须从专用 runner 启动。每个 popup 和整个 context 都要有关闭回执，缺少回执视为中断待恢复。
 
 ## 工作流（严格按三个阶段）
 
@@ -121,8 +140,8 @@ SOIA_CWORK_PROCESSON_DIAGRAMS_CONFIG_FILE=<custom-config-path>
 
 #### 1.1 访问与初始化盘点（`inventory.init`）
 
-1. 先查找 ProcessOn 官方连接器、公开 API 或 CLI；没有满足当前任务的专用能力时，使用已安装的浏览器控制能力和客户已有登录态。首次登录由客户在当前浏览器手动完成；不读取输入值、Cookie、Token 或 profile，也不需要 Chrome 扩展。
-2. 打开客户 URL（未提供时从“我的文件/团队空间”进入），读取当前页面快照，确认目标空间可见。若登录或当前视口真实可见的安全验证阻断，停在页面等待客户接管；隐藏 iframe 不算弹窗。读取 [ProcessOn 能力与格式](references/processon-capabilities.md) 后再操作。
+1. 先查找 ProcessOn 官方连接器、公开 API 或 CLI；没有满足当前任务的专用能力时，使用 `processon_browser_runner.py` 和技能专用 profile。首次登录只在 runner 的独立窗口由客户手动完成；不读取输入值、Cookie、Token 或 profile，也不需要 Chrome 扩展。宿主 browser/computer-use 只能在客户明确授权后做一次性诊断，不能承担批量主流程。
+2. 用 runner `status`/`snapshot` 打开客户 URL（未提供时从“我的文件/团队空间”进入），确认目标空间可见。若登录或当前视口真实可见的安全验证阻断，用独立 headed 会话等待客户接管；隐藏 iframe 不算弹窗。读取 [ProcessOn 能力与格式](references/processon-capabilities.md) 后再操作。
 3. `init` 必须先创建一个新的运行包；用 BFS/DFS 从指定根递归到叶子。每访问 3—6 个目录，将**完整目录快照**落为不可变批次再 `record`；不要把唯一清单只放在浏览器会话。格式、恢复和审计见 [递归盘点中间状态](references/inventory-checkpoint.md)。
 4. 每层记录逻辑完整路径、子目录、图表标题、类型、作者、更新时间、可见缩略图/访问限制。文件夹单击进入；深层面包屑折叠时仍以逻辑路径为准。虚拟列表连续两次滚动无新增条目才停止。
 5. 运行 `audit` 重放批次。只有 `discovered_paths - visited_paths - blocked_paths = 0` 且 `blocked=0` 才得到可用的完整快照和 `receipt.md`；否则只能报告部分盘点。
@@ -183,12 +202,12 @@ python3 scripts/processon_archive_state.py next \
 
 `init` 在进度文件已存在时只接受相同计划 SHA-256，保留既有成功/失败/阻断证据并机械刷新计数；计划变更时 fail closed。`next` 默认跳过已完成、失败和阻断项，显式重试时才使用 `--include-failed` 或 `--include-blocked`。
 
-1. 根据最新页面快照定位目标的“下载/导出”，不依赖固定坐标或私有 CSS。ProcessOn 文件列表可能虚拟化；目标条目未进入当前视口时先滚动并重新读取快照，不能把定位超时写成文件不存在。按已确认类型选择：
+1. 先用 runner `snapshot` 取得当前目录可见文字和语义控件，再生成小批次 action JSON；根据快照定位目标的“下载/导出”，不依赖固定坐标或私有 CSS。ProcessOn 文件列表可能虚拟化；目标条目未进入当前视口时先用 `scroll` 并重新快照，不能把定位超时写成文件不存在。按已确认类型选择：
    - 流程图默认选当前账号菜单中的 `VISIO文件`/`.vsdx`；多画布优先 `导出全部画布 (.vsdx)`；
    - 思维导图默认选 `Xmind文件`/`.xmind`；
    - 无法确认类型的文件加入“待人工确认”清单，不自动打开下载菜单。
    默认格式不可用、会员/权限阻断或下载失败时回退 POS，并明确记录“原请求格式、实际格式、降级原因”，不得静默替换。列表页点击无文件时进入官方编辑器重试 XMind/POS/POSM；若这些原生格式均无文件、但 Markdown 能下载，只能把 Markdown 作为诊断证据并将 artifact 标为 `blocked`，不能把 Markdown 冒充 XMind/POS 完成。格式选择见 [ProcessOn 能力与格式](references/processon-capabilities.md)。
-2. 首次需要受管临时目录时运行 `paths --ensure`；用浏览器下载事件或下载列表确认真实文件落地，不凭 Toast 判断成功。ProcessOn 导出是异步任务：同一浏览器标签一次只能发起一个 artifact，必须等该文件真实落地、大小稳定并完成结构/语义校验后，才能切换选中项或发起下一份；固定 `sleep`、点击成功和短时下载事件超时都不能替代落盘信号。先 dry-run，再归档。受管临时目录可显式 `--move`；否则默认复制并保留浏览器原文件：
+2. 首次需要受管临时目录时运行 `paths --ensure`；由 runner `download` 动作捕获真实下载事件并保存到受管目录，不凭 Toast 判断成功。ProcessOn 导出是异步任务：一次只发起一个 artifact，必须等该文件真实落地、大小稳定并完成结构/语义校验后，才能切换选中项或发起下一份；固定 `sleep`、点击成功和短时下载事件超时都不能替代落盘信号。临时源页面必须在下载完成/失败后的 `finally` 中关闭。先 dry-run，再归档。受管临时目录可显式 `--move`；否则默认复制并保留浏览器原文件：
 
 ```bash
 python3 scripts/finalize_processon_download.py paths --ensure
@@ -284,6 +303,13 @@ python3 scripts/processon_archive_state.py audit \
 - `next` 给出下一批可执行 artifact；`record` 将实际文件、finalizer manifest、大小和 SHA-256 绑定到稳定 artifact_id；`mark` 单列失败和阻断。
 - `audit` 重放已完成证据并重新计算计数；进度文件原子写入、权限为 `0600`，未知类型只进入人工确认队列。
 
+`scripts/processon_browser_runner.py`：
+
+- 从任何 AI host/普通终端启动技能专用 Playwright profile，不依赖 Codex/Claude 浏览器工具，也不附着客户主 Chrome。
+- `login` 只负责独立窗口中的人工登录；`status`、`snapshot`、`run` 默认 headless。
+- action 合同只允许 ProcessOn HTTPS 导航、有名称的语义 click/hover、scroll、wait、受控 popup 和下载；拒绝任意 CSS、无名称控件和远端变更标签，没有填表、脚本执行、Cookie/Storage 或凭据接口。
+- 启动时关闭专用 profile 的陈旧多余页面；每个 popup 在 `finally` 中关闭，整次 context 在所有正常/异常退出路径关闭并输出计数回执。
+
 `scripts/diff_processon_inventory.py`：
 
 - 对两个完整 checkpoint 做 fail-closed 的本地快照差分，不访问 ProcessOn、不读取凭据，也不宣称事件/API 增量。
@@ -292,12 +318,13 @@ python3 scripts/processon_archive_state.py audit \
 
 ## 验证
 
-- 静态：`python3 -m py_compile scripts/inspect_processon_export.py scripts/finalize_processon_download.py scripts/processon_inventory_state.py scripts/build_processon_archive_plan.py scripts/processon_archive_state.py scripts/diff_processon_inventory.py`
-- 单测：`python3 -m unittest tests.test_processon_downloads tests.test_processon_inventory_state tests.test_processon_archive_plan tests.test_processon_archive_state tests.test_processon_inventory_delta -v`，覆盖配置优先级、安全默认路径、原子复制、同名改名、受管移动、保留期清理、目录与资产中间状态、计划漂移拒绝、失败/阻断续跑、诊断证据复制与篡改检测，以及完整快照的增量差分门禁。
+- 静态：`python3 -m py_compile scripts/inspect_processon_export.py scripts/finalize_processon_download.py scripts/processon_inventory_state.py scripts/build_processon_archive_plan.py scripts/processon_archive_state.py scripts/diff_processon_inventory.py scripts/processon_browser_runner.py`
+- 单测：`python3 -m unittest tests.test_processon_downloads tests.test_processon_inventory_state tests.test_processon_archive_plan tests.test_processon_archive_state tests.test_processon_inventory_delta tests.test_processon_browser_runner -v`，覆盖配置优先级、安全默认路径、原子复制、同名改名、受管移动、目录与资产中间状态、计划漂移拒绝、失败/阻断续跑、完整快照增量门禁，以及主 Chrome profile 拒绝、敏感 action 拒绝和正常/异常页面关闭。
 - POS：用一份流程图和一份思维导图 POS 运行 `--format json`，确认标题、category、节点文字和元素数。
 - 图片：用 PNG/JPEG 运行脚本，确认宽高与 SHA-256。
 - 归档：用真实导出文件依次运行 `finalize --dry-run` 和 `finalize`，核对交付文件 SHA-256 与 manifest；不要把 fixture 路径写入公共文档。
 - 远端：至少验证一次“打开团队空间 → 读取文件列表 → 右键看到浏览/下载”；若安全验证阻断导出，结论必须写成“远端读取已验证，完整导出待人工验证后继续”。
+- 非干扰浏览器：用临时专用 profile 跑 `status`/`snapshot` smoke；验证客户默认 Chrome 不在进程参数中、启动陈旧页被清理、异常 action 后 context 全关。真实账号 E2E 必须由客户在独立窗口先完成一次登录，不得复制主 Chrome profile。
 - 递归：用至少三级目录验证 discovered/visited 差集为 0；模拟会话中断后从持久化恢复点继续。
 - 计划：用真实 checkpoint 运行 `build` 和 `verify`；人为修改 checkpoint 或计划条目后，`verify` 必须失败；含 `unknown` 时计划必须标记待确认，允许已确认类型分阶段下载但不可宣称全量归档就绪。
 - 下载队列：对真实计划运行 `init` 和 `next`；记录一份真实归档文件后运行 `record` 与 `audit`，确认重启后不会重复领取、计数可重算、修改文件或计划后审计失败。
