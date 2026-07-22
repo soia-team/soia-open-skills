@@ -175,14 +175,14 @@ and repository audit before publishing a skill under it.
 | `soia-<domain>` | Org + registered domain prefix | `soia-pkm`, `soia-safe` |
 | `<action>` | Domain action: PKM stages such as `clip`/`transform`, or verbs such as `audit`/`track`/`maintain` | `clip`, `audit` |
 | `<object>` | What the skill operates on, or where it operates | `x`, `web`, `wechat`, `article`, `obsidian` |
-| `<qualifier>` | (Optional) Output type or platform that disambiguates siblings | `pdf`, `slides`, `visual`, `notebooklm` |
+| `<qualifier>` | (Optional) Output type or platform that disambiguates siblings | `pdf`, `ppt`, `visual`, `notebooklm` |
 
 How to pick `<object>` vs `<qualifier>`:
 
 - **Input/source** goes in `<object>`: `clip-x` (source is X), `clip-web` (source
   is web).
 - **Output type** goes in `<qualifier>` when there are multiple output-type
-  siblings: `transform-article-slides`, `transform-article-visual`.
+  siblings: `transform-article-ppt`, `transform-article-visual`.
 - **Platform/tool** goes in `<object>` or `<qualifier>` when the platform IS
   the defining trait: `transform-obsidian-pdf` (Obsidian is the knowledge base,
   PDF is the output), `transform-article-notebooklm` (NotebookLM is the
