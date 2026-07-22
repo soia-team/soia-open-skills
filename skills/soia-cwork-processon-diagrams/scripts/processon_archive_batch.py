@@ -19,7 +19,6 @@ import re
 import stat
 import subprocess
 import sys
-import tempfile
 import time
 import zipfile
 from collections import OrderedDict
@@ -39,6 +38,7 @@ from processon_browser_runner import (
     validate_processon_url,
     validate_profile_dir,
 )
+from finalize_processon_download import DownloadError, ensure_paths, load_settings
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -324,9 +324,17 @@ def safe_relative_parts(source_path: str) -> tuple[str, ...]:
 
 
 def output_folder(output_root: Path, entry: dict[str, Any]) -> Path:
-    parts = list(safe_relative_parts(str(entry["source_path"])))
-    if entry.get("collision_risk") not in {None, "", "none_detected"}:
-        parts[-1] = f"{parts[-1]}--{str(entry['artifact_id'])[:8]}"
+    parts = list(safe_relative_parts(str(entry["source_directory"])))
+    title = str(entry["title"])
+    title_component = provider_safe_filename_stem(title).strip()
+    if title_component in {"", ".", ".."}:
+        raise BatchError(f"unsafe archive title: {title!r}")
+    if (
+        title_component != title
+        or entry.get("collision_risk") not in {None, "", "none_detected"}
+    ):
+        title_component = f"{title_component}--{str(entry['artifact_id'])[:8]}"
+    parts.append(title_component)
     root = output_root.expanduser().resolve(strict=False)
     target = root.joinpath(*parts).resolve(strict=False)
     try:
@@ -391,9 +399,11 @@ def legacy_flat_download_review(progress: dict[str, Any]) -> dict[str, Any]:
     completed_count = len(progress.get("completed", []))
     return {
         "flat_downloads_completed_count": len(flat),
+        "revalidation_required_count": len(flat),
         "numbered_suffix_review_count": len(numbered),
-        "trusted_completed_count": max(completed_count - len(numbered), 0),
-        "claim_status": "revalidation_required" if numbered else "trusted",
+        "trusted_completed_count": max(completed_count - len(flat), 0),
+        "claim_status": "revalidation_required" if flat else "trusted",
+        "revalidation_items": flat,
         "numbered_suffix_items": numbered,
     }
 
@@ -1181,10 +1191,18 @@ def write_progress_mirror(
     legacy_review = legacy_flat_download_review(progress)
     legacy_revalidation_ids = {
         str(item.get("artifact_id", ""))
-        for item in legacy_review["numbered_suffix_items"]
+        for item in legacy_review["revalidation_items"]
+    }
+    explicit_revalidation = [
+        item for item in progress.get("revalidation_pending", []) if isinstance(item, dict)
+    ]
+    explicit_revalidation_ids = {
+        str(item.get("artifact_id", "")) for item in explicit_revalidation
     }
     recorded_remaining_known = int(counts.get("remaining_known", 0))
-    legacy_revalidation_count = int(legacy_review["numbered_suffix_review_count"])
+    legacy_revalidation_count = int(legacy_review["revalidation_required_count"])
+    explicit_revalidation_count = len(explicit_revalidation_ids)
+    revalidation_count = len(legacy_revalidation_ids | explicit_revalidation_ids)
     remaining_known = recorded_remaining_known + legacy_revalidation_count
     blocked = int(counts.get("blocked", 0))
     failed = int(counts.get("failed", 0))
@@ -1215,6 +1233,8 @@ def write_progress_mirror(
         f"  unknown_pending_confirmation: {unknown}",
         f"  completed: {int(legacy_review['trusted_completed_count'])}",
         f"  completed_recorded: {int(counts.get('completed', 0))}",
+        f"  revalidation_pending: {revalidation_count}",
+        f"  explicit_revalidation_pending: {explicit_revalidation_count}",
         f"  legacy_flat_revalidation_pending: {legacy_revalidation_count}",
         f"  failed: {failed}",
         f"  blocked: {blocked}",
@@ -1238,15 +1258,27 @@ def write_progress_mirror(
                 f"    metadata: {yaml_string(os.path.relpath(metadata, path.parent))}",
             ]
         )
-    lines.append("legacy_flat_revalidation_pending:")
-    for item in legacy_review["numbered_suffix_items"]:
+    lines.append("revalidation_pending:")
+    for item in explicit_revalidation:
+        prior = item.get("prior_completion", {})
+        lines.extend(
+            [
+                f"  - artifact_id: {yaml_string(item.get('artifact_id', ''))}",
+                f"    source_path: {yaml_string(item.get('source_path', ''))}",
+                f"    prior_download_source: {yaml_string(prior.get('download_source', ''))}",
+                f"    reason: {yaml_string(item.get('reason', ''))}",
+                '    state: "explicitly_reopened"',
+            ]
+        )
+    for item in legacy_review["revalidation_items"]:
         lines.extend(
             [
                 f"  - artifact_id: {yaml_string(item.get('artifact_id', ''))}",
                 f"    source_path: {yaml_string(item.get('source_path', ''))}",
                 f"    download_source: {yaml_string(item.get('download_source', ''))}",
                 f"    archive_destination: {yaml_string(item.get('archive_destination', ''))}",
-                '    reason: "个人 Downloads 平铺下载产生编号后缀，无法仅凭文件名唯一绑定来源；须按 artifact_id 隔离重下。"',
+                '    reason: "个人 Downloads 平铺下载无法证明来源与 artifact_id 唯一绑定；须先重开，再按 artifact_id 隔离重下。"',
+                '    state: "legacy_completed_pending_reopen"',
             ]
         )
     lines.append("blocked:")
@@ -1285,8 +1317,11 @@ def finalize_result(
         str(destination_dir),
         "--manifest-dir",
         str(args.manifest_dir),
+        "--temp-dir",
+        str(args.managed_temp_root),
         "--collision",
         "fail",
+        "--move",
     ]
     dry_run = run_json(base_command + ["--dry-run"])
     if dry_run.get("status") != "dry-run":
@@ -1518,14 +1553,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--progress", type=Path, required=True)
     parser.add_argument("--team-url", required=True)
-    parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--manifest-dir", type=Path, required=True)
+    parser.add_argument("--config", type=Path)
+    parser.add_argument("--output-root", type=Path)
+    parser.add_argument("--manifest-dir", type=Path)
     parser.add_argument("--source-links", type=Path)
     parser.add_argument("--progress-mirror", type=Path)
     parser.add_argument("--concurrency-proof", type=Path)
     parser.add_argument("--lock-file", type=Path)
     parser.add_argument("--receipt-dir", type=Path)
-    parser.add_argument("--download-dir", type=Path)
+    parser.add_argument(
+        "--download-dir",
+        type=Path,
+        help="Override the configured managed staging prefix; a run-id subdirectory is added.",
+    )
     parser.add_argument("--profile-dir", type=Path, default=default_profile_dir())
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--limit", type=int, default=12)
@@ -1546,20 +1586,31 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--timeout-ms must be within 250..300000")
     if not 0 <= args.settle_ms <= 30_000:
         parser.error("--settle-ms must be within 0..30000")
-    args.profile_dir = validate_profile_dir(args.profile_dir)
-    args.download_dir = (
-        args.download_dir
-        or Path(tempfile.gettempdir()) / "soia-cwork-processon-diagrams"
-    ).expanduser().resolve(strict=False)
-    args.receipt_dir = (
-        args.receipt_dir
-        or args.progress.expanduser().resolve(strict=False).parent / "batch-receipts"
-    )
-    args.lock_file = (
-        args.lock_file
-        or args.progress.expanduser().resolve(strict=False).parent / ".archive-orchestrator.lock"
-    )
     try:
+        args.profile_dir = validate_profile_dir(args.profile_dir)
+        settings = load_settings(
+            config=args.config,
+            temp_dir=args.download_dir,
+            output_dir=args.output_root,
+            manifest_dir=args.manifest_dir,
+        )
+        args.managed_temp_root = settings.temp_dir
+        args.output_root = settings.output_dir
+        args.manifest_dir = settings.manifest_dir
+        run_id = args.progress.expanduser().resolve(strict=False).parent.parent.name
+        if not run_id or run_id in {".", ".."} or "/" in run_id or "\\" in run_id:
+            raise BatchError("cannot derive a safe run id from --progress")
+        args.download_dir = args.managed_temp_root / run_id
+        args.receipt_dir = (
+            args.receipt_dir
+            or args.progress.expanduser().resolve(strict=False).parent / "batch-receipts"
+        )
+        args.lock_file = (
+            args.lock_file
+            or args.progress.expanduser().resolve(strict=False).parent / ".archive-orchestrator.lock"
+        )
+        if not args.dry_run:
+            ensure_paths(settings)
         with exclusive_lock(args.lock_file):
             payload = cmd_run(args)
         print(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -1569,7 +1620,7 @@ def main(argv: list[str] | None = None) -> int:
             "nothing_to_do",
             "collision_confirmation_required",
         } else 1
-    except (BatchError, BrowserRunnerError, OSError, ValueError) as exc:
+    except (BatchError, BrowserRunnerError, DownloadError, OSError, ValueError) as exc:
         payload = {
             "schema_version": 1,
             "status": "failed",
