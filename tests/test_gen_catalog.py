@@ -460,6 +460,26 @@ type: moc
         self.assertIn("| 📁 **10_孩子** |", output)
         self.assertIn("| 3 | 2 | 30B |", output)
 
+    def test_summary_collapses_exact_scan_double_listings(self) -> None:
+        # Same path AND same file_id appearing twice is a scan double-listing
+        # (e.g. --resume re-enqueues a directory, or a thread race relists it).
+        # The cloud has one entity; the summary must count it once. Distinct
+        # entities that merely share a path (different file_id) are still kept.
+        records = [
+            folder("10_孩子", "root"),
+            folder("10_孩子/10_课程", "course"),
+            folder("10_孩子/10_课程", "course"),  # exact duplicate scan row -> collapse
+            {"path": "10_孩子/10_课程/one.mp4", "name": "one.mp4", "id": "file-a", "dir": False, "size": 10},
+            {"path": "10_孩子/10_课程/one.mp4", "name": "one.mp4", "id": "file-a", "dir": False, "size": 10},  # dup
+            {"path": "10_孩子/10_课程/two.mp4", "name": "two.mp4", "id": "file-b", "dir": False, "size": 20},
+        ]
+
+        output = self.run_catalog(records)
+
+        # 2 目录 (root + course, NOT 3) / 2 文件 (one + two, NOT 3)
+        self.assertIn("全盘 **2 目录 / 2 文件 / 30B**", output)
+        self.assertIn("| 2 | 2 | 30B |", output)
+
     def test_custom_heading_pattern_and_section_icons_are_user_configurable(self) -> None:
         records = [
             folder("Library", "root"),
