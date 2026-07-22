@@ -1,9 +1,9 @@
 ---
 name: soia-cwork-processon-diagrams
 description: 通过宿主无关的专用浏览器 profile 和可恢复队列，递归盘点 ProcessOn 个人/团队空间到叶子文件；按授权对流程图默认导出 Visio VSDX、对思维导图默认导出 XMind，将未知类型列入待确认清单，并完成下载校验与归档；适用于“读取 ProcessOn 文件”“导出架构图”“盘点全部子目录”“批量下载但不要影响我的 Chrome”“从 POS/VSDX/XMind 提取结构”等请求。
-version: 1.10.2
+version: 1.10.3
 created_at: 2026-07-20 18:57:53
-updated_at: 2026-07-22 17:52:09
+updated_at: 2026-07-22 18:19:07
 created_by: gpt-5.6-sol
 updated_by: gpt-5.6-sol
 dependencies:
@@ -213,7 +213,7 @@ python3 scripts/processon_archive_state.py next \
 `init` 在进度文件已存在时只接受相同计划 SHA-256，保留既有成功/失败/阻断证据并机械刷新计数；计划变更时 fail closed。`next` 默认跳过已完成、失败和阻断项，显式重试时才使用 `--include-failed` 或 `--include-blocked`。
 
 1. 先用 runner `snapshot` 取得当前目录可见文字和语义控件，再生成小批次 action JSON；根据快照定位目标的“下载/导出”，不依赖固定坐标或私有 CSS。ProcessOn 文件列表可能虚拟化；目标条目未进入当前视口时先用 `scroll` 并重新快照，不能把定位超时写成文件不存在。按已确认类型选择：
-   - 流程图默认选当前账号菜单中的 `VISIO文件`/`.vsdx`；多画布优先 `导出全部画布 (.vsdx)`；
+   - 流程图默认导出 `.vsdx`；runner 先选 `导出全部画布 (.vsdx)` 保留全部画布，该项不可见时再兼容 `VISIO文件` / `VISIO文件 beta`；
    - 思维导图默认选 `Xmind文件`/`.xmind`；
    - 无法确认类型的文件加入“待人工确认”清单，不自动打开下载菜单。
    默认格式不可用、会员/权限阻断或下载失败时回退 POS，并明确记录“原请求格式、实际格式、降级原因”，不得静默替换。列表页点击无文件时进入官方编辑器重试 XMind/POS/POSM；若这些原生格式均无文件、但 Markdown 能下载，只能把 Markdown 作为诊断证据并将 artifact 标为 `blocked`，不能把 Markdown 冒充 XMind/POS 完成。格式选择见 [ProcessOn 能力与格式](references/processon-capabilities.md)。
@@ -338,6 +338,7 @@ python3 scripts/processon_archive_state.py audit \
 - 浏览器下载可并行；finalize、metadata、source-links、record、进度镜像和 audit 在全局 orchestrator lock 内单写入。
 - 每份 artifact 使用 `<managed-root>/<run-id>/<artifact_id>/` 独立 staging；源标题含路径分隔符时只转义标题组件并附 artifact_id，不能把标题误拆成子目录。
 - VSDX 读取页面文字并匹配标题特征，XMind 核对根标题；建议文件名正确但文件内语义不匹配时保持 pending，不写进度。
+- VSDX 菜单使用有界的精确标签候选，优先全画布导出并兼容单画布旧标签；实际命中的菜单标签写入 artifact metadata 与批次回执。
 - 每批生成不可变 JSON receipt，并对 worker 页、popup 与 context 的关闭数做机械对账；历史进度里直接来自 `~/Downloads` 的所有平铺文件都会进入复核清单，不能因未带 `(n)` 或旧状态写成 completed 就省略来源复核。
 
 `scripts/diff_processon_inventory.py`：

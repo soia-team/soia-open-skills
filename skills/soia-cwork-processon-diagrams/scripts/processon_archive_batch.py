@@ -69,6 +69,11 @@ SENSITIVE_TEXT_PATTERNS = (
         re.compile(r"\b(?:password|passwd|pwd)\s*[:=]\s*[^\s,;]+", re.IGNORECASE),
     ),
 )
+VSDX_DOWNLOAD_MENU_CANDIDATES = (
+    "导出全部画布 (.vsdx)",
+    "VISIO文件",
+    "VISIO文件 beta",
+)
 
 
 class BatchError(RuntimeError):
@@ -582,6 +587,49 @@ def safe_download_path(download_dir: Path, artifact_id: str, suggested_filename:
     return destination
 
 
+def download_menu_candidates(entry: dict[str, Any]) -> list[str]:
+    """Return ordered, exact ProcessOn menu labels for the requested format."""
+
+    primary_format = str(entry.get("primary_format") or "").strip().lower()
+    primary_menu = str(entry.get("primary_menu") or "").strip()
+    raw_candidates: list[str]
+    if primary_format == "vsdx":
+        raw_candidates = [*VSDX_DOWNLOAD_MENU_CANDIDATES, primary_menu]
+    else:
+        raw_candidates = [primary_menu]
+    candidates: list[str] = []
+    for label in raw_candidates:
+        if label and label not in candidates:
+            candidates.append(label)
+    if not candidates:
+        raise BatchError(
+            f"archive entry has no download menu for format {primary_format or '<missing>'}"
+        )
+    return candidates
+
+
+async def find_download_menu(
+    page: Any, entry: dict[str, Any], timeout_ms: int
+) -> tuple[str, Any]:
+    """Find the first visible exact menu label without serial full-timeout waits."""
+
+    candidates = download_menu_candidates(entry)
+    deadline = time.monotonic() + timeout_ms / 1000
+    while time.monotonic() < deadline:
+        for label in candidates:
+            locator = page.get_by_text(label, exact=True).filter(visible=True).nth(0)
+            try:
+                if await locator.count() and await locator.is_visible():
+                    return label, locator
+            except Exception:
+                continue
+        remaining_ms = max(1, int((deadline - time.monotonic()) * 1000))
+        await page.wait_for_timeout(min(100, remaining_ms))
+    raise BatchError(
+        "no visible ProcessOn download menu matched: " + ", ".join(candidates)
+    )
+
+
 async def download_one(
     page: Any,
     entry: dict[str, Any],
@@ -634,9 +682,8 @@ async def download_one(
         await trigger.click(timeout=timeout_ms)
         download_label = page.get_by_text("下载", exact=False).filter(visible=True).nth(0)
         await download_label.hover(timeout=timeout_ms)
-        menu_label = str(entry["primary_menu"])
-        menu = page.get_by_text(menu_label, exact=True).filter(visible=True).nth(0)
-        await menu.wait_for(state="visible", timeout=timeout_ms)
+        menu_label, menu = await find_download_menu(page, entry, timeout_ms)
+        result["download_menu"] = menu_label
         async with page.expect_download(timeout=max(timeout_ms, 60_000)) as download_info:
             await menu.click(timeout=timeout_ms)
         download = await download_info.value
@@ -660,6 +707,7 @@ async def download_one(
             "path": str(destination),
             "bytes": size,
             "suggested_filename": suggested,
+            "download_menu": menu_label,
         }
         receipt.downloaded_files.append(item)
         result["download"] = item
@@ -1076,6 +1124,7 @@ def write_metadata(
         f"archived_at: {yaml_string(now)}",
         f"requested_format: {yaml_string(entry['primary_format'])}",
         f"actual_format: {yaml_string(entry['primary_format'])}",
+        f"download_menu: {yaml_string(browser_result.get('download_menu', ''))}",
         "fallback_used: false",
         f"file: {yaml_string(Path(finalized['destination']).name)}",
         f"bytes: {int(inspection['bytes'])}",
@@ -1431,6 +1480,7 @@ def finalize_result(
         "artifact_id": entry["artifact_id"],
         "status": "completed",
         "source_url": browser_result["source_url"],
+        "download_menu": browser_result.get("download_menu", ""),
         "download": str(source),
         "destination": str(destination),
         "metadata": str(metadata_path),

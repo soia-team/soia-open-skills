@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import importlib.util
 import json
 import os
@@ -20,6 +21,35 @@ MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
 sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
+
+
+class MenuLocator:
+    def __init__(self, visible):
+        self.visible = visible
+
+    def filter(self, **_kwargs):
+        return self
+
+    def nth(self, _index):
+        return self
+
+    async def count(self):
+        return 1 if self.visible else 0
+
+    async def is_visible(self):
+        return self.visible
+
+
+class MenuPage:
+    def __init__(self, visible_labels):
+        self.visible_labels = set(visible_labels)
+
+    def get_by_text(self, label, *, exact):
+        assert exact is True
+        return MenuLocator(label in self.visible_labels)
+
+    async def wait_for_timeout(self, _milliseconds):
+        return None
 
 
 class ProcessOnArchiveBatchTests(unittest.TestCase):
@@ -45,6 +75,26 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
         self.assertEqual([item["artifact_id"] for item in serial], ["safe"])
         deferred = MODULE.deferred_collision_entries(plan, progress)
         self.assertEqual([item["artifact_id"] for item in deferred], ["collision"])
+
+    def test_vsdx_download_menu_prefers_all_canvases(self):
+        label, _locator = asyncio.run(
+            MODULE.find_download_menu(
+                MenuPage({"VISIO文件", "导出全部画布 (.vsdx)"}),
+                self.entry("multi-canvas"),
+                timeout_ms=100,
+            )
+        )
+        self.assertEqual(label, "导出全部画布 (.vsdx)")
+
+    def test_vsdx_download_menu_falls_back_to_legacy_plan_label(self):
+        label, _locator = asyncio.run(
+            MODULE.find_download_menu(
+                MenuPage({"VISIO文件"}),
+                self.entry("single-canvas"),
+                timeout_ms=100,
+            )
+        )
+        self.assertEqual(label, "VISIO文件")
 
     def test_vsdx_semantic_title_check(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -476,6 +526,7 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
                     "download": {"path": str(source)},
                     "source_url": "https://www.processon.com/diagraming/remote-id",
                     "remote_id": "remote-id",
+                    "download_menu": "导出全部画布 (.vsdx)",
                 },
                 entry,
                 args=args,
@@ -485,6 +536,10 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
             self.assertTrue(destination.is_file())
             self.assertEqual(destination.stat().st_ino, source_inode)
             self.assertTrue(Path(result["metadata"]).is_file())
+            self.assertIn(
+                'download_menu: "导出全部画布 (.vsdx)"',
+                Path(result["metadata"]).read_text(encoding="utf-8"),
+            )
             manifest = json.loads(Path(result["manifest"]).read_text(encoding="utf-8"))
             self.assertEqual(manifest["operation"], "move")
             self.assertEqual(manifest["transfer_mode"], "hardlink_then_unlink")
