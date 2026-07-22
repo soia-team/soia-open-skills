@@ -169,6 +169,16 @@ def openpyxl_available() -> bool:
     return importlib.util.find_spec("openpyxl") is not None
 
 
+def artifact_tool_looks_valid(package_dir: Path) -> bool:
+    """Lightweight validity check beyond "the directory exists": a real installed npm
+    package has a package.json. This won't catch every way a provisioning could be
+    broken (that only a real Node import would prove), but it stops 'auto' from
+    committing to a stale/empty directory and then hard-failing instead of falling
+    back to openpyxl.
+    """
+    return package_dir.is_dir() and (package_dir / "package.json").is_file()
+
+
 def resolve_renderer(args: argparse.Namespace) -> str:
     """Pick the Excel author backend. artifact-tool is an optional, platform-specific
     fast path (richer styling, built-in formula-error scan + screenshot QA); openpyxl
@@ -178,7 +188,7 @@ def resolve_renderer(args: argparse.Namespace) -> str:
     node_path = resolve_node(args.node)
     artifact_runtime = Path(args.artifact_runtime).expanduser().resolve() if args.artifact_runtime else None
     artifact_package = (artifact_runtime / "node_modules" / "@oai" / "artifact-tool") if artifact_runtime else None
-    artifact_ok = bool(node_path and artifact_runtime and artifact_package and artifact_package.exists())
+    artifact_ok = bool(node_path and artifact_package and artifact_tool_looks_valid(artifact_package))
 
     if args.renderer == "artifact-tool":
         if not artifact_runtime:
@@ -189,8 +199,8 @@ def resolve_renderer(args: argparse.Namespace) -> str:
             )
         if not node_path:
             raise SystemExit(f"Node.js 不可用：{args.node}")
-        if not artifact_package.exists():
-            raise SystemExit(f"artifact runtime 中未找到 @oai/artifact-tool：{artifact_package}")
+        if not artifact_tool_looks_valid(artifact_package):
+            raise SystemExit(f"artifact runtime 中未找到有效的 @oai/artifact-tool（缺少 package.json）：{artifact_package}")
         args.node = node_path
         args.artifact_runtime = artifact_runtime
         return "artifact-tool"

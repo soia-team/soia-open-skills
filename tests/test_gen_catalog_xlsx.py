@@ -150,7 +150,9 @@ for output in outputs:
                 encoding="utf-8",
             )
             runtime = root / "runtime"
-            (runtime / "node_modules" / "@oai" / "artifact-tool").mkdir(parents=True)
+            artifact_tool_dir = runtime / "node_modules" / "@oai" / "artifact-tool"
+            artifact_tool_dir.mkdir(parents=True)
+            (artifact_tool_dir / "package.json").write_text('{"name": "@oai/artifact-tool"}', encoding="utf-8")
             node = self.fake_node(root)
             home = root / "home"
             output_dir = home / "Downloads" / "soia-pkm-alipan-curator"
@@ -192,7 +194,9 @@ for output in outputs:
                 encoding="utf-8",
             )
             runtime = root / "runtime"
-            (runtime / "node_modules" / "@oai" / "artifact-tool").mkdir(parents=True)
+            artifact_tool_dir = runtime / "node_modules" / "@oai" / "artifact-tool"
+            artifact_tool_dir.mkdir(parents=True)
+            (artifact_tool_dir / "package.json").write_text('{"name": "@oai/artifact-tool"}', encoding="utf-8")
             node = self.fake_node(root)
             output_dir = root / "configured-output"
             env = {
@@ -474,7 +478,9 @@ class RendererSelectionTests(unittest.TestCase):
     @staticmethod
     def make_artifact_runtime(root: Path) -> Path:
         runtime = root / "runtime"
-        (runtime / "node_modules" / "@oai" / "artifact-tool").mkdir(parents=True)
+        artifact_tool_dir = runtime / "node_modules" / "@oai" / "artifact-tool"
+        artifact_tool_dir.mkdir(parents=True)
+        (artifact_tool_dir / "package.json").write_text('{"name": "@oai/artifact-tool"}', encoding="utf-8")
         return runtime
 
     def test_auto_prefers_artifact_tool_when_fully_available(self) -> None:
@@ -500,6 +506,17 @@ class RendererSelectionTests(unittest.TestCase):
         with mock.patch.object(gen_catalog_xlsx, "openpyxl_available", return_value=False):
             with self.assertRaisesRegex(SystemExit, "openpyxl"):
                 resolve_renderer(args)
+
+    def test_auto_falls_back_to_openpyxl_when_artifact_tool_dir_exists_but_is_stale(self) -> None:
+        """A directory named node_modules/@oai/artifact-tool existing is not proof the
+        package actually works -- a stale/partial provisioning must not make 'auto'
+        commit to a backend that will then hard-fail instead of falling back."""
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = Path(temporary) / "runtime"
+            (runtime / "node_modules" / "@oai" / "artifact-tool").mkdir(parents=True)  # no package.json
+            args = argparse.Namespace(renderer="auto", artifact_runtime=runtime, node="python3")
+            with mock.patch.object(gen_catalog_xlsx, "openpyxl_available", return_value=True):
+                self.assertEqual(resolve_renderer(args), "openpyxl")
 
     def test_explicit_artifact_tool_requires_runtime(self) -> None:
         args = argparse.Namespace(renderer="artifact-tool", artifact_runtime=None, node="python3")
@@ -600,6 +617,85 @@ class OpenpyxlFallbackIntegrationTests(unittest.TestCase):
             # HYPERLINK formula string, not just a bare url — must stay clickable.
             link_cell = files_sheet.cell(row=5, column=header_row["点击直达云盘"])
             self.assertTrue(str(link_cell.value).startswith("=IF("))
+
+    def test_untrusted_filenames_are_never_written_as_live_formulas(self) -> None:
+        """Alipan file/folder names are attacker-controlled (any uploader can name a
+        file '=cmd|...'). openpyxl auto-promotes a bare string starting with '=' into
+        a live formula cell (data_type 'f') unless explicitly forced back to 's' --
+        this is a real, previously-unguarded formula-injection hole found via
+        adversarial review and reproduced end-to-end against build_partition_workbook."""
+        from openpyxl import load_workbook
+        from catalog_xlsx.build_workbooks_fallback import build_partition_workbook
+
+        payload = '=cmd|"/c calc"!A0'
+        partition_cache = {
+            "partition": "10_孩子",
+            "sourceName": "10_孩子.md",
+            "files": [
+                {
+                    "partition": "10_孩子", "categories": ["10_英语"], "type": "视频", "ext": "mp4",
+                    "name": f"{payload}.mp4", "sizeText": "1MB", "sizeBytes": 1048576,
+                    "folder": "10_孩子/10_英语", "fullPath": f"10_孩子/10_英语/{payload}.mp4",
+                    "folderUrl": "https://example.test/10_孩子", "source": "10_孩子.md",
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            workbook, _ = build_partition_workbook(partition_cache, "2026-07-22 00:00")
+            output = Path(temporary) / "partition.xlsx"
+            workbook.save(output)
+            reloaded = load_workbook(output)
+            files_sheet = reloaded["01_文件明细"]
+            header_row = {cell.value: cell.column for cell in files_sheet[4]}
+            name_cell = files_sheet.cell(row=5, column=header_row["文件名"])
+            self.assertNotEqual(name_cell.data_type, "f", "filename was silently promoted to a live formula")
+            self.assertEqual(name_cell.value, f"{payload}.mp4")
+
+    def test_entry_sheet_survives_and_blanks_link_for_partition_without_search_file(self) -> None:
+        """Real-world shape: 80_待探索资源 appears in the catalog's partition table but
+        has no matching _全文检索/*.md (it's currently empty), so it has no entry in
+        plan['partitions']. Must not crash and must not emit a dead HYPERLINK formula."""
+        from catalog_xlsx.build_workbooks_fallback import build_master_workbook
+
+        catalog = {
+            "sourceName": "00_馆藏总览.md", "totalDirs": 4, "totalFiles": 1, "totalSize": "1MB",
+            "partitions": [
+                {"partition": "10_孩子", "url": "https://example.test/10", "dirs": 3, "files": 1, "volume": "1MB"},
+                {"partition": "80_待探索资源", "url": "https://example.test/80", "dirs": 1, "files": 0, "volume": "0B"},
+            ],
+            "headingLinks": [],
+        }
+        aggregate = {
+            "catalog": catalog, "indexedFiles": 1, "indexedBytes": 1048576,
+            "directories": [], "typeStats": [], "extensionStats": [],
+            "partitionStats": [
+                {"partition": "10_孩子", "url": "https://example.test/10", "dirs": 3, "files": 1, "volume": "1MB", "indexedFiles": 1, "indexedBytes": 1048576},
+                {"partition": "80_待探索资源", "url": "https://example.test/80", "dirs": 1, "files": 0, "volume": "0B", "indexedFiles": 0, "indexedBytes": 0},
+            ],
+        }
+        # 80_待探索资源 has no entry here -- mirrors prepare_incremental() when there is
+        # no corresponding _全文检索/80_待探索资源.md on disk.
+        plan = {
+            "outputPath": "/tmp/does-not-matter.xlsx",
+            "partitions": [
+                {"partition": "10_孩子", "output": "/tmp/does-not-matter-分区明细/10_孩子.xlsx", "source": "/tmp/search/10_孩子.md"}
+            ],
+            "releaseMetadata": None,
+        }
+        workbook, _ = build_master_workbook(aggregate, plan, "2026-07-22 00:00")
+        entry_sheet = workbook["02_明细入口"]
+        # 80_待探索资源 is the 2nd partition -> row 6.
+        self.assertIn(entry_sheet["K6"].value, (None, ""))
+        link_formula = entry_sheet["L6"].value
+        self.assertIn('IF(K6=""', link_formula)
+
+    def test_mjs_friendly_local_path_guards_against_missing_detail_path(self) -> None:
+        style = (SCRIPTS / "catalog_xlsx" / "workbook_style.mjs").read_text(encoding="utf-8")
+        self.assertIn("if (!detailPath) return", style)
+
+    def test_mjs_entry_sheet_open_detail_link_is_guarded(self) -> None:
+        builder = (SCRIPTS / "catalog_xlsx" / "build_workbooks.mjs").read_text(encoding="utf-8")
+        self.assertIn('IF(K${row}=""', builder)
 
     def test_openpyxl_renderer_second_run_is_unchanged(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

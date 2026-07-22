@@ -123,9 +123,6 @@ def set_column_widths(sheet: Worksheet, widths: dict[str, float]) -> None:
 
 
 def add_table(sheet: Worksheet, cell_range: str, name: str) -> None:
-    _, top, _, bottom = _range_bounds(cell_range)
-    if bottom <= top:
-        return
     table = Table(displayName=name, ref=cell_range)
     table.tableStyleInfo = TableStyleInfo(
         name="TableStyleMedium2", showRowStripes=True, showFirstColumn=False, showLastColumn=False
@@ -150,13 +147,26 @@ def release_metadata_rows(release_metadata: dict[str, str]) -> list[list[str]]:
     ]
 
 
+_TYPE_ORDER = list(TYPE_NOTES)
+
+
+def _type_sort_key(type_label: str) -> tuple[int, str]:
+    # Canonical TYPE_RULES order, not locale collation (Python's plain sorted() and
+    # JS's localeCompare("zh-CN") don't agree on Chinese ordering; both renderers use
+    # this same fixed list so the two backends produce identical row order).
+    try:
+        return (_TYPE_ORDER.index(type_label), type_label)
+    except ValueError:
+        return (len(_TYPE_ORDER), type_label)
+
+
 def type_stats_from_files(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
     stats: dict[str, dict[str, Any]] = {}
     for row in files:
         entry = stats.setdefault(row["type"], {"type": row["type"], "count": 0, "bytes": 0})
         entry["count"] += 1
         entry["bytes"] += row["sizeBytes"]
-    return sorted(stats.values(), key=lambda item: item["type"])
+    return sorted(stats.values(), key=lambda item: _type_sort_key(item["type"]))
 
 
 def extension_stats_from_files(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -170,10 +180,22 @@ def extension_stats_from_files(files: list[dict[str, Any]]) -> list[dict[str, An
     return sorted(stats.values(), key=lambda item: (-item["count"], item["ext"]))
 
 
+# openpyxl auto-promotes any string cell value starting with "=" into a live formula
+# (data_type "f"). Alipan file/folder names are attacker-controlled (anyone who can
+# upload a file can name it "=cmd|'/c calc'!A0"), so every raw data cell must be forced
+# back to a literal string after assignment -- otherwise the name silently becomes an
+# executable formula the moment the workbook is opened in Excel/WPS. Also guards +/-/@,
+# the other classic CSV/formula-injection trigger characters, for defense in depth.
+_FORMULA_TRIGGER_PREFIXES = ("=", "+", "-", "@")
+
+
 def _write_row(sheet: Worksheet, row: int, start_col0: int, values: list[Any]) -> None:
     for offset, value in enumerate(values):
         if value is not None:
-            sheet.cell(row=row, column=start_col0 + 1 + offset).value = value
+            cell = sheet.cell(row=row, column=start_col0 + 1 + offset)
+            cell.value = value
+            if isinstance(value, str) and value.startswith(_FORMULA_TRIGGER_PREFIXES):
+                cell.data_type = "s"
 
 
 def _number_format(sheet: Worksheet, cell_range: str, fmt: str) -> None:
@@ -278,12 +300,13 @@ def build_master_workbook(aggregate: dict[str, Any], plan: dict[str, Any], gener
     usage.cell(row=15, column=1).value = "口径与限制"
     usage.cell(row=15, column=1).fill = _fill(COLORS["teal"])
     usage.cell(row=15, column=1).font = Font(bold=True, color=COLORS["white"])
+    coverage_pct = (indexed_files / catalog["totalFiles"] * 100) if catalog["totalFiles"] else 0.0
     note_band(
         usage,
         "A16:J17",
         (
             f"馆藏总览口径：{catalog['totalDirs']:,} 个目录 / {catalog['totalFiles']:,} 个文件 / {catalog['totalSize']}。"
-            f"全文检索 Markdown 展开 {indexed_files:,} 个文件，覆盖率 {(indexed_files / catalog['totalFiles'] * 100):.1f}%。"
+            f"全文检索 Markdown 展开 {indexed_files:,} 个文件，覆盖率 {coverage_pct:.1f}%。"
             "未展开差额主要来自采用聚合索引的分区。"
         ),
         True,
@@ -410,7 +433,9 @@ def build_master_workbook(aggregate: dict[str, Any], plan: dict[str, Any], gener
         entry_sheet.cell(row=excel_row, column=5).value = f"=IFERROR(D{excel_row}/C{excel_row},0)"
         entry_sheet.cell(row=excel_row, column=7).value = f"=F{excel_row}/'00_使用说明'!$B$23"
         entry_sheet.cell(row=excel_row, column=10).value = f'=HYPERLINK(I{excel_row},"🔗 打开云盘")'
-        entry_sheet.cell(row=excel_row, column=12).value = f'=HYPERLINK(K{excel_row},"📄 打开明细")'
+        entry_sheet.cell(row=excel_row, column=12).value = (
+            f'=IF(K{excel_row}="","",HYPERLINK(K{excel_row},"📄 打开明细"))'
+        )
     style_header(entry_sheet, f"A4:{last_entry_col}4")
     add_table(entry_sheet, f"A4:{last_entry_col}{partition_end}", "DetailEntryTable")
     entry_sheet.freeze_panes = "A5"
