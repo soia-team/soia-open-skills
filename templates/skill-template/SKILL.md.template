@@ -55,7 +55,7 @@ updated_by: <model-name>
 配置约定：
 
 ```text
-~/.config/soia-skills/<repo>/<skill-type>/<skill-name>/config.yml
+~/.config/soia-skills/<skill-name>/config.yml
 SOIA_<TYPE>_<SHORT>_CONFIG_FILE=<custom-config-path>
 ```
 

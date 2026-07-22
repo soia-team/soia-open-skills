@@ -1,5 +1,7 @@
 # Private Data and Intermediate Storage Spec
 
+`storage-schema: v2`（自 2026-07-22 起）
+
 This repository publishes public, advanced skills across domains (PKM, dev
 tooling, collaboration, design). Skills here read and write customer data on
 local disk and cloud providers, but must not turn the public repository, a
@@ -27,9 +29,9 @@ implementation.
 
 | Purpose | Linux / Unix default | macOS default | Windows default |
 |---|---|---|---|
-| Config | `${XDG_CONFIG_HOME:-~/.config}/soia-skills/soia-open-skills/...` | same unless the host integration deliberately uses the native app-support directory | `%APPDATA%\soia-skills\soia-open-skills\...` |
-| State | `${XDG_STATE_HOME:-~/.local/state}/soia-skills/soia-open-skills/...` | same | `%LOCALAPPDATA%\soia-skills\soia-open-skills\state\...` |
-| Cache | `${XDG_CACHE_HOME:-~/.cache}/soia-skills/soia-open-skills/...` | `~/Library/Caches/soia-skills/soia-open-skills/...` | `%LOCALAPPDATA%\soia-skills\soia-open-skills\Cache\...` |
+| Config | `${XDG_CONFIG_HOME:-~/.config}/soia-skills/<skill-name>/` | same unless the host integration deliberately uses the native app-support directory | `%APPDATA%\soia-skills\<skill-name>\` |
+| State | `${XDG_STATE_HOME:-~/.local/state}/soia-skills/<skill-name>/` | same | `%LOCALAPPDATA%\soia-skills\state\<skill-name>\` |
+| Cache | `${XDG_CACHE_HOME:-~/.cache}/soia-skills/<skill-name>/` | `~/Library/Caches/soia-skills/<skill-name>/` | `%LOCALAPPDATA%\soia-skills\Cache\<skill-name>\` |
 | Temporary | OS temporary directory under a per-run subdirectory | OS temporary directory under a per-run subdirectory | OS temporary directory under a per-run subdirectory |
 
 The following environment variables may override the SOIA roots:
@@ -41,6 +43,16 @@ SOIA_SKILLS_CACHE_HOME
 ```
 
 These variables name directories, not secret values.
+
+### v1 兼容回退
+
+读取时按 v2 → v1 的顺序查找。v1 路径形如
+`soia-skills/<repo>/<domain>/<skill-name>/`；历史仓名依次尝试
+`soia-open-skills`、`soia-open-env-skills`，`domain` 从技能名第二段推导，
+并兼容历史上的 `cwork` 与 `soia-dev` 域段写法。v1 仅用于只读回退；
+所有新写入始终落到 v2 路径。命中 v1 时，解析器会向 stderr 输出一次包含
+建议 `mv` 命令的迁移提示，但不会自动移动数据。P8 收口时应再次提醒用户迁移，
+并在确认清理窗口后移除 v1 回退。
 
 ## Credentials and private information
 
