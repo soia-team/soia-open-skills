@@ -31,6 +31,19 @@ state:
   state_file: 90_同步元数据/sync-state.json
   preserve_deleted_files_when_prune_false: true
 
+subtree_exclusions:
+  default: disabled
+  opt_in_config: sync.exclude_subtrees.enabled
+  roots: "stable node_token preferred; exact_title supported"
+  behavior:
+    - "discover the configured root in its parent listing but do not enumerate children"
+    - "exclude the root and every known descendant from content reads, retries, resource downloads, active manifest and sidebar"
+    - "record known historical members under manifest.excluded_nodes, never as remotely deleted"
+  existing_generated_content:
+    policy: "preserve unless the user explicitly runs --rebuild-tree"
+    validation: "report excluded Markdown, directories, complete exports, and downloaded assets that remain locally"
+  local_manual_dir: never_touched
+
 sheets:
   default: metadata_stub
   opt_in_config: sync.sheets.enabled
@@ -63,6 +76,7 @@ validation:
     - generated_files_exist_for_manifest_records
     - frontmatter_node_token_and_status_match_manifest
     - successful_documents_contain_no_error_placeholder
+    - excluded_subtrees_are_absent_from_active_manifest_sidebar_and_generated_tree
     - generated_sidebar_covers_manifest_nodes
     - unresolved_assets_are_reported_when_local_assets_are_required
   failed_statuses:
