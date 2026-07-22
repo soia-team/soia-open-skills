@@ -21,7 +21,7 @@ npx skills add soia-team/soia-open-skills
 
 跨 agent 通用——Claude Code、Cursor、Codex、Antigravity、Gemini、Kimi 都能装。
 
-[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单) · [CWork · 企业协作](#-cwork--企业协作) · [高频技能速览](#高频技能速览) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
+[闭环框架](#pkm-闭环一篇内容的一生) · [Skills 清单](#skills-清单) · [CWork · 企业协作](#-cwork--企业协作) · [高频技能速览](#高频技能速览) · [PR 协作闭环](#-pr-协作闭环审查--修复--合并) · [安装](#安装) · [Telegram 同步](#telegram-我的收藏同步clip-x) · [设计哲学](#设计哲学)
 
 </div>
 
@@ -333,6 +333,46 @@ python3 gen_genre_library_md.py --vault <vault路径> --base <书库相对路径
 ```
 
 **重要边界**：应用权限通过不等于 bot 自动获得所有资源；文档所有者或知识库管理员可能还要把应用加入协作者或授权可见范围。权限错误应优先按 CLI 返回的 `missing_scopes` 和 `console_url` 补申请，不要扩大到写权限。
+
+---
+
+## 🔀 PR 协作闭环（审查 → 修复 → 合并）
+
+团队里"有人提 PR、有人审、审完让作者改、改完再合"这条链路，由三个开发技能配套支撑，**全程 AI 不替任何人做"合并"这个终局决定**——合不合始终是审查者一条独立消息里的显式指令。
+
+### 一句话闭环
+
+```
+审查者说"审核这个 PR"
+  → AI 多视角 + 对抗式复核出分档建议（决定权在审查者）
+  → 审查者说"发到 PR 上" → AI 发成 PR 评审意见
+  → 作者贴评审 URL 说"帮我修复"
+  → AI 拉意见 + 逐条修 + push + 请求重审
+  → 审查者再审 → 审查者说"合并" → AI 合并
+```
+
+### 三个角色怎么用
+
+| 角色 | 说什么 | 背后技能 | 产出 |
+|---|---|---|---|
+| **审查者** 审 PR | 「审核这个 PR 该不该合 <PR URL>」 | `soia-dev-github-ops`（审查者侧）+ `soia-dev-review-panel` | 一句话结论 + 按 🔴阻断/🟡应改分档、带证据等级的发现清单；**只出建议不自动合并** |
+| **审查者** 回复意见 | 「把这些意见发到 PR 上」 | `soia-dev-github-ops` | `gh pr review --request-changes` / `gh pr comment`，作者收到带文件行号的评审 |
+| **作者** 修复 | 「帮我修复这个 PR <评审 URL>」 | `soia-dev-github-ops`（作者侧）+ `soia-dev-fix-loop` | 拉评审（正文+行内+会话评论三端点）→ checkout → 逐条 fix/reject/defer → push → 请求重审；**作者侧同样绝不自动合并** |
+| **审查者** 合并 | 「合并」（看完发现后的下一条消息） | `soia-dev-github-ops` | `gh pr merge`，CI 绿 + 显式确认后才执行 |
+
+### 三条硬规则
+
+- **建议 ≠ 合并**：审查产出永远是建议；即使同一句话预授权了合并，AI 也会先把分档发现摆出来，等下一条消息才合。
+- **作者不合自己被 `CHANGES_REQUESTED` 的 PR**：即使作者有 write/admin 权限，合并仍是审查者的决定。
+- **每条意见都有交代**：作者侧对每条评审意见必须给出 fix / reject（带反驳证据）/ defer（带后续位置）之一，不静默跳过。
+
+### 安装（作者和审查者都装这一条即可）
+
+```bash
+npx skills add soia-team/soia-open-skills -g -a '*' -s soia-dev-github-ops -y
+```
+
+会自动带上硬依赖 `soia-dev-review-panel`（审查者侧多视角复核）与 `soia-dev-fix-loop`（作者侧修复引擎）。技能宿主无关，Codex / Gemini CLI / Claude Code 等都能用。
 
 ---
 
