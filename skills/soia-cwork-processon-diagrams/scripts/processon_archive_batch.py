@@ -836,6 +836,10 @@ def title_signals(title: str) -> list[str]:
     cleaned = title
     for word in COMMON_TITLE_WORDS:
         cleaned = cleaned.replace(word, "")
+    # Treat dotted release numbers as separators. Otherwise a title such as
+    # "磐石4.0短信系统" produces the unusable signals "磐石4" and "0短信",
+    # while the diagram itself naturally contains "磐石" and "短信".
+    cleaned = re.sub(r"\d+(?:\.\d+)+", " ", cleaned)
     for piece in re.split(r"[\s《》()（）\[\]【】,，、:：/&+_\-.]+", cleaned):
         piece = piece.strip()
         if len(piece) >= 2 and not piece.isdigit():
