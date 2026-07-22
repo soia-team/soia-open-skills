@@ -122,6 +122,24 @@ Rules:
 - Declare only real install-level dependencies. Pipeline neighbors,
   routing-table references, and prose mentions stay out of `dependencies`.
 
+### Description length and trigger shape (frontmatter)
+
+Treat `description` as a compact routing index, not a capability inventory:
+
+- Target at most 150 characters, counted as Unicode characters by Python
+  `len()`; Chinese characters, Latin letters, punctuation, and spaces each
+  count as one character.
+- Use one sentence for the skill's core responsibility, followed by `触发：`
+  and 2–3 high-discrimination trigger phrases.
+- Preserve the skill's identity and boundaries. Move feature lists, platform
+  inventories, fallback behavior, and other long-tail detail into the body.
+- Check sibling descriptions before choosing triggers; do not reuse phrases
+  that would make two skills compete for the same request.
+- New skills over 150 characters fail `scripts/audit_skills.py`. Existing long
+  descriptions may appear only in the explicit
+  `GRANDFATHER_LONG_DESCRIPTION` allowlist and produce a non-blocking warning;
+  slim them when the skill is next substantively edited.
+
 ### Version and timestamps (frontmatter)
 
 Every `SKILL.md` frontmatter should include version and timestamp fields:
@@ -363,7 +381,8 @@ Do not say "tested" or "passed" without saying which checks ran.
 
 Before commit, verify:
 
-- [ ] `SKILL.md` has `name` and concise `description` with triggers.
+- [ ] `SKILL.md` has `name` and a `description` of at most 150 characters: one
+      core-responsibility sentence plus `触发：` and 2–3 distinct triggers.
 - [ ] `SKILL.md` has a customer-readable intro covering capabilities, usage, dependencies/install, config, logs, and completion receipt.
 - [ ] No `metadata.json`; public skills use `SKILL.md` and optional `agents/openai.yaml`.
 - [ ] No maintainer-specific paths or vault directory names.

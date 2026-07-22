@@ -23,6 +23,8 @@
 
 查找技能时先看 [`routing/routing-manifest.json`](routing/routing-manifest.json)，再从条目中的 `repo` 和 `skillPath` 安装或查看技能。
 
+按机器用途选择最小技能集，见 [`docs/install-profiles.md`](docs/install-profiles.md)。
+
 ## 14 仓拓扑
 
 | 仓库 | 一句话职责 | 安装 / 查看示例 |

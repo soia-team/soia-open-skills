@@ -22,6 +22,13 @@ FRONTMATTER_DATETIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
 # future legacy exception is reviewable instead of silently weakening the gate.
 GRANDFATHER_MISSING_FRONTMATTER: frozenset[str] = frozenset()
 GRANDFATHER_INVALID_DATETIME: frozenset[str] = frozenset()
+# Baseline measured on 2026-07-23 before description slimming. Keep the names
+# explicit: only these existing skills receive a non-blocking warning.
+GRANDFATHER_LONG_DESCRIPTION = frozenset(
+    {
+        "soia-meta-prompt-clarity",
+    }
+)
 GRANDFATHER_MISSING_PRIVATE_DATA_SECTION = frozenset(
     {
         "soia-cwork-feishu-cli",
@@ -76,6 +83,7 @@ GRANDFATHER_MISSING_PRIVATE_DATA_SECTION = frozenset(
 SEGMENT_EXEMPT = {"soia-pkm-maintain"}
 DEPENDENCY_KEYS = {"hard", "optional", "external"}
 MAX_SKILL_LINES = 500
+MAX_DESCRIPTION_CHARS = 150
 DISALLOWED_SKILL_DOCS = {
     "README.md",
     "INSTALLATION_GUIDE.md",
@@ -348,8 +356,20 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
         pass  # parse_frontmatter already emitted the type error
     elif not description:
         findings.append(Finding("ERROR", rel(skill_md, root), "missing frontmatter description"))
-    elif len(description) > 220:
-        findings.append(Finding("WARN", rel(skill_md, root), f"description is long ({len(description)} chars); keep trigger metadata concise"))
+    elif len(description) > MAX_DESCRIPTION_CHARS:
+        message = (
+            f"description is long ({len(description)} chars); "
+            f"maximum is {MAX_DESCRIPTION_CHARS}"
+        )
+        if skill_name in GRANDFATHER_LONG_DESCRIPTION:
+            findings.append(
+                grandfather_warning(
+                    rel(skill_md, root),
+                    f"grandfathered {message}",
+                )
+            )
+        else:
+            findings.append(Finding("ERROR", rel(skill_md, root), message))
 
     extras = sorted(set(fm) - ALLOWED_FRONTMATTER)
     if extras:
