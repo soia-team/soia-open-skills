@@ -2,7 +2,7 @@
 
 > Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.
 > Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.
-> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 52 skills.
+> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 55 skills.
 
 ## Source Fields
 
@@ -54,7 +54,7 @@
 |---|---|---|
 | [`soia-cwork-feishu-cli`](./soia-cwork-feishu-cli/) | 分开核对知识库/Wiki与云盘/Drive权限，再用官方 lark-cli 只读调研。 | 用 soia-cwork-feishu-cli 先区分飞书知识库和云盘，再分别核对应用身份 Bot 与用户 OAuth 的最小只读权限，最后只读调研，不要修改远端内容。 |
 | [`soia-cwork-feishu-doc-git-sync`](./soia-cwork-feishu-doc-git-sync/) | 同步飞书知识库、内嵌或指定 Sheet 与多维表格到 Markdown 和保真快照 | 使用 soia-cwork-feishu-doc-git-sync，先用 --pilot-node-token 在独立目录验证指定飞书节点，再以只读镜像模式批量同步；只读取私有配置中明确选择的独立或文档内嵌 Sheet 范围与多维表格，并按需保留样式、图表、附件和公式快照。 |
-| [`soia-cwork-processon-diagrams`](./soia-cwork-processon-diagrams/) | 可断点、可审计地递归盘点 ProcessOn，并安全导出图表。 | Use $soia-cwork-processon-diagrams to inventory this ProcessOn space in resumable batches, persist and audit the discovered-minus-visited queue, export confirmed flowcharts as VSDX and mind maps as XMind when authorized, and never claim completion before the final audit passes. |
+| [`soia-cwork-processon-diagrams`](./soia-cwork-processon-diagrams/) | 可断点、可审计地递归盘点 ProcessOn，并安全导出图表。 | Use $soia-cwork-processon-diagrams in three explicit stages: (1) inventory.init for a recursive, resumable and audited baseline, or inventory.incremental only after a new complete snapshot is diffed against a previous complete checkpoint; (2) use the host-agnostic processon_browser_runner.py with its dedicated profile—never the customer's main Chrome or a host-only browser/computer-use loop—then build and verify the archive plan, initialize download-progress.json, use next/record/mark/audit for every confirmed artifact, serialize asynchronous exports, and require balanced popup open/close plus context-close receipts; flowcharts default to VSDX and mind maps to XMind, while Markdown-only mind-map export is evidence rather than completion; (3) ask before parsing, converting or upgrading and route VSDX work to soia-dev-drawio-visio-diagrams. Keep each stage's evidence and completion state separate; a snapshot diff is not a ProcessOn API/event delta. |
 
 ## Development
 
@@ -69,14 +69,22 @@
 | [`soia-dev-doc-sync`](./soia-dev-doc-sync/) | 审计并修复任意代码仓的 docs、README、CHANGELOG、VERSION 与明确真源之间的事实漂移；先建立真源优先级与证据，再按依赖顺序同步派生文档。 |  |
 | [`soia-dev-drawio-visio-diagrams`](./soia-dev-drawio-visio-diagrams/) | 读取 VSDX，转换、理解并升级为可编辑 draw.io 图表。 | Use $soia-dev-drawio-visio-diagrams to inspect this VSDX safely, convert it into an editable draw.io source, apply requested upgrades without overwriting the original, and validate exported artifacts. |
 | [`soia-dev-fix-loop`](./soia-dev-fix-loop/) | 用五步闭环处理代码审查或测试发现：复现、决策、修复、回归复核与回执，防止遗漏、假修复和无证据收口。 |  |
-| [`soia-dev-github-ops`](./soia-dev-github-ops/) | Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates. | Use soia-dev-github-ops: Use gh CLI for GitHub issue, PR, checks, review, workflow run, and release operations with structured JSON output and safety gates. |
+| [`soia-dev-github-ops`](./soia-dev-github-ops/) | Use gh CLI for GitHub issue, PR, checks, review, workflow run, release, and collaborator-permission operations, plus a pre-merge rule-review procedure and an author-side address-the-review-and-fix procedure, with structu... | Use soia-dev-github-ops: review this open PR against the repo's own rules and tell me whether it's safe to merge. |
 | [`soia-dev-open-design-ops`](./soia-dev-open-design-ops/) | Operate Open Design daemon, catalogs, design systems, exports, and session resume | Use $soia-dev-open-design-ops to check my Open Design environment, start the local daemon safely, query real catalogs, and run a source-backed export or resume workflow. |
 | [`soia-dev-project-scaffold`](./soia-dev-project-scaffold/) | 为任意新 Git 项目创建最小 AI 协作基线。 | Use $soia-dev-project-scaffold to create a minimal AGENTS.md and docs baseline for a new Git project. |
 | [`soia-dev-prompt-clarity`](./soia-dev-prompt-clarity/) | 中英文提示词编写、诊断、防误伤改写与可验证规格化 | Use $soia-dev-prompt-clarity to turn my request into a clear, directly usable prompt; preserve my chosen prompt and explanation languages, and use a named framework only when it materially improves the result. |
+| [`soia-dev-review-panel`](./soia-dev-review-panel/) | Run a multi-lens, adversarially-verified review over a code diff or a skill package — independent lenses first, refute-by-default verification second, one graded report last. | Use soia-dev-review-panel: 多角度审一下我这次改动，每条发现都要经过对抗式复核再报告 |
 | [`soia-dev-skill-release`](./soia-dev-skill-release/) | 完成 merge 后技能的本机安装、软链、lock 与版本发布收尾。 | Use $soia-dev-skill-release to finish local release cleanup for merged skill names from an owner/name repository. |
 | [`soia-dev-sync-skills`](./soia-dev-sync-skills/) | 将共享技能目录以软链接同步到用户选择的 AI 工具目录。 | Use $soia-dev-sync-skills to preview and sync a shared skill source to explicitly selected AI tool directories. |
 | [`soia-dev-task-execute`](./soia-dev-task-execute/) | 执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务。 |  |
 | [`soia-dev-terminal-ops`](./soia-dev-terminal-ops/) | Monitor long-running POSIX jobs and recover stalled processes safely | Use $soia-dev-terminal-ops to monitor this long-running command, diagnose progress with multiple signals, and apply the TERM-to-KILL confirmation gates if recovery is needed. |
+
+## Security
+
+| Skill | Description | Default Prompt |
+|---|---|---|
+| [`soia-safe-audit-fix-codebase`](./soia-safe-audit-fix-codebase/) | 只读审计完整代码库，经明确确认后修复代码并完成回归验证 | 使用 $soia-safe-audit-fix-codebase 审计这个代码路径，先只输出带证据的项目安全报告和修复预览，等我确认后再修改代码并测试。 |
+| [`soia-safe-track-vulnerability-intel`](./soia-safe-track-vulnerability-intel/) | 聚合权威漏洞情报、去重核验并生成带证据的专业安全报告 | 使用 $soia-safe-track-vulnerability-intel 收集指定时间窗和技术栈的漏洞情报，去重核验后生成带覆盖范围、优先级和修复建议的专业报告。 |
 
 ## Registry Export
 

@@ -429,7 +429,7 @@ def iter_scan_records(scan_dir):
                 if not isinstance(r,dict) or 'path' not in r: continue
                 p=r['path'].rstrip('/')
                 if not r.get('name'): r['name']=p.rsplit('/',1)[-1]
-                if r.get('name') and p.rsplit('/',1)[-1]!=r['name']:
+                if r.get('name'):
                     p=p+'/'+r['name']; r={**r,'path':p}
                 yield fn,p,r
 
@@ -465,10 +465,19 @@ def load(scan_dir, moves_f, del_f, roots_f):
 
 
 def raw_stats_by_root(scan_dir, roots):
-    """原始扫描统计保留同路径重名实体；目录树仍可按路径去重展示。"""
+    """原始扫描统计保留同路径、不同 file_id 的重名实体（真实存在的不同文件）；
+    但同 (path, file_id) 的精确重复行是扫描双列产物（例如 --resume 把同一目录
+    重新入队、线程竞态重列），按 file_id 折叠一次，避免总数被扫描双列虚增。
+    缺失 file_id 的记录无法据此去重，保守计入（宁可多算不少算真实实体）。"""
     result={root:[0,0,0] for root in roots}
     root_seen=set()
+    seen_ids=set()
     for _,path,record in iter_scan_records(scan_dir):
+        fid=record.get('id')
+        if fid is not None:
+            key=(path,fid)
+            if key in seen_ids: continue
+            seen_ids.add(key)
         for root in roots:
             if path!=root and not path.startswith(root+'/'): continue
             if path==root: root_seen.add(root)

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -24,6 +25,7 @@ def load_module(name: str, relative_path: str):
 
 
 audit_skills = load_module("audit_skills_under_test", "scripts/audit_skills.py")
+catalog = load_module("generate_skill_catalog_under_test", "scripts/generate_skill_catalog.py")
 
 
 def write_skill(root: Path, name: str, body: str) -> Path:
@@ -80,6 +82,50 @@ class RepositoryDocumentAuditTests(unittest.TestCase):
             )
 
 
+class DesensitizationGateTests(unittest.TestCase):
+    """Real private capture data must never reach the public skills repo. These
+    guard the class of leak found on 2026-07-22 (real cloud file_ids/URLs and a
+    real personal name in an example doc)."""
+
+    def _messages(self, body: str) -> list[str]:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_skill(root, "soia-test-desensitize", body)
+            return [f.message for f in audit_skills.collect_findings(root)]
+
+    def test_real_cloud_drive_url_is_flagged(self) -> None:
+        msgs = self._messages(
+            "见 https://www.alipan.com/drive/file/all/backup/6a6042d077c30982772e477ea54556b8a1fead14"
+        )
+        self.assertTrue(any("real cloud/drive/diagram URL" in m for m in msgs))
+
+    def test_real_processon_team_url_is_flagged(self) -> None:
+        msgs = self._messages("源: https://www.processon.com/org/teams/5f3a1b2c9d8e7f6a")
+        self.assertTrue(any("real cloud/drive/diagram URL" in m for m in msgs))
+
+    def test_real_file_id_is_flagged(self) -> None:
+        msgs = self._messages('```json\n{"file_id": "6a6035f49c8178d220d64172adc3398bcb214503"}\n```')
+        self.assertTrue(any("real 40-hex cloud file_id" in m for m in msgs))
+
+    def test_real_personal_name_in_owner_field_is_flagged(self) -> None:
+        msgs = self._messages('```json\n{"owner": "周鹏"}\n```')
+        self.assertTrue(any("possible real personal name" in m for m in msgs))
+
+    def test_placeholders_do_not_trigger_desensitization(self) -> None:
+        body = "\n".join([
+            "URL 模板: https://www.alipan.com/drive/file/all/backup/<40位file_id>",
+            "占位: `file_id: <file-id>`",
+            "团队: processon.com/org/teams/<team-id>",
+            '示例: `{"owner": "示例用户"}` `{"owner": "张三"}`',
+            "提交引用: 见 commit 6aec980 的改动",
+        ])
+        msgs = self._messages(body)
+        self.assertFalse(any(
+            "real cloud/drive/diagram URL" in m or "real 40-hex cloud file_id" in m
+            or "possible real personal name" in m for m in msgs
+        ), msgs)
+
+
 class FrontmatterYamlTests(unittest.TestCase):
     def test_folded_frontmatter_description_is_supported(self) -> None:
         text = "---\nname: soia-folded\ndescription: >\n  First line\n  second line\n---\n"
@@ -108,6 +154,19 @@ class FrontmatterYamlTests(unittest.TestCase):
 
 
 class AuthoringQualityTests(unittest.TestCase):
+    def test_security_domain_is_valid_and_cataloged(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            write_skill(root, "soia-safe-audit-codebase", "安全审计。")
+            findings = audit_skills.collect_findings(root)
+            self.assertFalse(
+                any("unknown domain 'safe'" in finding.message for finding in findings)
+            )
+        self.assertEqual(
+            catalog.infer_group("soia-safe-audit-codebase"),
+            ("Security", "security"),
+        )
+
     def test_long_skill_is_flagged_for_refactoring(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -259,6 +318,43 @@ class LinkAuditTests(unittest.TestCase):
                     for hit in findings
                 )
             )
+
+
+class RepoNameResolutionTest(unittest.TestCase):
+    """The catalog repo name must come from the git origin remote, not the
+    checkout directory name — otherwise generating from a worktree/clone whose
+    dir differs from the repo name bakes the wrong name into skills/README.md,
+    which then reads as stale in CI (whose checkout dir is always the real name).
+    """
+
+    def _git(self, root: Path, *args: str) -> None:
+        subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True)
+
+    def test_repo_name_comes_from_origin_remote_not_directory_name(self) -> None:
+        with tempfile.TemporaryDirectory(suffix="-a-wrong-dir-name") as tmp:
+            root = Path(tmp)
+            self._git(root, "init")
+            self._git(
+                root, "remote", "add", "origin",
+                "https://github.com/soia-team/soia-open-skills.git",
+            )
+            self.assertEqual(catalog.resolve_repo_name(root), "soia-open-skills")
+            self.assertEqual(catalog.repo_title("soia-open-skills"), "SOIA Open Skills Catalog")
+
+    def test_scp_style_remote_is_parsed(self) -> None:
+        with tempfile.TemporaryDirectory(suffix="-a-wrong-dir-name") as tmp:
+            root = Path(tmp)
+            self._git(root, "init")
+            self._git(
+                root, "remote", "add", "origin",
+                "git@github.com:soia-team/soia-private-skills.git",
+            )
+            self.assertEqual(catalog.resolve_repo_name(root), "soia-private-skills")
+
+    def test_falls_back_to_directory_name_without_git(self) -> None:
+        with tempfile.TemporaryDirectory(suffix="-soia-open-skills") as tmp:
+            root = Path(tmp)  # not a git repo → no origin remote
+            self.assertEqual(catalog.resolve_repo_name(root), root.name)
 
 
 if __name__ == "__main__":

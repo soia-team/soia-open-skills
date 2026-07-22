@@ -4,6 +4,8 @@
 schema_version: 1
 
 env:
+  # For formal no-copy batches, keep TEMP_DIR and OUTPUT_DIR on the same filesystem.
+  # A dedicated <final-delivery-directory>/_staging directory is recommended.
   SOIA_CWORK_PROCESSON_DIAGRAMS_TEMP_DIR: "<temporary-download-directory>"
   SOIA_CWORK_PROCESSON_DIAGRAMS_OUTPUT_DIR: "<final-delivery-directory>"
   SOIA_CWORK_PROCESSON_DIAGRAMS_MANIFEST_DIR: "<audit-manifest-directory>"

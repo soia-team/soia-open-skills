@@ -27,7 +27,7 @@ ${XDG_STATE_HOME:-~/.local/state}/soia-cwork-processon-diagrams/
 ```bash
 python3 scripts/processon_inventory_state.py init \
   --run-id '2026-07-21-backend-processon-inventory' \
-  --root-path '解决方案后端组' \
+  --root-path '示例团队空间' \
   --source-url 'https://www.processon.com/org/teams/<team-id>'
 ```
 
@@ -41,18 +41,18 @@ python3 scripts/processon_inventory_state.py init \
 {
   "directories": [
     {
-      "path": "解决方案后端组/01_系统架构",
+      "path": "示例团队空间/01_架构目录",
       "status": "visited",
       "captured_at": "2026-07-21T10:00:00+08:00",
       "folders": [
-        {"name": "规范", "path": "解决方案后端组/01_系统架构/规范"}
+        {"name": "子目录A", "path": "示例团队空间/01_架构目录/子目录A"}
       ],
       "files": [
         {
-          "title": "系统架构图",
+          "title": "示例流程图",
           "type": "flowchart",
-          "owner": "周鹏",
-          "remote_updated_at": "8月前"
+          "owner": "示例用户",
+          "remote_updated_at": "N月前"
         }
       ]
     }
@@ -108,9 +108,24 @@ python3 scripts/processon_inventory_state.py audit --run-dir <run-dir>
 
 完整性通过但仍有待访问目录时，运行状态继续保持 `inventory_running`。只有审计通过且 `pending_count=0、blocked_count=0` 时，状态才变为 `completed` 并生成 `handoff/receipt.md`。任何哈希、重放或索引不一致都 fail closed 为 `inventory_audit_failed`，不得发布完成结论。
 
-## 5. 与知识库归档的关系
+## 5. 增量盘点：两次完整快照的差分
+
+普通 ProcessOn 团队空间的“增量盘点”不是事件订阅、接口爬取或仅扫描最近目录，而是先完成一份新的全量、审计通过的 checkpoint，再与同范围的上一份完整 checkpoint 比较：
+
+```bash
+python3 scripts/diff_processon_inventory.py \
+  --previous <previous-run>/inventory/checkpoint.json \
+  --current <current-run>/inventory/checkpoint.json \
+  --output <current-run>/analysis/inventory-delta.json
+```
+
+脚本会拒绝 `pending_paths` 或 `blocked_paths` 非空的输入、不同 root/source URL、符号链接和重复的稳定 ID。报告固定包含前后 checkpoint 的 SHA-256、`added`、`changed` 与 `removed_candidates`。只有 ProcessOn 页面明确提供稳定 `remote_id/id` 时才标记 `moved` 或 `renamed`；其余条目不能推断移动，保持新增/移除候选。若同目录中存在多个无 ID 的完全相同条目，脚本将其隔离到 `ambiguous_entries`，不为它们产生变更结论。`removed_candidates` 只供人工核对和后续归档计划使用，绝不触发自动删除。
+
+## 6. 与知识库归档的关系
 
 - XDG state 运行包是控制面：持续更新，可以续跑，并保留原始批次证据。
 - Markdown 盘点报告是阶段性快照：从状态文件生成或核对，不反向充当唯一队列。
+- 目录审计通过后，在同一运行包的 `artifacts/archive-plan.json` 生成资产计划；它记录 checkpoint SHA-256、稳定 `artifact_id`、默认格式、unknown 队列和同名风险。计划可重建，不能反向替代 checkpoint。
+- 阶段状态至少区分：`inventory_running`、`inventory_completed_asset_archive_pending`、`known_ready_pending_confirmation`、`asset_archive_running`、`asset_archive_completed`。只有目录审计和资产 manifest 都通过，才可对外报告整体归档完成。
 - VSDX/XMind/POS 和预览文件是内容归档：只在目录盘点和类型确认后下载。
 - 状态 JSON、批次 JSON 和企业图表都可能敏感；公开发布前单独做权限与脱敏审查。

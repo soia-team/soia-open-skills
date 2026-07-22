@@ -390,6 +390,41 @@ def copy_atomically(source: Path, destination: Path, overwrite: bool) -> None:
             destination.unlink()
 
 
+def link_for_atomic_move(
+    source: Path, destination: Path, overwrite: bool
+) -> tuple[Path | None, Path | None]:
+    """Prepare a no-copy move while retaining source until the manifest commits."""
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if source.stat().st_dev != destination.parent.stat().st_dev:
+        raise DownloadError(
+            "managed staging and output must be on the same filesystem for no-copy move"
+        )
+    temporary = destination.parent / f".{destination.name}.{uuid.uuid4().hex}.move"
+    backup: Path | None = None
+    try:
+        os.link(source, temporary, follow_symlinks=False)
+        if destination.exists():
+            if not overwrite:
+                raise DownloadError(f"Destination appeared concurrently: {destination}")
+            backup = destination.parent / f".{destination.name}.{uuid.uuid4().hex}.backup"
+            os.replace(destination, backup)
+        os.replace(temporary, destination)
+        return destination, backup
+    except OSError as exc:
+        if backup is not None and backup.exists() and not destination.exists():
+            os.replace(backup, destination)
+        raise DownloadError(f"Cannot create no-copy atomic move: {exc}") from exc
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def rollback_linked_move(destination: Path, backup: Path | None) -> None:
+    destination.unlink(missing_ok=True)
+    if backup is not None and backup.exists():
+        os.replace(backup, destination)
+
+
 def finalize_download(
     source: Path,
     settings: Settings,
@@ -430,6 +465,7 @@ def finalize_download(
         "schema_version": 1,
         "status": "dry-run" if dry_run else "completed",
         "operation": operation,
+        "transfer_mode": "hardlink_then_unlink" if move else "atomic_copy",
         "collision_policy": collision,
         "source": str(source),
         "destination": str(destination),
@@ -443,19 +479,28 @@ def finalize_download(
 
     overwrite = collision == "overwrite" and allow_overwrite
     destination_existed = destination.exists()
+    linked_destination: Path | None = None
+    backup: Path | None = None
     reserve_manifest(manifest_path)
     try:
-        copy_atomically(source, destination, overwrite)
+        if move:
+            linked_destination, backup = link_for_atomic_move(source, destination, overwrite)
+        else:
+            copy_atomically(source, destination, overwrite)
         finalized_inspection = inspect_source(destination)
         if finalized_inspection.get("sha256") != inspection.get("sha256"):
             raise DownloadError("SHA-256 mismatch after finalizing download")
         result["inspection"] = finalized_inspection
         atomic_write_json(manifest_path, result)
         if move:
+            if backup is not None:
+                backup.unlink(missing_ok=True)
             source.unlink()
     except Exception:
-        remove_empty_reservation(manifest_path)
-        if not destination_existed:
+        manifest_path.unlink(missing_ok=True)
+        if linked_destination is not None:
+            rollback_linked_move(destination, backup)
+        elif not destination_existed:
             destination.unlink(missing_ok=True)
         raise
     return result

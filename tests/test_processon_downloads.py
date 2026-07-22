@@ -218,6 +218,71 @@ env:
             self.assertFalse(source.exists())
             self.assertTrue(Path(result["destination"]).exists())
             self.assertTrue(Path(result["manifest"]).exists())
+            self.assertEqual(result["transfer_mode"], "hardlink_then_unlink")
+
+    def test_move_uses_hardlink_without_copying_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            settings = self.module.Settings(
+                temp_dir=root / "output" / "_staging",
+                output_dir=root / "output" / "archive",
+                manifest_dir=root / "manifests",
+                retention_days=7,
+                config_file=None,
+            )
+            self.module.ensure_paths(settings)
+            source = settings.temp_dir / "artifact-id" / "diagram.pos"
+            source.parent.mkdir()
+            write_pos(source)
+            source_inode = source.stat().st_ino
+
+            with patch.object(
+                self.module.shutil,
+                "copy2",
+                side_effect=AssertionError("move path must not copy bytes"),
+            ):
+                result = self.module.finalize_download(source, settings, move=True)
+
+            destination = Path(result["destination"])
+            self.assertFalse(source.exists())
+            self.assertEqual(destination.stat().st_ino, source_inode)
+            self.assertEqual(result["transfer_mode"], "hardlink_then_unlink")
+
+    def test_no_copy_move_fails_closed_across_filesystems(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source.pos"
+            destination = root / "output" / "source.pos"
+            write_pos(source)
+            destination.parent.mkdir()
+            source_stat = source.stat()
+            parent_stat = destination.parent.stat()
+
+            with patch.object(
+                self.module.Path,
+                "stat",
+                autospec=True,
+                side_effect=lambda path, *args, **kwargs: (
+                    type(source_stat)(
+                        (
+                            parent_stat.st_mode,
+                            parent_stat.st_ino,
+                            parent_stat.st_dev + 1,
+                            parent_stat.st_nlink,
+                            parent_stat.st_uid,
+                            parent_stat.st_gid,
+                            parent_stat.st_size,
+                            parent_stat.st_atime,
+                            parent_stat.st_mtime,
+                            parent_stat.st_ctime,
+                        )
+                    )
+                    if path == destination.parent
+                    else source_stat
+                ),
+            ):
+                with self.assertRaisesRegex(self.module.DownloadError, "same filesystem"):
+                    self.module.link_for_atomic_move(source, destination, False)
 
     def test_cleanup_requires_marker_and_keeps_recent_files(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
