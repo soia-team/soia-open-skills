@@ -32,14 +32,24 @@ gen_catalog = load_module(
 )
 
 
+def _split_parent_name(path: str) -> tuple[str, str]:
+    """按 scan_drive.py 的真实约定拆成 (父目录路径, 自身名字)；所有路径统一视为从 / 出发的绝对路径，
+    顶层根的父目录拆分为空串，与生产扫描数据保持一致，避免父子路径前导 / 不一致导致链路断裂。"""
+    absolute = path if path.startswith("/") else "/" + path
+    parent, name = absolute.rsplit("/", 1)
+    return parent, name
+
+
 def folder(path: str, file_id: str) -> dict:
-    return {"path": path, "name": path.rsplit("/", 1)[-1], "id": file_id, "dir": True, "size": None}
+    parent, name = _split_parent_name(path)
+    return {"path": parent, "name": name, "id": file_id, "dir": True, "size": None}
 
 
 def file_record(path: str, size: int = 10) -> dict:
+    parent, name = _split_parent_name(path)
     return {
-        "path": path,
-        "name": path.rsplit("/", 1)[-1],
+        "path": parent,
+        "name": name,
         "id": None,
         "dir": False,
         "size": size,
@@ -459,6 +469,26 @@ type: moc
         self.assertIn("全盘 **3 目录 / 2 文件 / 30B**", output)
         self.assertIn("| 📁 **10_孩子** |", output)
         self.assertIn("| 3 | 2 | 30B |", output)
+
+    def test_same_name_parent_child_directory_does_not_break_root_detection(self) -> None:
+        """回归测试：当某个目录与其直接子目录同名时（常见于压缩包解压出的
+        「文件夹/文件夹/真内容」结构），iter_scan_records 曾因误判「path 最后一段
+        等于 name 即代表 path 已是完整路径」而漏拼一层，导致更深层内容与顶层分区
+        断链、被 catalog_roots() 误判为独立的伪顶层区。"""
+        records = [
+            folder("10_孩子", "root"),
+            folder("10_孩子/同名课程", "course"),
+            folder("10_孩子/同名课程/同名课程", "course-inner"),
+            folder("10_孩子/同名课程/同名课程/子目录", "grandchild"),
+            file_record("10_孩子/同名课程/同名课程/子目录/深层文件.mp4", 10),
+        ]
+
+        output = self.run_catalog(records)
+
+        self.assertIn("全盘 **4 目录 / 1 文件 / 10B**", output)
+        self.assertIn("| 📁 **10_孩子** |", output)
+        self.assertNotIn("**子目录**", output, "同名父子目录导致的断链不应把更深层子目录误判成独立顶层区")
+        self.assertEqual(output.count("| 📁 **"), 1, "同名父子目录不应产生额外的伪顶层区")
 
     def test_custom_heading_pattern_and_section_icons_are_user_configurable(self) -> None:
         records = [
