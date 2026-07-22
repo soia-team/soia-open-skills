@@ -1,0 +1,374 @@
+import importlib.util
+import json
+import os
+import tempfile
+import unittest
+import zipfile
+from pathlib import Path
+from unittest.mock import patch
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = ROOT / "skills" / "soia-cwork-processon-diagrams" / "scripts" / "processon_archive_batch.py"
+RUNNER_DIR = SCRIPT.parent
+import sys
+
+sys.path.insert(0, str(RUNNER_DIR))
+SPEC = importlib.util.spec_from_file_location("processon_archive_batch", SCRIPT)
+MODULE = importlib.util.module_from_spec(SPEC)
+assert SPEC and SPEC.loader
+sys.modules[SPEC.name] = MODULE
+SPEC.loader.exec_module(MODULE)
+
+
+class ProcessOnArchiveBatchTests(unittest.TestCase):
+    def entry(self, artifact_id="a", collision="none_detected"):
+        return {
+            "artifact_id": artifact_id,
+            "confirmation_required": False,
+            "type": "flowchart",
+            "collision_risk": collision,
+            "source_directory": "root/folder",
+            "source_path": f"root/folder/{artifact_id}",
+            "title": artifact_id,
+            "primary_format": "vsdx",
+            "primary_menu": "VISIO文件",
+        }
+
+    def test_parallel_selection_skips_collision_risk(self):
+        plan = {"entries": [self.entry("safe"), self.entry("collision", "duplicate_title")]}
+        progress = {"completed": [], "failed": [], "blocked": []}
+        selected = MODULE.choose_entries(plan, progress, 10, workers=2)
+        self.assertEqual([item["artifact_id"] for item in selected], ["safe"])
+        serial = MODULE.choose_entries(plan, progress, 10, workers=1)
+        self.assertEqual([item["artifact_id"] for item in serial], ["safe"])
+        deferred = MODULE.deferred_collision_entries(plan, progress)
+        self.assertEqual([item["artifact_id"] for item in deferred], ["collision"])
+
+    def test_vsdx_semantic_title_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "数据服务平台.vsdx"
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("visio/document.xml", "<VisioDocument />")
+                archive.writestr(
+                    "visio/pages/page1.xml",
+                    "<PageContents><Shapes><Shape><Text>数据服务平台 exchange</Text></Shape></Shapes></PageContents>",
+                )
+            inspected = MODULE.inspect_vsdx(
+                path, "《斛斗4.0数据服务平台&保单验真(exchange)部署架构图-生产环境》"
+            )
+            self.assertEqual(inspected["semantic_status"], "matched")
+            self.assertIn("exchange", inspected["matched_title_signals"])
+            with self.assertRaises(MODULE.BatchError):
+                MODULE.inspect_vsdx(path, "《风险管理系统-测试环境-部署图》")
+
+    def test_vsdx_requires_short_chinese_signal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "订单系统部署架构图.vsdx"
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("visio/document.xml", "<VisioDocument />")
+                archive.writestr(
+                    "visio/pages/page1.xml",
+                    "<PageContents><Shapes><Shape><Text>完全无关内容</Text></Shape></Shapes></PageContents>",
+                )
+            self.assertEqual(MODULE.title_signals("订单系统部署架构图"), ["订单"])
+            with self.assertRaises(MODULE.BatchError):
+                MODULE.inspect_vsdx(path, "订单系统部署架构图")
+
+    def test_concurrency_requires_matching_proof(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            plan = {
+                "entries": [
+                    {
+                        "artifact_id": "a",
+                        "title": "Alpha",
+                        "source_url": "https://www.processon.com/diagraming/a",
+                        "remote_id": "a",
+                        "primary_format": "vsdx",
+                    },
+                    {
+                        "artifact_id": "b",
+                        "title": "Beta",
+                        "source_url": "https://www.processon.com/diagraming/b",
+                        "remote_id": "b",
+                        "primary_format": "vsdx",
+                    },
+                ]
+            }
+            completed = []
+            samples = []
+            for artifact_id, title in (("a", "Alpha"), ("b", "Beta")):
+                folder = root / artifact_id
+                folder.mkdir()
+                destination = folder / f"{title}.vsdx"
+                with zipfile.ZipFile(destination, "w") as archive:
+                    archive.writestr("visio/document.xml", "<VisioDocument />")
+                    archive.writestr(
+                        "visio/pages/page1.xml",
+                        f"<PageContents><Shapes><Shape><Text>{title}</Text></Shape></Shapes></PageContents>",
+                    )
+                digest = MODULE.sha256(destination)
+                source_url = f"https://www.processon.com/diagraming/{artifact_id}"
+                (folder / "metadata.yml").write_text(
+                    "\n".join(
+                        [
+                            f'artifact_id: "{artifact_id}"',
+                            f'title: "{title}"',
+                            f'source_url: "{source_url}"',
+                            f'remote_id: "{artifact_id}"',
+                            f'sha256: "{digest}"',
+                        ]
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                completed.append(
+                    {
+                        "artifact_id": artifact_id,
+                        "archive_destination": str(destination),
+                        "sha256": digest,
+                    }
+                )
+                samples.append(
+                    {
+                        "artifact_id": artifact_id,
+                        "title": title,
+                        "source_url": source_url,
+                        "remote_id": artifact_id,
+                        "sha256": digest,
+                        "semantic_status": "matched",
+                    }
+                )
+            progress = {"plan": {"sha256": "abc"}, "completed": completed}
+            with self.assertRaises(MODULE.BatchError):
+                MODULE.validate_concurrency_proof(
+                    None, workers=2, plan=plan, progress=progress
+                )
+            proof = root / "proof.json"
+            proof.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "status": "passed",
+                        "plan_sha256": "abc",
+                        "max_workers": 2,
+                        "samples": samples,
+                        "lifecycle": {
+                            "scoped_pages_opened": 2,
+                            "scoped_pages_closed": 2,
+                            "worker_pages_opened": 2,
+                            "worker_pages_closed": 2,
+                            "pages_remaining": 0,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = MODULE.validate_concurrency_proof(
+                proof, workers=2, plan=plan, progress=progress
+            )
+            self.assertEqual(result["max_workers"], 2)
+            payload = json.loads(proof.read_text(encoding="utf-8"))
+            payload["samples"][0]["source_url"] = "https://www.processon.com/diagraming/evil"
+            payload["samples"][0]["remote_id"] = "evil"
+            proof.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaises(MODULE.BatchError):
+                MODULE.validate_concurrency_proof(
+                    proof, workers=2, plan=plan, progress=progress
+                )
+            payload["samples"][0]["source_url"] = "https://www.processon.com/diagraming/a"
+            payload["samples"][0]["remote_id"] = "a"
+            payload["lifecycle"]["worker_pages_opened"] = 1
+            proof.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaises(MODULE.BatchError):
+                MODULE.validate_concurrency_proof(
+                    proof, workers=2, plan=plan, progress=progress
+                )
+            payload["lifecycle"]["worker_pages_opened"] = 2
+            proof.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaises(MODULE.BatchError):
+                MODULE.validate_concurrency_proof(
+                    proof, workers=3, plan=plan, progress=progress
+                )
+
+    def test_concurrency_rejects_duplicate_samples(self):
+        progress = {"plan": {"sha256": "abc"}}
+        with tempfile.TemporaryDirectory() as tmp:
+            proof = Path(tmp) / "proof.json"
+            sample = {
+                "artifact_id": "same",
+                "source_url": "https://www.processon.com/diagraming/same",
+                "sha256": "same-sha",
+                "semantic_status": "matched",
+            }
+            proof.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "status": "passed",
+                        "plan_sha256": "abc",
+                        "max_workers": 2,
+                        "samples": [sample, sample],
+                        "lifecycle": {
+                            "scoped_pages_opened": 2,
+                            "scoped_pages_closed": 2,
+                            "worker_pages_closed": 2,
+                            "pages_remaining": 0,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaises(MODULE.BatchError):
+                MODULE.validate_concurrency_proof(
+                    proof, workers=2, plan={"entries": []}, progress=progress
+                )
+
+    def test_source_popup_identity_must_match_plan(self):
+        entry = self.entry("a")
+        entry["remote_id"] = "remote-a"
+        entry["source_url"] = "https://www.processon.com/diagraming/remote-a"
+        observed = "https://www.processon.com/diagraming/remote-a/"
+        self.assertEqual(MODULE.verify_source_identity(entry, observed), "remote-a")
+        with self.assertRaises(MODULE.BatchError):
+            MODULE.verify_source_identity(
+                entry, "https://www.processon.com/diagraming/remote-b"
+            )
+
+    def test_zip_member_traversal_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "unsafe.vsdx"
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("../escape", "no")
+                archive.writestr("visio/document.xml", "<VisioDocument />")
+                archive.writestr("visio/pages/page1.xml", "<PageContents />")
+            with self.assertRaises(MODULE.BatchError):
+                MODULE.inspect_vsdx(path, "订单系统部署架构图")
+
+    @unittest.skipIf(os.name == "nt", "symlink privileges vary on Windows")
+    def test_lock_rejects_symlink_without_touching_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            victim = root / "victim.txt"
+            victim.write_text("KEEP-ME", encoding="utf-8")
+            lock = root / "lock"
+            lock.symlink_to(victim)
+            with self.assertRaises(MODULE.BatchError):
+                with MODULE.exclusive_lock(lock):
+                    pass
+            self.assertEqual(victim.read_text(encoding="utf-8"), "KEEP-ME")
+
+    @unittest.skipIf(os.name == "nt", "hard-link semantics vary on Windows")
+    def test_lock_rejects_hardlink_without_touching_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            victim = root / "victim.txt"
+            victim.write_text("KEEP-ME", encoding="utf-8")
+            lock = root / "lock"
+            os.link(victim, lock)
+            with self.assertRaises(MODULE.BatchError):
+                with MODULE.exclusive_lock(lock):
+                    pass
+            self.assertEqual(victim.read_text(encoding="utf-8"), "KEEP-ME")
+
+    def test_progress_mirror_reports_complete_and_waiting_states(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "progress.yml"
+            plan = {"entries": [], "counts": {"total_entries": 0}}
+            progress = {
+                "plan": {"sha256": "abc"},
+                "counts": {
+                    "planned_known": 1,
+                    "completed": 1,
+                    "failed": 0,
+                    "blocked": 0,
+                    "remaining_known": 0,
+                    "unknown_pending_confirmation": 0,
+                },
+                "completed": [],
+                "blocked": [],
+            }
+            MODULE.write_progress_mirror(path, plan=plan, progress=progress, run_id="run")
+            self.assertIn('status: "asset_archive_completed"', path.read_text(encoding="utf-8"))
+            progress["counts"].update(
+                {"blocked": 1, "remaining_known": 1, "unknown_pending_confirmation": 1}
+            )
+            MODULE.write_progress_mirror(path, plan=plan, progress=progress, run_id="run")
+            self.assertIn('status: "asset_archive_running"', path.read_text(encoding="utf-8"))
+
+    def test_source_link_conflict_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "source-links.yml"
+            path.write_text(
+                'schema_version: 1\nentries:\n  - artifact_id: "a"\n    source_url: "https://www.processon.com/diagraming/one"\n',
+                encoding="utf-8",
+            )
+            entry = self.entry("a")
+            with self.assertRaises(MODULE.BatchError):
+                MODULE.append_source_link(
+                    path,
+                    entry,
+                    {
+                        "source_url": "https://www.processon.com/diagraming/two",
+                        "remote_id": "two",
+                    },
+                )
+
+    def test_output_folder_contains_collision_suffix(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            entry = self.entry("abcdef012345", "duplicate_title")
+            target = MODULE.output_folder(Path(tmp), entry)
+            self.assertEqual(target.name, "abcdef012345--abcdef01")
+
+    def test_same_download_name_uses_artifact_specific_staging(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            first = MODULE.safe_download_path(Path(tmp), "artifact-a", "未命名文件.vsdx")
+            second = MODULE.safe_download_path(Path(tmp), "artifact-b", "未命名文件.vsdx")
+            self.assertNotEqual(first.parent, second.parent)
+            self.assertEqual(first.name, second.name)
+            self.assertEqual(first.parent.name, "artifact-a")
+            self.assertEqual(second.parent.name, "artifact-b")
+
+    def test_legacy_flat_download_review_flags_numbered_suffix(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            downloads = home / "Downloads"
+            downloads.mkdir()
+            progress = {
+                "completed": [
+                    {
+                        "artifact_id": "a",
+                        "source_path": "root/a",
+                        "download_source": str(downloads / "未命名文件 (2).vsdx"),
+                        "archive_destination": "/archive/a",
+                    },
+                    {
+                        "artifact_id": "b",
+                        "source_path": "root/b",
+                        "download_source": str(downloads / "唯一名称.vsdx"),
+                        "archive_destination": "/archive/b",
+                    },
+                    {
+                        "artifact_id": "c",
+                        "source_path": "root/c",
+                        "download_source": str(home / "managed" / "同名.vsdx"),
+                        "archive_destination": "/archive/c",
+                    },
+                ]
+            }
+            with patch.object(Path, "home", return_value=home):
+                review = MODULE.legacy_flat_download_review(progress)
+            self.assertEqual(review["flat_downloads_completed_count"], 2)
+            self.assertEqual(review["numbered_suffix_review_count"], 1)
+            self.assertEqual(review["numbered_suffix_items"][0]["artifact_id"], "a")
+
+    def test_provider_title_suffix_is_deliberately_narrow(self):
+        title = "企业知识库"
+        self.assertTrue(MODULE.source_title_matches(title, title))
+        self.assertTrue(MODULE.source_title_matches(title, f"{title}-ProcessOn"))
+        self.assertFalse(MODULE.source_title_matches(title, f"{title}-副本"))
+
+
+if __name__ == "__main__":
+    unittest.main()
