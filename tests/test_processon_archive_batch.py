@@ -75,6 +75,12 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
             with self.assertRaises(MODULE.BatchError):
                 MODULE.inspect_vsdx(path, "订单系统部署架构图")
 
+    def test_dotted_release_number_separates_chinese_title_signals(self):
+        self.assertEqual(
+            MODULE.title_signals("《磐石4.0短信系统部署架构图-生产环境》"),
+            ["磐石", "短信"],
+        )
+
     def test_concurrency_requires_matching_proof(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
