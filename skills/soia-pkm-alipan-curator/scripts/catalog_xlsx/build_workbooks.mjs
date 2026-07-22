@@ -68,6 +68,16 @@ function writeRowsInChunks(sheet, startRow, startColumn, rows, columnCount, chun
 }
 
 
+const TYPE_ORDER = Object.keys(TYPE_NOTES);
+
+function typeSortKey(typeLabel) {
+  // Canonical TYPE_RULES order, not locale collation -- localeCompare("zh-CN") and
+  // Python's plain sorted() don't agree on Chinese ordering; both renderers use this
+  // same fixed list so the two backends produce identical row order.
+  const index = TYPE_ORDER.indexOf(typeLabel);
+  return index === -1 ? TYPE_ORDER.length : index;
+}
+
 function typeStatsFromFiles(files) {
   const stats = new Map();
   for (const row of files) {
@@ -76,7 +86,7 @@ function typeStatsFromFiles(files) {
     current.bytes += row.sizeBytes;
     stats.set(row.type, current);
   }
-  return [...stats.values()].sort((a, b) => a.type.localeCompare(b.type, "zh-CN"));
+  return [...stats.values()].sort((a, b) => typeSortKey(a.type) - typeSortKey(b.type) || a.type.localeCompare(b.type, "zh-CN"));
 }
 
 
@@ -259,10 +269,10 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   entrySheet.getRangeByIndexes(4, 0, entryValues.length, entryHeaders.length).values = entryValues;
   for (let index = 0; index < entryValues.length; index += 1) {
     const row = index + 5;
-    entrySheet.getRange(`E${row}`).formulas = [[`=D${row}/C${row}`]];
+    entrySheet.getRange(`E${row}`).formulas = [[`=IFERROR(D${row}/C${row},0)`]];
     entrySheet.getRange(`G${row}`).formulas = [[`=F${row}/'00_使用说明'!$B$23`]];
     entrySheet.getRange(`J${row}`).formulas = [[`=HYPERLINK(I${row},"🔗 打开云盘")`]];
-    entrySheet.getRange(`L${row}`).formulas = [[`=HYPERLINK(K${row},"📄 打开明细")`]];
+    entrySheet.getRange(`L${row}`).formulas = [[`=IF(K${row}="","",HYPERLINK(K${row},"📄 打开明细"))`]];
   }
   styleHeader(entrySheet.getRange("A4:M4"));
   addTable(entrySheet, `A4:M${partitionEnd}`, "DetailEntryTable");
@@ -302,7 +312,7 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   partitionSheet.getRangeByIndexes(4, 0, partitionStats.length, 10).values = partitionStats.map((row) => [row.partition, row.dirs, row.files, row.indexedFiles, null, row.indexedBytes, null, row.volume, row.url, null]);
   for (let index = 0; index < partitionStats.length; index += 1) {
     const row = index + 5;
-    partitionSheet.getRange(`E${row}`).formulas = [[`=D${row}/C${row}`]];
+    partitionSheet.getRange(`E${row}`).formulas = [[`=IFERROR(D${row}/C${row},0)`]];
     partitionSheet.getRange(`G${row}`).formulas = [[`=F${row}/'00_使用说明'!$B$23`]];
     partitionSheet.getRange(`J${row}`).formulas = [[`=HYPERLINK(I${row},"🔗 打开分区")`]];
   }
