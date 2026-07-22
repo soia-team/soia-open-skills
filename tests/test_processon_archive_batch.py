@@ -1,3 +1,4 @@
+import argparse
 import importlib.util
 import json
 import os
@@ -327,6 +328,17 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
             target = MODULE.output_folder(Path(tmp), entry)
             self.assertEqual(target.name, "abcdef012345--abcdef01")
 
+    def test_output_folder_treats_title_separator_as_one_escaped_component(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            entry = self.entry("abcdef012345")
+            entry["source_directory"] = "team/system"
+            entry["source_path"] = "team/system/中介/银保手续费"
+            entry["title"] = "中介/银保手续费"
+            entry["collision_risk"] = "none_detected"
+            target = MODULE.output_folder(Path(tmp), entry)
+            self.assertEqual(target.parent.name, "system")
+            self.assertEqual(target.name, "中介_银保手续费--abcdef01")
+
     def test_same_download_name_uses_artifact_specific_staging(self):
         with tempfile.TemporaryDirectory() as tmp:
             first = MODULE.safe_download_path(Path(tmp), "artifact-a", "未命名文件.vsdx")
@@ -336,7 +348,98 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
             self.assertEqual(first.parent.name, "artifact-a")
             self.assertEqual(second.parent.name, "artifact-b")
 
-    def test_legacy_flat_download_review_flags_numbered_suffix(self):
+    def test_finalize_result_moves_from_managed_staging_without_payload_copy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            managed = root / "staging"
+            output = root / "output"
+            manifests = root / "manifests"
+            plan_path = root / "archive-plan.json"
+            progress_path = root / "download-progress.json"
+            entry = self.entry("deployment")
+            archive_plan = {
+                "schema_version": 1,
+                "plan_type": "processon-artifact-archive",
+                "archive_status": "known_ready",
+                "ready_for_known_artifacts": True,
+                "ready_for_archive": True,
+                "counts": {
+                    "total": 1,
+                    "flowchart": 1,
+                    "mindmap": 0,
+                    "unknown": 0,
+                    "pending_confirmation": 0,
+                },
+                "entries": [entry],
+            }
+            plan_path.write_text(json.dumps(archive_plan), encoding="utf-8")
+            MODULE.run_json(
+                [
+                    sys.executable,
+                    str(MODULE.FINALIZER),
+                    "paths",
+                    "--temp-dir",
+                    str(managed),
+                    "--output-dir",
+                    str(output),
+                    "--manifest-dir",
+                    str(manifests),
+                    "--ensure",
+                ]
+            )
+            MODULE.run_json(
+                [
+                    sys.executable,
+                    str(MODULE.ARCHIVE_STATE),
+                    "init",
+                    "--plan",
+                    str(plan_path),
+                    "--progress",
+                    str(progress_path),
+                ]
+            )
+            source = managed / "run" / entry["artifact_id"] / "deployment.vsdx"
+            source.parent.mkdir(parents=True)
+            with zipfile.ZipFile(source, "w") as archive:
+                archive.writestr("[Content_Types].xml", "<Types />")
+                archive.writestr("visio/document.xml", "<VisioDocument />")
+                archive.writestr("visio/pages/pages.xml", "<Pages />")
+                archive.writestr(
+                    "visio/pages/page1.xml",
+                    "<PageContents><Shapes><Shape><Text>deployment</Text></Shape></Shapes></PageContents>",
+                )
+            source_inode = source.stat().st_ino
+            args = argparse.Namespace(
+                output_root=output,
+                manifest_dir=manifests,
+                managed_temp_root=managed,
+                team_url="https://www.processon.com/org/teams/team-id",
+                source_links=None,
+                plan=plan_path,
+                progress=progress_path,
+            )
+            result = MODULE.finalize_result(
+                {
+                    "download": {"path": str(source)},
+                    "source_url": "https://www.processon.com/diagraming/remote-id",
+                    "remote_id": "remote-id",
+                },
+                entry,
+                args=args,
+            )
+            destination = Path(result["destination"])
+            self.assertFalse(source.exists())
+            self.assertTrue(destination.is_file())
+            self.assertEqual(destination.stat().st_ino, source_inode)
+            self.assertTrue(Path(result["metadata"]).is_file())
+            manifest = json.loads(Path(result["manifest"]).read_text(encoding="utf-8"))
+            self.assertEqual(manifest["operation"], "move")
+            self.assertEqual(manifest["transfer_mode"], "hardlink_then_unlink")
+            progress = json.loads(progress_path.read_text(encoding="utf-8"))
+            self.assertEqual(progress["counts"]["completed"], 1)
+            self.assertEqual(progress["completed"][0]["download_source"], str(source.resolve()))
+
+    def test_legacy_flat_download_review_revalidates_every_flat_download(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             downloads = home / "Downloads"
@@ -366,9 +469,13 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
             with patch.object(Path, "home", return_value=home):
                 review = MODULE.legacy_flat_download_review(progress)
             self.assertEqual(review["flat_downloads_completed_count"], 2)
+            self.assertEqual(review["revalidation_required_count"], 2)
             self.assertEqual(review["numbered_suffix_review_count"], 1)
-            self.assertEqual(review["trusted_completed_count"], 2)
+            self.assertEqual(review["trusted_completed_count"], 1)
             self.assertEqual(review["claim_status"], "revalidation_required")
+            self.assertEqual(
+                [item["artifact_id"] for item in review["revalidation_items"]], ["a", "b"]
+            )
             self.assertEqual(review["numbered_suffix_items"][0]["artifact_id"], "a")
 
     def test_progress_mirror_excludes_legacy_numbered_download_from_trusted_completed(self):
@@ -411,10 +518,56 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
             text = mirror.read_text(encoding="utf-8")
             self.assertIn("completed: 1", text)
             self.assertIn("completed_recorded: 2", text)
+            self.assertIn("revalidation_pending: 1", text)
             self.assertIn("legacy_flat_revalidation_pending: 1", text)
             self.assertIn("remaining_known: 1", text)
             self.assertIn("remaining_known_recorded: 0", text)
             self.assertIn('artifact_id: "unsafe"', text)
+
+    def test_progress_mirror_does_not_double_count_explicit_revalidation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            mirror = root / "archive-progress.yml"
+            plan = {"entries": [], "counts": {"total_entries": 2}}
+            progress = {
+                "plan": {"sha256": "abc"},
+                "counts": {
+                    "planned_known": 2,
+                    "completed": 1,
+                    "failed": 0,
+                    "blocked": 0,
+                    "revalidation_pending": 1,
+                    "remaining_known": 1,
+                    "unknown_pending_confirmation": 0,
+                },
+                "completed": [
+                    {
+                        "artifact_id": "safe",
+                        "source_path": "root/safe",
+                        "actual_format": "vsdx",
+                        "download_source": str(root / "staging" / "safe" / "safe.vsdx"),
+                        "archive_destination": str(root / "archive" / "safe.vsdx"),
+                    }
+                ],
+                "revalidation_pending": [
+                    {
+                        "artifact_id": "reopen",
+                        "source_path": "root/reopen",
+                        "reason": "legacy flat source",
+                        "prior_completion": {
+                            "download_source": str(root / "Downloads" / "same.vsdx")
+                        },
+                    }
+                ],
+                "blocked": [],
+            }
+            MODULE.write_progress_mirror(mirror, plan=plan, progress=progress, run_id="run")
+            text = mirror.read_text(encoding="utf-8")
+            self.assertIn("completed: 1", text)
+            self.assertIn("revalidation_pending: 1", text)
+            self.assertIn("explicit_revalidation_pending: 1", text)
+            self.assertIn("legacy_flat_revalidation_pending: 0", text)
+            self.assertIn("remaining_known: 1", text)
 
     def test_provider_title_suffix_is_deliberately_narrow(self):
         title = "企业知识库"
