@@ -10,6 +10,8 @@ python3 scripts/processon_browser_runner.py status --url '<team-url>'
 python3 scripts/processon_browser_runner.py snapshot --url '<folder-url>'
 ```
 
+`status`、`snapshot` 和 `run` 默认在初始导航后等待 2000ms，让 ProcessOn SPA 完成首屏渲染；慢网络可在子命令前传 `--settle-ms <0..30000>`。若快照的 `visible_text` 与 `interactive` 同时为空，先增加 settle 或改用独立 headed 诊断，禁止从空快照生成盲点动作。
+
 默认 profile 位于用户私有 config 根的 `soia-skills/soia-open-skills/cwork/soia-cwork-processon-diagrams/browser-profile/`。可用 `--profile-dir` 或 `SOIA_CWORK_PROCESSON_BROWSER_PROFILE_DIR` 覆盖，但 runner 会拒绝系统默认 Chrome/Chromium profile、符号链接和非空无技能标记目录。profile 由浏览器保存登录态；技能不读取其 Cookie、Storage、密码或凭据文件。
 
 `run` 接收 schema 1 JSON。只允许 `goto`、有名称的语义 `click`/`hover`、`scroll`、`wait_text`、非激活型 `press`、`back`、`snapshot`、`download` 和嵌套 `popup`；URL 仅限 HTTPS ProcessOn。任意 CSS、无名称控件、删除/编辑/移动/分享/发布等远端变更标签会被拒绝；没有 `fill`、`evaluate`、Cookie/Storage 或网络拦截动作：
