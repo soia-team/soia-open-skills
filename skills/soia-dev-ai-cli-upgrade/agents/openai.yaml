@@ -1,4 +1,0 @@
-interface:
-  display_name: "Dev AI CLI Upgrade"
-  short_description: "Audit and upgrade AI CLIs, using agy for consumer Google login and Gemini only for supported non-consumer lanes."
-  default_prompt: "Use soia-dev-ai-cli-upgrade to audit or upgrade my AI CLIs; treat agy as the consumer Google-login successor and keep Gemini opt-in for supported enterprise, API Key, or Vertex lanes."

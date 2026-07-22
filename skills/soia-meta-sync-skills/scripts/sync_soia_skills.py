@@ -21,6 +21,16 @@ RETIRED_SKILLS = [
     "soia-brand-guidelines",  # renamed to soia-design-brand-guidelines (2026-04-24)
     "jiuan-docs-v5-project-structure",
     "jiuan-docs-v5-references",
+    "soia-pkm-compose-article-draft",
+    "soia-pkm-cover-image",
+    "soia-pkm-publish-wechat-draft",
+    "soia-pkm-publish-x-thread",
+    "soia-pkm-publish-x-article",
+    "soia-pkm-publish-rednote-card",
+    "soia-dev-sync-skills",
+    "soia-dev-skill-release",
+    "soia-dev-prompt-clarity",
+    "soia-dev-ai-cli-upgrade",
 ]
 
 

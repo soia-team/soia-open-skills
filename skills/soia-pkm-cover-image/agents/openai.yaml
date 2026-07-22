@@ -1,4 +1,0 @@
-interface:
-  display_name: "PKM Cover Image"
-  short_description: "为公众号/X/小红书文章生成封面图。五维参数（type/palette/rendering/text/mood），公众号产出接 soia-pkm-publish-wechat-draft --cover。后端仅用 codex CLI 内置生图，探测不到就询问客户，绝不静默降级、绝不用代码渲染冒充位图"
-  default_prompt: "Use soia-pkm-cover-image: 为公众号/X/小红书文章生成封面图；公众号产出接 soia-pkm-publish-wechat-draft --cover。"

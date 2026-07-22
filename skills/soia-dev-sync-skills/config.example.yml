@@ -1,6 +1,0 @@
-# Optional user-owned defaults. CLI arguments always take precedence.
-schema_version: 1
-source_dir: "<shared-skill-dir>"
-targets:
-  - "codex"
-  - "claude"

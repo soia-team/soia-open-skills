@@ -1,4 +1,0 @@
-interface:
-  display_name: "文章转 PPT 媒体包"
-  short_description: "生成可编辑 PPTX、图片素材、信息图和 NotebookLM 对照版"
-  default_prompt: "Use $soia-pkm-transform-article-ppt to turn this article into an editable PPTX media bundle with visual assets and full QA."

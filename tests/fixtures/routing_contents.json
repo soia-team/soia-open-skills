@@ -1,0 +1,10 @@
+{
+  "soia-open-example-a": [
+    {"name": "README.md", "type": "file"},
+    {"name": "soia-zeta-example-skill", "type": "dir"}
+  ],
+  "soia-open-example-b": [
+    {"name": "nested-helper", "type": "dir"},
+    {"name": "soia-alpha-example-skill", "type": "dir"}
+  ]
+}

@@ -1,0 +1,422 @@
+[
+  {
+    "skill_name": "soia-cwork-feishu-cli",
+    "repo": "soia-open-cwork-office-skills",
+    "skillPath": "skills/soia-cwork-feishu-cli",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-cwork-feishu-doc-git-sync",
+    "repo": "soia-open-cwork-office-skills",
+    "skillPath": "skills/soia-cwork-feishu-doc-git-sync",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-cwork-processon-diagrams",
+    "repo": "soia-open-cwork-office-skills",
+    "skillPath": "skills/soia-cwork-processon-diagrams",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-agent-cli-dispatch",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-agent-cli-dispatch",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-agent-md-advisor",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-agent-md-advisor",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-archify-diagrams",
+    "repo": "soia-open-dev-design-skills",
+    "skillPath": "skills/soia-dev-archify-diagrams",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-coding-protocol",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-coding-protocol",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-design-explorer",
+    "repo": "soia-open-dev-design-skills",
+    "skillPath": "skills/soia-dev-design-explorer",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-doc-sync",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-doc-sync",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-drawio-visio-diagrams",
+    "repo": "soia-open-dev-design-skills",
+    "skillPath": "skills/soia-dev-drawio-visio-diagrams",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-fix-loop",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-fix-loop",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-github-ops",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-github-ops",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-officecli-ops",
+    "repo": "soia-open-dev-design-skills",
+    "skillPath": "skills/soia-dev-officecli-ops",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-open-design-ops",
+    "repo": "soia-open-dev-design-skills",
+    "skillPath": "skills/soia-dev-open-design-ops",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-project-scaffold",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-project-scaffold",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-review-panel",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-review-panel",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-task-execute",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-task-execute",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-terminal-ops",
+    "repo": "soia-open-dev-ts-skills",
+    "skillPath": "skills/soia-dev-terminal-ops",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-ai-cli-upgrade",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-ai-cli-upgrade",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-antigravity-cli-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-antigravity-cli-install",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-claude-cli-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-claude-cli-install",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-codex-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-codex-install",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-codex-setup-support",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-codex-setup-support",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-deepcode-cli-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-deepcode-cli-install",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-environment-setup",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-environment-setup",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-kimi-cli-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-kimi-cli-install",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-network-diagnose",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-network-diagnose",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-node-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-node-install",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-opencode-cli-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-opencode-cli-install",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-python-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-python-install",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-qoder-cli-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-qoder-cli-install",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-storage-cleanup",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-storage-cleanup",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-env-workbuddy-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-workbuddy-install",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-media-compose-article-draft",
+    "repo": "soia-open-media-content-skills",
+    "skillPath": "skills/soia-media-compose-article-draft",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-media-cover-image",
+    "repo": "soia-open-media-content-skills",
+    "skillPath": "skills/soia-media-cover-image",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-media-publish-rednote-card",
+    "repo": "soia-open-media-content-skills",
+    "skillPath": "skills/soia-media-publish-rednote-card",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-media-publish-wechat-draft",
+    "repo": "soia-open-media-content-skills",
+    "skillPath": "skills/soia-media-publish-wechat-draft",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-media-publish-x-article",
+    "repo": "soia-open-media-content-skills",
+    "skillPath": "skills/soia-media-publish-x-article",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-media-publish-x-thread",
+    "repo": "soia-open-media-content-skills",
+    "skillPath": "skills/soia-media-publish-x-thread",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-meta-prompt-clarity",
+    "repo": "soia-open-skills",
+    "skillPath": "skills/soia-meta-prompt-clarity",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-meta-skill-release",
+    "repo": "soia-open-skills",
+    "skillPath": "skills/soia-meta-skill-release",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-meta-sync-skills",
+    "repo": "soia-open-skills",
+    "skillPath": "skills/soia-meta-sync-skills",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-alipan-curator",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-alipan-curator",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-alipan-drive-ops",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-alipan-drive-ops",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-baidu-netdisk-ops",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-baidu-netdisk-ops",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-bootstrap-vault-base",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-bootstrap-vault-base",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-bootstrap-vault-ima",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-bootstrap-vault-ima",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-bootstrap-vault-obsidian",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-bootstrap-vault-obsidian",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-clip-douyin",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-clip-douyin",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-clip-drive",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-clip-drive",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-clip-github-repo",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-clip-github-repo",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-clip-rednote",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-clip-rednote",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-clip-web",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-clip-web",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-clip-wechat-account",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-clip-wechat-account",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-clip-wechat-article",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-clip-wechat-article",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-clip-x",
+    "repo": "soia-open-pkm-clip-skills",
+    "skillPath": "skills/soia-pkm-clip-x",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-distill-article-opinion",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-distill-article-opinion",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-interpret-article-analysis",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-interpret-article-analysis",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-library-book-catalog",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-library-book-catalog",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-library-weread-sync",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-library-weread-sync",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-maintain",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-maintain",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-organize-article-moc",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-organize-article-moc",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-reading-plan",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-reading-plan",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-transform-article-notebooklm",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-transform-article-notebooklm",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-transform-article-ppt",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-transform-article-ppt",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-transform-article-visual",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-transform-article-visual",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-transform-obsidian-pdf",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-transform-obsidian-pdf",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-translate-article-zh",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-translate-article-zh",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-safe-audit-fix-codebase",
+    "repo": "soia-open-safe-skills",
+    "skillPath": "skills/soia-safe-audit-fix-codebase",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-safe-track-vulnerability-intel",
+    "repo": "soia-open-safe-skills",
+    "skillPath": "skills/soia-safe-track-vulnerability-intel",
+    "visibility": "public"
+  }
+]

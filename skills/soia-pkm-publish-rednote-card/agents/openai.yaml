@@ -1,4 +1,0 @@
-interface:
-  display_name: "PKM Publish Rednote Card"
-  short_description: "把文章改写成小红书 rednote 笔记：标题、3–5 段短文、标签和配图建议。"
-  default_prompt: "Use soia-pkm-publish-rednote-card: 把这篇文章改成小红书笔记，给我标题、短文、话题标签和配图建议。"

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Dev Review Panel"
-  short_description: "Run a multi-lens, adversarially-verified review over a code diff or a skill package — independent lenses first, refute-by-default verification second, one graded report last."
-  default_prompt: "Use soia-dev-review-panel: 多角度审一下我这次改动，每条发现都要经过对抗式复核再报告"

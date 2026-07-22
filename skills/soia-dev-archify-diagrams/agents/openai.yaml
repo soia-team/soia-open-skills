@@ -1,4 +1,0 @@
-interface:
-  display_name: "SOIA Dev Archify Diagrams"
-  short_description: "Create architecture and workflow diagrams with Archify."
-  default_prompt: "Use soia-dev-archify-diagrams to create or update technical diagrams with JSON IR, validated HTML, and README PNG previews. Ask for or infer the delivery directory, pass --output-dir explicitly for repository/proposal outputs, and use ~/Downloads/soia-dev-archify-diagrams/ only as the safe default."

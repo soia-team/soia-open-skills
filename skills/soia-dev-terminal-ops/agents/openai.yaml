@@ -1,4 +1,0 @@
-interface:
-  display_name: "Dev Terminal Ops"
-  short_description: "Monitor long-running POSIX jobs and recover stalled processes safely"
-  default_prompt: "Use $soia-dev-terminal-ops to monitor this long-running command, diagnose progress with multiple signals, and apply the TERM-to-KILL confirmation gates if recovery is needed."
