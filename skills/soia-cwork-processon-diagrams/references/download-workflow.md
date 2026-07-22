@@ -4,6 +4,8 @@
 
 正式批量必须调用 `scripts/processon_browser_runner.py`，不得在客户正在使用的 Chrome 中用 browser/computer-use/扩展逐份开标签。runner 使用技能专用持久化 profile：首次 `login` 打开独立窗口让客户手动登录，后续 `status`、`snapshot`、`run` 默认 headless。任何 AI host 只需运行 Python 命令，不需要自己的浏览器工具。
 
+已有归档计划时，优先使用 `scripts/processon_archive_batch.py`：一个专用 persistent context 固定复用 worker 页，不为每份 artifact 新建并遗留标签；浏览器下载可受控并发，最终归档与进度仍只有一个 writer。每份文件先进入 `<managed-download-root>/<artifact_id>/<原文件名>`，不与其他同名文件共享 staging。`--workers 1` 不需要 proof；`--workers 2` 或 `3` 必须分别提供当前计划下真实样本生成的语义并发 proof。
+
 ```bash
 python3 scripts/processon_browser_runner.py login --url '<team-url>'
 python3 scripts/processon_browser_runner.py status --url '<team-url>'
@@ -126,9 +128,24 @@ python3 scripts/processon_archive_state.py next \
 
 浏览器下载、`finalize` 和本地结构校验完成后，用 `record` 绑定 artifact_id、浏览器落地文件、最终交付文件与 finalizer manifest。失败或阻断分别用 `mark` 记录原因；已有截图、Markdown 或错误响应等诊断文件时，重复传入 `--evidence-file`，脚本会把它们复制到 `<run-dir>/artifacts/evidence/`、记录大小与 SHA-256，并由 `audit` 重放。未知类型仍在人工确认队列，不得用 `mark` 冒充已确认类型。
 
-ProcessOn 导出任务可能晚于菜单点击数秒才真正落盘；如果在前一份完成前切换列表选中项，下载文件名可能使用后来选中的标题，而文件内容仍属于前一项。正式队列因此必须严格串行：记录下载目录基线，发起一份导出，轮询到新增文件完成且大小连续稳定，再做结构/页面文字校验和 `record`，最后才领取下一项。浏览器下载事件短时超时后继续核对真实文件，不能立即重试或切换选中项。出现同名不同 SHA、意外 `(n)` 后缀或标题与页面文字冲突时，使用 `soia-dev-drawio-visio-diagrams` 只读提取 VSDX 文字；无法唯一映射的文件保留为诊断材料，对应 artifact 继续 pending。
+ProcessOn 导出任务可能晚于菜单点击数秒才真正落盘；如果同一页面在前一份完成前切换列表选中项，下载文件名可能使用后来选中的标题，而文件内容仍属于前一项。同一 worker 因此必须严格串行：记录 artifact 独占 staging，发起一份导出，等下载事件和落盘完成，再做结构/页面文字校验，最后才切换下一项。不得把不同条目平铺到 `~/Downloads` 并用浏览器生成的 `(1)`、`(2)` 推断来源。多 worker 只在 proof 证明独立页面没有交叉串件后启用；每份仍需核对弹页标题、source URL、建议文件名和 VSDX/XMind 内部标题信号。出现相同 SHA、意外后缀或语义冲突时，本 wave 保持 pending 并降级为串行；不能立即重试或写 `record`。
 
-ProcessOn 列表是虚拟化渲染：目标不在当前视口时必须先滚动并重新读取快照。思维导图列表页原生格式无产物时进入官方编辑器重试 XMind、POS、POSM；只有 Markdown 能下载时将其作为阻断证据，不作为 artifact 交付物。同目录同名且缺少远端 ID 时，交付目录附加 artifact_id 前 8 位，避免浏览器 `(1)` 后缀失去来源定位。
+推荐批次入口：
+
+```bash
+python3 scripts/processon_archive_batch.py \
+  --plan <run-dir>/artifacts/archive-plan.json \
+  --progress <run-dir>/artifacts/download-progress.json \
+  --team-url '<team-url>' --output-root <archive-root> \
+  --manifest-dir <run-dir>/artifacts/finalizer-manifests \
+  --source-links <archive-root>/_manifests/source-links.yml \
+  --progress-mirror <archive-root>/_manifests/archive-progress.yml \
+  --workers 1 --limit 12 --dry-run
+```
+
+并发前先用两份可信 VSDX/XMind 做串行基线和两路真实下载，解析文件内文字确认没有交叉串件，再保存运行包私有 `concurrency-proof.json` 并改为 `--workers 2 --concurrency-proof <proof>`。三路需要独立三路 proof，不能拿两路结果外推。批处理持有全局 lock；第二个 orchestrator 必须立即失败，不能重复领取。
+
+ProcessOn 列表是虚拟化渲染：目标不在当前视口时必须先滚动并重新读取快照。思维导图列表页原生格式无产物时进入官方编辑器重试 XMind、POS、POSM；只有 Markdown 能下载时将其作为阻断证据，不作为 artifact 交付物。同目录同名的 collision-risk 项无论 `--workers` 为多少都从自动队列排除；只有取得行级稳定 ID/URL 或人工逐项确认后，才允许进入专用下载流程，交付目录附加 artifact_id 前 8 位。
 
 每一小批结束运行 `audit`。它重新检查计划 SHA-256、成功记录计数、交付文件大小与 SHA-256、VSDX/XMind 包结构、阻断诊断证据及 finalizer manifest。进度文件使用原子写入和独占锁；会话中断后再次执行 `init` 与 `next` 即可继续。
 

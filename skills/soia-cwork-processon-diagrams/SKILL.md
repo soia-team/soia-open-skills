@@ -1,9 +1,9 @@
 ---
 name: soia-cwork-processon-diagrams
 description: 通过宿主无关的专用浏览器 profile 和可恢复队列，递归盘点 ProcessOn 个人/团队空间到叶子文件；按授权对流程图默认导出 Visio VSDX、对思维导图默认导出 XMind，将未知类型列入待确认清单，并完成下载校验与归档；适用于“读取 ProcessOn 文件”“导出架构图”“盘点全部子目录”“批量下载但不要影响我的 Chrome”“从 POS/VSDX/XMind 提取结构”等请求。
-version: 1.8.2
+version: 1.9.0
 created_at: 2026-07-20 18:57:53
-updated_at: 2026-07-22 14:15:42
+updated_at: 2026-07-22 15:00:00
 created_by: gpt-5.6-sol
 updated_by: gpt-5.6-sol
 dependencies:
@@ -25,6 +25,7 @@ dependencies:
 | 导出图表 | 按客户授权选择 VSDX、POS、PNG、SVG、PDF、XMind 或 Office 格式 | 下载文件、格式/大小/SHA-256 验收 |
 | 归档浏览器下载 | 解析 CLI、环境变量和私有 YAML 中的路径，把下载文件校验后复制/移动到交付目录 | 最终路径、碰撞策略、SHA-256 和审计 manifest |
 | 批量续跑归档 | 从归档计划初始化下载队列，逐项领取、记录成功/失败/阻断并重放审计 | `download-progress.json`、下一批列表和机械验收结果 |
+| 受控并发归档 | 在一个技能专用 context 内固定复用 1–2 个 headless worker 页；下载可并发，归档和进度仍单写入 | 并发 proof、逐批 receipt、弹页/worker 关闭对账和进度镜像 |
 | 不干扰地控制浏览器 | 从任意 AI/终端调用本地 Playwright runner，在技能专用 profile 中 headless 执行 | 独立登录态、页面关闭计数、下载回执；客户主 Chrome 不被接管 |
 | 解析已有导出 | 读取本地 POS/XMind/SVG/图片；VSDX 可交给可选 draw.io/Visio 技能 | 标题、图表类型、节点文字、尺寸与校验值 |
 
@@ -76,6 +77,10 @@ python3 scripts/processon_browser_runner.py status --url '<team-url>'
 python3 scripts/processon_browser_runner.py snapshot --url '<folder-url>'
 python3 scripts/processon_browser_runner.py run \
   --actions <actions.json> --download-dir <managed-temp-dir>
+python3 scripts/processon_archive_batch.py \
+  --plan <archive-plan.json> --progress <download-progress.json> \
+  --team-url '<team-url>' --output-root <archive-root> \
+  --manifest-dir <manifest-dir> --workers 1 --limit 12 --dry-run
 ```
 
 runner 的 action 文件只允许导航、有名称的语义点击/悬停、滚动、等待、受控 popup、下载、固定的只读 `inspect_text` 结构检查和 ProcessOn 专用 `row_menu`；不接受任意 CSS/无名称控件/调用方脚本，并机械拒绝删除、编辑、移动、分享、发布等远端变更入口；不提供填表、读取 Cookie/Storage 或注入凭据。动作格式和标签生命周期见 [下载归档工作流](references/download-workflow.md)。
@@ -212,7 +217,7 @@ python3 scripts/processon_archive_state.py next \
    - 思维导图默认选 `Xmind文件`/`.xmind`；
    - 无法确认类型的文件加入“待人工确认”清单，不自动打开下载菜单。
    默认格式不可用、会员/权限阻断或下载失败时回退 POS，并明确记录“原请求格式、实际格式、降级原因”，不得静默替换。列表页点击无文件时进入官方编辑器重试 XMind/POS/POSM；若这些原生格式均无文件、但 Markdown 能下载，只能把 Markdown 作为诊断证据并将 artifact 标为 `blocked`，不能把 Markdown 冒充 XMind/POS 完成。格式选择见 [ProcessOn 能力与格式](references/processon-capabilities.md)。
-2. 首次需要受管临时目录时运行 `paths --ensure`；由 runner `download` 动作捕获真实下载事件并保存到受管目录，不凭 Toast 判断成功。ProcessOn 导出是异步任务：一次只发起一个 artifact，必须等该文件真实落地、大小稳定并完成结构/语义校验后，才能切换选中项或发起下一份；固定 `sleep`、点击成功和短时下载事件超时都不能替代落盘信号。临时源页面必须在下载完成/失败后的 `finally` 中关闭。先 dry-run，再归档。受管临时目录可显式 `--move`；否则默认复制并保留浏览器原文件：
+2. 首次需要受管临时目录时运行 `paths --ensure`；由 runner `download` 动作捕获真实下载事件并保存到受管目录，不凭 Toast 判断成功。ProcessOn 导出是异步任务：同一 worker 页一次只发起一个 artifact，必须等真实落地并完成结构/语义校验后才能切换条目。默认串行；只有存在当前计划对应的 `concurrency-proof.json`，且两份独立 VSDX/XMind 的文件内文字反证均通过时，才允许 `processon_archive_batch.py --workers 2`。并发下载仍由一个 writer 串行执行 finalize、`metadata.yml`、source-links、record、进度镜像和 audit。每个下载必须先保存到 `<managed-download-root>/<artifact_id>/<原文件名>`，禁止平铺到 `~/Downloads` 后依赖 `(1)` 后缀区分。同目录同标题的 collision-risk 项在 1 路和多路模式下都不进入自动队列，必须取得行级稳定 ID/URL 或人工逐项确认后走专用流程。固定 `sleep`、点击成功和短时下载事件超时都不能替代落盘信号。临时源页面必须在下载完成/失败后的 `finally` 中关闭。先 dry-run，再归档。受管临时目录可显式 `--move`；否则默认复制并保留浏览器原文件：
 
 ```bash
 python3 scripts/finalize_processon_download.py paths --ensure
@@ -315,6 +320,15 @@ python3 scripts/processon_archive_state.py audit \
 - action 合同只允许 ProcessOn HTTPS 导航、有名称的语义 click/hover、scroll、wait、受控 popup 和下载；拒绝任意 CSS、无名称控件和远端变更标签，没有填表、脚本执行、Cookie/Storage 或凭据接口。
 - 启动时关闭专用 profile 的陈旧多余页面；每个 popup 在 `finally` 中关闭，整次 context 在所有正常/异常退出路径关闭并输出计数回执。
 
+`scripts/processon_archive_batch.py`：
+
+- 使用一个技能专用 persistent context 和最多三个固定 headless worker 页；不附着客户主 Chrome，不为每份 artifact 累积新标签。
+- `--workers > 1` 必须提供同一计划的并发语义 proof；两路和三路分别验证；collision-risk 项在所有 worker 数下均不进入自动批次。
+- 浏览器下载可并行；finalize、metadata、source-links、record、进度镜像和 audit 在全局 orchestrator lock 内单写入。
+- 每份 artifact 使用独立 staging 子目录，禁止把同名文件平铺到个人下载目录后按 `(1)`、`(2)` 推断来源。
+- VSDX 读取页面文字并匹配标题特征，XMind 核对根标题；建议文件名正确但文件内语义不匹配时保持 pending，不写进度。
+- 每批生成不可变 JSON receipt，并对 worker 页、popup 与 context 的关闭数做机械对账；历史进度里直接来自 `~/Downloads` 的平铺文件会单列统计，带 `(n)` 后缀的条目进入复核清单，不能因旧状态写成 completed 就省略来源复核。
+
 `scripts/diff_processon_inventory.py`：
 
 - 对两个完整 checkpoint 做 fail-closed 的本地快照差分，不访问 ProcessOn、不读取凭据，也不宣称事件/API 增量。
@@ -323,8 +337,8 @@ python3 scripts/processon_archive_state.py audit \
 
 ## 验证
 
-- 静态：`python3 -m py_compile scripts/inspect_processon_export.py scripts/finalize_processon_download.py scripts/processon_inventory_state.py scripts/build_processon_archive_plan.py scripts/processon_archive_state.py scripts/diff_processon_inventory.py scripts/processon_browser_runner.py`
-- 单测：`python3 -m unittest tests.test_processon_downloads tests.test_processon_inventory_state tests.test_processon_archive_plan tests.test_processon_archive_state tests.test_processon_inventory_delta tests.test_processon_browser_runner -v`，覆盖配置优先级、安全默认路径、原子复制、同名改名、受管移动、目录与资产中间状态、计划漂移拒绝、失败/阻断续跑、完整快照增量门禁，以及主 Chrome profile 拒绝、敏感 action 拒绝和正常/异常页面关闭。
+- 静态：`python3 -m py_compile scripts/inspect_processon_export.py scripts/finalize_processon_download.py scripts/processon_inventory_state.py scripts/build_processon_archive_plan.py scripts/processon_archive_state.py scripts/diff_processon_inventory.py scripts/processon_browser_runner.py scripts/processon_archive_batch.py`
+- 单测：`python3 -m unittest tests.test_processon_downloads tests.test_processon_inventory_state tests.test_processon_archive_plan tests.test_processon_archive_state tests.test_processon_inventory_delta tests.test_processon_browser_runner tests.test_processon_archive_batch -v`，覆盖配置优先级、安全默认路径、原子复制、同名改名、受管移动、目录与资产中间状态、计划漂移拒绝、失败/阻断续跑、完整快照增量门禁，以及主 Chrome profile 拒绝、敏感 action 拒绝、并发 proof、collision 隔离、文件内标题信号和正常/异常页面关闭。
 - POS：用一份流程图和一份思维导图 POS 运行 `--format json`，确认标题、category、节点文字和元素数。
 - 图片：用 PNG/JPEG 运行脚本，确认宽高与 SHA-256。
 - 归档：用真实导出文件依次运行 `finalize --dry-run` 和 `finalize`，核对交付文件 SHA-256 与 manifest；不要把 fixture 路径写入公共文档。

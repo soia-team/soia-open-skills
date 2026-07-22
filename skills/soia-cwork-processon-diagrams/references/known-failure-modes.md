@@ -99,3 +99,15 @@
 **错误表现**：批量循环依赖 Codex/Claude 的 browser、computer-use 或 Chrome 扩展，在客户正在使用的主 Chrome 中逐份打开页面；即使平时只保留一个源页面，也会持续抢焦点。任务中断时当前页遗留，其他 AI 又无法复用这套执行链。
 
 **纠偏规则**：正式批量只用 `processon_browser_runner.py` 的技能专用 profile，首次登录走独立 headed 窗口，后续默认 headless。启动时收拢为一个父页面；临时新页必须写成嵌套 `popup`，在 `finally` 中关闭；整次 context 在成功、异常、超时、Ctrl-C 和 SIGTERM 后全部关闭。回执中 scoped 打开/关闭数不等或退出关闭数为 0 时，本批视为中断待核查。宿主浏览器能力只可在客户明确同意后做一次性诊断，不能回退成批量主路线。
+
+## 13. “多开浏览器”不能跳过交叉串件验证
+
+**错误表现**：为了提速直接启动多个主 Chrome、多个无锁 orchestrator，或只看到并发下载的文件名正确，就假定文件内容也正确；每份打开新标签但不关闭，继续干扰客户操作。
+
+**纠偏规则**：只在一个技能专用 persistent context 中固定复用 1–3 个 headless worker 页；同一 worker 严格串行，源图 popup 必须由发起点击的 worker 页用 `expect_popup` 独占，并在 `finally` 关闭；批次退出关闭所有 worker 和 context。默认串行；两路/三路分别需要当前计划的真实并发 proof，proof 必须解析 VSDX/XMind 内部文字反证没有串件。每个 artifact 使用独立 staging 子目录，禁止平铺到个人下载目录后依赖 `(1)` 后缀。下载可并发，但 finalize、`metadata.yml`、source-links、progress mirror、`record` 和 `audit` 只能由持有全局 lock 的单 writer 执行。collision-risk 项在串行和并发模式下都排除，直到取得行级稳定身份；发现内容语义不匹配、相同 SHA 或关闭数不对时，整项保持 pending 并降级并发度。
+
+## 14. 团队 URL 不保证回到团队根目录
+
+**错误表现**：ProcessOn 会记住团队空间上次停留的子目录；重新打开相同 team URL 后，页面仍在旧 breadcrumb。脚本把 URL 当根目录，随后在当前文件列表中找一级目录并超时。
+
+**纠偏规则**：每个 job 导航前读取可见 breadcrumb，校验首项与计划根一致，再通过固定 breadcrumb 根节点回到团队根；逐层导航时只接受 `file_list_item` 内唯一可见的文件夹行，不按页面任意同名文字点击。breadcrumb 无法归一、目录行不唯一或最后路径不符时保持 pending，不增加等待冒充修复。
