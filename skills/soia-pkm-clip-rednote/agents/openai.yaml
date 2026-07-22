@@ -1,4 +1,0 @@
-interface:
-  display_name: "PKM Clip Rednote"
-  short_description: "归档小红书（rednote）单篇笔记到 Obsidian vault。基于 stdlib 解析 __INITIAL_STATE__，零第三方依赖；视频/图片下载到本地 Downloads，vault 内只留轻量 Markdown 笔记"
-  default_prompt: "Use soia-pkm-clip-rednote: 归档小红书（rednote）单篇笔记到 Obsidian vault。基于 stdlib 解析 __INITIAL_STATE__，零第三方依赖；视频/图片下载到本地 Downloads，vault 内只留轻量 Markdown 笔记"

@@ -1,7 +1,0 @@
-# Optional OpenAI/Codex/SOIA catalog metadata.
-# Canonical instructions still live in ../SKILL.md so Claude Code and other
-# skills.sh-compatible agents receive the same dependencies and workflow rules.
-interface:
-  display_name: "PKM Publish X Article"
-  short_description: "把 Markdown 成文直传 X Articles 草稿箱：富文本粘贴、封面与正文图按原位插入，只存草稿绝不发布。"
-  default_prompt: "Use soia-pkm-publish-x-article: 把这篇 Markdown 长文上传到 X Articles 草稿箱，封面用文首第一张图，校验通过后给我草稿 URL。"

@@ -1,4 +1,0 @@
-interface:
-  display_name: "PKM Clip Douyin"
-  short_description: "归档单条抖音视频到 Obsidian vault：Playwright 拦截签名 API 拿元数据，MP4 存本地 Downloads，vault 只留轻量笔记。"
-  default_prompt: "Use soia-pkm-clip-douyin: 归档我刚发的这条抖音视频链接到 vault"

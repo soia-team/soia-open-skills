@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -18,6 +19,22 @@ SCRIPT = (
 
 
 class MetaSyncTargetTests(unittest.TestCase):
+    def test_repository_split_retired_names_are_registered(self) -> None:
+        retired = set(runpy.run_path(str(SCRIPT))["RETIRED_SKILLS"])
+        expected = {
+            "soia-pkm-compose-article-draft",
+            "soia-pkm-cover-image",
+            "soia-pkm-publish-wechat-draft",
+            "soia-pkm-publish-x-thread",
+            "soia-pkm-publish-x-article",
+            "soia-pkm-publish-rednote-card",
+            "soia-dev-sync-skills",
+            "soia-dev-skill-release",
+            "soia-dev-prompt-clarity",
+            "soia-dev-ai-cli-upgrade",
+        }
+        self.assertTrue(expected.issubset(retired), expected - retired)
+
     def run_script(self, home: Path, *args: str, path: str | None = None) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env["HOME"] = str(home)

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Draw.io Visio 图表工程"
-  short_description: "读取 VSDX，转换、理解并升级为可编辑 draw.io 图表。"
-  default_prompt: "Use $soia-dev-drawio-visio-diagrams to inspect this VSDX safely, convert it into an editable draw.io source, apply requested upgrades without overwriting the original, and validate exported artifacts."

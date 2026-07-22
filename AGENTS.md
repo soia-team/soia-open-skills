@@ -12,9 +12,13 @@ do not make this a Codex-only file.
 
 ## Repository Purpose
 
-`soia-open-skills` publishes public, reusable skills. Every committed skill must
-be safe for users who do not share the maintainer's machine, vault layout,
-accounts, private data, or SOIA internal workspace.
+`soia-open-skills` is the public SOIA Skills ecosystem portal and specification
+source of truth. It retains only the three `soia-meta-*` ecosystem skills, the
+shared authoring/storage specifications and template, the canonical audit and
+catalog tooling, and the public cross-repository routing manifest. Domain skills
+are published from focused spoke repositories. Every committed artifact must be
+safe for users who do not share the maintainer's machine, vault layout, accounts,
+private data, or SOIA internal workspace.
 
 ## Routing Boundary
 

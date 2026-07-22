@@ -1,4 +1,0 @@
-interface:
-  display_name: "Dev Sync Skills"
-  short_description: "将共享技能目录以软链接同步到用户选择的 AI 工具目录。"
-  default_prompt: "Use $soia-dev-sync-skills to preview and sync a shared skill source to explicitly selected AI tool directories."

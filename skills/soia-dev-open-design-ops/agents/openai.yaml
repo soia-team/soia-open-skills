@@ -1,4 +1,0 @@
-interface:
-  display_name: "Open Design Ops"
-  short_description: "Operate Open Design daemon, catalogs, design systems, exports, and session resume"
-  default_prompt: "Use $soia-dev-open-design-ops to check my Open Design environment, start the local daemon safely, query real catalogs, and run a source-backed export or resume workflow."

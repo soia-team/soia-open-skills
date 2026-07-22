@@ -1,8 +1,0 @@
-# soia-pkm-clip-rednote private config example.
-# Copy to ~/.config/soia-skills/soia-open-skills/soia-pkm/soia-pkm-clip-rednote/config.yml.
-
-env:
-  OBSIDIAN_VAULT: "<vault-path>"
-  OBSIDIAN_ARTICLES: "<vault-relative-articles-dir>"
-  # 可选：仅当笔记需要登录态才能完整渲染时设置；不要把真实 cookie 写进本文件的公开副本
-  XHS_COOKIE: "<optional xiaohongshu cookie string>"
