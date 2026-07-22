@@ -62,6 +62,13 @@ COMMON_TITLE_WORDS = (
     "系统",
     "未上生产",
 )
+SENSITIVE_TEXT_PATTERNS = (
+    ("chinese_password_assignment", re.compile(r"密码\s*[:：=]\s*[^\s,，;；]+")),
+    (
+        "english_password_assignment",
+        re.compile(r"\b(?:password|passwd|pwd)\s*[:=]\s*[^\s,;]+", re.IGNORECASE),
+    ),
+)
 
 
 class BatchError(RuntimeError):
@@ -897,6 +904,18 @@ def matched_chinese_bigram_pair(title: str, combined: str) -> list[str]:
     return []
 
 
+def sensitive_text_findings(texts: list[str]) -> list[dict[str, Any]]:
+    """Count potential plaintext credential assignments without returning values."""
+
+    combined = "\n".join(texts)
+    findings: list[dict[str, Any]] = []
+    for finding_type, pattern in SENSITIVE_TEXT_PATTERNS:
+        count = sum(1 for _ in pattern.finditer(combined))
+        if count:
+            findings.append({"type": finding_type, "count": count})
+    return findings
+
+
 def validate_zip_archive(archive: zipfile.ZipFile) -> list[str]:
     infos = archive.infolist()
     if len(infos) > MAX_ZIP_ENTRIES:
@@ -945,6 +964,15 @@ def inspect_vsdx(path: Path, title: str) -> dict[str, Any]:
                     if text:
                         texts.append(text)
     combined = normalized_text("\n".join(texts))
+    sensitive_findings = sensitive_text_findings(texts)
+    if sensitive_findings:
+        summary = ", ".join(
+            f"{finding['type']}={finding['count']}" for finding in sensitive_findings
+        )
+        raise BatchError(
+            "VSDX contains potential plaintext credential assignments; "
+            f"security review required ({summary})"
+        )
     signals = title_signals(title)
     if not signals:
         raise BatchError(f"VSDX title has no distinctive signal and cannot be verified: {title!r}")

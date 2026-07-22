@@ -104,6 +104,31 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
                 MODULE.inspect_vsdx(path, "数字化柜面状态流传")
             self.assertEqual(MODULE.matched_chinese_bigram_pair("数字化", "数字字化"), [])
 
+    def test_vsdx_blocks_plaintext_credentials_without_echoing_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "MongoDB使用关系图.vsdx"
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("visio/document.xml", "<VisioDocument />")
+                archive.writestr(
+                    "visio/pages/page1.xml",
+                    "<PageContents><Shapes><Shape><Text>MongoDB 密码：do-not-log-this</Text></Shape>"
+                    "<Shape><Text>password=also-secret</Text></Shape></Shapes></PageContents>",
+                )
+            with self.assertRaises(MODULE.BatchError) as caught:
+                MODULE.inspect_vsdx(path, "MongoDB使用关系图")
+            message = str(caught.exception)
+            self.assertIn("security review required", message)
+            self.assertIn("chinese_password_assignment=1", message)
+            self.assertIn("english_password_assignment=1", message)
+            self.assertNotIn("do-not-log-this", message)
+            self.assertNotIn("also-secret", message)
+
+    def test_secret_scan_does_not_block_non_assignment_security_terms(self):
+        self.assertEqual(
+            MODULE.sensitive_text_findings(["token验证", "password policy", "修改密码"]),
+            [],
+        )
+
     def test_dotted_release_number_separates_chinese_title_signals(self):
         self.assertEqual(
             MODULE.title_signals("《磐石4.0短信系统部署架构图-生产环境》"),
