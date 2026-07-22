@@ -259,7 +259,7 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   entrySheet.getRangeByIndexes(4, 0, entryValues.length, entryHeaders.length).values = entryValues;
   for (let index = 0; index < entryValues.length; index += 1) {
     const row = index + 5;
-    entrySheet.getRange(`E${row}`).formulas = [[`=D${row}/C${row}`]];
+    entrySheet.getRange(`E${row}`).formulas = [[`=IFERROR(D${row}/C${row},0)`]];
     entrySheet.getRange(`G${row}`).formulas = [[`=F${row}/'00_使用说明'!$B$23`]];
     entrySheet.getRange(`J${row}`).formulas = [[`=HYPERLINK(I${row},"🔗 打开云盘")`]];
     entrySheet.getRange(`L${row}`).formulas = [[`=HYPERLINK(K${row},"📄 打开明细")`]];
@@ -302,7 +302,7 @@ function buildMasterWorkbook(Workbook, aggregate, plan, generatedAt) {
   partitionSheet.getRangeByIndexes(4, 0, partitionStats.length, 10).values = partitionStats.map((row) => [row.partition, row.dirs, row.files, row.indexedFiles, null, row.indexedBytes, null, row.volume, row.url, null]);
   for (let index = 0; index < partitionStats.length; index += 1) {
     const row = index + 5;
-    partitionSheet.getRange(`E${row}`).formulas = [[`=D${row}/C${row}`]];
+    partitionSheet.getRange(`E${row}`).formulas = [[`=IFERROR(D${row}/C${row},0)`]];
     partitionSheet.getRange(`G${row}`).formulas = [[`=F${row}/'00_使用说明'!$B$23`]];
     partitionSheet.getRange(`J${row}`).formulas = [[`=HYPERLINK(I${row},"🔗 打开分区")`]];
   }

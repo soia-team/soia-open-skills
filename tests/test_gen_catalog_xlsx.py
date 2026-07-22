@@ -119,6 +119,14 @@ for output in outputs:
         self.assertNotIn("=SUM(02_明细入口!", builder)
         self.assertNotIn("=COUNTA(01_目录索引!", builder)
 
+    def test_coverage_formulas_guard_against_zero_total_files_in_mjs_builder(self) -> None:
+        """Regression for a real #DIV/0! found via --soffice recalculation against real
+        vault data: a partition with 全盘口径文件数=0 (e.g. an empty district) made
+        `=D/C` divide by zero in 02_明细入口 and 04_分区统计. Must stay IFERROR-guarded."""
+        builder = (SCRIPTS / "catalog_xlsx" / "build_workbooks.mjs").read_text(encoding="utf-8")
+        self.assertIn("=IFERROR(D${row}/C${row},0)", builder)
+        self.assertNotIn("`=D${row}/C${row}`", builder)
+
     def test_parser_checks_declared_count(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "10_孩子.md"
@@ -609,6 +617,43 @@ class OpenpyxlFallbackIntegrationTests(unittest.TestCase):
             self.assertIsNotNone(payload["qa"])
             self.assertIsNone(payload["qa"].get("formulaErrorCount"))
             self.assertIn("soffice", payload["qa"]["note"])
+
+    def test_coverage_formulas_guard_against_zero_total_files_partition(self) -> None:
+        """A partition with 全盘口径文件数=0 (e.g. an empty district like 80_待探索资源)
+        must not produce a bare D/C division — that evaluates to #DIV/0! in real Excel/
+        LibreOffice, caught via --soffice recalculation against real vault data."""
+        from catalog_xlsx.build_workbooks_fallback import build_master_workbook
+
+        catalog = {
+            "sourceName": "00_馆藏总览.md",
+            "totalDirs": 4,
+            "totalFiles": 1,
+            "totalSize": "1MB",
+            "partitions": [
+                {"partition": "10_孩子", "url": "https://example.test/10", "dirs": 3, "files": 1, "volume": "1MB"},
+                {"partition": "80_待探索资源", "url": "https://example.test/80", "dirs": 1, "files": 0, "volume": "0B"},
+            ],
+            "headingLinks": [],
+        }
+        aggregate = {
+            "catalog": catalog,
+            "indexedFiles": 1,
+            "indexedBytes": 1048576,
+            "directories": [],
+            "typeStats": [],
+            "extensionStats": [],
+            "partitionStats": [
+                {"partition": "10_孩子", "url": "https://example.test/10", "dirs": 3, "files": 1, "volume": "1MB", "indexedFiles": 1, "indexedBytes": 1048576},
+                {"partition": "80_待探索资源", "url": "https://example.test/80", "dirs": 1, "files": 0, "volume": "0B", "indexedFiles": 0, "indexedBytes": 0},
+            ],
+        }
+        plan = {"outputPath": "/tmp/does-not-matter.xlsx", "partitions": [], "releaseMetadata": None}
+        workbook, _ = build_master_workbook(aggregate, plan, "2026-07-22 00:00")
+        # 80_待探索资源 is the 2nd partition -> row 6 (data starts at row 5).
+        entry_formula = workbook["02_明细入口"]["E6"].value
+        partition_formula = workbook["04_分区统计"]["E6"].value
+        self.assertIn("IFERROR", entry_formula)
+        self.assertIn("IFERROR", partition_formula)
 
 
 if __name__ == "__main__":

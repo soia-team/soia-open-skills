@@ -407,7 +407,7 @@ def build_master_workbook(aggregate: dict[str, Any], plan: dict[str, Any], gener
                 f"{row['partition']}.md",
             ],
         )
-        entry_sheet.cell(row=excel_row, column=5).value = f"=D{excel_row}/C{excel_row}"
+        entry_sheet.cell(row=excel_row, column=5).value = f"=IFERROR(D{excel_row}/C{excel_row},0)"
         entry_sheet.cell(row=excel_row, column=7).value = f"=F{excel_row}/'00_使用说明'!$B$23"
         entry_sheet.cell(row=excel_row, column=10).value = f'=HYPERLINK(I{excel_row},"🔗 打开云盘")'
         entry_sheet.cell(row=excel_row, column=12).value = f'=HYPERLINK(K{excel_row},"📄 打开明细")'
@@ -466,7 +466,7 @@ def build_master_workbook(aggregate: dict[str, Any], plan: dict[str, Any], gener
             partition_sheet, excel_row, 0,
             [row["partition"], row["dirs"], row["files"], row["indexedFiles"], None, row["indexedBytes"], None, row["volume"], row["url"] or None, None],
         )
-        partition_sheet.cell(row=excel_row, column=5).value = f"=D{excel_row}/C{excel_row}"
+        partition_sheet.cell(row=excel_row, column=5).value = f"=IFERROR(D{excel_row}/C{excel_row},0)"
         partition_sheet.cell(row=excel_row, column=7).value = f"=F{excel_row}/'00_使用说明'!$B$23"
         partition_sheet.cell(row=excel_row, column=10).value = f'=HYPERLINK(I{excel_row},"🔗 打开分区")'
     style_header(partition_sheet, "A4:J4")
