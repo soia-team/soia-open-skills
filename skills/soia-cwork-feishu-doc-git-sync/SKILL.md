@@ -3,9 +3,9 @@ name: soia-cwork-feishu-doc-git-sync
 description: 将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。
 dependencies:
   hard: [soia-cwork-feishu-cli]
-version: 1.6.5
+version: 1.7.1
 created_at: 2026-07-14 23:24:26
-updated_at: 2026-07-21 14:16:00
+updated_at: 2026-07-22 14:52:25
 created_by: claude opus 4.6
 updated_by: gpt-5.6-sol
 ---
@@ -21,6 +21,7 @@ updated_by: gpt-5.6-sol
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
 | 同步飞书知识库到本地 | 遍历知识空间节点，读取可读文档并生成 Markdown | 本地镜像目录、目录层级、来源链接、同步清单 |
+| 排除指定知识库子树 | 按稳定节点 ID 或精确标题跳过根节点及全部后代 | 不读取该子树正文、表格、图片或附件，也不加入侧边栏和重试队列 |
 | 备份到 Git | 将生成内容放入客户指定的 Git 仓库并检查差异 | commit/push 回执、文件变更和失败清单 |
 | 用 Obsidian 查看 | 在独立 vault 中保存规则、镜像和本地补录 | 可直接用 Obsidian 打开的 vault |
 | 用 VitePress 展示 | 生成站点侧边栏并构建静态站点 | 本地开发服务或构建产物 |
@@ -42,10 +43,11 @@ updated_by: gpt-5.6-sol
 3. 首次使用先执行 dry-run，核对空间、节点数量和目标目录。
 4. 先用单节点隔离试点核对表格、资源和样式快照；`--pilot-node-token` 只写明确选择的节点到单独试点目录，不会给空目录补齐其他节点占位文件。
 5. 执行镜像同步。默认只写本地文件和同步元数据，不修改飞书内容，也不删除本地历史文件。
-6. 同步写入后会自动校验 manifest、文件存在性、frontmatter、失败占位、侧边栏覆盖范围、资源引用、未归档的嵌入式 Sheet、未归档的 Sheet 内嵌 Base、`all_docx` 模式下尚未完成 XML 语义扫描的历史文档，以及 `all_nodes` 模式下仍未生成真实表格的独立 Sheet；发现 `failed`/`stale` 或语义缺口时返回非零结果，不能把空白占位或局部内容当作完整成功。
-7. 如需检查表格导出，先做 `drive +inspect`/帮助/schema 探查；能力探查不等于授权导出。
-8. 只有客户明确确认导出范围、格式、文件数和本地目录后，才调用 `drive +export` 或 `drive +export-download`。
-9. 如需镜像 Sheet，先在私有配置明确范围：全部独立 Sheet 使用 `sync.sheets.enabled: true` 与 `all_nodes: true` 自动发现每个网格子表，或在 `selections` 中逐项指定 `node_token`、稳定 `sheet_id` 和有界 A1 `range`；两种方式都必须设置行列、单元格和返回字符上限。响应达到 `max_chars` 时必须按 `actual_range` 下一行续读，不能把截断当成整表失败。混合工作簿还需显式设置 `include_bitable_tabs: true` 与记录上限，随后把 Base 子表路由到多维表格读取。文档内嵌 Sheet 启用 `sync.embedded_sheets.enabled` 后，还须选择 `all_docx: true` 或 `node_tokens`。按需开启 `sync.sheets.preserve` 保存公式、样式、批注、布局和图表等元数据。未启用时必须显示并校验语义缺口，不得静默删除 `<sheet>` 或把独立 Sheet 占位当成完整归档。
+6. 如需排除完整目录树，在私有配置设置 `sync.exclude_subtrees.enabled: true`，并在 `roots` 中优先填写稳定 `node_token`；首次清理既有 Markdown、完整导出和已下载附件时显式运行一次 `--rebuild-tree`，本地补录目录永不受影响。
+7. 同步写入后会自动校验 manifest、文件存在性、frontmatter、失败占位、侧边栏覆盖范围、排除子树残留、资源引用、未归档的嵌入式 Sheet、未归档的 Sheet 内嵌 Base、`all_docx` 模式下尚未完成 XML 语义扫描的历史文档，以及 `all_nodes` 模式下仍未生成真实表格的独立 Sheet；发现 `failed`/`stale` 或语义缺口时返回非零结果，不能把空白占位或局部内容当作完整成功。
+8. 如需检查表格导出，先做 `drive +inspect`/帮助/schema 探查；能力探查不等于授权导出。
+9. 只有客户明确确认导出范围、格式、文件数和本地目录后，才调用 `drive +export` 或 `drive +export-download`。
+10. 如需镜像 Sheet，先在私有配置明确范围：全部独立 Sheet 使用 `sync.sheets.enabled: true` 与 `all_nodes: true` 自动发现每个网格子表，或在 `selections` 中逐项指定 `node_token`、稳定 `sheet_id` 和有界 A1 `range`；两种方式都必须设置行列、单元格和返回字符上限。响应达到 `max_chars` 时必须按 `actual_range` 下一行续读，不能把截断当成整表失败。混合工作簿还需显式设置 `include_bitable_tabs: true` 与记录上限，随后把 Base 子表路由到多维表格读取。文档内嵌 Sheet 启用 `sync.embedded_sheets.enabled` 后，还须选择 `all_docx: true` 或 `node_tokens`。按需开启 `sync.sheets.preserve` 保存公式、样式、批注、布局和图表等元数据。未启用时必须显示并校验语义缺口，不得静默删除 `<sheet>` 或把独立 Sheet 占位当成完整归档。
 11. 如需镜像多维表格，逐项指定 `sync.bitables.selections` 的 `node_token`、`table_id` 和 `max_records`，再开启 `sync.bitables.enabled` 或传入 `--sync-bitables`；附件二进制还需要单独开启 `download_attachments`，仪表盘/报表元数据需要 `include_dashboards`。
 12. 只有用户明确确认来源、格式、文件数、输出目录和 Git 策略后，才能执行完整初始化：Sheet 设置 `sync.sheets.workbook_exports.enabled=true` 与 `all_nodes=true`，Base 设置 `sync.bitables.base_exports.enabled=true` 与 `all_nodes=true`，Wiki 文件设置 `sync.files.downloads.enabled=true` 与 `all_nodes=true`。每项必须配置 `batch_size`，重复执行至 deferred 为零。
 13. 如需离线资源、文档间本地跳转、子页面导航或变更台账，先在私有配置中逐项启用 `download_assets`、`localize_internal_links`、`render_sub_page_navigation`、`change_ledger`；它们默认关闭以兼容已有镜像。
@@ -82,6 +84,9 @@ python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --rebuild-tree
 # 从飞书刷新最新目录层级和兄弟节点顺序，但复用现有本地正文
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental \
   --rebuild-tree --refresh-tree-only
+# 应用私有配置中的整棵子树排除，并清理该子树既有 Markdown、完整导出和已下载附件
+python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental \
+  --rebuild-tree --refresh-tree-only --skip-assets
 # 下载图片到本地镜像并把正文中的远程 URL 改成相对路径
 python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --incremental \
   --download-assets
@@ -111,6 +116,8 @@ python3 scripts/sync_feishu_wiki.py --config <private-config.yml> --validate-onl
 ### ID 增量同步与事件推送
 
 - `node_token` 是同步主键，`obj_token` 是正文读取和事件映射的对象键；标题变化、移动和重名都不应改变这两个 ID。
+- `sync.exclude_subtrees` 必须在私有配置中显式启用；优先按稳定 `node_token` 排除，`exact_title` 会排除所有精确同名根节点。同步器只在根节点的父级列表中识别它，不再枚举后代，并从正文、Sheet、Base、图片、附件、重试、活跃 manifest 和侧边栏中同时排除整棵子树。
+- 已生成的排除子树内容不会被普通增量同步静默删除；用户明确要求清理后运行 `--rebuild-tree`，同步器把已知成员记录为 `excluded` 而不是误报为远端删除，并清理、校验对应 Markdown、目录、`_exports/` 完整导出和 `_assets/` 已下载附件均不残留；`20_本地补录/` 永不删除。
 - `--only-node-token` 是单文档修复开关；与 `--rebuild-tree-only` 一起使用时只从已有 manifest 定位节点，不重新遍历飞书树，也不会因为其他节点历史失败而重试它们。
 - 首次同步建立完整基线，记录 `obj_edit_time`/`remote_updated_at` 和 `docs +fetch` 返回的 `revision_id`。
 - 后续 `--incremental` 仍会先按 `parent_node_token` 重建树，但只读取新增、失败、事件命中或远端编辑时间变化的文档正文；未变化节点复用本地 Markdown。
@@ -185,7 +192,7 @@ sync:
 - 每次非 dry-run 同步结束都会运行本地验收；`--validate-only` 可单独复核最近一次结果。验收失败时退出码为 2，并在 manifest 的 `validation` 节点保留机器可读摘要。
 - `prune: false` 时不删除已消失节点对应的本地文件；节点会在 manifest 中标记为 deleted，避免一次权限或网络异常造成数据丢失。
 - `20_本地补录/` 与 `90_同步元数据/` 不会被知识库同步覆盖。
-- `--rebuild-tree` 只迁移 `paths.generated_dir` 内由同步器生成的旧扁平文件，不触碰 `20_本地补录/`。
+- `--rebuild-tree` 只处理 `paths.generated_dir` 内由同步器生成的旧扁平文件与已排除节点的已知资源，不触碰 `20_本地补录/`。
 - `--rebuild-tree-only` 仅复用已有 manifest 和生成文件做目录迁移，不发起飞书正文请求；如果同时启用资源本地化，仍可能只为刷新过期媒体 URL 读取含资源的文档。
 - `--refresh-tree-only` 会重新读取飞书节点树和兄弟顺序，按最新 `parent_node_token` 重建本地目录和侧边栏，但复用已有本地正文；启用资源本地化时，会额外刷新仍含未本地化资源的文档；必须与 `--rebuild-tree` 一起使用。
 - `manifest.json`/`sync-state.json` 的 `tree_order: feishu_node_list` 表示目录顺序来源于飞书节点列表，不是标题排序。
@@ -217,6 +224,12 @@ sync:
 - bot 无权访问的个人云盘或私有资源必须报告为不可见，不得切换 user OAuth 代为读取。
 - 不默认覆盖本地补录、删除历史文件或推送远程 Git；这些属于需要明确确认的写入/发布动作。
 - 执行前检查目标仓库、当前分支和远程地址；发现与预期不符时停止并报告。
+
+## 私密信息与中间数据
+
+- 把排除节点 ID、知识空间 ID、凭据别名和本地输出位置只写入技能私有配置，不提交公共仓库。
+- 把 active/excluded 节点清单、同步状态、侧边栏和变更台账保存在用户指定镜像的同步元数据目录；排除记录只用于证明未抓取范围，不包含正文。
+- 把临时下载和接口中间结果交给系统临时目录；只把用户授权的 Markdown、表格快照和资源文件写入交付目录。
 
 ## 日志与完成回执
 

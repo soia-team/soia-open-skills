@@ -93,6 +93,92 @@ class FeishuDocSyncTests(unittest.TestCase):
             sync.sidebar_links(sidebar),
         )
 
+    def test_subtree_exclusion_filters_root_and_all_descendants(self) -> None:
+        nodes = [
+            {"node_token": "root", "title": "Private", "parent_node_token": ""},
+            {"node_token": "child", "title": "Child", "parent_node_token": "root"},
+            {"node_token": "grandchild", "title": "Grandchild", "parent_node_token": "child"},
+            {"node_token": "keep", "title": "Keep", "parent_node_token": ""},
+        ]
+        settings = sync.configured_subtree_exclusions(
+            {
+                "sync": {
+                    "exclude_subtrees": {
+                        "enabled": True,
+                        "roots": [{"node_token": "root"}],
+                    }
+                }
+            }
+        )
+
+        included, excluded = sync.filter_excluded_subtrees(nodes, settings)
+
+        self.assertEqual([node["node_token"] for node in included], ["keep"])
+        self.assertEqual(
+            {node["node_token"] for node in excluded},
+            {"root", "child", "grandchild"},
+        )
+
+    def test_subtree_exclusion_exact_title_uses_the_local_path_cleaning_rule(self) -> None:
+        settings = sync.configured_subtree_exclusions(
+            {
+                "sync": {
+                    "exclude_subtrees": {
+                        "enabled": True,
+                        "roots": [{"exact_title": "  Private/ Docs: Q&A?  "}],
+                    }
+                }
+            }
+        )
+
+        self.assertTrue(
+            sync.is_excluded_subtree_root(
+                {"node_token": "private", "title": "Private/  Docs: Q&A?"},
+                settings,
+            )
+        )
+
+    def test_walk_nodes_does_not_enumerate_an_excluded_root(self) -> None:
+        settings = sync.configured_subtree_exclusions(
+            {
+                "sync": {
+                    "structure_workers": 1,
+                    "exclude_subtrees": {
+                        "enabled": True,
+                        "roots": [{"exact_title": "Private"}],
+                    },
+                }
+            }
+        )
+
+        def fake_node_list(_config, _space_id, parent=None):
+            if parent is None:
+                return [
+                    {"node_token": "private", "title": "Private", "has_child": True},
+                    {"node_token": "keep", "title": "Keep", "has_child": True},
+                ]
+            if parent == "keep":
+                return [
+                    {
+                        "node_token": "kept-child",
+                        "title": "Kept child",
+                        "parent_node_token": "keep",
+                        "has_child": False,
+                    }
+                ]
+            self.fail("excluded subtree was enumerated")
+
+        with mock.patch.object(sync, "node_list", side_effect=fake_node_list) as node_list:
+            nodes = sync.walk_nodes(
+                {"sync": {"structure_workers": 1}},
+                "space",
+                None,
+                settings,
+            )
+
+        self.assertEqual([node["node_token"] for node in nodes], ["keep", "kept-child"])
+        self.assertEqual([call.args[2] for call in node_list.call_args_list], [None, "keep"])
+
     def test_missing_generated_dir_reuses_the_single_existing_generated_root(self) -> None:
         previous_mirror_dir = sync.MIRROR_DIR
         with tempfile.TemporaryDirectory() as temp:
@@ -876,6 +962,87 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertEqual(manifest["stats"]["sheets_mirrored"], 1)
         self.assertIn("| 姓名 | 岗位 |", generated)
 
+    def test_sync_reclassifies_a_historical_excluded_node_without_marking_it_deleted(self) -> None:
+        private = {
+            "node_token": "private",
+            "obj_token": "doc-private",
+            "obj_type": "docx",
+            "title": " Private/ Docs: Q&A? ",
+            "parent_node_token": "",
+            "depth": 0,
+            "has_child": False,
+        }
+        keep = {
+            "node_token": "keep",
+            "obj_token": "doc-keep",
+            "obj_type": "docx",
+            "title": "Keep",
+            "parent_node_token": "",
+            "depth": 0,
+            "has_child": False,
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "docs"
+            config = root / "config.yml"
+
+            def write_config(exclude_private: bool) -> None:
+                lines = [
+                    "version: 1",
+                    "provider:",
+                    "  cli: lark-cli",
+                    "space:",
+                    '  id: "space-1"',
+                    '  source_url_template: "https://example.test/wiki/{node_token}"',
+                    "paths:",
+                    f'  output_dir: "{output}"',
+                    '  generated_dir: "10_knowledge-base"',
+                    "sync:",
+                    "  mode: mirror",
+                    "  workers: 1",
+                    "  metadata_workers: 1",
+                ]
+                if exclude_private:
+                    lines.extend(
+                        [
+                            "  exclude_subtrees:",
+                            "    enabled: true",
+                            "    roots:",
+                            '      - exact_title: "Private/ Docs: Q&A?"',
+                        ]
+                    )
+                config.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+            def fake_run_cli(_config, *args):
+                if args[:2] == ("wiki", "+node-get"):
+                    return {"data": {"obj_edit_time": "1", "updated_at": "1970-01-01T00:00:01Z"}}
+                if args[:2] == ("docs", "+fetch"):
+                    doc = args[args.index("--doc") + 1]
+                    return {"data": {"document": {"content": f"# {doc}", "revision_id": "1"}}}
+                raise AssertionError(args)
+
+            write_config(False)
+            with mock.patch.object(sync, "walk_nodes", return_value=[private, keep]), mock.patch.object(
+                sync, "run_cli", side_effect=fake_run_cli
+            ):
+                first_result = sync.sync(self.sync_args(config))
+
+            write_config(True)
+            rebuild_args = self.sync_args(config)
+            rebuild_args.rebuild_tree = True
+            with mock.patch.object(sync, "walk_nodes", return_value=[keep]), mock.patch.object(
+                sync, "run_cli", side_effect=fake_run_cli
+            ):
+                second_result = sync.sync(rebuild_args)
+
+            manifest = json.loads((output / "90_同步元数据" / "manifest.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(first_result, 0)
+        self.assertEqual(second_result, 0)
+        self.assertEqual([record["node_token"] for record in manifest["nodes"]], ["keep"])
+        self.assertEqual([record["node_token"] for record in manifest["excluded_nodes"]], ["private"])
+        self.assertEqual(manifest["deleted_nodes"], [])
+
     def test_all_sheet_nodes_mirrors_discovered_tabs_without_manual_selections(self) -> None:
         nodes = [
             {
@@ -1103,6 +1270,60 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertEqual([item["node_token"] for item in manifest["nodes"]], ["node-pilot"])
         self.assertEqual(len(files), 1)
 
+    def test_pilot_node_rejects_a_descendant_of_an_excluded_subtree(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "pilot-output"
+            config = root / "config.yml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "version: 1",
+                        "provider:",
+                        "  cli: lark-cli",
+                        "space:",
+                        '  id: "space-1"',
+                        '  source_url_template: "https://example.test/wiki/{node_token}"',
+                        "paths:",
+                        f'  output_dir: "{output}"',
+                        '  generated_dir: "10_knowledge-base"',
+                        "sync:",
+                        "  exclude_subtrees:",
+                        "    enabled: true",
+                        "    roots:",
+                        '      - node_token: "private-root"',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = self.sync_args(config)
+            args.pilot_node_token = ["private-child"]
+
+            def fake_run_cli(_config, *call):
+                if call[:2] != ("wiki", "+node-get"):
+                    raise AssertionError(call)
+                token = call[call.index("--node-token") + 1]
+                if token == "private-child":
+                    return {
+                        "data": {
+                            "node_token": token,
+                            "obj_token": "doc-private-child",
+                            "obj_type": "docx",
+                            "title": "Child",
+                            "parent_node_token": "private-root",
+                        }
+                    }
+                self.assertEqual(token, "private-root")
+                return {"data": {"node_token": token, "title": "Private", "parent_node_token": ""}}
+
+            with mock.patch.object(sync, "walk_nodes") as walk, mock.patch.object(
+                sync, "run_cli", side_effect=fake_run_cli
+            ), self.assertRaisesRegex(SystemExit, "inside an excluded"):
+                sync.sync(args)
+
+        walk.assert_not_called()
+
     def test_parse_cli_json_skips_human_preamble_with_brackets(self) -> None:
         payload = sync.parse_cli_json("notice [not-json-yet]\n{" + '"ok": true, "data": {}}')
         self.assertTrue(payload["ok"])
@@ -1314,6 +1535,147 @@ class FeishuDocSyncTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertIn("error_placeholder_in_successful_document", result["errors"])
         self.assertEqual(result["stats"]["placeholder_errors"], 1)
+
+    def test_validation_rejects_generated_content_for_excluded_subtree(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "docs"
+            mirror = output / "10_knowledge-base"
+            metadata = output / "90_同步元数据"
+            excluded_dir = mirror / "Excluded"
+            excluded_dir.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            asset = mirror / "_assets" / "private-attachment.bin"
+            export = mirror / "_exports" / "sheets" / "private-workbook.xlsx"
+            asset.parent.mkdir()
+            export.parent.mkdir(parents=True)
+            asset.write_bytes(b"private attachment")
+            export.write_bytes(b"private workbook")
+            active = mirror / "Active.md"
+            excluded = excluded_dir / "Excluded.md"
+            active.write_text(
+                '---\nnode_token: "active"\nsync_status: "ok"\n---\n\n# Active\n',
+                encoding="utf-8",
+            )
+            excluded.write_text("# legacy generated content\n", encoding="utf-8")
+            nodes = [
+                {
+                    "node_token": "active",
+                    "title": "Active",
+                    "obj_type": "docx",
+                    "sync_status": "ok",
+                    "relative_path": "10_knowledge-base/Active.md",
+                    "parent_node_token": "",
+                }
+            ]
+            excluded_nodes = [
+                {
+                    "node_token": "excluded",
+                    "title": "Excluded",
+                    "obj_type": "docx",
+                    "sync_status": "excluded",
+                    "relative_path": "10_knowledge-base/Excluded/Excluded.md",
+                    "parent_node_token": "",
+                    "has_children": True,
+                    "local_resources": [
+                        "_assets/private-attachment.bin",
+                        "_exports/sheets/private-workbook.xlsx",
+                    ],
+                }
+            ]
+            sidebar_file = metadata / "sidebar.json"
+            sidebar_file.write_text(
+                json.dumps(sync.build_sidebar(nodes), ensure_ascii=False),
+                encoding="utf-8",
+            )
+            result = sync.validate_mirror(
+                output,
+                {"nodes": nodes, "excluded_nodes": excluded_nodes},
+                sidebar_file=sidebar_file,
+            )
+
+        self.assertFalse(result["ok"])
+        self.assertIn("excluded_generated_files", result["errors"])
+        self.assertIn("excluded_generated_directories", result["errors"])
+        self.assertIn("excluded_generated_resources", result["errors"])
+        self.assertEqual(result["stats"]["excluded_records"], 1)
+        self.assertEqual(result["stats"]["excluded_generated_files"], 1)
+        self.assertEqual(result["stats"]["excluded_generated_directories"], 1)
+        self.assertEqual(result["stats"]["excluded_generated_resources"], 2)
+
+    def test_rebuild_removes_excluded_assets_and_exports(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            output = root / "docs"
+            mirror = output / "10_knowledge-base"
+            metadata = output / "90_同步元数据"
+            mirror.mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            document = mirror / "Private.md"
+            asset = mirror / "_assets" / "private-attachment.bin"
+            export = mirror / "_exports" / "sheets" / "private-workbook.xlsx"
+            document.write_text(
+                '---\nnode_token: "private"\nsync_status: "ok"\n---\n\n# Private\n',
+                encoding="utf-8",
+            )
+            asset.parent.mkdir()
+            export.parent.mkdir(parents=True)
+            asset.write_bytes(b"private attachment")
+            export.write_bytes(b"private workbook")
+            private_record = {
+                "node_token": "private",
+                "obj_token": "doc-private",
+                "obj_type": "docx",
+                "title": "Private",
+                "sync_status": "ok",
+                "relative_path": "10_knowledge-base/Private.md",
+                "parent_node_token": "",
+                "local_resources": [
+                    "_assets/private-attachment.bin",
+                    "_exports/sheets/private-workbook.xlsx",
+                ],
+            }
+            (metadata / "manifest.json").write_text(
+                json.dumps({"nodes": [private_record]}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            (metadata / "sync-state.json").write_text(
+                json.dumps({"nodes": {"private": private_record}}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            config = root / "config.yml"
+            config.write_text(
+                "\n".join(
+                    [
+                        "version: 1",
+                        "provider:",
+                        "  cli: lark-cli",
+                        "space:",
+                        '  id: "space-1"',
+                        '  source_url_template: "https://example.test/wiki/{node_token}"',
+                        "paths:",
+                        f'  output_dir: "{output}"',
+                        '  generated_dir: "10_knowledge-base"',
+                        "sync:",
+                        "  exclude_subtrees:",
+                        "    enabled: true",
+                        "    roots:",
+                        '      - node_token: "private"',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = self.sync_args(config)
+            args.rebuild_tree = True
+            with mock.patch.object(sync, "walk_nodes", return_value=[]):
+                result = sync.sync(args)
+            manifest = json.loads((metadata / "manifest.json").read_text(encoding="utf-8"))
+            resources_removed = not asset.exists() and not export.exists()
+
+        self.assertEqual(result, 0)
+        self.assertTrue(resources_removed)
+        self.assertEqual(manifest["stats"]["excluded_resources_deleted"], 2)
+        self.assertEqual(manifest["validation"]["stats"]["excluded_generated_resources"], 0)
 
     def test_validation_rejects_unmirrored_base_tab_in_sheet_workbook(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

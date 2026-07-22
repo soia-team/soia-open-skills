@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import tempfile
 import zipfile
@@ -18,6 +19,7 @@ from typing import Any, Iterator
 
 STATE_SCHEMA_VERSION = 1
 KNOWN_TYPES = {"flowchart", "mindmap"}
+NUMBERED_DOWNLOAD_SUFFIX = re.compile(r" \(\d+\)$")
 
 
 class ArchiveStateError(RuntimeError):
@@ -216,17 +218,40 @@ def recompute_counts(state: dict[str, Any], plan: dict[str, Any]) -> dict[str, i
     completed_ids = set(identifiers(state.get("completed", []), "completed"))
     failed_ids = set(identifiers(state.get("failed", []), "failed"))
     blocked_ids = set(identifiers(state.get("blocked", []), "blocked"))
+    revalidation_ids = set(
+        identifiers(state.get("revalidation_pending", []), "revalidation_pending")
+    )
     known_ids = {entry["artifact_id"] for entry in known}
-    for label, values in (("completed", completed_ids), ("failed", failed_ids), ("blocked", blocked_ids)):
+    for label, values in (
+        ("completed", completed_ids),
+        ("failed", failed_ids),
+        ("blocked", blocked_ids),
+        ("revalidation_pending", revalidation_ids),
+    ):
         foreign = values - known_ids
         if foreign:
             raise ArchiveStateError(f"{label} contains unknown or unconfirmed artifacts: {sorted(foreign)}")
+    outcomes = {
+        "completed": completed_ids,
+        "failed": failed_ids,
+        "blocked": blocked_ids,
+        "revalidation_pending": revalidation_ids,
+    }
+    labels = list(outcomes)
+    for index, left in enumerate(labels):
+        for right in labels[index + 1 :]:
+            overlap = outcomes[left] & outcomes[right]
+            if overlap:
+                raise ArchiveStateError(
+                    f"artifact appears in both {left} and {right}: {sorted(overlap)}"
+                )
     return {
         "planned_known": len(known),
         "unknown_pending_confirmation": len(unknown),
         "completed": len(completed_ids),
         "failed": len(failed_ids),
         "blocked": len(blocked_ids),
+        "revalidation_pending": len(revalidation_ids),
         "remaining_known": len(known_ids - completed_ids),
     }
 
@@ -252,9 +277,11 @@ def normalize_state(state: dict[str, Any], plan_path: Path, plan: dict[str, Any]
     state.setdefault("completed", [])
     state.setdefault("failed", [])
     state.setdefault("blocked", [])
+    state.setdefault("revalidation_pending", [])
     identifiers(state["completed"], "completed")
     identifiers(state["failed"], "failed")
     identifiers(state["blocked"], "blocked")
+    identifiers(state["revalidation_pending"], "revalidation_pending")
     state["plan"] = {
         "path": str(plan_path.resolve()),
         "sha256": current_fingerprint,
@@ -281,6 +308,7 @@ def initialize_state(plan_path: Path, progress_path: Path) -> dict[str, Any]:
                 "completed": [],
                 "failed": [],
                 "blocked": [],
+                "revalidation_pending": [],
             }
         normalize_state(state, plan_path, plan)
         atomic_write_json(progress_path, state)
@@ -345,6 +373,23 @@ def inspect_artifact(path: Path, actual_format: str) -> dict[str, Any]:
     return inspection
 
 
+def is_unsafe_flat_personal_download(path: Path) -> bool:
+    """Return true for any file written directly into the personal Downloads root."""
+
+    resolved = path.expanduser().resolve(strict=False)
+    downloads_root = (Path.home() / "Downloads").resolve(strict=False)
+    return resolved.parent == downloads_root
+
+
+def is_unsafe_flat_numbered_download(path: Path) -> bool:
+    """Compatibility helper for identifying the numbered subset of unsafe flat downloads."""
+
+    resolved = path.expanduser().resolve(strict=False)
+    return is_unsafe_flat_personal_download(path) and bool(
+        NUMBERED_DOWNLOAD_SUFFIX.search(resolved.stem)
+    )
+
+
 def validate_finalizer_manifest(
     manifest_path: Path, destination: Path, inspection: dict[str, Any]
 ) -> dict[str, Any]:
@@ -371,6 +416,11 @@ def record_completed(
     actual_format: str,
     download_event: str,
 ) -> tuple[dict[str, Any], str]:
+    if is_unsafe_flat_personal_download(download_source):
+        raise ArchiveStateError(
+            "refusing a file from the flat personal Downloads directory; "
+            "redownload it into an artifact_id-scoped managed staging directory"
+        )
     plan = load_json(plan_path, "archive plan")
     validate_plan(plan)
     item = get_plan_item(plan, artifact_id)
@@ -417,6 +467,9 @@ def record_completed(
         state["completed"].append(record)
         state["failed"] = [entry for entry in state["failed"] if entry["artifact_id"] != artifact_id]
         state["blocked"] = [entry for entry in state["blocked"] if entry["artifact_id"] != artifact_id]
+        state["revalidation_pending"] = [
+            entry for entry in state["revalidation_pending"] if entry["artifact_id"] != artifact_id
+        ]
         normalize_state(state, plan_path, plan)
         atomic_write_json(progress_path, state)
     return state, "completed"
@@ -454,6 +507,17 @@ def mark_outcome(
         ]
         other = "blocked" if outcome == "failed" else "failed"
         state[other] = [entry for entry in state[other] if entry["artifact_id"] != artifact_id]
+        revalidation = next(
+            (
+                entry
+                for entry in state["revalidation_pending"]
+                if entry["artifact_id"] == artifact_id
+            ),
+            None,
+        )
+        state["revalidation_pending"] = [
+            entry for entry in state["revalidation_pending"] if entry["artifact_id"] != artifact_id
+        ]
         record = {
             "artifact_id": artifact_id,
             "source_path": item.get("source_path", ""),
@@ -462,6 +526,8 @@ def mark_outcome(
         }
         if evidence_records or prior_evidence:
             record["evidence_files"] = evidence_records or prior_evidence
+        if revalidation is not None:
+            record["revalidation"] = revalidation
         replaced = False
         for index, entry in enumerate(state[outcome]):
             if entry["artifact_id"] == artifact_id:
@@ -473,6 +539,149 @@ def mark_outcome(
         normalize_state(state, plan_path, plan)
         atomic_write_json(progress_path, state)
     return state
+
+
+def reopen_completed(
+    plan_path: Path,
+    progress_path: Path,
+    artifact_ids: list[str],
+    reason: str,
+    quarantine_dir: Path,
+) -> tuple[dict[str, Any], str]:
+    if not artifact_ids or len(artifact_ids) != len(set(artifact_ids)):
+        raise ArchiveStateError("reopen requires unique artifact ids")
+    if not reason.strip():
+        raise ArchiveStateError("reason must not be empty")
+    plan = load_json(plan_path, "archive plan")
+    validate_plan(plan)
+    for artifact_id in artifact_ids:
+        get_plan_item(plan, artifact_id)
+    quarantine_input = quarantine_dir.expanduser()
+    if quarantine_input.is_symlink():
+        raise ArchiveStateError(f"refusing symlink quarantine directory: {quarantine_input}")
+    quarantine_root = quarantine_input.resolve(strict=False)
+
+    moved: list[tuple[Path, Path]] = []
+    created_dirs: list[Path] = []
+    committed = False
+    with exclusive_state_lock(progress_path):
+        try:
+            state = load_json(progress_path, "archive progress")
+            normalize_state(state, plan_path, plan)
+            completed_by_id = {
+                entry["artifact_id"]: entry for entry in state["completed"]
+            }
+            already = {
+                entry["artifact_id"] for entry in state["revalidation_pending"]
+            }
+            missing = [
+                artifact_id
+                for artifact_id in artifact_ids
+                if artifact_id not in completed_by_id and artifact_id not in already
+            ]
+            if missing:
+                raise ArchiveStateError(
+                    f"artifact is not completed or already reopened: {missing}"
+                )
+            new_records: list[dict[str, Any]] = []
+            for artifact_id in artifact_ids:
+                if artifact_id in already:
+                    continue
+                completion = completed_by_id[artifact_id]
+                destination = Path(str(completion.get("archive_destination", ""))).expanduser()
+                inspection = inspect_artifact(destination, str(completion.get("actual_format", "")))
+                if inspection["sha256"] != completion.get("sha256"):
+                    raise ArchiveStateError(
+                        f"cannot reopen tampered completion: {artifact_id}"
+                    )
+                artifact_quarantine = quarantine_root / artifact_id
+                if artifact_quarantine.exists():
+                    raise ArchiveStateError(
+                        f"quarantine target already exists: {artifact_quarantine}"
+                    )
+                artifact_quarantine.mkdir(parents=True)
+                created_dirs.append(artifact_quarantine)
+                if destination.stat().st_dev != artifact_quarantine.stat().st_dev:
+                    raise ArchiveStateError(
+                        "archive and quarantine must share one filesystem for no-copy migration"
+                    )
+                quarantine_files: list[dict[str, Any]] = []
+                candidates = [destination]
+                metadata = destination.parent / "metadata.yml"
+                if metadata.is_file() and not metadata.is_symlink():
+                    candidates.append(metadata)
+                for source in candidates:
+                    target = artifact_quarantine / source.name
+                    if target.exists():
+                        raise ArchiveStateError(f"quarantine file collision: {target}")
+                    os.replace(source, target)
+                    moved.append((source, target))
+                    record = inspect_evidence_file(target)
+                    quarantine_files.append(
+                        {
+                            "original_path": str(source.resolve(strict=False)),
+                            "quarantine_path": record["path"],
+                            "bytes": record["bytes"],
+                            "sha256": record["sha256"],
+                        }
+                    )
+                new_records.append(
+                    {
+                        "artifact_id": artifact_id,
+                        "source_path": completion.get("source_path", ""),
+                        "reason": reason.strip(),
+                        "reopened_at": now(),
+                        "prior_completion": completion,
+                        "quarantine_files": quarantine_files,
+                    }
+                )
+            if new_records:
+                reopened_ids = {entry["artifact_id"] for entry in new_records}
+                state["completed"] = [
+                    entry for entry in state["completed"] if entry["artifact_id"] not in reopened_ids
+                ]
+                state["failed"] = [
+                    entry for entry in state["failed"] if entry["artifact_id"] not in reopened_ids
+                ]
+                state["blocked"] = [
+                    entry for entry in state["blocked"] if entry["artifact_id"] not in reopened_ids
+                ]
+                state["revalidation_pending"].extend(new_records)
+            normalize_state(state, plan_path, plan)
+            atomic_write_json(progress_path, state)
+            committed = True
+            return state, "reopened" if new_records else "already_reopened"
+        finally:
+            if not committed:
+                for source, target in reversed(moved):
+                    if target.exists() and not source.exists():
+                        os.replace(target, source)
+                for directory in reversed(created_dirs):
+                    try:
+                        directory.rmdir()
+                    except OSError:
+                        pass
+
+
+def reopen_artifact_ids(cli_ids: list[str] | None, artifact_id_file: Path | None) -> list[str]:
+    identifiers_to_reopen = [value.strip() for value in (cli_ids or []) if value.strip()]
+    if artifact_id_file is not None:
+        input_path = artifact_id_file.expanduser()
+        if input_path.is_symlink() or not input_path.is_file():
+            raise ArchiveStateError(
+                f"artifact id file must be a regular non-symlink file: {input_path}"
+            )
+        path = input_path.resolve(strict=False)
+        identifiers_to_reopen.extend(
+            line.strip()
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        )
+    if not identifiers_to_reopen:
+        raise ArchiveStateError("reopen requires --artifact-id or --artifact-id-file")
+    if len(identifiers_to_reopen) != len(set(identifiers_to_reopen)):
+        raise ArchiveStateError("reopen artifact ids must be unique")
+    return identifiers_to_reopen
 
 
 def next_items(
@@ -488,6 +697,9 @@ def next_items(
     completed = set(identifiers(state.get("completed", []), "completed"))
     failed = set(identifiers(state.get("failed", []), "failed"))
     blocked = set(identifiers(state.get("blocked", []), "blocked"))
+    revalidation = set(
+        identifiers(state.get("revalidation_pending", []), "revalidation_pending")
+    )
     result: list[dict[str, Any]] = []
     fields = (
         "artifact_id",
@@ -510,7 +722,9 @@ def next_items(
         if artifact_id in blocked and not include_blocked:
             continue
         candidate = {field: entry.get(field) for field in fields}
-        if artifact_id in failed:
+        if artifact_id in revalidation:
+            candidate["prior_outcome"] = "revalidation_pending"
+        elif artifact_id in failed:
             candidate["prior_outcome"] = "failed"
         elif artifact_id in blocked:
             candidate["prior_outcome"] = "blocked"
@@ -551,6 +765,24 @@ def audit_state(plan_path: Path, progress_path: Path) -> dict[str, Any]:
                             errors.append(f"evidence size mismatch: {entry['artifact_id']}")
                     except ArchiveStateError as exc:
                         errors.append(f"invalid {outcome} evidence for {entry['artifact_id']}: {exc}")
+        for entry in state.get("revalidation_pending", []):
+            for evidence in entry.get("quarantine_files", []):
+                try:
+                    inspection = inspect_evidence_file(
+                        Path(evidence.get("quarantine_path", ""))
+                    )
+                    if inspection["sha256"] != evidence.get("sha256"):
+                        errors.append(
+                            f"revalidation evidence SHA-256 mismatch: {entry['artifact_id']}"
+                        )
+                    if inspection["bytes"] != evidence.get("bytes"):
+                        errors.append(
+                            f"revalidation evidence size mismatch: {entry['artifact_id']}"
+                        )
+                except ArchiveStateError as exc:
+                    errors.append(
+                        f"invalid revalidation evidence for {entry['artifact_id']}: {exc}"
+                    )
         for entry in state.get("completed", []):
             destination = Path(entry.get("archive_destination", ""))
             actual_format = str(entry.get("actual_format", ""))
@@ -623,6 +855,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="copy one diagnostic file into the run evidence directory; repeatable",
     )
 
+    reopen_parser = subcommands.add_parser(
+        "reopen", help="move completed evidence to quarantine and make artifacts actionable again"
+    )
+    reopen_parser.add_argument("--plan", type=Path, required=True)
+    reopen_parser.add_argument("--progress", type=Path, required=True)
+    reopen_parser.add_argument("--artifact-id", action="append", default=[])
+    reopen_parser.add_argument(
+        "--artifact-id-file",
+        type=Path,
+        help="newline-delimited artifact ids; blank lines and # comments are ignored",
+    )
+    reopen_parser.add_argument("--reason", required=True)
+    reopen_parser.add_argument("--quarantine-dir", type=Path, required=True)
+
     audit_parser = subcommands.add_parser("audit", help="replay archived artifact evidence")
     audit_parser.add_argument("--plan", type=Path, required=True)
     audit_parser.add_argument("--progress", type=Path, required=True)
@@ -678,6 +924,16 @@ def main() -> int:
                 args.evidence_file,
             )
             print_json({"status": args.outcome, "counts": state["counts"]})
+        elif args.command == "reopen":
+            artifact_ids = reopen_artifact_ids(args.artifact_id, args.artifact_id_file)
+            state, outcome = reopen_completed(
+                args.plan,
+                args.progress,
+                artifact_ids,
+                args.reason,
+                args.quarantine_dir,
+            )
+            print_json({"status": outcome, "counts": state["counts"]})
         elif args.command == "audit":
             result = audit_state(args.plan, args.progress)
             print_json(result)

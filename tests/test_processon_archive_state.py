@@ -7,6 +7,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -264,6 +265,161 @@ class ProcessOnArchiveStateTests(unittest.TestCase):
             result = self.module.audit_state(plan_path, progress_path)
             self.assertEqual(result["status"], "failed")
             self.assertTrue(result["errors"])
+
+    def test_record_rejects_every_file_from_flat_personal_downloads(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            downloads = home / "Downloads"
+            downloads.mkdir()
+            for filename in ("未命名文件.vsdx", "未命名文件 (2).vsdx"):
+                source = downloads / filename
+                write_vsdx(source)
+                with patch.object(Path, "home", return_value=home):
+                    self.assertTrue(self.module.is_unsafe_flat_personal_download(source))
+                    with self.assertRaisesRegex(
+                        self.module.ArchiveStateError, "artifact_id-scoped managed staging"
+                    ):
+                        self.module.record_completed(
+                            home / "unused-plan.json",
+                            home / "unused-progress.json",
+                            "flow-1",
+                            source,
+                            source,
+                            home / "unused-manifest.json",
+                            "vsdx",
+                            "vsdx",
+                            "observed",
+                        )
+
+    def test_reopen_completed_is_resumable_audited_and_cleared_by_redownload(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            plan_path = root / "archive-plan.json"
+            progress_path = root / "download-progress.json"
+            destination = root / "archive" / "deployment" / "deployment.vsdx"
+            metadata = destination.parent / "metadata.yml"
+            manifest = root / "manifest.json"
+            quarantine = root / "archive" / "_staging" / "legacy-quarantine"
+            destination.parent.mkdir(parents=True)
+            plan_path.write_text(json.dumps(plan()), encoding="utf-8")
+            self.module.initialize_state(plan_path, progress_path)
+            write_vsdx(destination)
+            metadata.write_text("artifact_id: flow-1\n", encoding="utf-8")
+            inspection = self.module.inspect_artifact(destination, "vsdx")
+            write_manifest(manifest, destination, inspection["sha256"], inspection["bytes"])
+            self.module.record_completed(
+                plan_path,
+                progress_path,
+                "flow-1",
+                destination,
+                destination,
+                manifest,
+                "vsdx",
+                "vsdx",
+                "not_observed_verified_file",
+            )
+
+            reopened, outcome = self.module.reopen_completed(
+                plan_path,
+                progress_path,
+                ["flow-1"],
+                "legacy flat download requires source revalidation",
+                quarantine,
+            )
+            self.assertEqual(outcome, "reopened")
+            self.assertEqual(reopened["counts"]["completed"], 0)
+            self.assertEqual(reopened["counts"]["revalidation_pending"], 1)
+            self.assertEqual(reopened["counts"]["remaining_known"], 2)
+            self.assertFalse(destination.exists())
+            self.assertFalse(metadata.exists())
+            evidence = reopened["revalidation_pending"][0]["quarantine_files"]
+            self.assertEqual(len(evidence), 2)
+            self.assertTrue(all(Path(item["quarantine_path"]).is_file() for item in evidence))
+            next_item = self.module.next_items(plan(), reopened, 1, None, False, False)[0]
+            self.assertEqual(next_item["artifact_id"], "flow-1")
+            self.assertEqual(next_item["prior_outcome"], "revalidation_pending")
+            self.assertEqual(self.module.audit_state(plan_path, progress_path)["status"], "passed")
+
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            write_vsdx(destination)
+            replacement = self.module.inspect_artifact(destination, "vsdx")
+            write_manifest(manifest, destination, replacement["sha256"], replacement["bytes"])
+            recorded, record_outcome = self.module.record_completed(
+                plan_path,
+                progress_path,
+                "flow-1",
+                destination,
+                destination,
+                manifest,
+                "vsdx",
+                "vsdx",
+                "observed",
+            )
+            self.assertEqual(record_outcome, "completed")
+            self.assertEqual(recorded["counts"]["completed"], 1)
+            self.assertEqual(recorded["counts"]["revalidation_pending"], 0)
+
+    def test_reopen_rolls_files_back_when_state_commit_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            plan_path = root / "archive-plan.json"
+            progress_path = root / "download-progress.json"
+            destination = root / "archive" / "deployment" / "deployment.vsdx"
+            metadata = destination.parent / "metadata.yml"
+            manifest = root / "manifest.json"
+            quarantine = root / "archive" / "_staging" / "legacy-quarantine"
+            destination.parent.mkdir(parents=True)
+            plan_path.write_text(json.dumps(plan()), encoding="utf-8")
+            self.module.initialize_state(plan_path, progress_path)
+            write_vsdx(destination)
+            metadata.write_text("artifact_id: flow-1\n", encoding="utf-8")
+            inspection = self.module.inspect_artifact(destination, "vsdx")
+            write_manifest(manifest, destination, inspection["sha256"], inspection["bytes"])
+            self.module.record_completed(
+                plan_path,
+                progress_path,
+                "flow-1",
+                destination,
+                destination,
+                manifest,
+                "vsdx",
+                "vsdx",
+                "observed",
+            )
+            before = progress_path.read_bytes()
+
+            with patch.object(self.module, "atomic_write_json", side_effect=OSError("disk full")):
+                with self.assertRaisesRegex(OSError, "disk full"):
+                    self.module.reopen_completed(
+                        plan_path,
+                        progress_path,
+                        ["flow-1"],
+                        "test rollback",
+                        quarantine,
+                    )
+            self.assertTrue(destination.is_file())
+            self.assertTrue(metadata.is_file())
+            self.assertEqual(progress_path.read_bytes(), before)
+            self.assertFalse((quarantine / "flow-1").exists())
+
+    def test_reopen_artifact_id_file_is_bounded_and_rejects_duplicates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifact_ids = root / "reopen.txt"
+            artifact_ids.write_text("# migration set\nflow-1\n\nmind-1\n", encoding="utf-8")
+            self.assertEqual(
+                self.module.reopen_artifact_ids([], artifact_ids), ["flow-1", "mind-1"]
+            )
+            with self.assertRaisesRegex(self.module.ArchiveStateError, "unique"):
+                self.module.reopen_artifact_ids(["flow-1"], artifact_ids)
+            if hasattr(artifact_ids, "symlink_to"):
+                symlink = root / "ids-link.txt"
+                try:
+                    symlink.symlink_to(artifact_ids)
+                except OSError:
+                    return
+                with self.assertRaisesRegex(self.module.ArchiveStateError, "non-symlink"):
+                    self.module.reopen_artifact_ids([], symlink)
 
 
 if __name__ == "__main__":
