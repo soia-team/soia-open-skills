@@ -871,6 +871,32 @@ def title_signals(title: str) -> list[str]:
     return result
 
 
+def matched_chinese_bigram_pair(title: str, combined: str) -> list[str]:
+    """Find two non-overlapping Chinese title bigrams in diagram text.
+
+    The caller verifies the ProcessOn remote id and source URL before this
+    semantic fallback runs. A single generic two-character hit is deliberately
+    insufficient.
+    """
+
+    cleaned = title
+    for word in COMMON_TITLE_WORDS:
+        cleaned = cleaned.replace(word, "")
+    candidates: list[tuple[str, int, int]] = []
+    for run_match in re.finditer(r"[\u3400-\u9fff]{4,}", cleaned):
+        run = run_match.group(0)
+        for offset in range(len(run) - 1):
+            signal = normalized_text(run[offset : offset + 2])
+            start = run_match.start() + offset
+            if signal in combined:
+                candidates.append((signal, start, start + 2))
+    for index, first in enumerate(candidates):
+        for second in candidates[index + 1 :]:
+            if first[2] <= second[1] or second[2] <= first[1]:
+                return [first[0], second[0]]
+    return []
+
+
 def validate_zip_archive(archive: zipfile.ZipFile) -> list[str]:
     infos = archive.infolist()
     if len(infos) > MAX_ZIP_ENTRIES:
@@ -923,6 +949,10 @@ def inspect_vsdx(path: Path, title: str) -> dict[str, Any]:
     if not signals:
         raise BatchError(f"VSDX title has no distinctive signal and cannot be verified: {title!r}")
     matched = [signal for signal in signals if signal in combined]
+    semantic_match_method = "title_signal"
+    if not matched:
+        matched = matched_chinese_bigram_pair(title, combined)
+        semantic_match_method = "chinese_bigram_pair"
     if not matched:
         raise BatchError(
             f"VSDX semantic title check failed; no distinctive title signal was found: {signals[:8]}"
@@ -934,6 +964,7 @@ def inspect_vsdx(path: Path, title: str) -> dict[str, Any]:
         "text_count": len(texts),
         "title_signals": signals,
         "matched_title_signals": matched,
+        "semantic_match_method": semantic_match_method,
         "semantic_status": "matched",
     }
 

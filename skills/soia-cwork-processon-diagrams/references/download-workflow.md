@@ -132,6 +132,8 @@ python3 scripts/processon_archive_state.py next \
 
 ProcessOn 导出任务可能晚于菜单点击数秒才真正落盘；如果同一页面在前一份完成前切换列表选中项，下载文件名可能使用后来选中的标题，而文件内容仍属于前一项。同一 worker 因此必须严格串行：记录 artifact 独占 staging，发起一份导出，等下载事件和落盘完成，再做结构/页面文字校验，最后才切换下一项。不得把不同条目平铺到 `~/Downloads` 并用浏览器生成的 `(1)`、`(2)` 推断来源。多 worker 只在 proof 证明独立页面没有交叉串件后启用；每份仍需核对弹页标题、source URL、建议文件名和 VSDX/XMind 内部标题信号。出现相同 SHA、意外后缀或语义冲突时，本 wave 保持 pending 并降级为串行；不能立即重试或写 `record`。
 
+VSDX 的语义校验先尝试完整标题信号。中文复合标题可能只在图内分散出现，例如标题含“柜面状态”而图中分别写“柜面视频身份核验标识”和“任务状态”；此时必须已经核对稳定 `remote_id/source_url`，并至少命中两个互不重叠的中文二字片段，记录 `semantic_match_method: chinese_bigram_pair`。只命中一个“状态”“系统”等泛词仍然失败并保持 pending。
+
 推荐批次入口：
 
 ```bash
