@@ -1,4 +1,0 @@
-interface:
-  display_name: "PKM Publish X Thread"
-  short_description: "把成文草稿拆成 ≤280 字符的 X thread 文本，人工复制发布，不接 X API。"
-  default_prompt: "Use soia-pkm-publish-x-thread: 把这篇文章拆成带 (1/N) 编号的 X 推文串，保留链接和代码完整性。"
