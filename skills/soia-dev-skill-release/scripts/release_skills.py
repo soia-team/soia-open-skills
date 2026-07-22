@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -47,9 +48,31 @@ def installed_skill_dir(home: Path, name: str) -> Path:
     return home_path(home, ".agents/skills") / name
 
 
-def default_repo_dir(repo: str, home: Path) -> Path:
-    """Use the documented local checkout convention, with --repo-dir as an escape hatch."""
-    return home / "owen/code/gitrepo/jiuan/server/v7" / repo.rsplit("/", 1)[-1]
+def resolve_repo_dir(
+    repo: str,
+    home: Path,
+    repo_dir: str | None = None,
+    environ: dict[str, str] | None = None,
+) -> Path:
+    """Resolve a checkout from CLI, shared root, then the legacy convention."""
+    if repo_dir:
+        return Path(repo_dir).expanduser()
+
+    env = os.environ if environ is None else environ
+    repo_name = repo.rstrip("/").rsplit("/", 1)[-1]
+    repos_root = env.get("SOIA_SKILL_REPOS_ROOT")
+    if repos_root:
+        return Path(repos_root).expanduser() / repo_name
+
+    # Deprecated compatibility fallback; configure SOIA_SKILL_REPOS_ROOT or
+    # pass --repo-dir before this maintainer-specific convention is removed.
+    warnings.warn(
+        "falling back to the deprecated local skill repository convention; "
+        "set SOIA_SKILL_REPOS_ROOT or pass --repo-dir",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return home / "owen/code/gitrepo/jiuan/server/v7" / repo_name
 
 
 def version_from_skill(path: Path) -> str:
@@ -172,7 +195,7 @@ def release(args: argparse.Namespace, *, home: Path | None = None) -> int:
     agents = args.agents
     rows = [SkillReceipt(name, "install/update") for name in skills]
     rows.extend(SkillReceipt(name, "remove") for name in removed)
-    repo_dir = Path(args.repo_dir).expanduser() if args.repo_dir else default_repo_dir(args.repo, user_home)
+    repo_dir = resolve_repo_dir(args.repo, user_home, args.repo_dir)
 
     if args.dry_run:
         for row in rows:

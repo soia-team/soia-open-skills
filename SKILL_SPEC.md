@@ -158,7 +158,7 @@ Rules:
 
 ### Naming convention
 
-Skill names use 4–5 kebab-case segments. The second segment is the domain;
+Skill names use 4–6 kebab-case segments (mechanically enforced). The second segment is the domain;
 later segments describe the action, object, and optional qualifier:
 
 ```
@@ -188,7 +188,8 @@ How to pick `<object>` vs `<qualifier>`:
   PDF is the output), `transform-article-notebooklm` (NotebookLM is the
   platform).
 - A 3-segment name (`soia-pkm-transform`) is too vague for Claude Code to
-  disambiguate. **Minimum 4 segments for new skills.**
+  disambiguate. **Skills must use 4–6 segments; legacy exemptions are listed
+  in `scripts/audit_skills.py` under `SEGMENT_EXEMPT`.**
 
 When naming, ask: "If a user says one sentence, which segment makes the match
 unambiguous?" That segment must be in the name.
