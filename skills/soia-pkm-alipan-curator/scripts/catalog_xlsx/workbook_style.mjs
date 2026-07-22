@@ -65,6 +65,9 @@ export function prepareSheet(sheet) {
 }
 
 export function friendlyLocalPath(masterPath, detailPath) {
+  // detailPath is undefined for a catalog partition with no matching _全文检索/*.md
+  // file (e.g. a currently-empty partition like 80_待探索资源) -- not an error case.
+  if (!detailPath) return "";
   const base = masterPath.replace(/\\/g, "/").split("/").slice(0, -1).join("/");
   const target = detailPath.replace(/\\/g, "/");
   return target.startsWith(`${base}/`) ? target.slice(base.length + 1) : target;
