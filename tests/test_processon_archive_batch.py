@@ -76,6 +76,34 @@ class ProcessOnArchiveBatchTests(unittest.TestCase):
             with self.assertRaises(MODULE.BatchError):
                 MODULE.inspect_vsdx(path, "订单系统部署架构图")
 
+    def test_vsdx_accepts_two_non_overlapping_chinese_bigram_signals(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "数字化柜面状态流传.vsdx"
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("visio/document.xml", "<VisioDocument />")
+                archive.writestr(
+                    "visio/pages/page1.xml",
+                    "<PageContents><Shapes><Shape><Text>任务状态</Text></Shape>"
+                    "<Shape><Text>柜面视频身份核验标识</Text></Shape></Shapes></PageContents>",
+                )
+            inspected = MODULE.inspect_vsdx(path, "数字化柜面状态流传")
+            self.assertEqual(inspected["semantic_status"], "matched")
+            self.assertEqual(inspected["semantic_match_method"], "chinese_bigram_pair")
+            self.assertEqual(inspected["matched_title_signals"], ["柜面", "状态"])
+
+    def test_vsdx_rejects_one_or_overlapping_chinese_bigram_signal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "compound.vsdx"
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("visio/document.xml", "<VisioDocument />")
+                archive.writestr(
+                    "visio/pages/page1.xml",
+                    "<PageContents><Shapes><Shape><Text>柜面服务</Text></Shape></Shapes></PageContents>",
+                )
+            with self.assertRaises(MODULE.BatchError):
+                MODULE.inspect_vsdx(path, "数字化柜面状态流传")
+            self.assertEqual(MODULE.matched_chinese_bigram_pair("数字化", "数字字化"), [])
+
     def test_dotted_release_number_separates_chinese_title_signals(self):
         self.assertEqual(
             MODULE.title_signals("《磐石4.0短信系统部署架构图-生产环境》"),

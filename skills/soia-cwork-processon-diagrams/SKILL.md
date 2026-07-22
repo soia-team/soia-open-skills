@@ -1,9 +1,9 @@
 ---
 name: soia-cwork-processon-diagrams
 description: 通过宿主无关的专用浏览器 profile 和可恢复队列，递归盘点 ProcessOn 个人/团队空间到叶子文件；按授权对流程图默认导出 Visio VSDX、对思维导图默认导出 XMind，将未知类型列入待确认清单，并完成下载校验与归档；适用于“读取 ProcessOn 文件”“导出架构图”“盘点全部子目录”“批量下载但不要影响我的 Chrome”“从 POS/VSDX/XMind 提取结构”等请求。
-version: 1.10.0
+version: 1.10.1
 created_at: 2026-07-20 18:57:53
-updated_at: 2026-07-22 17:12:37
+updated_at: 2026-07-22 17:32:01
 created_by: gpt-5.6-sol
 updated_by: gpt-5.6-sol
 dependencies:
@@ -225,7 +225,7 @@ python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file
 python3 scripts/finalize_processon_download.py finalize <browser-downloaded-file>
 ```
 
-3. 核对文件非空、扩展名与内容类型一致；VSDX 必须是有效 ZIP/OOXML 且包含 `visio/document.xml`，图像核对尺寸，POS/XMind 核对标题和可提取文字，所有文件记录 SHA-256。文件名只能作为候选证据：若异步队列产生 `(1)` 后缀、标题漂移或同名不同 SHA，调用 `soia-dev-drawio-visio-diagrams` 提取 VSDX 页面文字反证来源；无法唯一对应 artifact 时保持 pending，不移动、不改名、不调用 `record`。状态脚本直接拒绝把个人 `~/Downloads` 根目录中的任何平铺文件登记为完成；未编号的第一份也无法证明来源绑定。历史平铺记录从可信 `completed` 排除并列入 `revalidation_pending`，先用 `reopen` 原子移入隔离区、回到可领取队列，再按 artifact_id 独立重下。批量下载只能逐个执行；官网未明确支持时不声称存在批量 API。清理临时目录必须先 `cleanup --dry-run`，再由客户确认。
+3. 核对文件非空、扩展名与内容类型一致；VSDX 必须是有效 ZIP/OOXML 且包含 `visio/document.xml`，图像核对尺寸，POS/XMind 核对标题和可提取文字，所有文件记录 SHA-256。文件名只能作为候选证据：若异步队列产生 `(1)` 后缀、标题漂移或同名不同 SHA，调用 `soia-dev-drawio-visio-diagrams` 提取 VSDX 页面文字反证来源；无法唯一对应 artifact 时保持 pending，不移动、不改名、不调用 `record`。VSDX 完整标题片段未出现时，只有在稳定 `remote_id/source_url` 已先核对、且文件内至少命中两个互不重叠的中文二字片段时，才允许以 `chinese_bigram_pair` 作为补充语义证据；单个泛词不得放行。状态脚本直接拒绝把个人 `~/Downloads` 根目录中的任何平铺文件登记为完成；未编号的第一份也无法证明来源绑定。历史平铺记录从可信 `completed` 排除并列入 `revalidation_pending`，先用 `reopen` 原子移入隔离区、回到可领取队列，再按 artifact_id 独立重下。批量下载只能逐个执行；官网未明确支持时不声称存在批量 API。清理临时目录必须先 `cleanup --dry-run`，再由客户确认。
 
 历史批量迁移使用换行分隔的 artifact 清单，整个状态提交失败时归档文件会回滚原位：
 
