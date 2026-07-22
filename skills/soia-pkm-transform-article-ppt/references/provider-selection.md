@@ -29,10 +29,18 @@
 
 高密度中文图使用 `local_visual`：HTML/CSS 或 PPT 排版后截图。不要把 imagegen、NotebookLM infographic 与最终中文排版混为一谈。
 
+## OfficeCLI 是执行层，不是 PPT provider
+
+OfficeCLI 不加入 `defaults.provider`。它位于 `local_editable` 或 `open_design` 生成之后，用于已有 PPTX 的结构盘点、稳定路径修改、原子 batch、schema/issues 和截图复验。
+
+- 从零生成高质量 PPT：先选 `local_editable` 或 `open_design`。
+- 已有 PPTX 精修：可直接调用 `soia-dev-officecli-ops`。
+- 需要双实现证据：宿主/Open Design 生成，OfficeCLI 复验。
+- OfficeCLI 缺失：不阻断母版生成；回执说明少了 OOXML 第二路径复验。
+
 ## 降级
 
 - NotebookLM 不可用：保留本地母版，报告认证/队列问题；用户只要 NotebookLM 时停止该路径。
 - imagegen 不可用：使用用户素材、图标或纯排版，减少装饰，不伪造图片产物。
 - presentations 不可用：可交 HTML/PDF deck，但必须说明不是可编辑 PPTX。
 - Open Design 不可用：停止 Open Design 路径；只有用户同意才改走本地或 hybrid。
-

@@ -47,7 +47,7 @@ npx skills add soia-team/soia-open-skills
 
   支撑：soia-pkm-bootstrap-vault-base（一句话从零搭通用 Markdown vault + 接入多 AI）
         soia-pkm-bootstrap-vault-obsidian / soia-pkm-bootstrap-vault-ima（Obsidian / ima 消费端特化）
-        soia-pkm-transform-obsidian-pdf/slides/visual/notebook（转化线：按输出类型拆分）
+        soia-pkm-transform-obsidian-pdf / transform-article-ppt/visual/notebooklm（转化线：按输出类型拆分）
         soia-pkm-reading-plan（读书线：把书单排成可执行阅读计划）
         soia-pkm-library-weread-sync / soia-pkm-library-book-catalog（书库线：微信读书同步 / 本地书目 catalog）
         soia-pkm-alipan-drive-ops（云盘线·原子层：aliyunpan CLI 可靠原子操作）
@@ -57,6 +57,7 @@ npx skills add soia-team/soia-open-skills
         soia-dev-drawio-visio-diagrams（Visio/draw.io 线：VSDX 解析 → .drawio 真源 → 升级/渲染）
         soia-dev-github-ops / soia-dev-ai-cli-upgrade（公共开发工具线）
         soia-dev-open-design-ops（Open Design 原子层：daemon / 目录 / 设计系统 / 导出 / resume）
+        soia-dev-officecli-ops（Office 原子层：DOCX/XLSX/PPTX 查询 / 副本修改 / 校验 / 预览）
         soia-cwork-feishu-cli（企业协作线：飞书 CLI 只读调研云盘、文档、知识库）
         soia-cwork-processon-diagrams（企业协作线：盘点、预览和导出 ProcessOn 图表）
 ```
@@ -120,7 +121,7 @@ npx skills add soia-team/soia-open-skills
 | skill | 说明 | 现在能用? | 依赖 |
 |-------|------|----------|------|
 | [`soia-pkm-transform-obsidian-pdf`](./skills/soia-pkm-transform-obsidian-pdf/) | **文章 → PDF**：Obsidian 原生导出优先，vault 外降级 pandoc/weasyprint | ✅ 可用 | Obsidian（vault 内）或 pandoc/weasyprint（降级）|
-| [`soia-pkm-transform-article-ppt`](./skills/soia-pkm-transform-article-ppt/) | **文章 → PPT 媒体包**：可编辑 PPTX 母版 + imagegen 素材/信息图 + 可选 NotebookLM 视觉对照版 + 全量渲染 QA | ✅ 可用 | 宿主演示文稿能力；NotebookLM / Open Design 可选 |
+| [`soia-pkm-transform-article-ppt`](./skills/soia-pkm-transform-article-ppt/) | **文章 → PPT 媒体包**：可编辑 PPTX 母版 + imagegen 素材/信息图 + 可选 NotebookLM 视觉对照版 + 全量渲染 QA | ✅ 可用 | 宿主演示文稿能力；NotebookLM / Open Design / OfficeCLI 可选 |
 | [`soia-pkm-transform-article-visual`](./skills/soia-pkm-transform-article-visual/) | **文章 → 长图/信息图/海报/封面**：HTML/CSS 截图本地优先，可选 Open Design / Codex imagegen | ✅ 可用 | playwright（截图）；Open Design / Codex imagegen 可选 |
 | [`soia-pkm-transform-article-notebooklm`](./skills/soia-pkm-transform-article-notebooklm/) | **文章 → 试卷/闪卡/脑图/播客**：NotebookLM 优先，降级本地 Markdown | ✅ 可用 | NotebookLM 可选；降级无额外依赖 |
 
@@ -158,6 +159,7 @@ npx skills add soia-team/soia-open-skills
 | [`soia-dev-terminal-ops`](./skills/soia-dev-terminal-ops/) | POSIX/macOS/Linux 长任务与 tmux 会话管理：多信号停滞诊断、日志抓取、安全 TERM→复查→KILL | ✅ 可用（纯命令工作流；参数化 session、日志、超时和 fallback） | POSIX shell、`ps`、`kill`；tmux/lsof 按工作流可选 |
 | [`soia-dev-design-explorer`](./skills/soia-dev-design-explorer/) | 高保真 HTML 原型、设计变体、deck、动画和设计评审的公共包装层：显式 upstream 路径、用户品牌输入、五分类输出与验证 | ✅ 可用（依赖外部 huashu-design） | `alchaincyf/huashu-design`（MIT，需单独安装） |
 | [`soia-dev-open-design-ops`](./skills/soia-dev-open-design-ops/) | Open Design 原子操作层：环境与 daemon、设计系统/项目接入、functional skill/template 查询、HTML/PDF/PPTX/MP4 导出与 session resume | ✅ 可用（stdlib 脚本 + upstream CLI/App） | Open Design checkout；Node 24.x、Corepack、pnpm 10.33.x；私有 `OPEN_DESIGN_HOME` |
+| [`soia-dev-officecli-ops`](./skills/soia-dev-officecli-ops/) | OfficeCLI 原子操作层：DOCX/XLSX/PPTX 结构读取、stable path 精确编辑、copy-on-write、原子 batch、OpenXML 校验和 HTML/截图预览 | ✅ 可用（安全包装器 + 三格式真实前向测试） | OfficeCLI >= 1.0.137；官方 CLI/MCP，Open Design 与宿主 Office 技能可组合 |
 
 Open Design 配置：复制 [`config.example.yml`](./skills/soia-dev-open-design-ops/config.example.yml) 到技能专属私有配置目录，填写 `OPEN_DESIGN_HOME`；本机 checkout、产品 `DESIGN.md` 路径与端口 override 不提交仓库。
 
@@ -415,6 +417,7 @@ npx skills add soia-team/soia-open-skills
 | `监控这个长任务` / `判断进程是否真的卡住` | soia-dev-terminal-ops |
 | `做高保真 HTML 原型` / `评审这个视觉方向` | soia-dev-design-explorer |
 | `启动 Open Design daemon` / `把这个 deck 导出 PPTX` | soia-dev-open-design-ops |
+| `检查这个 Word/Excel/PPT` / `确认后在副本上修复` / `用 OfficeCLI 复验` | soia-dev-officecli-ops |
 | `调研飞书云盘/知识库` / `读取飞书工作文档` | soia-cwork-feishu-cli |
 | `同步飞书知识库到 Git/Obsidian/VitePress` | soia-cwork-feishu-doc-git-sync |
 | `递归盘点 ProcessOn 团队空间` / `默认导出 ProcessOn Visio` | soia-cwork-processon-diagrams |
@@ -524,6 +527,7 @@ soia-open-skills/
     ├── soia-dev-fix-loop/
     ├── soia-dev-github-ops/
     ├── soia-dev-open-design-ops/
+    ├── soia-dev-officecli-ops/
     ├── soia-dev-project-scaffold/
     ├── soia-dev-prompt-clarity/
     ├── soia-dev-review-panel/

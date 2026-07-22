@@ -3,11 +3,11 @@ name: soia-pkm-transform-article-ppt
 description: 把文章、Markdown、URL、提纲、数据表或主题转换为以可编辑 PPTX 为核心的演示媒体包，可同时生成封面/插画素材、信息图、逐页预览和 NotebookLM 视觉对照版。适用于「做PPT」「生成PPTX」「转成课件」「做演示文稿」「生成图片素材」「NotebookLM做PPT」「两版PPT对比」「article to deck」「make slides」。
 version: 2.0.0
 created_at: 2026-07-16 10:58:46
-updated_at: 2026-07-22 17:35:20
+updated_at: 2026-07-22 18:19:31
 created_by: claude opus 4.6
 updated_by: gpt-5.6-luna
 dependencies:
-  optional: [soia-dev-open-design-ops]
+  optional: [soia-dev-open-design-ops, soia-dev-officecli-ops]
 ---
 
 # soia-pkm-transform-article-ppt
@@ -57,6 +57,7 @@ npx skills add soia-team/soia-open-skills -g -a claude-code -a codex -s soia-pkm
 - `imagegen`：宿主提供图片生成能力时直接调用；不可用时使用用户素材、图标或纯排版，不伪称生成了图片。
 - `notebooklm`：需要 NotebookLM CLI 与登录态，见 [references/provider-notebooklm.md](references/provider-notebooklm.md)。
 - `open_design`：可选增强；选中后硬依赖 `soia-dev-open-design-ops`，见 [references/provider-open-design.md](references/provider-open-design.md)。
+- `officecli`：可选 Office 文件操作与复验层；适合检查、精确修改和验证已有 PPTX，不替代设计生成，见 [references/provider-officecli.md](references/provider-officecli.md)。
 
 私有配置放在：
 
@@ -73,6 +74,7 @@ npx skills add soia-team/soia-open-skills -g -a claude-code -a codex -s soia-pkm
 
 - source: <路径或 URL>
 - provider: local_editable | notebooklm | hybrid | open_design
+- office_execution: host | officecli | host+officecli
 - editable_pptx: <路径、页数、是否可编辑>
 - notebooklm_pptx: <路径、页数、是否为图片页；未生成则省略>
 - visual_assets: <数量与路径>
@@ -142,6 +144,8 @@ python3 scripts/media_bundle.py plan \
 
 使用宿主 presentations 能力或 Open Design 生成。遵循当前宿主的演示文稿技能与 runtime 说明。PPTX 中的中文文本、流程箭头、表格、页码、来源应保持可编辑；位图只用于照片、插画、纹理和必要的复杂视觉。
 
+OfficeCLI 不是默认创作 provider。已有母版、需要稳定元素路径精修、三项以上原子 batch、OpenXML schema 复验或内置截图时，可在生成后调用 `soia-dev-officecli-ops`。默认在副本上修改；不得用 OfficeCLI 绕过宿主 presentations 的硬性实现要求。
+
 固定设计要求：
 
 - 中长文默认 14-18 页；短文 8-12 页；用户指定时服从并记录压缩风险。
@@ -175,6 +179,8 @@ python3 scripts/media_bundle.py validate \
 
 详细标准见 [references/quality-gates.md](references/quality-gates.md)。任何一页失败都回到对应源文件、HTML 或 prompt 修复，再重新渲染；不能只改完成回执。
 
+OfficeCLI 可用时，把它作为额外机械证据：运行 `validate`、`view issues`，并按需生成全量截图。它不能替代 `media_bundle.py` 的编辑性检查和人工逐页视觉复核。
+
 ### 9. 交付与回链
 
 把正式母版、辅助版本、图片和 manifest 放在同一输出目录。若 source 位于可写知识库且已有「关联/派生产物」区域，更新链接；不要在多个文件复制同一份产物清单。
@@ -188,5 +194,6 @@ python3 scripts/media_bundle.py validate \
 - 信息图：[references/prompt-infographic.md](references/prompt-infographic.md)
 - NotebookLM：[references/provider-notebooklm.md](references/provider-notebooklm.md)、[references/prompt-notebooklm-ppt.md](references/prompt-notebooklm-ppt.md)
 - Open Design：[references/provider-open-design.md](references/provider-open-design.md)、[references/prompt-open-design.md](references/prompt-open-design.md)
+- OfficeCLI 操作与复验：[references/provider-officecli.md](references/provider-officecli.md)
 - 质量门：[references/quality-gates.md](references/quality-gates.md)
 - 典型调用：[references/examples.md](references/examples.md)

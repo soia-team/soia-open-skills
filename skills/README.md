@@ -2,7 +2,7 @@
 
 > Generated from `skills/*/SKILL.md` and optional `agents/openai.yaml`.
 > Do not edit by hand. Run `python3 scripts/generate_skill_catalog.py`.
-> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 55 skills.
+> Discoverable by `npx skills add soia-team/soia-open-skills -l`: 56 skills.
 
 ## Source Fields
 
@@ -70,6 +70,7 @@
 | [`soia-dev-drawio-visio-diagrams`](./soia-dev-drawio-visio-diagrams/) | 读取 VSDX，转换、理解并升级为可编辑 draw.io 图表。 | Use $soia-dev-drawio-visio-diagrams to inspect this VSDX safely, convert it into an editable draw.io source, apply requested upgrades without overwriting the original, and validate exported artifacts. |
 | [`soia-dev-fix-loop`](./soia-dev-fix-loop/) | 用五步闭环处理代码审查或测试发现：复现、决策、修复、回归复核与回执，防止遗漏、假修复和无证据收口。 |  |
 | [`soia-dev-github-ops`](./soia-dev-github-ops/) | Use gh CLI for GitHub issue, PR, checks, review, workflow run, release, and collaborator-permission operations, plus a pre-merge rule-review procedure and an author-side address-the-review-and-fix procedure, with structu... | Use soia-dev-github-ops: review this open PR against the repo's own rules and tell me whether it's safe to merge. |
+| [`soia-dev-officecli-ops`](./soia-dev-officecli-ops/) | 安全读取、修改并验证 Word、Excel 和 PowerPoint 文件。 | 检查这个 Office 文件，先给出问题和修改计划；我确认后在副本上修复并完成验证。 |
 | [`soia-dev-open-design-ops`](./soia-dev-open-design-ops/) | Operate Open Design daemon, catalogs, design systems, exports, and session resume | Use $soia-dev-open-design-ops to check my Open Design environment, start the local daemon safely, query real catalogs, and run a source-backed export or resume workflow. |
 | [`soia-dev-project-scaffold`](./soia-dev-project-scaffold/) | 为任意新 Git 项目创建最小 AI 协作基线。 | Use $soia-dev-project-scaffold to create a minimal AGENTS.md and docs baseline for a new Git project. |
 | [`soia-dev-prompt-clarity`](./soia-dev-prompt-clarity/) | 中英文提示词编写、诊断、防误伤改写与可验证规格化 | Use $soia-dev-prompt-clarity to turn my request into a clear, directly usable prompt; preserve my chosen prompt and explanation languages, and use a named framework only when it materially improves the result. |

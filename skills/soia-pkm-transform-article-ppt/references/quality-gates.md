@@ -67,6 +67,13 @@ python3 scripts/media_bundle.py validate \
 - 最终中文、数字、表格和来源由 PPT/HTML 排版。
 - 素材没有实际进入 deck/infographic 时，从交付清单移除，避免库存堆积。
 
+## OfficeCLI 可选复验门
+
+- `officecli validate <deck.pptx> --json` 无 schema error。
+- `officecli view <deck.pptx> issues --json` 的 error 已清零，warning 已处理或解释。
+- 修复使用生成文件的副本；不原地覆盖正式母版。
+- `validate` 通过只代表 OOXML 结构成立，不能替代编辑性检测、事实核对或人工逐页视觉检查。
+
 ## 修复循环
 
 1. 定位失败页和失败类型。
@@ -74,4 +81,3 @@ python3 scripts/media_bundle.py validate \
 3. 重新生成受影响产物。
 4. 重新渲染全部页面，防止局部修复引入全局漂移。
 5. 再跑机械门和人工门。
-
