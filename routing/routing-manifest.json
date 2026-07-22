@@ -54,6 +54,18 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-dev-draft-prd",
+    "repo": "soia-open-dev-product-skills",
+    "skillPath": "skills/soia-dev-draft-prd",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-draft-test-doc",
+    "repo": "soia-open-dev-testing-skills",
+    "skillPath": "skills/soia-dev-draft-test-doc",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-dev-drawio-visio-diagrams",
     "repo": "soia-open-dev-design-skills",
     "skillPath": "skills/soia-dev-drawio-visio-diagrams",
@@ -84,6 +96,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-dev-plan-release-checklist",
+    "repo": "soia-open-dev-release-skills",
+    "skillPath": "skills/soia-dev-plan-release-checklist",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-dev-project-scaffold",
     "repo": "soia-open-dev-coding-skills",
     "skillPath": "skills/soia-dev-project-scaffold",
@@ -96,6 +114,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-dev-run-ops-inspection",
+    "repo": "soia-open-dev-ts-skills",
+    "skillPath": "skills/soia-dev-run-ops-inspection",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-dev-task-execute",
     "repo": "soia-open-dev-coding-skills",
     "skillPath": "skills/soia-dev-task-execute",
@@ -105,6 +129,18 @@
     "skill_name": "soia-dev-terminal-ops",
     "repo": "soia-open-dev-ts-skills",
     "skillPath": "skills/soia-dev-terminal-ops",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-edu-compose-lesson-plan",
+    "repo": "soia-open-edu-course-skills",
+    "skillPath": "skills/soia-edu-compose-lesson-plan",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-edu-design-course-outline",
+    "repo": "soia-open-edu-course-skills",
+    "skillPath": "skills/soia-edu-design-course-outline",
     "visibility": "public"
   },
   {
