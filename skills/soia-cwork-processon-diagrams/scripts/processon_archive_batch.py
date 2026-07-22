@@ -626,7 +626,7 @@ async def download_one(
             raise BatchError(
                 f"download suffix mismatch for {title!r}: expected {expected_suffix}, got {suggested!r}"
             )
-        if Path(suggested).stem != title:
+        if Path(suggested).stem not in {title, provider_safe_filename_stem(title)}:
             raise BatchError(
                 f"download title mismatch for {title!r}: suggested filename is {suggested!r}"
             )
@@ -801,6 +801,12 @@ def normalized_text(value: str) -> str:
 
 def source_title_matches(expected: str, observed: str) -> bool:
     return observed in {expected, f"{expected}-ProcessOn"}
+
+
+def provider_safe_filename_stem(title: str) -> str:
+    """Mirror ProcessOn's observed path-separator sanitization, and nothing broader."""
+
+    return title.replace("/", "_").replace("\\", "_")
 
 
 def normalized_processon_source_url(value: str) -> str:
