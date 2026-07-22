@@ -180,6 +180,23 @@ class ProcessOnBrowserRunnerTests(unittest.TestCase):
             self.module.target_reached("https://www.processon.com/login", target)
         )
 
+    def test_cli_has_bounded_spa_settle_delay(self) -> None:
+        parser = self.module.build_parser()
+        args = parser.parse_args(
+            ["snapshot", "--url", "https://www.processon.com/org/teams/example"]
+        )
+        self.assertEqual(args.settle_ms, 2_000)
+        overridden = parser.parse_args(
+            [
+                "--settle-ms",
+                "3500",
+                "snapshot",
+                "--url",
+                "https://www.processon.com/org/teams/example",
+            ]
+        )
+        self.assertEqual(overridden.settle_ms, 3_500)
+
     def test_skill_contract_makes_portable_runner_the_batch_default(self) -> None:
         skill_root = SCRIPT.parents[1]
         skill = (skill_root / "SKILL.md").read_text(encoding="utf-8")
@@ -194,6 +211,7 @@ class ProcessOnBrowserRunnerTests(unittest.TestCase):
             "正式批量只能使用技能专用 profile",
             "禁止附着客户默认 Chrome profile",
             "pages_closed_at_exit",
+            "settle",
         ]:
             with self.subTest(marker=marker):
                 self.assertIn(marker, skill)

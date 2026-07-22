@@ -490,6 +490,7 @@ def execute_steps(
         if action == "goto":
             url = validate_processon_url(str(step.get("url", "")))
             page.goto(url, wait_until="domcontentloaded", timeout=timeout)
+            page.wait_for_timeout(int(step.get("settle_ms", 750)))
         elif action == "click":
             click_locator(step_locator(page, step), step, timeout)
             page.wait_for_timeout(int(step.get("settle_ms", 250)))
@@ -597,6 +598,7 @@ def cmd_status(args: argparse.Namespace) -> dict[str, Any]:
     receipt = None
     with managed_context(args.profile_dir, headless=not args.headed) as (_context, page, receipt):
         page.goto(url, wait_until="domcontentloaded", timeout=args.timeout_ms)
+        page.wait_for_timeout(args.settle_ms)
         accessible = target_accessible(page, url)
         reached_url = page.url
         title = page.title()
@@ -617,6 +619,7 @@ def cmd_snapshot(args: argparse.Namespace) -> dict[str, Any]:
     receipt = None
     with managed_context(args.profile_dir, headless=not args.headed) as (_context, page, receipt):
         page.goto(url, wait_until="domcontentloaded", timeout=args.timeout_ms)
+        page.wait_for_timeout(args.settle_ms)
         accessible = target_accessible(page, url)
         snapshot = bounded_snapshot(page)
     assert receipt is not None
@@ -633,6 +636,7 @@ def cmd_run(args: argparse.Namespace) -> dict[str, Any]:
     receipt = None
     with managed_context(args.profile_dir, headless=not args.headed) as (context, page, receipt):
         page.goto(payload["start_url"], wait_until="domcontentloaded", timeout=args.timeout_ms)
+        page.wait_for_timeout(args.settle_ms)
         if not target_accessible(page, payload["start_url"]):
             raise BrowserRunnerError("dedicated profile is not logged in for the requested ProcessOn URL")
         results = execute_steps(
@@ -655,6 +659,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile-dir", type=Path, default=default_profile_dir())
     parser.add_argument("--timeout-ms", type=int, default=30_000)
+    parser.add_argument(
+        "--settle-ms",
+        type=int,
+        default=2_000,
+        help="wait after initial navigation for ProcessOn SPA rendering (default: 2000)",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     login = sub.add_parser("login", help="one-time manual login in the dedicated profile")
@@ -694,6 +704,9 @@ def main(argv: list[str] | None = None) -> int:
     args.profile_dir = validate_profile_dir(args.profile_dir)
     if args.timeout_ms < 250 or args.timeout_ms > 300_000:
         print(json.dumps({"ok": False, "error": "timeout-ms must be 250..300000"}))
+        return 2
+    if args.settle_ms < 0 or args.settle_ms > 30_000:
+        print(json.dumps({"ok": False, "error": "settle-ms must be 0..30000"}))
         return 2
     try:
         result = args.func(args)
