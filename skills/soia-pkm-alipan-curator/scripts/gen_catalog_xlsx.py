@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import shutil
@@ -115,7 +116,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--soffice",
         default=os.environ.get("SOIA_SOFFICE"),
-        help="可选：LibreOffice/soffice 路径，用于预计算 HYPERLINK 显示值",
+        help="可选：LibreOffice/soffice 路径，用于预计算 HYPERLINK 显示值；openpyxl 兜底路径下还用于公式错误扫描",
+    )
+    parser.add_argument(
+        "--renderer",
+        choices=["auto", "artifact-tool", "openpyxl"],
+        default=os.environ.get("SOIA_CATALOG_XLSX_RENDERER", "auto"),
+        help=(
+            "Excel 作者层实现：artifact-tool 需要宿主提供的 @oai/artifact-tool 运行时（格式更丰富，"
+            "支持公式错误扫描与截图预览）；openpyxl 是不依赖特定平台的通用兜底，任何装有 openpyxl 的"
+            "环境都能跑；auto（默认）优先用可用的 artifact-tool，缺失时自动退回 openpyxl，保证换一个"
+            "没有 artifact-tool 访问权限的 AI/宿主也能产出有效索引。"
+        ),
     )
     parser.add_argument("--force", action="store_true", help="忽略缓存，重建全部分区")
     parser.add_argument("--verify", action="store_true", help="渲染总索引与本次变化分区的全部工作表")
@@ -146,6 +158,74 @@ def load_release_metadata(argument: str | None) -> dict[str, str] | None:
         raise ValueError("--release-metadata 不是有效 JSON") from error
 
 
+def resolve_node(node_arg: str) -> str | None:
+    node = shutil.which(node_arg) if os.sep not in node_arg else node_arg
+    if not node or not Path(node).exists():
+        return None
+    return str(Path(node).resolve())
+
+
+def openpyxl_available() -> bool:
+    return importlib.util.find_spec("openpyxl") is not None
+
+
+def artifact_tool_looks_valid(package_dir: Path) -> bool:
+    """Lightweight validity check beyond "the directory exists": a real installed npm
+    package has a package.json. This won't catch every way a provisioning could be
+    broken (that only a real Node import would prove), but it stops 'auto' from
+    committing to a stale/empty directory and then hard-failing instead of falling
+    back to openpyxl.
+    """
+    return package_dir.is_dir() and (package_dir / "package.json").is_file()
+
+
+def resolve_renderer(args: argparse.Namespace) -> str:
+    """Pick the Excel author backend. artifact-tool is an optional, platform-specific
+    fast path (richer styling, built-in formula-error scan + screenshot QA); openpyxl
+    is the platform-agnostic fallback so any AI/host without artifact-tool access can
+    still produce a fully usable catalog Excel. See references/catalog-excel.md。
+    """
+    node_path = resolve_node(args.node)
+    artifact_runtime = Path(args.artifact_runtime).expanduser().resolve() if args.artifact_runtime else None
+    artifact_package = (artifact_runtime / "node_modules" / "@oai" / "artifact-tool") if artifact_runtime else None
+    artifact_ok = bool(node_path and artifact_package and artifact_tool_looks_valid(artifact_package))
+
+    if args.renderer == "artifact-tool":
+        if not artifact_runtime:
+            raise SystemExit(
+                "缺少 --artifact-runtime：请先让宿主加载 spreadsheet workspace dependencies，"
+                "在临时工作目录创建 node_modules 软链后传入该目录。也可改用 --renderer openpyxl 或"
+                "--renderer auto 使用不依赖平台的兜底路径。"
+            )
+        if not node_path:
+            raise SystemExit(f"Node.js 不可用：{args.node}")
+        if not artifact_tool_looks_valid(artifact_package):
+            raise SystemExit(f"artifact runtime 中未找到有效的 @oai/artifact-tool（缺少 package.json）：{artifact_package}")
+        args.node = node_path
+        args.artifact_runtime = artifact_runtime
+        return "artifact-tool"
+
+    if args.renderer == "openpyxl":
+        if not openpyxl_available():
+            raise SystemExit(
+                "openpyxl 不可用：请先安装（pip install openpyxl 或 uv pip install openpyxl），"
+                "或改用 --renderer artifact-tool 并提供有效的 --artifact-runtime。"
+            )
+        return "openpyxl"
+
+    # auto：优先复用可用的 artifact-tool（格式更丰富），缺失时自动退回 openpyxl 兜底。
+    if artifact_ok:
+        args.node = node_path
+        args.artifact_runtime = artifact_runtime
+        return "artifact-tool"
+    if openpyxl_available():
+        return "openpyxl"
+    raise SystemExit(
+        "既没有可用的 --artifact-runtime（@oai/artifact-tool 运行时），也没有安装 openpyxl 兜底依赖；"
+        "请安装 openpyxl（pip install openpyxl）或提供有效的 --artifact-runtime 后重试。"
+    )
+
+
 def validate_inputs(args: argparse.Namespace) -> None:
     args.output_dir, _ = resolve_output_dir(args.output_dir)
     args.output = args.output_dir / MASTER_FILENAME
@@ -155,19 +235,7 @@ def validate_inputs(args: argparse.Namespace) -> None:
         raise SystemExit(f"search-dir 不存在：{args.search_dir}")
     if args.output.suffix.lower() != ".xlsx":
         raise SystemExit("output 必须以 .xlsx 结尾")
-    node = shutil.which(args.node) if os.sep not in args.node else args.node
-    if not node or not Path(node).exists():
-        raise SystemExit(f"Node.js 不可用：{args.node}")
-    args.node = str(Path(node).resolve())
-    if not args.artifact_runtime:
-        raise SystemExit(
-            "缺少 --artifact-runtime：请先让宿主加载 spreadsheet workspace dependencies，"
-            "在临时工作目录创建 node_modules 软链后传入该目录。"
-        )
-    args.artifact_runtime = args.artifact_runtime.resolve()
-    package = args.artifact_runtime / "node_modules" / "@oai" / "artifact-tool"
-    if not package.exists():
-        raise SystemExit(f"artifact runtime 中未找到 @oai/artifact-tool：{package}")
+    args.renderer = resolve_renderer(args)
     if args.soffice:
         soffice = shutil.which(args.soffice) if os.sep not in args.soffice else args.soffice
         if not soffice or not Path(soffice).exists():
@@ -190,6 +258,33 @@ def recalculate_with_soffice(soffice: str, outputs: list[Path], cache_dir: Path)
             if not recalculated.exists():
                 raise RuntimeError(f"LibreOffice 未生成重算文件：{recalculated}")
             recalculated.replace(output)
+
+
+EXCEL_ERROR_TOKENS = ("#REF!", "#DIV/0!", "#VALUE!", "#NAME?", "#N/A", "#NULL!", "#NUM!")
+
+
+def scan_formula_errors(outputs: list[Path]) -> list[dict]:
+    """openpyxl 兜底路径下的公式错误扫描（对齐 artifact-tool 的 workbook.inspect()）。
+
+    openpyxl 本身不计算公式；只能扫描已缓存的计算值，因此只有在 recalculate_with_soffice()
+    先用 LibreOffice 重算过一遍之后调用才有意义。
+    """
+    from openpyxl import load_workbook
+
+    errors: list[dict] = []
+    for output in outputs:
+        workbook = load_workbook(output, data_only=True, read_only=True)
+        try:
+            for sheet in workbook.worksheets:
+                for row in sheet.iter_rows():
+                    for cell in row:
+                        if isinstance(cell.value, str) and cell.value.strip() in EXCEL_ERROR_TOKENS:
+                            errors.append(
+                                {"file": str(output), "sheet": sheet.title, "cell": cell.coordinate, "value": cell.value}
+                            )
+        finally:
+            workbook.close()
+    return errors
 
 
 def cleanup_inspection_sidecars(outputs: list[Path]) -> None:
@@ -244,33 +339,60 @@ def run() -> dict:
         outputs.append(Path(plan["outputPath"]))
     outputs.extend(Path(item["output"]) for item in plan["partitions"] if item["changed"])
 
+    qa = {"renderer": args.renderer}
     if outputs:
-        environment = os.environ.copy()
-        node_options = os.environ.get("SOIA_ARTIFACT_NODE_OPTIONS")
-        if node_options:
-            environment["NODE_OPTIONS"] = node_options
-        command = [
-            args.node,
-            str(BUILDER),
-            "--plan",
-            str(cache_dir / "build-plan.json"),
-            "--artifact-runtime",
-            str(args.artifact_runtime),
-        ]
-        process = subprocess.run(command, text=True, capture_output=True, env=environment, check=False)
-        if process.returncode != 0:
-            raise RuntimeError(
-                f"artifact-tool 生成失败（缓存未提交，下次会继续重建）：\n"
-                f"stdout={process.stdout}\nstderr={process.stderr}"
-            )
+        if args.renderer == "artifact-tool":
+            environment = os.environ.copy()
+            node_options = os.environ.get("SOIA_ARTIFACT_NODE_OPTIONS")
+            if node_options:
+                environment["NODE_OPTIONS"] = node_options
+            command = [
+                args.node,
+                str(BUILDER),
+                "--plan",
+                str(cache_dir / "build-plan.json"),
+                "--artifact-runtime",
+                str(args.artifact_runtime),
+            ]
+            process = subprocess.run(command, text=True, capture_output=True, env=environment, check=False)
+            if process.returncode != 0:
+                raise RuntimeError(
+                    f"artifact-tool 生成失败（缓存未提交，下次会继续重建）：\n"
+                    f"stdout={process.stdout}\nstderr={process.stderr}"
+                )
+        else:
+            from catalog_xlsx.build_workbooks_fallback import build as build_with_openpyxl
+
+            try:
+                build_with_openpyxl(cache_dir / "build-plan.json")
+            except Exception as error:
+                raise RuntimeError(f"openpyxl 兜底生成失败（缓存未提交，下次会继续重建）：{error}") from error
         if args.soffice:
             recalculate_with_soffice(args.soffice, outputs, cache_dir)
         commit_manifest(plan)
     removed_outputs = cleanup_stale_partition_outputs(plan)
     cleanup_inspection_sidecars(managed_outputs)
 
+    if args.verify:
+        if args.renderer == "artifact-tool":
+            qa["note"] = "公式错误扫描与截图预览已由 artifact-tool 内置完成，见各输出旁的调试信息。"
+        elif args.soffice and outputs:
+            formula_errors = scan_formula_errors(outputs)
+            qa["formulaErrorCount"] = len(formula_errors)
+            qa["formulaErrors"] = formula_errors[:20]
+            qa["previewsAvailable"] = False
+        else:
+            qa["formulaErrorCount"] = None
+            qa["previewsAvailable"] = False
+            qa["note"] = (
+                "openpyxl 兜底模式未提供 --soffice：跳过公式错误扫描与截图预览，公式仅在 "
+                "Excel/WPS/LibreOffice 打开时才会实际计算；交付前建议人工打开核对，或补充 --soffice。"
+            )
+
     payload = {
         "status": "updated" if outputs else "unchanged",
+        "renderer": args.renderer,
+        "qa": qa if args.verify else None,
         "master": plan["outputPath"],
         "detailDir": plan["detailDir"],
         "changedPartitions": changed,
@@ -288,6 +410,7 @@ def run() -> dict:
         print(json.dumps(payload, ensure_ascii=False))
     else:
         print(f"status={payload['status']}")
+        print(f"renderer={payload['renderer']}")
         print(f"master={payload['master']}")
         print(f"rebuilt={len(payload['rebuilt'])}")
         print(f"changed_partitions={len(changed)}")

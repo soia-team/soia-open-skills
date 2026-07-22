@@ -86,20 +86,26 @@
 
 ## 运行依赖
 
-Excel 作者层强制使用宿主提供的 `@oai/artifact-tool`，不切换到 `openpyxl`、`xlsxwriter` 或 `pandas.ExcelWriter`。
+Excel 作者层不绑定单一平台，有两条数据口径一致的路径，由 `--renderer` 选择：
 
-需要：
+| `--renderer` | 何时用 | 需要 |
+|---|---|---|
+| `artifact-tool` | 宿主提供了 `@oai/artifact-tool` 运行时（格式更丰富，自带公式错误扫描与截图预览） | Node.js；含 `node_modules/@oai/artifact-tool` 的运行目录 |
+| `openpyxl` | 任何没有该运行时访问权限的 AI/宿主（平台无关兜底） | Python 3.10+ 加 `openpyxl`（`pip install openpyxl` 或 `uv pip install openpyxl`） |
+| `auto`（默认） | 不确定当前宿主有没有 artifact-tool 时 | 优先探测 artifact-tool；不可用则自动退回 openpyxl，两者都不可用才报错 |
 
-- Python 3.10+；
-- Node.js；
-- 含 `node_modules/@oai/artifact-tool` 的运行目录；
-- 可选 LibreOffice `soffice`，用于预计算 `HYPERLINK` 的友好显示值。
+两条路径共享同一份 `prepare_incremental()` 增量缓存与数据结构，产出的分区、目录、类型统计、release metadata 完全一致；差别只在渲染层：
 
-在支持 workspace dependency loader 的宿主中，先读取它返回的 Node、`node_modules` 和 `soffice` 路径。若缺少 `@oai/artifact-tool`，停止并说明，不猜路径、不临时安装替代库。
+- artifact-tool 路径内置公式错误扫描（`workbook.inspect()`）与截图 QA（`workbook.render()`）。
+- openpyxl 路径本身不计算公式（Excel/WPS/LibreOffice 打开时才计算）；提供 `--soffice` 时，`gen_catalog_xlsx.py` 会用它重算一遍并做等价的公式错误扫描，但不产出截图预览。未提供 `--soffice` 时如实在 `--verify` 的输出里标注这轮 QA 未覆盖，不冒充已通过。
+
+可选 LibreOffice `soffice`：两条路径都可用，用于预计算 `HYPERLINK` 的友好显示值；openpyxl 路径下还用于补齐公式错误扫描。
+
+在支持 workspace dependency loader 的宿主中，先读取它返回的 Node、`node_modules` 和 `soffice` 路径，走 `--renderer artifact-tool`（或让 `--renderer auto` 自行探测）。没有这类宿主注入、或探测不到 `@oai/artifact-tool` 时，直接走 `--renderer openpyxl`，不猜路径、不临时拼凑替代方案——openpyxl 是正式声明支持的第二条路径，不是临时应急。
 
 ## 正式运行
 
-先创建一次性的运行目录，只用于连接宿主依赖：
+**有 artifact-tool 运行时的宿主**：先创建一次性的运行目录，只用于连接宿主依赖：
 
 ```bash
 RUNTIME_DIR="$(mktemp -d)"
@@ -114,6 +120,7 @@ python3 '<skill-dir>/scripts/gen_catalog_xlsx.py' \
   --search-dir '<vault>/path/to/_全文检索' \
   --release-metadata '<run-dir>/catalog/release-metadata.json' \
   --output-dir '<absolute-output-dir>' \
+  --renderer artifact-tool \
   --node '<loader-node>' \
   --artifact-runtime "$RUNTIME_DIR" \
   --soffice '<loader-soffice>' \
@@ -121,14 +128,30 @@ python3 '<skill-dir>/scripts/gen_catalog_xlsx.py' \
   --json
 ```
 
+**没有 artifact-tool 运行时的 AI/宿主**（默认兜底，只需要 Python + openpyxl）：
+
+```bash
+python3 '<skill-dir>/scripts/gen_catalog_xlsx.py' \
+  --catalog '<vault>/path/to/00_馆藏总览.md' \
+  --search-dir '<vault>/path/to/_全文检索' \
+  --release-metadata '<run-dir>/catalog/release-metadata.json' \
+  --output-dir '<absolute-output-dir>' \
+  --renderer openpyxl \
+  --soffice '<可选：本机 soffice 路径>' \
+  --verify \
+  --json
+```
+
+不确定当前宿主有没有 artifact-tool 时，省略 `--renderer`（默认 `auto`）即可，脚本自行探测并在 JSON 输出的 `renderer` 字段里如实报告实际用了哪一条路径。
+
 常用模式：
 
 - 日常刷新：不加 `--force`。
 - 首次生成/生成规则升级：加 `--force`。
-- 交付验收：加 `--verify`，只渲染总入口和本次变化分区的所有工作表。
+- 交付验收：加 `--verify`，只渲染总入口和本次变化分区的所有工作表（openpyxl 路径下需另加 `--soffice` 才能覆盖公式错误扫描，见上表）。
 - 自定义缓存：`--cache-dir <cache-dir>`，仍须放在用户缓存区而不是 vault。
 
-运行完成后再用完全相同参数复跑一次。第二次必须进入 unchanged 快路径；否则增量缓存、输出缺失判断或 manifest 提交存在问题。
+运行完成后再用完全相同参数复跑一次。第二次必须进入 unchanged 快路径；否则增量缓存、输出缺失判断或 manifest 提交存在问题。两条渲染路径复跑同样适用这条验收标准。
 
 ## 从 verified ledger 物化新增分区
 
@@ -197,6 +220,9 @@ https://www.alipan.com/drive/file/all/backup/<40位file_id>
 | Excel 能打开但链接不可点 | 名称列没有公式，或 URL 不是直达格式 | 检查 `HYPERLINK` 数量，并抽查 `file/all/backup/<file_id>` |
 | 交付目录出现 `.inspect.ndjson` | 调试 sidecar 未清理 | 生成器应自动清理；交付前再次确认目录只含正式产物 |
 | 云端还是旧版本 | 只更新了本地，或覆盖后仍引用旧 `file_id` | 比较远端 SHA1/bytes，并更新所有消费端链接 |
+| `--artifact-runtime` 不可用/宿主没有 workspace dependency loader | 当前 AI/宿主本来就不具备该运行时 | 不猜路径、不临时装替代库；直接用 `--renderer openpyxl`（或省略 `--renderer` 让 `auto` 自动探测退回） |
+| `--renderer openpyxl` 报 openpyxl 不可用 | 当前 Python 环境没装 openpyxl | `pip install openpyxl` 或 `uv pip install openpyxl` 后重跑；这是标准 pip 包，不是平台专属依赖 |
+| openpyxl 路径 `--verify` 输出里 `qa.note` 提示未扫描公式错误 | 没有传 `--soffice`，openpyxl 本身不计算公式 | 补充 `--soffice <路径>` 让脚本重算并扫描；或在 Excel/WPS 打开后人工核对 |
 
 更广泛的云盘扫描、删除、路径异常和并发问题见 [operations-troubleshooting.md](operations-troubleshooting.md)。
 
@@ -205,8 +231,9 @@ https://www.alipan.com/drive/file/all/backup/<40位file_id>
 - 所有全文检索文件的声明数与实际数据行一致。
 - 总入口的物理总数、已展开明细数和覆盖率均有明确标签。
 - 本次变化分区已重建；未变化分区文件的修改时间/哈希保持不变。
-- `--verify` 公式错误扫描为 0，变化工作簿的全部工作表均完成渲染检查。
-- `unzip -t` 或等价 ZIP 完整性检查通过。
+- `--verify` 公式错误扫描为 0：artifact-tool 路径由 `workbook.inspect()` 内置完成；openpyxl 路径需另加 `--soffice` 才能等价完成，没有 `--soffice` 时输出必须如实标注该轮未扫描，不得默认视为 0。
+- artifact-tool 路径下变化工作簿的全部工作表均完成渲染检查；openpyxl 路径不产出截图预览，属已知能力差异，不算完成缺陷。
+- `unzip -t` 或等价 ZIP 完整性检查通过（两条渲染路径产出的都是标准 xlsx）。
 - 提供 `soffice` 时，链接显示为友好文字；名称列和“打开云盘”列均可点击。
 - 同参数第二次运行返回 `status=unchanged` 且 `rebuilt=[]`。
 - 若已上传，远端字节数与 SHA1 和本地一致，旧 `file_id` 的消费端引用已更新；关键产物与资源地图分别通过 `required_artifacts`、`resource_maps` 合同审计。

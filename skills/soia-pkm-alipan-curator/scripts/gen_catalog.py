@@ -429,7 +429,7 @@ def iter_scan_records(scan_dir):
                 if not isinstance(r,dict) or 'path' not in r: continue
                 p=r['path'].rstrip('/')
                 if not r.get('name'): r['name']=p.rsplit('/',1)[-1]
-                if r.get('name') and p.rsplit('/',1)[-1]!=r['name']:
+                if r.get('name'):
                     p=p+'/'+r['name']; r={**r,'path':p}
                 yield fn,p,r
 
