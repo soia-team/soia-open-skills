@@ -8,12 +8,72 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import yaml
 
 
 ALLOWED_FRONTMATTER = {"name", "description", "dependencies", "version", "created_at", "updated_at", "created_by", "updated_by"}
+REQUIRED_FRONTMATTER = {"name", "description", "version", "created_at", "updated_at", "created_by", "updated_by"}
+FRONTMATTER_DATETIME_FIELDS = ("created_at", "updated_at")
+FRONTMATTER_DATETIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+# Empty after auditing all 56 skills at f73659e. Keep these explicit so any
+# future legacy exception is reviewable instead of silently weakening the gate.
+GRANDFATHER_MISSING_FRONTMATTER: frozenset[str] = frozenset()
+GRANDFATHER_INVALID_DATETIME: frozenset[str] = frozenset()
+GRANDFATHER_MISSING_PRIVATE_DATA_SECTION = frozenset(
+    {
+        "soia-cwork-feishu-cli",
+        "soia-dev-agent-cli-dispatch",
+        "soia-dev-agent-md-advisor",
+        "soia-dev-ai-cli-upgrade",
+        "soia-dev-archify-diagrams",
+        "soia-dev-coding-protocol",
+        "soia-dev-design-explorer",
+        "soia-dev-doc-sync",
+        "soia-dev-fix-loop",
+        "soia-dev-github-ops",
+        "soia-dev-officecli-ops",
+        "soia-dev-open-design-ops",
+        "soia-dev-project-scaffold",
+        "soia-dev-prompt-clarity",
+        "soia-dev-sync-skills",
+        "soia-dev-task-execute",
+        "soia-dev-terminal-ops",
+        "soia-pkm-alipan-drive-ops",
+        "soia-pkm-baidu-netdisk-ops",
+        "soia-pkm-bootstrap-vault-base",
+        "soia-pkm-bootstrap-vault-ima",
+        "soia-pkm-bootstrap-vault-obsidian",
+        "soia-pkm-clip-drive",
+        "soia-pkm-clip-github-repo",
+        "soia-pkm-clip-rednote",
+        "soia-pkm-clip-web",
+        "soia-pkm-clip-wechat-account",
+        "soia-pkm-clip-wechat-article",
+        "soia-pkm-clip-x",
+        "soia-pkm-compose-article-draft",
+        "soia-pkm-cover-image",
+        "soia-pkm-distill-article-opinion",
+        "soia-pkm-interpret-article-analysis",
+        "soia-pkm-library-book-catalog",
+        "soia-pkm-library-weread-sync",
+        "soia-pkm-maintain",
+        "soia-pkm-organize-article-moc",
+        "soia-pkm-publish-rednote-card",
+        "soia-pkm-publish-wechat-draft",
+        "soia-pkm-publish-x-article",
+        "soia-pkm-publish-x-thread",
+        "soia-pkm-reading-plan",
+        "soia-pkm-transform-article-notebooklm",
+        "soia-pkm-transform-article-ppt",
+        "soia-pkm-transform-article-visual",
+        "soia-pkm-transform-obsidian-pdf",
+        "soia-pkm-translate-article-zh",
+    }
+)
+SEGMENT_EXEMPT = {"soia-pkm-maintain"}
 DEPENDENCY_KEYS = {"hard", "optional", "external"}
 MAX_SKILL_LINES = 500
 DISALLOWED_SKILL_DOCS = {
@@ -79,6 +139,7 @@ CUSTOMER_READABLE_RULES = (
     ("dependency/install section", ("依赖与安装", "首次安装与配置", "前置依赖", "强依赖")),
     ("log/completion receipt section", ("日志与完成回执", "客户可见日志与总结", "完成后回执", "执行后回执")),
 )
+PRIVATE_DATA_SECTION_MARKERS = ("私密信息与中间数据",)
 
 
 @dataclass
@@ -87,6 +148,7 @@ class Finding:
     path: str
     message: str
     line: int | None = None
+    strict_blocking: bool = True
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -115,7 +177,7 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
         return {}, ["unterminated YAML frontmatter"]
     try:
         data = yaml.safe_load("\n".join(lines[1:end]))
-    except yaml.YAMLError as exc:
+    except (yaml.YAMLError, ValueError) as exc:
         return {}, [f"invalid YAML frontmatter: {exc}"]
     if not isinstance(data, dict):
         return {}, ["YAML frontmatter must be a mapping"]
@@ -124,6 +186,40 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str], list[str]]:
         if key in data and not isinstance(data[key], str):
             errors.append(f"frontmatter {key} must be a string")
     return data, errors
+
+
+def frontmatter_scalar_values(text: str) -> dict[str, str]:
+    """Return the source scalar text so timestamp separators remain observable."""
+    lines = text.replace("\r\n", "\n").splitlines()
+    if not lines or lines[0] != "---":
+        return {}
+    try:
+        end = lines.index("---", 1)
+        document = yaml.compose("\n".join(lines[1:end]))
+    except (ValueError, yaml.YAMLError):
+        return {}
+    if document is None or getattr(document, "id", None) != "mapping":
+        return {}
+    values: dict[str, str] = {}
+    for key_node, value_node in document.value:
+        if getattr(key_node, "id", None) == "scalar" and getattr(value_node, "id", None) == "scalar":
+            values[key_node.value] = value_node.value
+    return values
+
+
+def valid_frontmatter_datetime(value: str | None) -> bool:
+    if value is None or not FRONTMATTER_DATETIME_RE.fullmatch(value):
+        return False
+    try:
+        datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return False
+    return True
+
+
+def grandfather_warning(path: str, message: str) -> Finding:
+    """Expose an explicit legacy exception without making --strict fail."""
+    return Finding("WARN", path, message, strict_blocking=False)
 
 
 def parse_openai_interface(path: Path) -> tuple[dict[str, str], list[str]]:
@@ -153,7 +249,7 @@ VALID_DOMAINS = ("pkm", "dev", "cwork", "design", "env", "meta", "safe", "gov")
 
 
 def audit_skill_name(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
-    """Naming contract: soia-<domain>-<kebab-name>, no repeated tokens, known domain."""
+    """Naming contract: 4-6 kebab segments, no repeated tokens, known domain."""
     name = skill_dir.name
     import re as _re
     if not _re.fullmatch(r"soia-[a-z0-9]+(-[a-z0-9]+)+", name):
@@ -161,6 +257,22 @@ def audit_skill_name(root: Path, skill_dir: Path, findings: list[Finding]) -> No
             f"skill name must match soia-<domain>-<kebab-name>: {name!r}"))
         return
     parts = name.split("-")
+    if not 4 <= len(parts) <= 6:
+        if name in SEGMENT_EXEMPT:
+            findings.append(
+                grandfather_warning(
+                    rel(skill_dir, root),
+                    f"segment-count exemption: {name!r} has {len(parts)} segments; required range is 4-6",
+                )
+            )
+        else:
+            findings.append(
+                Finding(
+                    "ERROR",
+                    rel(skill_dir, root),
+                    f"skill name must have 4-6 kebab-case segments; found {len(parts)}: {name!r}",
+                )
+            )
     domain = parts[1]
     if domain not in VALID_DOMAINS:
         findings.append(Finding("ERROR", rel(skill_dir, root),
@@ -205,11 +317,34 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
     fm, errors = parse_frontmatter(text)
     for error in errors:
         findings.append(Finding("ERROR", rel(skill_md, root), error))
+    missing_frontmatter = sorted(REQUIRED_FRONTMATTER - set(fm))
+    for key in missing_frontmatter:
+        if skill_name in GRANDFATHER_MISSING_FRONTMATTER:
+            findings.append(
+                grandfather_warning(
+                    rel(skill_md, root),
+                    f"grandfathered missing required frontmatter: {key}",
+                )
+            )
+        else:
+            findings.append(Finding("ERROR", rel(skill_md, root), f"missing required frontmatter: {key}"))
 
-    if fm.get("name") != skill_name:
+    scalar_values = frontmatter_scalar_values(text)
+    for key in FRONTMATTER_DATETIME_FIELDS:
+        if key not in fm or valid_frontmatter_datetime(scalar_values.get(key)):
+            continue
+        message = f"frontmatter {key} must use YYYY-MM-DD HH:mm:ss"
+        if skill_name in GRANDFATHER_INVALID_DATETIME:
+            findings.append(grandfather_warning(rel(skill_md, root), f"grandfathered {message}"))
+        else:
+            findings.append(Finding("ERROR", rel(skill_md, root), message))
+
+    if "name" in fm and fm.get("name") != skill_name:
         findings.append(Finding("ERROR", rel(skill_md, root), f"frontmatter name must match folder name: {skill_name!r}"))
     description = fm.get("description")
-    if not isinstance(description, str) and description is not None:
+    if "description" not in fm:
+        pass  # required-frontmatter handling already emitted the finding
+    elif not isinstance(description, str):
         pass  # parse_frontmatter already emitted the type error
     elif not description:
         findings.append(Finding("ERROR", rel(skill_md, root), "missing frontmatter description"))
@@ -248,6 +383,12 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
     for label, markers in CUSTOMER_READABLE_RULES:
         if not any(marker in text for marker in markers):
             findings.append(Finding("ERROR", rel(skill_md, root), f"missing customer-readable {label}"))
+    if not any(marker in text for marker in PRIVATE_DATA_SECTION_MARKERS):
+        message = "missing customer-readable private/intermediate data section"
+        if skill_name in GRANDFATHER_MISSING_PRIVATE_DATA_SECTION:
+            findings.append(grandfather_warning(rel(skill_md, root), f"grandfathered {message}"))
+        else:
+            findings.append(Finding("ERROR", rel(skill_md, root), message))
 
     for path in skill_dir.rglob("*"):
         if path.is_dir():
@@ -420,7 +561,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Audit public skills for authoring-rule drift.")
     parser.add_argument("--root", default=".", help="Repository root.")
     parser.add_argument("--json", action="store_true", help="Print JSON findings.")
-    parser.add_argument("--strict", action="store_true", help="Exit non-zero on WARN as well as ERROR.")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit non-zero on ordinary WARN as well as ERROR; explicit grandfather WARN remain non-blocking.",
+    )
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -436,7 +581,7 @@ def main() -> int:
             print(f"{finding.severity}: {loc}: {finding.message}")
 
     has_error = any(f.severity == "ERROR" for f in findings)
-    has_warn = any(f.severity == "WARN" for f in findings)
+    has_warn = any(f.severity == "WARN" and f.strict_blocking for f in findings)
     return 1 if has_error or (args.strict and has_warn) else 0
 
 

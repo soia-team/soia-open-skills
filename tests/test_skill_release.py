@@ -47,6 +47,34 @@ class SkillReleaseTests(unittest.TestCase):
         self.lock(home, {"soia-new": "owner/repo"})
         return home, repo
 
+    def test_repo_dir_explicit_argument_wins_over_environment_root(self) -> None:
+        home = Path("/test/home")
+        explicit = Path("/checkouts/explicit-repo")
+        resolved = release_skills.resolve_repo_dir(
+            "owner/any-repo",
+            home,
+            str(explicit),
+            {"SOIA_SKILL_REPOS_ROOT": "/checkouts/shared"},
+        )
+        self.assertEqual(resolved, explicit)
+
+    def test_repo_dir_uses_environment_root_for_arbitrary_repo_name(self) -> None:
+        resolved = release_skills.resolve_repo_dir(
+            "another-owner/skill-repo-14",
+            Path("/test/home"),
+            environ={"SOIA_SKILL_REPOS_ROOT": "/checkouts/shared"},
+        )
+        self.assertEqual(resolved, Path("/checkouts/shared/skill-repo-14"))
+
+    def test_repo_dir_falls_back_to_deprecated_legacy_convention(self) -> None:
+        home = Path("/test/home")
+        with self.assertWarns(DeprecationWarning):
+            resolved = release_skills.resolve_repo_dir("owner/legacy-repo", home, environ={})
+        self.assertEqual(
+            resolved,
+            home / "owen/code/gitrepo/jiuan/server/v7/legacy-repo",
+        )
+
     def test_steps_run_in_order_and_stop_on_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             home, repo = self.prepare_versions(Path(temp))
@@ -96,7 +124,7 @@ class SkillReleaseTests(unittest.TestCase):
     def test_dry_run_executes_no_command_or_write(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             home = Path(temp) / "home"
-            args = self.args("--removed", "soia-old", "--dry-run")
+            args = self.args("--repo-dir", str(Path(temp) / "repo"), "--removed", "soia-old", "--dry-run")
             with patch.object(release_skills, "run_command") as run, patch.object(release_skills, "remove_old_skills") as remove, patch.object(release_skills, "fill_codex_links") as links:
                 self.assertEqual(release_skills.release(args, home=home), 0)
             run.assert_not_called()

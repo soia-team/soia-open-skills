@@ -1,11 +1,11 @@
 ---
 name: soia-dev-skill-release
 description: 技能 PR merge 后一键完成安装、旧名清理、全 AI 软链、lock 与版本对账；触发词「发布技能」「技能发布收尾」「release skill」。
-version: 1.0.2
+version: 1.1.0
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-07-21 09:36:33
+updated_at: 2026-07-22 19:55:16
 created_by: gpt-5.6-terra
-updated_by: gpt-5.6-terra
+updated_by: gpt-5.6-luna
 dependencies:
   hard: [soia-dev-sync-skills]
 ---
@@ -35,7 +35,13 @@ python3 skills/soia-dev-skill-release/scripts/release_skills.py \
   --dry-run
 ```
 
-复核 dry-run 后，移除 `--dry-run` 执行。默认面向 `claude-code,codex`，可用 `--agents` 覆盖；版本核对默认采用约定的本地 checkout，可用 `--repo-dir <repo-path>` 覆盖。
+复核 dry-run 后，移除 `--dry-run` 执行。默认面向 `claude-code,codex`，可用 `--agents` 覆盖。版本核对按以下顺序解析本地 checkout：
+
+1. `--repo-dir <repo-path>` 显式路径；
+2. `SOIA_SKILL_REPOS_ROOT/<repo-name>`，其中环境变量指向多个技能仓的共同根目录；
+3. 旧版维护者本地目录约定，仅作弃用中的向后兼容回退。
+
+仓库内部仍须采用 `skills/<skill-name>/SKILL.md` 布局。对未来新增仓库，只要 `--repo` 提供对应的任意 `<owner>/<repo-name>`，无需修改脚本。
 
 ### 依赖与安装
 
@@ -69,7 +75,7 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-dev-skill-release -y
 4. 遍历 `~/.agents/skills`：对有 `SKILL.md` 且 Codex 侧缺失的技能，创建相对软链；历史实证目录没有 `SKILL.md`，不进入 Codex。
 5. 调用已安装的 `soia-dev-sync-skills`，目标为 `soia,workbuddy`。
 6. 对账 `~/.agents/.skill-lock.json`：所有新技能必须来自 `--repo`，旧名必须零残留。
-7. 对比每项本地 checkout 的 `SKILL.md` version 与 `~/.agents/skills` 装机 version。
+7. 按 `--repo-dir` → `SOIA_SKILL_REPOS_ROOT/<repo-name>` → 旧版兼容目录的顺序解析 checkout，并对比每项 `SKILL.md` version 与 `~/.agents/skills` 装机 version。
 
 ## 边界与验证
 
