@@ -59,6 +59,9 @@ npx skills add soia-team/soia-open-skills -g -a '*' \
 - **Claude Code：双层目录。** 用户级 `~/.claude/skills/` 对所有项目生效，项目级 `.claude/skills/` 只服务当前仓库；两层都会先把技能名和 `description` 作为路由索引提供给模型，完整正文仅在命中时加载。因此全局层只放高频通用技能，项目专用技能放项目层，并保持 description 短而有区分度。详见 [Claude Code Skills 官方文档](https://code.claude.com/docs/en/slash-commands)。
 - **Kimi Code CLI：启动时选目录。** 默认自动发现用户级和项目级技能；需要一次性限定技能集合时，重复传入 `--skills-dir <path>`。该参数会替换本次启动的自动发现目录，而不是叠加；需要持久叠加目录时使用配置项 `extra_skill_dirs`。详见 [Kimi Agent Skills 官方文档](https://moonshotai.github.io/kimi-cli/en/customization/skills.html)。
 - **Codex：目录自动发现。** Codex 自动扫描从当前目录到仓库根目录各层的 `.agents/skills/`，并扫描用户级 `~/.agents/skills/`；技能目录可使用软链接。Codex先索引名称、描述和路径，命中后再加载正文。详见 [Codex Skills 官方文档](https://developers.openai.com/codex/skills/)。
+- **Cursor、Copilot CLI / agent、Zed：共享目录原生发现。** 三者均可原生读取 `~/.agents/skills`，全局安装后无需同步；Cursor 与 Copilot 的团队/项目目录分别还可使用 `.cursor/skills` 与 `.github/skills`，Zed v1.4 起也读取工作树 `.agents/skills`。
+- **Windsurf、Trae：显式软链。** Windsurf 使用 `~/.codeium/windsurf/skills`（或 `.windsurf/skills`），Trae 使用 `~/.trae/skills`（中国版还应探测 `~/.trae-cn`）；两者都是同步工具的 targets，更新共享真源后需重跑同步。
+- **qodercli：原生目录与市场复用。** qodercli 发现 `~/.qoder/skills` 和 `.qoder/skills`，用户级优先；用 `/skills reload` 刷新。其 Claude Code 同构插件格式可复用 SOIA 市场清单，并可按插件、MCP 或工具权限进行开关。
 
 安装后若某个宿主没有发现技能，先确认该宿主实际扫描的目录，再用 `soia-meta-sync-skills` 预览并同步到明确选择的目标；不要手工复制技能目录。
 

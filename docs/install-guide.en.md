@@ -4,6 +4,10 @@
 
 This concise guide covers the universal installer, domain plugins, on-demand routing, and host-specific notes. Placeholders such as `<repository>`, `<skill-name>`, and `<domain-plugin>` should be replaced before running a command.
 
+## Ecosystem coverage
+
+`~/.agents/skills` is read natively by Zed, Cursor, Copilot, Codex, Gemini, DeepCode, and other hosts, so most need no synchronization. Only Windsurf and Trae need explicit links; both are sync-tool targets. The SOIA marketplace manifest is also reusable by Qwen Code and qodercli.
+
 ## Recommended starting points
 
 ### Universal npx installation
@@ -191,18 +195,58 @@ npx skills add soia-team/<repository> -g \
   -a qoder -s <skill-name> -y
 ```
 
-`--plugin-dir` selects a plugin directory for a run. npx keeps skills in the shared `~/.agents` source and creates the agent symlink.
+qodercli discovers `~/.qoder/skills` and `.qoder/skills` (user-level wins); run `/skills reload` to verify. Update npx installs with `npx skills update <skill-name> -g`. Its Claude-compatible plugin format can reuse the SOIA marketplace with near-zero changes; plugins/MCP can be enabled or disabled, and `--permission-mode` plus `--tools` constrain a run.
 
-### Cursor and Windsurf
+### Cursor
 
 ```bash
 npx skills add soia-team/<repository> -g \
   -a cursor -s <skill-name> -y
-npx skills add soia-team/<repository> -g \
-  -a windsurf -s <skill-name> -y
 ```
 
-Verify with `npx skills list -g -a cursor` or `-a windsurf`; update with `npx skills update <skill-name> -g`, and uninstall with `npx skills remove -g -a <agent-id> -s <skill-name> -y`.
+Cursor natively supports `.cursor/skills` and `~/.agents/skills`; verify with `npx skills list -g -a cursor` or a new session, then update with `npx skills update <skill-name> -g`. Skills are description-triggered; rules support `paths` globs and `disable-model-invocation`. Cursor also has extensions, a marketplace, hooks, and per-item MCP sidebar toggles. Retire a duplicate `~/.cursor/skills` link if present.
+
+### Windsurf
+
+```bash
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets windsurf \
+  --skills <skill-name> \
+  --dry-run
+```
+
+Windsurf requires an explicit link to `~/.codeium/windsurf/skills` (or project `.windsurf/skills`); remove `--dry-run` after review and verify with `readlink`. Update the shared source with npx, then sync again. It progressively discloses skills; rules have three activation modes and MCP supports per-tool toggles with a 100-tool cap.
+
+### Copilot CLI / agent
+
+```bash
+npx skills add soia-team/<repository> -g \
+  -a '*' -s <skill-name> -y
+```
+
+Copilot natively reads `~/.copilot/skills`, `~/.agents/skills`, and `.github/skills`; use `/skills` to verify and toggle individual skills, and update with npx. Team skills belong in `.github/skills`; custom Markdown agents, provenance-aware `gh` distribution, ACP servers, and `allowed-tools` / `--allow-tool` / `--deny-tool` are also available.
+
+### Zed
+
+```bash
+npx skills add soia-team/<repository> -g \
+  -a '*' -s <skill-name> -y
+```
+
+Since v1.4 Zed reads `~/.agents/skills` and worktree `.agents/skills`; start a new session to verify and update with npx. `AGENTS.md` / `.rules` provide instructions, skills support `disable-model-invocation`, and profiles can set `context_servers` plus three-state tool permissions. Zed also supports WASM extensions (including MCP) and acts as an ACP client.
+
+### Trae
+
+```bash
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets trae \
+  --skills <skill-name> \
+  --dry-run
+```
+
+Trae Skills (Beta) use `.trae/skills` or `~/.trae/skills`; remove `--dry-run` after review, verify with `readlink`, and also probe `~/.trae-cn` for the CN edition. Update with npx, then sync again. Skills invoke on demand; rules live in `.trae/rules/`, and custom Agents plus MCP (`~/.trae/mcp.json`, v1.3+) can choose tools per agent.
 
 ## Multi-agent symlink synchronization
 

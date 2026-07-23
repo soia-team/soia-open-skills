@@ -66,6 +66,7 @@ TARGETS = {
     "qoder": Target("qoder", "QoderCLI", Path("~/.qoder/skills")),
     "copilot": Target("copilot", "GitHub Copilot", Path("~/.copilot/skills")),
     "windsurf": Target("windsurf", "Windsurf", Path("~/.codeium/windsurf/skills")),
+    "trae": Target("trae", "Trae", Path("~/.trae/skills")),
     "openclaw": Target("openclaw", "OpenClaw", Path("~/.openclaw/skills")),
 }
 
@@ -80,6 +81,7 @@ DEFAULT_ORDER = [
     "codex",
     "opencode",
     "windsurf",
+    "trae",
     "qwen",
     "openclaw",
 ]
