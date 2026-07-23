@@ -6,7 +6,7 @@
 
 ## 生态覆盖面
 
-`~/.agents/skills` 已被 Zed、Cursor、Copilot、Codex、Gemini、DeepCode 等宿主原生识别；多数宿主因此零同步即可覆盖。只有 Windsurf 和 Trae 需要显式软链，`soia-meta-sync-skills` 的 targets 已包含对应目标。插件市场方面，同一份 SOIA 市场清单可被 Qwen Code 与 qodercli 复用。
+`~/.agents/skills` 已被 Zed、Cursor、Copilot、Codex、Gemini、DeepCode 等宿主原生识别；这些宿主零同步即可覆盖。其他宿主可由 `soia-meta-sync-skills` 从同一共享真源分发软链接。插件市场方面，同一份 SOIA 市场清单可被 Claude Code、Codex、Qwen Code 与 qodercli 复用。
 
 文中的占位符含义如下：
 
@@ -86,6 +86,171 @@ npx skills add soia-team/soia-open-skills -g -a '*' \
 ```
 
 `soia-meta-find-skill` 让高频核心技能保持直达，同时通过公开路由清单检索并加载低频长尾技能。若某个宿主只需要较小的技能集合，还可使用 `soia-meta-sync-skills` 的 `--exclude-skills` 和 `--save-excludes` 保存该宿主的排除列表；完整命令见[同步工具](#sync-工具多-ai-软链管理)。
+
+## 全量与混合安装（多宿主用户推荐）
+
+**一句话策略：底座全量 + 按宿主能力分层瘦身。** 先用 npx 把全部技能安装到 `~/.agents/skills` 这个单一真源；原生读取该目录的宿主装完即用，其他宿主通过一次软链同步接入；最后只对索引较重或高频使用的宿主启用 RouterV1 核心集或域插件开关。
+
+### 第一步：底座全量安装
+
+先全量安装元仓；对其他开源仓重复同一命令即可覆盖全部 12 个仓：
+
+```bash
+npx skills add soia-team/soia-open-skills -g -a '*' -s '*' -y
+```
+
+若要一次安装全部 12 个公开仓，可直接运行：
+
+```bash
+repos=(
+  soia-open-cwork-office-skills
+  soia-open-dev-coding-skills
+  soia-open-dev-design-skills
+  soia-open-dev-product-skills
+  soia-open-dev-release-skills
+  soia-open-dev-testing-skills
+  soia-open-edu-course-skills
+  soia-open-env-skills
+  soia-open-media-content-skills
+  soia-open-pkm-clip-skills
+  soia-open-pkm-vault-skills
+  soia-open-skills
+)
+for repo in "${repos[@]}"; do
+  npx skills add "soia-team/$repo" -g -a '*' -s '*' -y
+done
+```
+
+全局安装内容进入 `~/.agents/skills`。后续更新、同步和宿主入口都应复用这份内容，不再维护多份技能副本。
+
+### 第二步：按宿主能力覆盖
+
+宿主分为三类：
+
+1. **零同步自动覆盖。** Zed、Cursor、GitHub Copilot CLI、Codex、Gemini CLI 和 DeepCode 原生读取 `~/.agents/skills`；底座安装完成后即可使用，无需额外动作。
+2. **一次软链分发。** Windsurf（`~/.codeium/windsurf/skills`）、Trae（`~/.trae/skills`，CN 版为 `~/.trae-cn`）、WorkBuddy、Kimi、OpenCode、qodercli、Antigravity CLI（`agy`）等宿主需要从共享真源建立入口。以下命令一次覆盖常用目标：
+
+   ```bash
+   python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+     --source-dir ~/.agents/skills \
+     --targets claude,codex,gemini,kimi,opencode,agy,qwen,soia,workbuddy
+   ```
+
+   `--targets` 是显式目标列表。使用 Windsurf、Trae 或 qodercli 时，把 `windsurf,trae,qoder` 追加到同一个参数；Trae CN 版可把展开后的绝对路径追加为自定义目标。
+3. **插件市场可选叠加。** Claude Code、Codex、Qwen Code 和 qodercli 可在 npx 底座之外按需使用市场安装，获得域级 `enable` / `disable` 开关。例如：
+
+   ```bash
+   claude plugin marketplace add soia-team/soia-open-skills
+   ```
+
+   同一宿主不要同时索引同一批技能的 npx 入口和插件副本；选择插件管理某个域时，应在该宿主中排除对应的 npx 入口。
+
+### 第三步：按宿主瘦身索引（可选进阶）
+
+全量底座不等于每个宿主都必须常驻索引全部技能。对常用且索引敏感的宿主，可选择以下一种方式：
+
+- **RouterV1 核心集瘦身。** 适合 Claude；实测可减少约 60% 的常驻索引。保留高频核心技能直达，把低频长尾从 Claude 入口持久排除，需要时再由 [`soia-meta-find-skill`](../skills/soia-meta-find-skill/SKILL.md) 检索并加载。例如：
+
+  ```bash
+  python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+    --source-dir ~/.agents/skills \
+    --targets claude \
+    --exclude-skills soia-pkm-clip-douyin,soia-pkm-clip-rednote \
+    --save-excludes
+  ```
+
+  这是持久排除的最小示例；按实际核心集继续补充长尾技能名。后续默认全量同步仍会遵守已保存的 Claude 排除列表。
+
+- **域插件开关。** 适合 Claude Code、Codex、Qwen Code 和 qodercli。按工作场景启停整个域，例如写代码时关闭剪藏域、写作时再开启：
+
+  ```bash
+  claude plugin disable soia-pkm-clip
+  claude plugin enable soia-pkm-clip
+  ```
+
+### 第四步：验证全量安装
+
+先核对共享真源的技能总数和安装器记录：
+
+```bash
+npx skills ls -g
+ls ~/.agents/skills | wc -l
+```
+
+再对需要软链的宿主抽查任一已安装技能；以下以 Claude Code 为例：
+
+```bash
+readlink ~/.claude/skills/<技能名>
+```
+
+`readlink` 应解析到 `~/.agents/skills/<技能名>`。其他宿主使用下表中的对应入口目录做同样抽查。
+
+### 混合安装决策表
+
+| 宿主 | 底座覆盖方式 | 是否需软链 | 瘦身手段 | 一句话建议 |
+|---|---|---:|---|---|
+| Claude Code | 从共享真源分发到 `~/.claude/skills` | 是 | RouterV1 或域插件开关 | 高频使用时只保留核心集，长尾交给路由 |
+| Codex | 原生读取 `~/.agents/skills` | 否 | 路由或域插件开关 | 全量安装后直接使用，索引敏感时再按域关闭 |
+| Qwen Code | 从共享真源分发到 `~/.qwen/skills` | 是 | 路由或域插件开关 | 需要域级启停时叠加市场能力 |
+| Gemini CLI | 原生读取 `~/.agents/skills` | 否 | 路由 | 无需同步；只在需要独立入口时同步到 `~/.gemini/skills` |
+| Antigravity CLI (`agy`) | 分发到 `~/.gemini/antigravity-cli/skills` | 是 | 路由 | 全量底座后执行一次 `agy` target 同步 |
+| Kimi CLI | 分发到 `~/.kimi/skills` | 是 | 路由 | 同步后重开会话加载技能 |
+| OpenCode | 分发到 `~/.config/opencode/skill` | 是 | 路由 | 用 `opencode` target 建立统一入口 |
+| DeepCode | 原生读取 `~/.agents/skills` | 否 | 路由 | 不需要专用 target，重开会话即可 |
+| WorkBuddy | 分发到 `~/.workbuddy/skills` | 是 | 路由 | 团队机器统一从共享真源同步 |
+| qodercli | 分发到 `~/.qoder/skills` | 是 | 路由或域插件开关 | 需要精细场景切换时使用域插件 |
+| Cursor | 原生读取 `~/.agents/skills` | 否 | 路由 | 全量底座装完即用 |
+| Windsurf | 分发到 `~/.codeium/windsurf/skills` | 是 | 路由 | 使用 `windsurf` target 建立入口 |
+| GitHub Copilot CLI | 原生读取 `~/.agents/skills` | 否 | 路由或宿主技能开关 | 用 `/skills` 抽查和控制单项技能 |
+| Zed | 原生读取 `~/.agents/skills` | 否 | 路由 | 新会话自动读取共享真源 |
+| Trae | 分发到 `~/.trae/skills`；CN 版另查 `~/.trae-cn` | 是 | 路由 | 按实际版本同步对应目录 |
+| SOIA AI | 分发到 `~/.soia/skills` | 是 | 路由 | 使用 `soia` target，避免手工复制 |
+
+### 常见组合示例
+
+以下示例均假定已经完成第一步的 12 仓底座全量安装。
+
+**Claude Code + Codex + WorkBuddy 个人开发**
+
+Codex 原生读取共享真源，只需为 Claude Code 和 WorkBuddy 分发入口；随后可单独压缩 Claude 的常驻索引：
+
+```bash
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets claude,workbuddy
+
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets claude \
+  --exclude-skills soia-pkm-clip-douyin,soia-pkm-clip-rednote \
+  --save-excludes
+```
+
+**团队 WorkBuddy + qodercli**
+
+两种宿主都从同一底座建立软链，团队只需维护 `~/.agents/skills` 的安装状态：
+
+```bash
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets workbuddy,qoder
+
+readlink ~/.workbuddy/skills/soia-meta-find-skill
+readlink ~/.qoder/skills/soia-meta-find-skill
+```
+
+**全宿主全量**
+
+一次覆盖同步工具的全部相关目标；DeepCode 和 Zed 继续直接读取共享真源：
+
+```bash
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets claude,qoder,copilot,cursor,agy,gemini,kimi,codex,opencode,windsurf,trae,qwen,soia,workbuddy
+
+npx skills ls -g
+ls ~/.agents/skills | wc -l
+```
 
 ## 按 AI agent 分类
 
@@ -210,11 +375,13 @@ agy plugin list
 
 ### Kimi CLI
 
-Kimi CLI 默认自动发现技能。全局安装后，重开会话即可使用：
+Kimi CLI 需要从共享真源分发到 `~/.kimi/skills`。完成底座安装后执行一次同步，再重开会话：
 
 ```bash
-npx skills add soia-team/<仓库名> -g \
-  -a kimi-code-cli -s <技能名> -y
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets kimi \
+  --skills <技能名>
 ```
 
 需要为一次任务限定技能子集时，可重复指定目录：
@@ -223,19 +390,21 @@ npx skills add soia-team/<仓库名> -g \
 kimi --skills-dir <技能目录>
 ```
 
-`--skills-dir` 会替换本次启动的自动发现目录；需要多个目录时重复传入。默认发现模式下可用 `ls ~/.agents/skills/<技能名>/SKILL.md` 验证。更新和卸载使用 npx。
+`--skills-dir` 会替换本次启动的自动发现目录；需要多个目录时重复传入。用 `readlink ~/.kimi/skills/<技能名>` 验证入口。共享真源的更新和卸载仍使用 npx。
 
 ### OpenCode
 
-OpenCode 读取 `~/.agents/skills` 互操作层，npx 全局安装后即可使用：
+OpenCode 需要从共享真源分发到 `~/.config/opencode/skill`：
 
 ```bash
-npx skills add soia-team/<仓库名> -g \
-  -a opencode -s <技能名> -y
-npx skills list -g -a opencode
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets opencode \
+  --skills <技能名>
+readlink ~/.config/opencode/skill/<技能名>
 ```
 
-更新和卸载使用 npx；当前会话未刷新时重启 OpenCode。
+共享真源的更新和卸载使用 npx；当前会话未刷新时重启 OpenCode。
 
 ### DeepCode
 
