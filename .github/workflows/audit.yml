@@ -35,3 +35,9 @@ jobs:
         run: python3 scripts/generate_router_index.py --check
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Validate portal Codex plugin manifest
+        run: |
+          curl --fail --location --silent --show-error \
+            https://raw.githubusercontent.com/openai/codex/4462b9deef211723b781b426f5e5d36a5777115f/codex-rs/skills/src/assets/samples/plugin-creator/scripts/validate_plugin.py \
+            --output "$RUNNER_TEMP/validate_plugin.py"
+          python3 "$RUNNER_TEMP/validate_plugin.py" .

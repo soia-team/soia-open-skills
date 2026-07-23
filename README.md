@@ -76,6 +76,7 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-prompt-clarity 
 - [`DATA_STORAGE_SPEC.md`](DATA_STORAGE_SPEC.md)：配置、凭据、状态、缓存和输出的存储边界。
 - [`docs/install-guide.md`](docs/install-guide.md)：按安装方式和 AI agent 分类的完整安装指南。
 - [`docs/install-profiles.md`](docs/install-profiles.md)：按使用场景组织的安装方案。
+- [`docs/plugin-dev.md`](docs/plugin-dev.md)：Codex 本地插件迭代与领域插件发版后的元仓刷新流程。
 
 ## 生态导航
 

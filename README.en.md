@@ -76,6 +76,7 @@ For installation sets organized by machine role, see [`docs/install-profiles.md`
 - [`DATA_STORAGE_SPEC.md`](DATA_STORAGE_SPEC.md): storage boundaries for configuration, credentials, state, caches, and outputs.
 - [`docs/install-guide.en.md`](docs/install-guide.en.md): complete installation guide by method and AI agent.
 - [`docs/install-profiles.md`](docs/install-profiles.md): installation profiles by use case.
+- [`docs/plugin-dev.md`](docs/plugin-dev.md): Codex local-plugin iteration and portal refresh after domain-plugin releases.
 
 ## Ecosystem navigation
 

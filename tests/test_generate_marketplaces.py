@@ -79,10 +79,19 @@ class MarketplaceGenerationTests(unittest.TestCase):
         self.assertEqual(codex_external["source"]["source"], "url")
         self.assertEqual(codex_external["source"]["ref"], self.SHA)
         self.assertEqual(
+            codex_external["interface"],
+            {
+                "displayName": "开发编码技能库",
+                "shortDescription": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
+                "category": "Developer Tools",
+            },
+        )
+        self.assertEqual(
             codex_external["policy"],
             {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
         )
         self.assertEqual(codex["plugins"][1]["source"], {"source": "local", "path": "./"})
+        self.assertEqual(codex["plugins"][1]["interface"]["displayName"], "SOIA 元技能库")
         self.assertEqual(revisions, {"soia-open-dev-coding-skills": self.SHA})
 
     def test_fetch_main_sha_uses_gh_and_rejects_non_full_sha(self) -> None:

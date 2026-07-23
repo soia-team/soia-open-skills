@@ -20,6 +20,7 @@ SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 class PluginDefinition(NamedTuple):
     repository: str
     name: str
+    display_name: str
     description: str
     category: str
 
@@ -31,72 +32,84 @@ PLUGIN_DEFINITIONS = (
     PluginDefinition(
         "soia-open-dev-coding-skills",
         "soia-dev-coding",
+        "开发编码技能库",
         "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
         "Developer Tools",
     ),
     PluginDefinition(
         "soia-open-dev-design-skills",
         "soia-dev-design",
+        "设计与文档技能库",
         "设计与文档产线技能：Open Design、Archify、draw.io/Visio、OfficeCLI",
         "Creativity",
     ),
     PluginDefinition(
         "soia-open-dev-product-skills",
         "soia-dev-product",
+        "产品需求技能库",
         "产品需求技能：PRD 起草、用户故事与验收标准",
         "Productivity",
     ),
     PluginDefinition(
         "soia-open-dev-testing-skills",
         "soia-dev-testing",
+        "测试质量技能库",
         "测试技能：测试计划、用例设计与回归清单",
         "Developer Tools",
     ),
     PluginDefinition(
         "soia-open-dev-release-skills",
         "soia-dev-release",
+        "发布运维技能库",
         "发布技能：发布清单、灰度验证与回滚预案",
         "Developer Tools",
     ),
     PluginDefinition(
         "soia-open-cwork-office-skills",
         "soia-cwork-office",
+        "办公协作技能库",
         "办公协作技能：飞书知识库与云盘、ProcessOn 图表",
         "Productivity",
     ),
     PluginDefinition(
         "soia-open-pkm-clip-skills",
         "soia-pkm-clip",
+        "知识剪藏技能库",
         "知识剪藏与网盘技能：网页、公众号、X、抖音、小红书、GitHub 归档与云盘操作",
         "Productivity",
     ),
     PluginDefinition(
         "soia-open-pkm-vault-skills",
         "soia-pkm-vault",
+        "知识库技能库",
         "知识库技能：初始化、整理、提炼、翻译、转换与书库",
         "Productivity",
     ),
     PluginDefinition(
         "soia-open-media-content-skills",
         "soia-media-content",
+        "新媒体内容技能库",
         "新媒体内容技能：文章成文、封面图与公众号、X、小红书发布",
         "Creativity",
     ),
     PluginDefinition(
         "soia-open-edu-course-skills",
         "soia-edu-course",
+        "教育课程技能库",
         "教育课程技能：课程大纲设计与教案编写",
         "Education & Research",
     ),
     PluginDefinition(
         "soia-open-env-skills",
         "soia-env",
+        "环境运维技能库",
         "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
         "Developer Tools",
     ),
     PluginDefinition(
         PORTAL_REPOSITORY,
         "soia-meta",
+        "SOIA 元技能库",
         "SOIA 技能生态门户：规范真源、技能目录与跨仓路由清单",
         "Developer Tools",
     ),
@@ -201,6 +214,11 @@ def build_marketplaces(
                 "name": definition.name,
                 "description": definition.description,
                 "source": codex_source,
+                "interface": {
+                    "displayName": definition.display_name,
+                    "shortDescription": definition.description,
+                    "category": definition.category,
+                },
                 "policy": {
                     "installation": "AVAILABLE",
                     "authentication": "ON_INSTALL",
