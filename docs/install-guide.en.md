@@ -6,7 +6,7 @@ This concise guide covers the universal installer, domain plugins, on-demand rou
 
 ## Ecosystem coverage
 
-`~/.agents/skills` is read natively by Zed, Cursor, Copilot, Codex, Gemini, DeepCode, and other hosts, so most need no synchronization. Only Windsurf and Trae need explicit links; both are sync-tool targets. The SOIA marketplace manifest is also reusable by Qwen Code and qodercli.
+`~/.agents/skills` is read natively by Zed, Cursor, Copilot, Codex, Gemini, and DeepCode, so those hosts need no synchronization. Other hosts can receive symlinks from the same shared source through `soia-meta-sync-skills`. The SOIA marketplace manifest is reusable by Claude Code, Codex, Qwen Code, and qodercli.
 
 ## Recommended starting points
 
@@ -60,6 +60,156 @@ npx skills add soia-team/soia-open-skills -g -a '*' \
 ```
 
 For host-specific trimming, use `soia-meta-sync-skills` with `--exclude-skills` and `--save-excludes`.
+
+## Full and mixed installation for multi-host users
+
+**Strategy: install a complete base, then trim by host capability.** Install every skill once into the single source of truth at `~/.agents/skills`; let native hosts consume it directly, distribute symlinks once to the remaining hosts, and trim only index-sensitive or frequently used hosts with RouterV1 or domain plugin switches.
+
+### Step 1: install the complete base
+
+Install the meta repository first. Repeat the command for each public repository, or use the 12-repository loop below:
+
+```bash
+npx skills add soia-team/soia-open-skills -g -a '*' -s '*' -y
+```
+
+```bash
+repos=(
+  soia-open-cwork-office-skills
+  soia-open-dev-coding-skills
+  soia-open-dev-design-skills
+  soia-open-dev-product-skills
+  soia-open-dev-release-skills
+  soia-open-dev-testing-skills
+  soia-open-edu-course-skills
+  soia-open-env-skills
+  soia-open-media-content-skills
+  soia-open-pkm-clip-skills
+  soia-open-pkm-vault-skills
+  soia-open-skills
+)
+for repo in "${repos[@]}"; do
+  npx skills add "soia-team/$repo" -g -a '*' -s '*' -y
+done
+```
+
+All global content lands in `~/.agents/skills`. Updates, synchronization, and host entries should reuse that source instead of maintaining copied skill directories.
+
+### Step 2: cover hosts by capability
+
+1. **Native, zero-sync coverage:** Zed, Cursor, GitHub Copilot CLI, Codex, Gemini CLI, and DeepCode read `~/.agents/skills` directly and work immediately after the base install.
+2. **One-time symlink distribution:** Windsurf (`~/.codeium/windsurf/skills`), Trae (`~/.trae/skills`; `~/.trae-cn` for the CN edition), WorkBuddy, Kimi, OpenCode, qodercli, Antigravity CLI (`agy`), and similar hosts need entries from the shared source. This command covers the common target set:
+
+   ```bash
+   python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+     --source-dir ~/.agents/skills \
+     --targets claude,codex,gemini,kimi,opencode,agy,qwen,soia,workbuddy
+   ```
+
+   `--targets` is explicit. Append `windsurf,trae,qoder` when those hosts are in use; for the Trae CN edition, append its expanded absolute path as a custom target.
+3. **Optional plugin overlay:** Claude Code, Codex, Qwen Code, and qodercli can add marketplace installation for domain-level `enable` / `disable` switches:
+
+   ```bash
+   claude plugin marketplace add soia-team/soia-open-skills
+   ```
+
+   Do not index both an npx entry and a plugin copy of the same skills in one host. Exclude the npx entries for any domain managed as a plugin.
+
+### Step 3: trim host indexes (optional)
+
+- **RouterV1 core set:** Recommended for Claude; measured index reduction is about 60%. Keep high-frequency core skills directly available, persistently exclude long-tail skills from Claude, and load them when needed through [`soia-meta-find-skill`](../skills/soia-meta-find-skill/SKILL.md):
+
+  ```bash
+  python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+    --source-dir ~/.agents/skills \
+    --targets claude \
+    --exclude-skills soia-pkm-clip-douyin,soia-pkm-clip-rednote \
+    --save-excludes
+  ```
+
+  Extend the exclusion list to match the selected core set. Later full syncs continue to honor the saved Claude exclusions.
+
+- **Domain plugin switches:** Recommended for Claude Code, Codex, Qwen Code, and qodercli. Disable a clipping domain while coding and re-enable it for writing:
+
+  ```bash
+  claude plugin disable soia-pkm-clip
+  claude plugin enable soia-pkm-clip
+  ```
+
+### Step 4: verify the full installation
+
+```bash
+npx skills ls -g
+ls ~/.agents/skills | wc -l
+readlink ~/.claude/skills/<skill-name>
+```
+
+The link should resolve to `~/.agents/skills/<skill-name>`. Use the corresponding host directory in the table for other symlink-based hosts.
+
+### Mixed-install decision table
+
+| Host | Base coverage | Symlink required | Trimming | Recommendation |
+|---|---|---:|---|---|
+| Claude Code | Distribute to `~/.claude/skills` | Yes | RouterV1 or domain plugins | Keep the core set direct and route the long tail |
+| Codex | Native `~/.agents/skills` | No | Router or domain plugins | Use the full base directly; trim only when needed |
+| Qwen Code | Distribute to `~/.qwen/skills` | Yes | Router or domain plugins | Add marketplace control when domain switches matter |
+| Gemini CLI | Native `~/.agents/skills` | No | Router | Sync to `~/.gemini/skills` only if a separate entry is needed |
+| Antigravity CLI (`agy`) | Distribute to `~/.gemini/antigravity-cli/skills` | Yes | Router | Run the `agy` target once |
+| Kimi CLI | Distribute to `~/.kimi/skills` | Yes | Router | Restart the session after synchronization |
+| OpenCode | Distribute to `~/.config/opencode/skill` | Yes | Router | Use the `opencode` target |
+| DeepCode | Native `~/.agents/skills` | No | Router | No dedicated target is needed |
+| WorkBuddy | Distribute to `~/.workbuddy/skills` | Yes | Router | Keep team machines on the shared source |
+| qodercli | Distribute to `~/.qoder/skills` | Yes | Router or domain plugins | Use domain plugins for scenario-level switching |
+| Cursor | Native `~/.agents/skills` | No | Router | The full base works immediately |
+| Windsurf | Distribute to `~/.codeium/windsurf/skills` | Yes | Router | Use the `windsurf` target |
+| GitHub Copilot CLI | Native `~/.agents/skills` | No | Router or host skill switches | Inspect and control individual skills with `/skills` |
+| Zed | Native `~/.agents/skills` | No | Router | Start a new session after installation |
+| Trae | Distribute to `~/.trae/skills`; also inspect `~/.trae-cn` | Yes | Router | Sync the directory for the installed edition |
+| SOIA AI | Distribute to `~/.soia/skills` | Yes | Router | Use the `soia` target instead of copying |
+
+### Common mixed-install profiles
+
+The following profiles assume the 12-repository base installation from step 1 is complete.
+
+**Claude Code + Codex + WorkBuddy for personal development**
+
+```bash
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets claude,workbuddy
+
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets claude \
+  --exclude-skills soia-pkm-clip-douyin,soia-pkm-clip-rednote \
+  --save-excludes
+```
+
+Codex reads the shared source directly; only Claude Code and WorkBuddy need entries.
+
+**Team WorkBuddy + qodercli**
+
+```bash
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets workbuddy,qoder
+
+readlink ~/.workbuddy/skills/soia-meta-find-skill
+readlink ~/.qoder/skills/soia-meta-find-skill
+```
+
+**Complete coverage for all hosts**
+
+```bash
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets claude,qoder,copilot,cursor,agy,gemini,kimi,codex,opencode,windsurf,trae,qwen,soia,workbuddy
+
+npx skills ls -g
+ls ~/.agents/skills | wc -l
+```
+
+DeepCode and Zed continue to read the shared source directly.
 
 ## By AI agent
 
@@ -150,28 +300,43 @@ npx and the sync tool cover `~/.gemini/antigravity-cli/skills/`. Recent `agy` ve
 
 ### Kimi CLI
 
-Kimi discovers skills automatically:
+Distribute the shared source into `~/.kimi/skills`, then restart the session:
 
 ```bash
-npx skills add soia-team/<repository> -g \
-  -a kimi-code-cli -s <skill-name> -y
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets kimi \
+  --skills <skill-name>
+
 kimi --skills-dir <skill-directory>
 ```
 
-`--skills-dir` replaces auto-discovery for that run and can be repeated to select a subset. Restart the session to verify the global install.
+`--skills-dir` replaces auto-discovery for that run and can be repeated to select a subset. Verify the shared entry with `readlink ~/.kimi/skills/<skill-name>`.
 
-### OpenCode and DeepCode
+### OpenCode
 
-Both use the `~/.agents/skills` interoperability layer; DeepCode documents this as interoperable skills:
+Distribute the shared source into `~/.config/opencode/skill`:
 
 ```bash
-npx skills add soia-team/<repository> -g \
-  -a opencode -s <skill-name> -y
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets opencode \
+  --skills <skill-name>
+readlink ~/.config/opencode/skill/<skill-name>
+```
+
+Update or remove the shared source with npx, and restart OpenCode if the current session does not refresh.
+
+### DeepCode
+
+DeepCode reads the `~/.agents/skills` interoperability layer directly:
+
+```bash
 npx skills add soia-team/<repository> -g \
   -a '*' -s <skill-name> -y
 ```
 
-DeepCode has no dedicated npx agent id; it consumes the installer's shared interoperability directory directly. Verify OpenCode with `npx skills list -g -a opencode`, verify DeepCode with `ls ~/.agents/skills/<skill-name>/SKILL.md`, update with `npx skills update`, and restart the host if the current session does not refresh.
+DeepCode has no dedicated npx agent id. Verify with `ls ~/.agents/skills/<skill-name>/SKILL.md`, update with `npx skills update`, and restart the host if the current session does not refresh.
 
 ### WorkBuddy
 
