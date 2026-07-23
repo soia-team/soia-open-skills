@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import sys
 import tempfile
@@ -65,6 +66,38 @@ class MetaSkillReleaseTests(unittest.TestCase):
             environ={"SOIA_SKILL_REPOS_ROOT": "/checkouts/shared"},
         )
         self.assertEqual(resolved, Path("/checkouts/shared/skill-repo-14"))
+
+    def test_repo_dir_uses_private_config_root_after_process_environment(self) -> None:
+        resolved = release_skills.resolve_repo_dir(
+            "another-owner/skill-repo-14",
+            Path("/test/home"),
+            environ={},
+            config_env={"SOIA_SKILL_REPOS_ROOT": "/checkouts/private"},
+        )
+        self.assertEqual(resolved, Path("/checkouts/private/skill-repo-14"))
+
+    def test_process_environment_wins_over_private_config_root(self) -> None:
+        resolved = release_skills.resolve_repo_dir(
+            "another-owner/skill-repo-14",
+            Path("/test/home"),
+            environ={"SOIA_SKILL_REPOS_ROOT": "/checkouts/process"},
+            config_env={"SOIA_SKILL_REPOS_ROOT": "/checkouts/private"},
+        )
+        self.assertEqual(resolved, Path("/checkouts/process/skill-repo-14"))
+
+    def test_default_config_uses_v2_then_falls_back_to_v1_with_migration_hint(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp) / "home"
+            current = release_skills.default_config_file(home, {})
+            legacy = next(release_skills.legacy_config_files(home, {}))
+            legacy.parent.mkdir(parents=True)
+            legacy.write_text("schema_version: 1\nenv: {}\n", encoding="utf-8")
+            with patch("sys.stderr", new_callable=io.StringIO) as stderr:
+                self.assertEqual(release_skills.resolve_config_file(None, home, {}), legacy)
+            self.assertIn("migrate when convenient", stderr.getvalue())
+            current.parent.mkdir(parents=True)
+            current.write_text("schema_version: 1\nenv: {}\n", encoding="utf-8")
+            self.assertEqual(release_skills.resolve_config_file(None, home, {}), current)
 
     def test_repo_dir_falls_back_to_deprecated_legacy_convention(self) -> None:
         home = Path("/test/home")

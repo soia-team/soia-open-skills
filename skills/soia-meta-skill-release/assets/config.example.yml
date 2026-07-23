@@ -1,0 +1,9 @@
+# Copy to the user's private v2 config directory:
+# ~/.config/soia-skills/soia-meta-skill-release/config.yml
+#
+# This file selects the local directory that contains the cloned SOIA skill
+# repositories used for post-merge version verification. It contains no token,
+# password, cookie, or browser profile.
+schema_version: 1
+env:
+  SOIA_SKILL_REPOS_ROOT: <directory-containing-skill-repository-checkouts>

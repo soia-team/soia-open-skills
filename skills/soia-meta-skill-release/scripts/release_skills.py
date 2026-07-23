@@ -6,17 +6,23 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Mapping
 
 
 INSTALL_ROOTS = (".agents/skills", ".claude/skills", ".soia/skills", ".workbuddy/skills", ".codex/skills")
 RECEIPT_LINK_ROOTS = (".agents/skills", ".claude/skills", ".codex/skills")
+SKILL_NAME = "soia-meta-skill-release"
+CONFIG_ENV = "SOIA_META_SKILL_RELEASE_CONFIG_FILE"
+LEGACY_REPOSITORIES = ("soia-open-skills", "soia-open-env-skills")
+LEGACY_DOMAINS = ("meta", "soia-meta")
+_WARNED_LEGACY_CONFIGS: set[Path] = set()
 
 
 class ReleaseError(RuntimeError):
@@ -48,21 +54,117 @@ def installed_skill_dir(home: Path, name: str) -> Path:
     return home_path(home, ".agents/skills") / name
 
 
+def expand_path(value: str | os.PathLike[str]) -> Path:
+    return Path(os.path.expandvars(str(value))).expanduser().resolve()
+
+
+def skills_config_root(home: Path, environ: Mapping[str, str]) -> Path:
+    """Return the v2 SOIA config root, without creating it."""
+    configured = environ.get("SOIA_SKILLS_CONFIG_HOME")
+    if configured:
+        return expand_path(configured)
+    if os.name == "nt":
+        return expand_path(environ.get("APPDATA", home / "AppData" / "Roaming")) / "soia-skills"
+    return expand_path(environ.get("XDG_CONFIG_HOME", home / ".config")) / "soia-skills"
+
+
+def default_config_file(home: Path, environ: Mapping[str, str]) -> Path:
+    return skills_config_root(home, environ) / SKILL_NAME / "config.yml"
+
+
+def legacy_config_files(home: Path, environ: Mapping[str, str]) -> Iterable[Path]:
+    root = skills_config_root(home, environ)
+    for repository in LEGACY_REPOSITORIES:
+        for domain in LEGACY_DOMAINS:
+            yield root / repository / domain / SKILL_NAME / "config.yml"
+
+
+def warn_legacy_config(legacy: Path, current: Path) -> None:
+    """Tell the maintainer about a read-only v1 fallback once per process."""
+    if legacy in _WARNED_LEGACY_CONFIGS:
+        return
+    _WARNED_LEGACY_CONFIGS.add(legacy)
+    print(
+        "SOIA storage schema v1 config fallback in use; migrate when convenient: "
+        f"mkdir -p {shlex.quote(str(current.parent))} && "
+        f"mv {shlex.quote(str(legacy))} {shlex.quote(str(current))}",
+        file=sys.stderr,
+    )
+
+
+def resolve_config_file(
+    cli_value: str | os.PathLike[str] | None,
+    home: Path,
+    environ: Mapping[str, str],
+) -> Path | None:
+    """Resolve explicit, v2, then read-only v1 configuration files."""
+    if cli_value:
+        path = expand_path(cli_value)
+        if not path.is_file():
+            raise ReleaseError(f"Config file not found: {path}")
+        return path
+    if environ.get(CONFIG_ENV):
+        path = expand_path(environ[CONFIG_ENV])
+        if not path.is_file():
+            raise ReleaseError(f"{CONFIG_ENV} points to a missing file: {path}")
+        return path
+
+    current = default_config_file(home, environ)
+    if current.is_file():
+        return current
+    for legacy in legacy_config_files(home, environ):
+        if legacy.is_file():
+            warn_legacy_config(legacy, current)
+            return legacy
+    return None
+
+
+def load_config_env(path: Path) -> dict[str, str]:
+    try:
+        import yaml
+    except ImportError as exc:  # pragma: no cover - environment-dependent
+        raise ReleaseError(
+            "PyYAML is required when using config.yml; install it with: "
+            "python3 -m pip install pyyaml"
+        ) from exc
+
+    try:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except OSError as exc:
+        raise ReleaseError(f"cannot read config {path}: {exc}") from exc
+    except yaml.YAMLError as exc:
+        raise ReleaseError(f"invalid YAML config {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ReleaseError("config root must be a YAML mapping")
+    values = payload.get("env") or {}
+    if not isinstance(values, dict):
+        raise ReleaseError("config env must be a YAML mapping")
+    return {
+        str(key): str(value).strip()
+        for key, value in values.items()
+        if value is not None and str(value).strip()
+    }
+
+
 def resolve_repo_dir(
     repo: str,
     home: Path,
     repo_dir: str | None = None,
-    environ: dict[str, str] | None = None,
+    environ: Mapping[str, str] | None = None,
+    config_env: Mapping[str, str] | None = None,
 ) -> Path:
-    """Resolve a checkout from CLI, shared root, then the legacy convention."""
+    """Resolve a checkout from CLI, process env, private config, then v1."""
     if repo_dir:
-        return Path(repo_dir).expanduser()
+        return expand_path(repo_dir)
 
     env = os.environ if environ is None else environ
     repo_name = repo.rstrip("/").rsplit("/", 1)[-1]
     repos_root = env.get("SOIA_SKILL_REPOS_ROOT")
     if repos_root:
-        return Path(repos_root).expanduser() / repo_name
+        return expand_path(repos_root) / repo_name
+    configured_root = (config_env or {}).get("SOIA_SKILL_REPOS_ROOT")
+    if configured_root:
+        return expand_path(configured_root) / repo_name
 
     # Deprecated compatibility fallback; configure SOIA_SKILL_REPOS_ROOT or
     # pass --repo-dir before this maintainer-specific convention is removed.
@@ -195,16 +297,23 @@ def release(args: argparse.Namespace, *, home: Path | None = None) -> int:
     agents = args.agents
     rows = [SkillReceipt(name, "install/update") for name in skills]
     rows.extend(SkillReceipt(name, "remove") for name in removed)
-    repo_dir = resolve_repo_dir(args.repo, user_home, args.repo_dir)
-
-    if args.dry_run:
-        for row in rows:
-            row.result = "planned"
-        print("dry-run: no command or filesystem write was executed")
-        print_receipt(rows)
-        return 0
-
     try:
+        config_file = resolve_config_file(args.config, user_home, os.environ)
+        config_env = load_config_env(config_file) if config_file else {}
+        repo_dir = resolve_repo_dir(
+            args.repo,
+            user_home,
+            args.repo_dir,
+            os.environ,
+            config_env,
+        )
+        if args.dry_run:
+            for row in rows:
+                row.result = "planned"
+            print("dry-run: no command or filesystem write was executed")
+            print_receipt(rows)
+            return 0
+
         # 1. Install all requested skills in one call (one clone, not O(n)).
         agent_flags = [flag for a in agents.split(",") for flag in ("-a", a.strip()) if a.strip()]
         skill_flags = [flag for name in skills for flag in ("-s", name)]
@@ -256,6 +365,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--removed", help="comma-separated legacy skill names to remove")
     parser.add_argument("--agents", default="claude-code,codex", help="skills.sh agent list")
     parser.add_argument("--repo-dir", help="local checkout used for version verification")
+    parser.add_argument(
+        "--config",
+        help=f"private YAML config; otherwise {CONFIG_ENV} or the v2 default is used",
+    )
     parser.add_argument("--dry-run", action="store_true", help="print the plan without commands or writes")
     return parser.parse_args(argv)
 
