@@ -1,5 +1,7 @@
 # 分域安装配置
 
+[完整安装指南](install-guide.md) · [English installation guide](install-guide.en.md)
+
 按机器的主要用途安装必要仓库，减少所有宿主启动时需要索引的技能描述。以下命令均从远端仓库安装到用户级；`-a '*'` 表示写入所有受支持的 agent 目标，`-y` 跳过交互确认。
 
 ## 安装矩阵
