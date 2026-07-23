@@ -227,7 +227,7 @@ def render_readme(spec: RepoSpec) -> str:
     if spec.note:
         lines.extend([spec.note, ""])
     if spec.incubator:
-        lines.extend(["## 孵化中", "", "本仓处于孵化阶段，技能和接口可能继续调整。", ""])
+        lines.extend(["## Roadmap", "", "技能与接口将按公开路线图持续完善。", ""])
     lines.extend(
         [
             "## 域说明",

@@ -26,7 +26,7 @@ PUBLIC_REPOSITORIES = (
     "soia-open-cwork-office-skills",
     "soia-open-dev-coding-skills",
     "soia-open-dev-design-skills",
-    "soia-open-dev-ts-skills",
+    "soia-open-dev-infra-skills",
     "soia-open-safe-skills",
     "soia-open-edu-course-skills",
     "soia-open-dev-product-skills",
