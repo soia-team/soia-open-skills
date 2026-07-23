@@ -35,6 +35,26 @@ The complete machine-readable skill catalog is [`routing/routing-manifest.json`]
 
 ## Installation
 
+### Plugin method (recommended)
+
+Plugins install and toggle a domain-sized group of skills. For example, install the knowledge-clipping plugin:
+
+```bash
+claude plugin marketplace add soia-team/soia-open-skills
+/plugin install soia-pkm-clip@soia
+
+codex plugin marketplace add soia-team/soia-open-skills
+codex plugin add soia-pkm-clip@soia
+
+qwen extensions install https://github.com/soia-team/soia-open-skills:soia-pkm-clip
+```
+
+Use `claude plugin enable`, `claude plugin disable`, and `claude plugin update` to manage installed Claude plugins.
+
+### npx method
+
+The npx method retains single-skill granularity when you only need one specific skill.
+
 Install an individual skill as needed:
 
 ```bash
