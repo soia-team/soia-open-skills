@@ -1,11 +1,11 @@
 ---
 name: soia-meta-skill-release
 description: 技能 PR merge 后一键完成安装、旧名清理、全 AI 软链、lock 与版本对账；触发词「发布技能」「技能发布收尾」「release skill」。
-version: 2.0.0
+version: 2.0.1
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-07-22 21:13:46
+updated_at: 2026-07-23 00:00:00
 created_by: gpt-5.6-terra
-updated_by: gpt-5.6-luna
+updated_by: gpt-5.6-sol
 dependencies:
   hard: [soia-meta-sync-skills]
 ---
@@ -38,8 +38,10 @@ python3 skills/soia-meta-skill-release/scripts/release_skills.py \
 复核 dry-run 后，移除 `--dry-run` 执行。默认面向 `claude-code,codex`，可用 `--agents` 覆盖。版本核对按以下顺序解析本地 checkout：
 
 1. `--repo-dir <repo-path>` 显式路径；
-2. `SOIA_SKILL_REPOS_ROOT/<repo-name>`，其中环境变量指向多个技能仓的共同根目录；
-3. 旧版维护者本地目录约定，仅作弃用中的向后兼容回退。
+2. 当前进程的 `SOIA_SKILL_REPOS_ROOT/<repo-name>`；
+3. 私有 YAML：`--config` → `SOIA_META_SKILL_RELEASE_CONFIG_FILE` → `~/.config/soia-skills/soia-meta-skill-release/config.yml` 中的 `env.SOIA_SKILL_REPOS_ROOT`；
+4. v1 私有配置目录只读回退（会向 stderr 输出建议的 `mv` 迁移命令）；
+5. 旧版维护者本地目录约定，仅作弃用中的向后兼容回退。
 
 仓库内部仍须采用 `skills/<skill-name>/SKILL.md` 布局。对未来新增仓库，只要 `--repo` 提供对应的任意 `<owner>/<repo-name>`，无需修改脚本。
 
@@ -54,10 +56,11 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 | `npx skills` | 强依赖 | 安装、移除、更新并维护 lock | 停止并报告失败步骤 |
 | `soia-meta-sync-skills` | 强依赖 | 同步 SOIA 与 WorkBuddy 软链 | 先安装该技能再重试 |
 | Python 3 | 强依赖 | 执行发布脚本 | 安装 Python 3 后重试 |
+| PyYAML | 可选依赖 | 读取私有 `config.yml` | 传 `--repo-dir` 或使用当前进程环境变量 |
 
 ### 私密信息与中间数据
 
-按本仓 `DATA_STORAGE_SPEC.md`，本技能只读写各 AI 技能安装目录及 `~/.agents/.skill-lock.json`；不读取或保存凭据、私有配置、缓存或中间文件。终端回执只显示技能名、版本、链接状态和失败步骤。
+按本仓 `DATA_STORAGE_SPEC.md`，本技能只读写各 AI 技能安装目录及 `~/.agents/.skill-lock.json`；可选读取仅含本地 checkout 根目录的私有 v2 `config.yml`。复制 [路径配置模板](assets/config.example.yml) 后再填写；不要为了这一个设置修改 `.zprofile`，也不读取或保存凭据、缓存或中间文件。终端回执只显示技能名、版本、链接状态和失败步骤。
 
 ### 日志与完成回执
 
@@ -75,7 +78,7 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 4. 遍历 `~/.agents/skills`：对有 `SKILL.md` 且 Codex 侧缺失的技能，创建相对软链；历史实证目录没有 `SKILL.md`，不进入 Codex。
 5. 调用已安装的 `soia-meta-sync-skills`，目标为 `soia,workbuddy`。
 6. 对账 `~/.agents/.skill-lock.json`：所有新技能必须来自 `--repo`，旧名必须零残留。
-7. 按 `--repo-dir` → `SOIA_SKILL_REPOS_ROOT/<repo-name>` → 旧版兼容目录的顺序解析 checkout，并对比每项 `SKILL.md` version 与 `~/.agents/skills` 装机 version。
+7. 按 `--repo-dir` → 进程环境 → 私有 v2 config → 只读 v1 config 回退 → 旧版兼容目录的顺序解析 checkout，并对比每项 `SKILL.md` version 与 `~/.agents/skills` 装机 version。
 
 ## 边界与验证
 
