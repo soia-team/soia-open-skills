@@ -34,6 +34,8 @@ The complete machine-readable skill catalog is [`routing/routing-manifest.json`]
 
 ## Installation
 
+> **[完整安装指南 → `docs/install-guide.md`](docs/install-guide.md)** · [English abridged version](docs/install-guide.en.md)
+
 ### Plugin method (recommended)
 
 Plugins install and toggle a domain-sized group of skills. For example, install the knowledge-clipping plugin:
@@ -72,6 +74,7 @@ For installation sets organized by machine role, see [`docs/install-profiles.md`
 
 - [`SKILL_SPEC.md`](SKILL_SPEC.md): skill structure, naming, frontmatter, and validation requirements.
 - [`DATA_STORAGE_SPEC.md`](DATA_STORAGE_SPEC.md): storage boundaries for configuration, credentials, state, caches, and outputs.
+- [`docs/install-guide.en.md`](docs/install-guide.en.md): complete installation guide by method and AI agent.
 - [`docs/install-profiles.md`](docs/install-profiles.md): installation profiles by use case.
 
 ## Ecosystem navigation
