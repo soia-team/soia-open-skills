@@ -27,3 +27,7 @@ jobs:
         run: python3 scripts/generate_skill_catalog.py --check
       - name: Check top-level README skill coverage
         run: python3 scripts/check_readme_coverage.py
+      - name: Check marketplace manifest freshness
+        run: python3 scripts/generate_marketplaces.py --check
+        env:
+          GH_TOKEN: ${{ github.token }}

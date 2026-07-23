@@ -1,0 +1,131 @@
+{
+  "name": "soia",
+  "owner": {
+    "name": "soia-team"
+  },
+  "description": "SOIA Skills 双格式插件市场，按领域分发可复用 AI 工作流。",
+  "plugins": [
+    {
+      "name": "soia-dev-coding",
+      "description": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行与 AI 派发",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-dev-coding-skills",
+        "sha": "4ad5a6df0902de00b5ffed95d3f29c40e8ffb022"
+      }
+    },
+    {
+      "name": "soia-dev-design",
+      "description": "设计与文档产线技能：Open Design、Archify、draw.io/Visio、OfficeCLI",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-dev-design-skills",
+        "sha": "59887bd83d77b47eba944cd5de634cd7011a691e"
+      }
+    },
+    {
+      "name": "soia-dev-product",
+      "description": "产品需求技能：PRD 起草、用户故事与验收标准",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-dev-product-skills",
+        "sha": "538e3297bbcc992b9814a8296a9eafbb46bd6c2d"
+      }
+    },
+    {
+      "name": "soia-dev-testing",
+      "description": "测试技能：测试计划、用例设计与回归清单",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-dev-testing-skills",
+        "sha": "d124f5666c95c8151f03dd27586e86ae7c1e37cf"
+      }
+    },
+    {
+      "name": "soia-dev-release",
+      "description": "发布技能：发布清单、灰度验证与回滚预案",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-dev-release-skills",
+        "sha": "b93821e1b1d7d241331a6e9bdd0d7a7841ca89ce"
+      }
+    },
+    {
+      "name": "soia-dev-infra",
+      "description": "基础设施与运维技能：终端长任务诊断、系统巡检",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-dev-infra-skills",
+        "sha": "a51fa94f93ce74e8c7e68fcbb52294d8f44043b5"
+      }
+    },
+    {
+      "name": "soia-safe",
+      "description": "安全技能：代码安全审计与漏洞情报跟踪",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-safe-skills",
+        "sha": "00a2ba5daf1c375a8007a5e67ad6a5d2765ea1f0"
+      }
+    },
+    {
+      "name": "soia-cwork-office",
+      "description": "办公协作技能：飞书知识库与云盘、ProcessOn 图表",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-cwork-office-skills",
+        "sha": "bf8a4c54528308a0ff4db7920210f053b04ae935"
+      }
+    },
+    {
+      "name": "soia-pkm-clip",
+      "description": "知识剪藏与网盘技能：网页、公众号、X、抖音、小红书、GitHub 归档与云盘操作",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-pkm-clip-skills",
+        "sha": "e5808d31f7e1c7e000581f60e9ba862af1e2988a"
+      }
+    },
+    {
+      "name": "soia-pkm-vault",
+      "description": "知识库技能：初始化、整理、提炼、翻译、转换与书库",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-pkm-vault-skills",
+        "sha": "f2d1811ac4906ad3a72ac78a41ea3cb079d9a52e"
+      }
+    },
+    {
+      "name": "soia-media-content",
+      "description": "新媒体内容技能：文章成文、封面图与公众号、X、小红书发布",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-media-content-skills",
+        "sha": "041358d4b0521ca261fe216f83aa60f459ad576c"
+      }
+    },
+    {
+      "name": "soia-edu-course",
+      "description": "教育课程技能：课程大纲设计与教案编写",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-edu-course-skills",
+        "sha": "02ee1612bf184d6a03b555155b1a7c1825f223ab"
+      }
+    },
+    {
+      "name": "soia-env",
+      "description": "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
+      "source": {
+        "source": "github",
+        "repo": "soia-team/soia-open-env-skills",
+        "sha": "c03d27c22ac91ec3500f10634c9c348f6c8db0d8"
+      }
+    },
+    {
+      "name": "soia-meta",
+      "description": "SOIA 技能生态门户：规范真源、技能目录与跨仓路由清单",
+      "source": "./"
+    }
+  ]
+}
