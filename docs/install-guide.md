@@ -4,6 +4,10 @@
 
 本指南帮助你按技能粒度、领域粒度或 AI agent 选择 SOIA 技能的安装方式。若不确定从哪里开始，优先使用 `npx skills add`：它覆盖 62+ AI agent，保留单技能粒度，并由统一的锁文件记录安装状态。
 
+## 生态覆盖面
+
+`~/.agents/skills` 已被 Zed、Cursor、Copilot、Codex、Gemini、DeepCode 等宿主原生识别；多数宿主因此零同步即可覆盖。只有 Windsurf 和 Trae 需要显式软链，`soia-meta-sync-skills` 的 targets 已包含对应目标。插件市场方面，同一份 SOIA 市场清单可被 Qwen Code 与 qodercli 复用。
+
 文中的占位符含义如下：
 
 - `<仓库名>`：例如 `soia-open-skills`、`soia-open-dev-coding-skills`。
@@ -271,13 +275,7 @@ WorkBuddy 也支持通过 SkillHub 或 zip 导入；zip 的包根目录必须包
 
 ### qodercli
 
-qodercli 可用 `--plugin-dir` 为一次运行指定插件目录：
-
-```bash
-qodercli --plugin-dir <插件目录>
-```
-
-技能仍可通过 npx 安装到 `~/.agents/skills` 共享真源，并由 agent 入口软链接：
+安装：qodercli 原生发现 `~/.qoder/skills` 和项目的 `.qoder/skills`，且用户级优先于项目级。SOIA 的现有软链已可用；也可用 npx 管理共享技能入口：
 
 ```bash
 npx skills add soia-team/<仓库名> -g \
@@ -285,29 +283,80 @@ npx skills add soia-team/<仓库名> -g \
 npx skills list -g -a qoder
 ```
 
-更新和卸载使用 npx；若使用 `--plugin-dir`，插件目录的生命周期由用户自行管理。
+验证：在 qodercli 中运行 `/skills reload`，并确认技能出现在可用列表。更新：npx 安装使用 `npx skills update <技能名> -g`；插件市场安装则按 qodercli 的插件管理命令更新或启用/停用。
+
+特有说明：qodercli 的插件格式与 Claude Code 同构，可近乎零改动复用 SOIA 插件市场；也可通过 `--plugin-dir <插件目录>` 为一次运行指定插件目录。插件与 MCP 均支持启用/停用；可用 `--permission-mode` 和 `--tools` 限制本次运行的权限及工具。
 
 ### Cursor
+
+安装：Cursor 原生支持 `.cursor/skills` 与 `~/.agents/skills` 等 AgentSkills 目录；全局 npx 安装后即可由共享目录覆盖：
 
 ```bash
 npx skills add soia-team/<仓库名> -g \
   -a cursor -s <技能名> -y
-npx skills list -g -a cursor
-npx skills remove -g -a cursor -s <技能名> -y
 ```
 
-更新使用 `npx skills update <技能名> -g`；安装后重启 Cursor 或新开会话验证。
+验证：执行 `npx skills list -g -a cursor`，或新开 Cursor 会话确认技能可用。更新：`npx skills update <技能名> -g`。
+
+特有说明：技能由 `description` 按需触发；`.cursor/rules/*.mdc` 可按 `paths` glob 等四种模式生效，也可使用 `disable-model-invocation`。Cursor 还支持扩展、Marketplace、`hooks.json` 与 `.cursor/mcp.json`；MCP 可在侧栏逐项开关。已有的 `~/.cursor/skills` 软链可退役以避免重复。
 
 ### Windsurf
 
+安装：Windsurf 的原生技能目录为 `.windsurf/skills` 或 `~/.codeium/windsurf/skills`，需要从共享真源显式软链：
+
 ```bash
-npx skills add soia-team/<仓库名> -g \
-  -a windsurf -s <技能名> -y
-npx skills list -g -a windsurf
-npx skills remove -g -a windsurf -s <技能名> -y
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets windsurf \
+  --skills <技能名> \
+  --dry-run
 ```
 
-更新使用 `npx skills update <技能名> -g`；安装后重启 Windsurf 或新开会话验证。
+确认预览后移除 `--dry-run`。验证：`readlink ~/.codeium/windsurf/skills/<技能名>`，然后新开会话。更新：先用 `npx skills update <技能名> -g` 更新共享真源，再运行上述同步命令。
+
+特有说明：Windsurf 对技能采用渐进披露；rules 有三种 activation 模式，MCP 可以逐工具开关，且有 100 个工具上限。它还支持 MCP Marketplace（Plugins）、`hooks.json` 的五类事件和 VS Code 扩展。
+
+### Copilot CLI / agent
+
+安装：Copilot 原生发现 `~/.copilot/skills`、`~/.agents/skills` 与 `.github/skills` 等目录；全局 npx 安装后共享目录即覆盖：
+
+```bash
+npx skills add soia-team/<仓库名> -g \
+  -a '*' -s <技能名> -y
+```
+
+验证：在 Copilot 中用 `/skills` 查看并逐项启用或停用技能。更新：`npx skills update <技能名> -g`。
+
+特有说明：团队技能适合放在 `.github/skills`；Copilot 也支持 Markdown custom agents、带 provenance 的 `gh` skill 分发和 ACP server。可通过 `allowed-tools` 或 `--allow-tool` / `--deny-tool` 限制工具。
+
+### Zed
+
+安装：Zed v1.4 起原生读取 `~/.agents/skills` 和工作树内的 `.agents/skills`，因此全局 npx 安装无需额外同步：
+
+```bash
+npx skills add soia-team/<仓库名> -g \
+  -a '*' -s <技能名> -y
+```
+
+验证：新开 Zed 会话并确认技能可被调用。更新：`npx skills update <技能名> -g`。
+
+特有说明：`AGENTS.md` / `.rules` 是 Instructions；技能可使用 `disable-model-invocation`。Zed 支持可包含 MCP 的 WASM 扩展，也可作为 ACP 客户端外挂 Claude Code 或 Gemini；每个 profile 的 `context_servers` 与三态工具权限可分别配置。
+
+### Trae
+
+安装：Trae Skills（Beta）采用开放标准，目录为 `.trae/skills` 或 `~/.trae/skills`；需要显式软链：
+
+```bash
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
+  --source-dir ~/.agents/skills \
+  --targets trae \
+  --skills <技能名> \
+  --dry-run
+```
+
+确认预览后移除 `--dry-run`。验证：`readlink ~/.trae/skills/<技能名>`；中国版还应探测 `~/.trae-cn`。更新：先运行 `npx skills update <技能名> -g`，再重跑同步。
+
+特有说明：技能按需调用；rules 位于 `.trae/rules/`。Trae 以自定义 Agents 为主，MCP 配置自 v1.3 起位于 `~/.trae/mcp.json`，并可按 Agent 选装工具。
 
 ## sync 工具（多 AI 软链管理）
 

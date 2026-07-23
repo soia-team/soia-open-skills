@@ -80,6 +80,27 @@ class MetaSyncTargetTests(unittest.TestCase):
             self.assertIn("gemini", result.stdout)
             self.assertIn("~/.gemini/skills", result.stdout)
 
+    def test_trae_target_is_listed_and_syncable(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sync-targets-") as temp:
+            root = Path(temp)
+            listed = self.run_script(root / "home", "--list-targets")
+            self.assertEqual(listed.returncode, 0, listed.stderr)
+            self.assertIn("trae", listed.stdout)
+            self.assertIn("~/.trae/skills", listed.stdout)
+
+            source = self.make_source(root)
+            synced = self.run_script(
+                root / "home",
+                "--source-dir",
+                str(source),
+                "--targets",
+                "trae",
+            )
+            self.assertEqual(synced.returncode, 0, synced.stderr)
+            link = root / "home/.trae/skills/soia-test-skill"
+            self.assertTrue(link.is_symlink())
+            self.assertEqual(link.resolve(), (source / "soia-test-skill").resolve())
+
     def test_write_sync_creates_two_independent_targets(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sync-targets-") as temp:
             root = Path(temp)

@@ -17,6 +17,7 @@
 | `qoder` | QoderCLI | `~/.qoder/skills` | Keep synced even when subscription is inactive. |
 | `copilot` | GitHub Copilot | `~/.copilot/skills` | Optional target when directory exists or user selects it. |
 | `windsurf` | Windsurf | `~/.codeium/windsurf/skills` | Optional target when directory exists or user selects it. |
+| `trae` | Trae | `~/.trae/skills` | Optional target when directory exists or user selects it. For the CN edition, also inspect `~/.trae-cn`. |
 | `openclaw` | OpenClaw | `~/.openclaw/skills` | Optional target when directory exists or user selects it. |
 
 Command-name truth:
