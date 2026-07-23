@@ -335,6 +335,85 @@ class MetaSyncTargetTests(unittest.TestCase):
                 (root / "home/.soia/skills/soia-pkm-alipan-curator").is_symlink()
             )
 
+    def test_cli_exclude_unlinks_existing_symlink(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sync-targets-") as temp:
+            root = Path(temp)
+            source = self.make_source(root)
+            self.add_skill(source, "soia-keep-skill")
+            target = root / "target"
+            initial = self.run_script(
+                root / "home", "--source-dir", str(source), "--targets", str(target)
+            )
+            self.assertEqual(initial.returncode, 0, initial.stderr)
+
+            result = self.run_script(
+                root / "home",
+                "--source-dir",
+                str(source),
+                "--targets",
+                str(target),
+                "--exclude-skills",
+                "soia-test-skill",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("unlink excluded: soia-test-skill", result.stdout)
+            self.assertFalse((target / "soia-test-skill").is_symlink())
+            self.assertTrue((target / "soia-keep-skill").is_symlink())
+
+    def test_saved_exclude_survives_later_full_sync(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sync-targets-") as temp:
+            root = Path(temp)
+            home = root / "home"
+            source = self.make_source(root)
+            saved = self.run_script(
+                home,
+                "--source-dir",
+                str(source),
+                "--targets",
+                "soia",
+                "--exclude-skills",
+                "soia-test-skill",
+                "--save-excludes",
+            )
+            self.assertEqual(saved.returncode, 0, saved.stderr)
+            config = home / ".config/soia-skills/soia-meta-sync-skills/config.yml"
+            self.assertIn("soia-test-skill", config.read_text(encoding="utf-8"))
+
+            full_sync = self.run_script(
+                home, "--source-dir", str(source), "--targets", "soia"
+            )
+            self.assertEqual(full_sync.returncode, 0, full_sync.stderr)
+            self.assertIn("excludes: soia-test-skill", full_sync.stdout)
+            self.assertFalse((home / ".soia/skills/soia-test-skill").is_symlink())
+
+    def test_persistent_exclude_does_not_affect_other_target(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sync-targets-") as temp:
+            root = Path(temp)
+            home = root / "home"
+            source = self.make_source(root)
+            saved = self.run_script(
+                home,
+                "--source-dir",
+                str(source),
+                "--targets",
+                "codex",
+                "--exclude-skills",
+                "soia-test-skill",
+                "--save-excludes",
+            )
+            self.assertEqual(saved.returncode, 0, saved.stderr)
+
+            result = self.run_script(
+                home,
+                "--source-dir",
+                str(source),
+                "--targets",
+                "codex,claude",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((home / ".codex/skills/soia-test-skill").is_symlink())
+            self.assertTrue((home / ".claude/skills/soia-test-skill").is_symlink())
+
 
 if __name__ == "__main__":
     unittest.main()

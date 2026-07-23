@@ -1,6 +1,10 @@
 # Optional user-owned defaults. CLI arguments always take precedence.
-schema_version: 2
+schema_version: 3
 source_dir: "<shared-skill-dir>"
 targets:
   - "codex"
   - "claude"
+excludes:
+  codex:
+    - "soia-example-skill"
+  claude: []
