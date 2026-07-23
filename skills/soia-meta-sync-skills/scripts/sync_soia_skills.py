@@ -32,6 +32,9 @@ RETIRED_SKILLS = [
     "soia-dev-skill-release",
     "soia-dev-prompt-clarity",
     "soia-dev-ai-cli-upgrade",
+    "soia-dev-run-ops-inspection",
+    "soia-safe-audit-fix-codebase",
+    "soia-safe-track-vulnerability-intel",
 ]
 
 

@@ -7,7 +7,7 @@
 | 场景 | 安装范围 | 适合任务 |
 |---|---|---|
 | 写作机 | PKM 剪藏 + PKM vault + media | 收集素材、整理知识库、写作与发布 |
-| 编码机 | meta + dev coding + dev design + dev infra + safe | 编码闭环、设计资产、基础设施与安全审计 |
+| 编码机 | meta + dev coding + dev design | 编码闭环、终端操作与设计资产 |
 | 教育机 | edu + PKM vault 精选子集 | 课程大纲、教案、阅读计划与教学资料整理 |
 | 最小 | 3 个 meta 技能 | 提示词澄清、技能同步与发布收尾 |
 
@@ -25,8 +25,6 @@ npx skills add soia-team/soia-open-media-content-skills -g -a '*' -y
 npx skills add soia-team/soia-open-skills -g -a '*' -y
 npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -y
 npx skills add soia-team/soia-open-dev-design-skills -g -a '*' -y
-npx skills add soia-team/soia-open-dev-infra-skills -g -a '*' -y
-npx skills add soia-team/soia-open-safe-skills -g -a '*' -y
 ```
 
 ### 教育机

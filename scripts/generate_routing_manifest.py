@@ -26,8 +26,6 @@ PUBLIC_REPOSITORIES = (
     "soia-open-cwork-office-skills",
     "soia-open-dev-coding-skills",
     "soia-open-dev-design-skills",
-    "soia-open-dev-infra-skills",
-    "soia-open-safe-skills",
     "soia-open-edu-course-skills",
     "soia-open-dev-product-skills",
     "soia-open-dev-testing-skills",
@@ -35,6 +33,10 @@ PUBLIC_REPOSITORIES = (
 )
 
 PORTAL_REPOSITORY = "soia-open-skills"
+ROUTING_EXCLUDED_SKILLS = {
+    # The router is the public entry point, not one of its own route targets.
+    "soia-meta-find-skill",
+}
 
 
 def routing_entry(repo: str, skill_name: str) -> dict[str, str]:
@@ -54,6 +56,7 @@ def entries_from_contents(repo: str, contents: Sequence[Mapping[str, Any]]) -> l
         if item.get("type") == "dir"
         and isinstance(item.get("name"), str)
         and item["name"].startswith("soia-")
+        and item["name"] not in ROUTING_EXCLUDED_SKILLS
     }
     return [routing_entry(repo, name) for name in sorted(names)]
 

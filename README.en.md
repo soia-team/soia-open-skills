@@ -23,10 +23,8 @@ The public SOIA Skills portal for shared specifications, ecosystem navigation, t
 | [`soia-open-pkm-vault-skills`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Markdown knowledge-base bootstrap, organization, distillation, transformation, and library maintenance. |
 | [`soia-open-media-content-skills`](https://github.com/soia-team/soia-open-media-content-skills) | Article creation, cover production, and multi-platform content publishing. |
 | [`soia-open-cwork-office-skills`](https://github.com/soia-team/soia-open-cwork-office-skills) | Integrations for collaborative office tools and document services. |
-| [`soia-open-dev-coding-skills`](https://github.com/soia-team/soia-open-dev-coding-skills) | Coding, task execution, code review, fixes, and GitHub operations. |
+| [`soia-open-dev-coding-skills`](https://github.com/soia-team/soia-open-dev-coding-skills) | Coding, task execution, code review, fixes, GitHub, and terminal operations (10 public skills). |
 | [`soia-open-dev-design-skills`](https://github.com/soia-team/soia-open-dev-design-skills) | Open Design, architecture diagrams, charting, and Office design workflows. |
-| [`soia-open-dev-infra-skills`](https://github.com/soia-team/soia-open-dev-infra-skills) | Infrastructure, terminal operations, and operational-maintenance capabilities. |
-| [`soia-open-safe-skills`](https://github.com/soia-team/soia-open-safe-skills) | Code security audits and public vulnerability-intelligence tracking. |
 | [`soia-open-edu-course-skills`](https://github.com/soia-team/soia-open-edu-course-skills) | Course outlines, teaching materials, and assessment design. |
 | [`soia-open-dev-product-skills`](https://github.com/soia-team/soia-open-dev-product-skills) | Product requirements, user stories, and requirements-review workflows. |
 | [`soia-open-dev-testing-skills`](https://github.com/soia-team/soia-open-dev-testing-skills) | Test cases, test documentation, and quality-assurance workflows. |
