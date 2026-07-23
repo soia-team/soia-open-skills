@@ -8,6 +8,7 @@ The public SOIA Skills portal for shared specifications, ecosystem navigation, t
 
 | Skill | Summary |
 |---|---|
+| [`soia-meta-find-skill`](skills/soia-meta-find-skill/) | Find, locate, and load SOIA ecosystem skills through a two-tier index. |
 | [`soia-meta-prompt-clarity`](skills/soia-meta-prompt-clarity/) | Draft, diagnose, and normalize Chinese and English prompts while preserving their language and boundaries. |
 | [`soia-meta-skill-release`](skills/soia-meta-skill-release/) | Support post-release skill installation, old-name cleanup, and version-state checks. |
 | [`soia-meta-sync-skills`](skills/soia-meta-sync-skills/) | Safely synchronize shared skills to AI tool directories explicitly selected by the user. |

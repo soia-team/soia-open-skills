@@ -1,0 +1,458 @@
+[
+  {
+    "name": "soia-cwork-feishu-cli",
+    "repo": "soia-open-cwork-office-skills",
+    "description": "通过飞书官方 lark-cli 分开调研飞书知识库/Wiki与云盘/Drive，按应用身份（bot）或用户 OAuth 身份执行最小权限只读操作；先按机器可读权限目录提醒两类身份的 scope、应用数据权限、资源授权和版本发布流程。当用户要求调研飞书知识库、云盘、个人云盘、读取飞书文档或配置飞书 CLI 时使用。",
+    "install_cmd": "npx skills add soia-team/soia-open-cwork-office-skills -g -a '*' -s soia-cwork-feishu-cli -y"
+  },
+  {
+    "name": "soia-cwork-feishu-doc-git-sync",
+    "repo": "soia-open-cwork-office-skills",
+    "description": "将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。",
+    "install_cmd": "npx skills add soia-team/soia-open-cwork-office-skills -g -a '*' -s soia-cwork-feishu-doc-git-sync -y"
+  },
+  {
+    "name": "soia-cwork-processon-diagrams",
+    "repo": "soia-open-cwork-office-skills",
+    "description": "安全盘点并按授权导出、校验和归档 ProcessOn 图表。触发：ProcessOn 盘点、导出架构图、批量下载图表",
+    "install_cmd": "npx skills add soia-team/soia-open-cwork-office-skills -g -a '*' -s soia-cwork-processon-diagrams -y"
+  },
+  {
+    "name": "soia-dev-agent-cli-dispatch",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "外部 AI CLI 调度与模型路由，支持受控派活与用量回执。触发：「派活给外部 AI」「调用 agy」「多 CLI 派发」",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-agent-cli-dispatch -y"
+  },
+  {
+    "name": "soia-dev-agent-md-advisor",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "AI 项目指令与配置设计顾问，提供诊断、起草和改写建议。触发：「审查我的 AGENTS.md」「CLAUDE.md 怎么写」「多个 AI 入口怎么管」",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-agent-md-advisor -y"
+  },
+  {
+    "name": "soia-dev-archify-diagrams",
+    "repo": "soia-open-dev-design-skills",
+    "description": "用 Archify 将架构、数据流和流程说明生成可维护 JSON 图表及 PNG 预览。触发：「用 Archify 画」「Archify 架构图」「Archify 时序图」",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-design-skills -g -a '*' -s soia-dev-archify-diagrams -y"
+  },
+  {
+    "name": "soia-dev-coding-protocol",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "为普通工程代码改动建立最小范围、验证前置、anti-fake-fix 与写后复核契约；适用于修复、重构、实现和评审。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-coding-protocol -y"
+  },
+  {
+    "name": "soia-dev-design-explorer",
+    "repo": "soia-open-dev-design-skills",
+    "description": "基于 Open Design（经 soia-dev-open-design-ops）做高保真 HTML 原型、设计变体、幻灯片、动画探索与设计评审；要求用户品牌输入、五分类输出落点与可复现验证。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-design-skills -g -a '*' -s soia-dev-design-explorer -y"
+  },
+  {
+    "name": "soia-dev-doc-sync",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "审计并修复任意代码仓的 docs、README、CHANGELOG、VERSION 与明确真源之间的事实漂移；先建立真源优先级与证据，再按依赖顺序同步派生文档。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-doc-sync -y"
+  },
+  {
+    "name": "soia-dev-draft-prd",
+    "repo": "soia-open-dev-product-skills",
+    "description": "起草互联网通用 PRD、产品需求文档与用户故事；适用于一句话需求补全、功能范围和验收标准梳理。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-product-skills -g -a '*' -s soia-dev-draft-prd -y"
+  },
+  {
+    "name": "soia-dev-draft-test-doc",
+    "repo": "soia-open-dev-testing-skills",
+    "description": "从需求、PRD 或变更说明生成测试计划、测试用例与验收对照；适用于测试设计、回归清单和质量评审。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-testing-skills -g -a '*' -s soia-dev-draft-test-doc -y"
+  },
+  {
+    "name": "soia-dev-drawio-visio-diagrams",
+    "repo": "soia-open-dev-design-skills",
+    "description": "将 Visio VSDX 安全转换、盘点和受控升级为可编辑 draw.io 图表。触发：「VSDX 转 draw.io」「Visio 图表升级」「draw.io 图表盘点」",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-design-skills -g -a '*' -s soia-dev-drawio-visio-diagrams -y"
+  },
+  {
+    "name": "soia-dev-fix-loop",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "用五步闭环处理代码审查或测试发现：复现、决策、修复、回归复核与回执，防止遗漏、假修复和无证据收口。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-fix-loop -y"
+  },
+  {
+    "name": "soia-dev-github-ops",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "GitHub gh CLI 运维、PR 合规审查与修复。触发：「查 CI 挂了」「发 release」「加协作者权限」",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-github-ops -y"
+  },
+  {
+    "name": "soia-dev-officecli-ops",
+    "repo": "soia-open-dev-design-skills",
+    "description": "以 OfficeCLI 安全读取、复制后修改并验证 DOCX、XLSX、PPTX。触发：「OfficeCLI」「OpenXML 验证」「Office 文件原子修改」",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-design-skills -g -a '*' -s soia-dev-officecli-ops -y"
+  },
+  {
+    "name": "soia-dev-open-design-ops",
+    "repo": "soia-open-dev-design-skills",
+    "description": "Open Design 原子操作层：环境/安装/daemon 健康管理，DESIGN.md/三件套与项目接入，skills/templates 查询，HTML/PDF/PPTX/MP4 导出及会话 resume；供上层设计流程调用。Triggers：「检查 Open Design」「接入 DESIGN.md」「查询设计目录」「导出设计产物」「恢复设计会话」",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-design-skills -g -a '*' -s soia-dev-open-design-ops -y"
+  },
+  {
+    "name": "soia-dev-plan-release-checklist",
+    "repo": "soia-open-dev-release-skills",
+    "description": "为互联网软件发版生成发布清单、预检门、灰度验证与发布后核对；适用于上线、部署、回滚规划。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-release-skills -g -a '*' -s soia-dev-plan-release-checklist -y"
+  },
+  {
+    "name": "soia-dev-project-scaffold",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "为任意新 Git 项目生成最小 AI 协作基线：可编辑的 AGENTS.md 和 docs 导航目录；在写入前确认目标路径。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-project-scaffold -y"
+  },
+  {
+    "name": "soia-dev-review-panel",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "Multi-lens, adversarially-verified review of a code diff or skill package. Never edits/merges/publishes. Triggers：「多角度审一下这个改动」「用几个视角复查」「对抗式复核一下」「审一下这个技能包」",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-review-panel -y"
+  },
+  {
+    "name": "soia-dev-run-ops-inspection",
+    "repo": "soia-open-dev-infra-skills",
+    "description": "执行系统巡检、日检清单、异常上报与恢复通告，并按日归档巡检结果；适用于 SRE 例行运维检查。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-infra-skills -g -a '*' -s soia-dev-run-ops-inspection -y"
+  },
+  {
+    "name": "soia-dev-task-execute",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-task-execute -y"
+  },
+  {
+    "name": "soia-dev-terminal-ops",
+    "repo": "soia-open-dev-infra-skills",
+    "description": "管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；在终止进程前用日志、CPU、网络等多信号交叉判断，并执行 TERM→复查→KILL 确认门。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-infra-skills -g -a '*' -s soia-dev-terminal-ops -y"
+  },
+  {
+    "name": "soia-edu-compose-lesson-plan",
+    "repo": "soia-open-edu-course-skills",
+    "description": "按课程大纲编写可执行教案与讲义结构；适用于“教案”“讲义”“课堂活动”等请求。",
+    "install_cmd": "npx skills add soia-team/soia-open-edu-course-skills -g -a '*' -s soia-edu-compose-lesson-plan -y"
+  },
+  {
+    "name": "soia-edu-design-course-outline",
+    "repo": "soia-open-edu-course-skills",
+    "description": "从主题、受众和课时约束设计课程大纲；适用于“课程大纲”“教学目标”“课时规划”等请求。",
+    "install_cmd": "npx skills add soia-team/soia-open-edu-course-skills -g -a '*' -s soia-edu-design-course-outline -y"
+  },
+  {
+    "name": "soia-env-ai-cli-upgrade",
+    "repo": "soia-open-env-skills",
+    "description": "审计并按授权升级多款 AI CLI，先预演并核验结果。触发：「升级 AI CLI」「更新 Claude/Kimi」「检查 CLI 版本」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-ai-cli-upgrade -y"
+  },
+  {
+    "name": "soia-env-antigravity-cli-install",
+    "repo": "soia-open-env-skills",
+    "description": "面向小白检查、安装、登录、迁移和按明确授权更新 Google Antigravity CLI（agy）；区分 agy 与旧 Gemini CLI，默认只报告版本和产品自更新状态。触发：「安装 agy」「安装 Antigravity CLI」「Gemini CLI 迁移」「agy 登录」「更新 agy 到最新」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-antigravity-cli-install -y"
+  },
+  {
+    "name": "soia-env-claude-cli-install",
+    "repo": "soia-open-env-skills",
+    "description": "为小白安装、登录与授权更新 Anthropic Claude Code CLI。触发：「安装 Claude CLI」「Claude 命令不存在」「Claude 登录」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-claude-cli-install -y"
+  },
+  {
+    "name": "soia-env-codex-install",
+    "repo": "soia-open-env-skills",
+    "description": "面向小白安装、验证和按明确授权更新 OpenAI Codex CLI：识别实际生效的安装来源，默认只报告版本，只有客户明确要求最新版时才沿原来源更新，并展示安装方式、安装目录、配置目录和中间状态。触发：「安装 Codex」「更新 Codex」「更新 Codex 到最新」「配置 Codex」「Codex 登录」「Codex 命令不存在」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-codex-install -y"
+  },
+  {
+    "name": "soia-env-codex-setup-support",
+    "repo": "soia-open-env-skills",
+    "description": "渐进式安装、验证和排查 Codex 桌面版与 CLI，按版本、网络登录、权限工作区、资源、SQLite 日志写放大和 SSD 健康分类；检查结果必须先以表格呈现。触发：「安装 Codex」「Codex 打不开」「Codex 变慢」「检查 logs_2.sqlite」「检查磁盘健康」「Codex 一直写 SSD」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-codex-setup-support -y"
+  },
+  {
+    "name": "soia-env-deepcode-cli-install",
+    "repo": "soia-open-env-skills",
+    "description": "为小白安装、配置与授权更新开源 Deep Code Agent CLI（lessweb/deepcode-cli）。触发：「安装 DeepCode」「deepcode 不存在」「配置 DeepSeek Agent」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-deepcode-cli-install -y"
+  },
+  {
+    "name": "soia-env-environment-setup",
+    "repo": "soia-open-env-skills",
+    "description": "从零规划并验证小白开发环境：诊断网络，按依赖顺序安装运行时、桌面工具及 Codex、Claude Code、Qoder、Antigravity、OpenCode、Kimi Code、Deep Code 等 Agent CLI，用固定列表汇报目标状态并输出下游就绪摘要。触发：「配置开发环境」「从零安装工具」「环境搭建」「帮我准备 AI CLI」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-environment-setup -y"
+  },
+  {
+    "name": "soia-env-kimi-cli-install",
+    "repo": "soia-open-env-skills",
+    "description": "面向小白检查、安装、登录和按明确授权更新 Moonshot AI Kimi Code CLI；识别官方独立安装与 npm 来源，默认只报告版本和产品自动更新状态。触发：「安装 Kimi CLI」「安装 Kimi Code」「kimi 不存在」「Kimi 登录」「更新 Kimi 到最新」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-kimi-cli-install -y"
+  },
+  {
+    "name": "soia-env-network-diagnose",
+    "repo": "soia-open-env-skills",
+    "description": "只读诊断小白安装工具时的网络问题：检查 DNS、HTTPS、代理、证书、官方源和超时，区分故障来源，并用固定七列列表汇报网络状态与处理结果。触发：「网络不通」「下载失败」「npm/pip 超时」「证书错误」「安装卡住」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-network-diagnose -y"
+  },
+  {
+    "name": "soia-env-node-install",
+    "repo": "soia-open-env-skills",
+    "description": "面向小白安装、验证和按明确授权更新 Node.js 与 npm：识别系统和架构，缺失时选择官方 Active LTS，已安装时默认只报告版本，只有客户明确要求最新版才更新，并持续记录中间状态。触发：「安装 Node」「更新 Node」「更新 Node 到最新」「安装 npm」「node 命令不存在」「npm 超时」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-node-install -y"
+  },
+  {
+    "name": "soia-env-opencode-cli-install",
+    "repo": "soia-open-env-skills",
+    "description": "面向小白检查、安装、登录、配置和按明确授权更新开源 OpenCode CLI；识别官方独立安装、Homebrew 与 npm 来源，默认只报告版本和产品自动更新设置。触发：「安装 OpenCode」「opencode 不存在」「配置 OpenCode」「OpenCode 登录」「更新 OpenCode 到最新」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-opencode-cli-install -y"
+  },
+  {
+    "name": "soia-env-python-install",
+    "repo": "soia-open-env-skills",
+    "description": "面向小白安装、验证和按明确授权更新 Python 与 pip：识别系统和架构，已安装时默认只报告版本，只有客户明确要求最新版才沿原来源更新，并持续记录中间状态。触发：「安装 Python」「更新 Python」「更新 Python 到最新」「安装 pip」「python 命令不存在」「pip 不能用」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-python-install -y"
+  },
+  {
+    "name": "soia-env-qoder-cli-install",
+    "repo": "soia-open-env-skills",
+    "description": "面向小白检查、安装、登录和按明确授权更新 Qoder CLI；识别官方独立安装、Homebrew 与 npm 来源，默认只报告版本和自动更新设置。触发：「安装 Qoder CLI」「qodercli 不存在」「Qoder 登录」「检查 Qoder 更新」「更新 Qoder 到最新」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-qoder-cli-install -y"
+  },
+  {
+    "name": "soia-env-storage-cleanup",
+    "repo": "soia-open-env-skills",
+    "description": "面向小白统计 SOIA 受管配置、状态、缓存和临时目录的空间占用，生成可清理清单并提醒删除风险；只有客户看过最新清单并明确授权后才执行删除，随后复核实际释放空间。触发：「检查 SOIA 占用」「统计缓存大小」「清理临时文件」「清理过期状态」「释放磁盘空间」；不用于未经授权的全盘清理。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-storage-cleanup -y"
+  },
+  {
+    "name": "soia-env-workbuddy-install",
+    "repo": "soia-open-env-skills",
+    "description": "面向小白通过 WorkBuddy 官方站点安装、验证和按明确授权更新桌面客户端：已安装时默认只报告版本，只有客户明确要求最新版才更新，并持续记录中间状态。触发：「安装 WorkBuddy」「更新 WorkBuddy」「更新 WorkBuddy 到最新」「安装腾讯龙虾」「WorkBuddy 下载」「WorkBuddy 打不开」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-workbuddy-install -y"
+  },
+  {
+    "name": "soia-media-compose-article-draft",
+    "repo": "soia-open-media-content-skills",
+    "description": "把 distill 提炼出的观点写成成文草稿。以用户观点为骨、vault 摘抄为料，生成可继续交给 publish 的文章。可指定公众号/知乎/随笔风格。Triggers：「把这些观点写成一篇」「把 X 主题写成文章」「compose 这篇」「写成草稿」「起草这篇」",
+    "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-compose-article-draft -y"
+  },
+  {
+    "name": "soia-media-cover-image",
+    "repo": "soia-open-media-content-skills",
+    "description": "为公众号/X/小红书文章生成封面图，支持五维参数与多种比例；公众号产出接 soia-media-publish-wechat-draft --cover。仅用 codex CLI 内置生图，缺失时停止并提示，不静默降级。Triggers：「生成封面」「做个封面图」「配一张公众号头图」「做张小红书封面」「cover image」",
+    "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-cover-image -y"
+  },
+  {
+    "name": "soia-media-publish-rednote-card",
+    "repo": "soia-open-media-content-skills",
+    "description": "把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议。只产出文本并由客户人工发布，不接平台 API。Triggers：「发成小红书」「小红书笔记」「改成 rednote」「rednote 这篇」",
+    "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-publish-rednote-card -y"
+  },
+  {
+    "name": "soia-media-publish-wechat-draft",
+    "repo": "soia-open-media-content-skills",
+    "description": "把成文草稿排版成符合微信公众号限制的内联样式 HTML，机械校验通过后推入微信公众号草稿箱；只建草稿，绝不自动群发。Triggers：「把这篇发成公众号」「排版这篇公众号」「推到公众号草稿箱」「公众号 draft」",
+    "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-publish-wechat-draft -y"
+  },
+  {
+    "name": "soia-media-publish-x-article",
+    "repo": "soia-open-media-content-skills",
+    "description": "把成文草稿（Markdown）直传 X/Twitter Articles 草稿箱：解析标题/封面/正文图与分割线，富文本粘贴保格式，倒序插图，机械校验后只存草稿、绝不点发布。需已登录浏览器且订阅含「撰写文章」权益。Triggers：「发成 X Article」「上传到 X 文章」「推到 X 草稿箱」「X Articles draft」「把这篇发 X 长文」",
+    "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-publish-x-article -y"
+  },
+  {
+    "name": "soia-media-publish-x-thread",
+    "repo": "soia-open-media-content-skills",
+    "description": "把成文草稿改写成 X thread：拆成带 (1/N) 编号的推文串，每条 ≤280 字符。默认只产文本；可选用自带 Playwright 脚本（宿主无关）把内容填进 X 撰写框存草稿，明确授权才发布。不接 X API。Triggers：「发成 X thread」「拆成推文串」「thread 这篇」「发条 X」「发个推」",
+    "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-publish-x-thread -y"
+  },
+  {
+    "name": "soia-meta-prompt-clarity",
+    "repo": "soia-open-skills",
+    "description": "起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界。触发：「写提示词 / write a prompt」「优化 prompt / improve this prompt」「扩展成可验证规格」",
+    "install_cmd": "npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-prompt-clarity -y"
+  },
+  {
+    "name": "soia-meta-skill-release",
+    "repo": "soia-open-skills",
+    "description": "技能 PR merge 后一键完成安装、旧名清理、全 AI 软链、lock 与版本对账；触发词「发布技能」「技能发布收尾」「release skill」。",
+    "install_cmd": "npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -y"
+  },
+  {
+    "name": "soia-meta-sync-skills",
+    "repo": "soia-open-skills",
+    "description": "将一个共享技能源以软链接同步到用户明确选择的 AI 工具目录；支持预览、单项同步、硬依赖闭包和受限清理。",
+    "install_cmd": "npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-sync-skills -y"
+  },
+  {
+    "name": "soia-pkm-alipan-curator",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "阿里云盘资源顾问：提供 inventory/organize/catalog/plan 四类工作流，盘点和整理资源、生成 Obsidian 馆藏与增量 Excel/家庭导航，并按用户提供的学情生成学习计划。Triggers：「整理云盘」「云盘盘点」「更新云盘索引」「更新Excel总索引」「生成家庭导航Excel」「给云盘建图书馆」「用网盘资源做学习计划」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-alipan-curator -y"
+  },
+  {
+    "name": "soia-pkm-alipan-drive-ops",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "阿里云盘原子操作层：安装/登录 aliyunpan、显式 driveId 双盘操作、目录浏览、移动/重命名/删除、下载上传、容量查询、全盘 JSONL 扫描。作为 curator 的底层依赖。Triggers：「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」「云盘登录过期了」「全盘扫描云盘」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-alipan-drive-ops -y"
+  },
+  {
+    "name": "soia-pkm-baidu-netdisk-ops",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "百度网盘原子操作与只读 JSONL 扫描适配。触发：「看下百度网盘」「登录百度网盘」「扫描百度网盘」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-baidu-netdisk-ops -y"
+  },
+  {
+    "name": "soia-pkm-bootstrap-vault-base",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "初始化知识库中立的 Markdown vault 骨架、多 AI 入口与 PKM 闭环，不包含平台特化配置。触发：「初始化知识库」「从零建 Markdown 知识库」「搭通用 vault 骨架」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-bootstrap-vault-base -y"
+  },
+  {
+    "name": "soia-pkm-bootstrap-vault-ima",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "把已有本地 Markdown vault 接入腾讯 ima 知识库消费端：安装客户端、建立目录映射、用 ima 官方 Skills 配置本地文件夹监控同步并验证检索。Triggers：「接入 ima」「同步到 ima 知识库」「配置 ima」「让 ima 监控 vault」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-bootstrap-vault-ima -y"
+  },
+  {
+    "name": "soia-pkm-bootstrap-vault-obsidian",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "配置 Obsidian 作为本地 Markdown 知识库的消费端：安装 Obsidian、启用 Bases、检查 .obsidian 配置和 CSS snippets，并衔接通用 vault base。Triggers：「配置 Obsidian」「装 Obsidian 插件」「Obsidian 特化配置」「启用 Bases」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-bootstrap-vault-obsidian -y"
+  },
+  {
+    "name": "soia-pkm-clip-douyin",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "归档单条抖音视频到 Obsidian vault，并保留本地媒体索引。触发：「归档这条抖音」「clip 这个抖音视频」「只要抖音文案」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-douyin -y"
+  },
+  {
+    "name": "soia-pkm-clip-drive",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "把云盘/本地的存量资料（PDF/Word/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理。Triggers：「导入云盘资料」「把这批 PDF 导进来」「clip 这个文档」「整理云盘」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-drive -y"
+  },
+  {
+    "name": "soia-pkm-clip-github-repo",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "将 GitHub 开源仓库归档为 Obsidian vault 的项目卡和调研笔记。触发：「归档这个项目 URL」「clip 这个 repo」「刷新项目卡」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-github-repo -y"
+  },
+  {
+    "name": "soia-pkm-clip-rednote",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "归档小红书单篇笔记（图文或视频）到 Obsidian vault。纯 stdlib 解析 __INITIAL_STATE__，无需登录；媒体存本地 Downloads，vault 只留轻量 Markdown。Triggers：「归档这条小红书」「clip 这篇小红书笔记」「archive this rednote」「存这篇 rednote」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-rednote -y"
+  },
+  {
+    "name": "soia-pkm-clip-web",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "归档网页或博客文章到 Obsidian vault，并按统一规范落地。触发：「归档这个网页」「clip 这个链接」「存这篇博客」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-web -y"
+  },
+  {
+    "name": "soia-pkm-clip-wechat-account",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "批量归档用户自己管理的微信公众号已发文章到 Obsidian vault。支持官方 API、公众号后台接口、登录态 Cookie 三条路线，并按 url 去重。Triggers：「同步我的公众号」「批量拉取我公众号历史文章」「批量归档我的公众号」「导入公众号已发文章」「clip 我的公众号」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-wechat-account -y"
+  },
+  {
+    "name": "soia-pkm-clip-wechat-article",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "归档单篇微信公众号文章到 Obsidian vault：抓取静态 HTML，提取标题、作者、正文、发布时间和配图，按 clip 家族规范落地；需要 PDF 时优先用 Obsidian 导出。Triggers：「归档这篇公众号」「clip 这个公众号文章」「存这篇微信文章」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-wechat-article -y"
+  },
+  {
+    "name": "soia-pkm-clip-x",
+    "repo": "soia-open-pkm-clip-skills",
+    "description": "归档 X/Twitter 推文、thread、Article 到 Obsidian vault。基于 fxtwitter API，单条零配置；可选同步 Telegram 收藏。需要 PDF 时优先用 Obsidian 导出。Triggers：「归档这条 X」「archive this」「clip 这条推文」「整理这条 thread」「同步我的电报收藏」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-x -y"
+  },
+  {
+    "name": "soia-pkm-distill-article-opinion",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "通过苏格拉底式逐问，把用户对 vault 文章的回答整理成其本人观点，并写入「我的看法」或主题综述。触发：「补我的看法」「炼成观点」「主题观点综述」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-distill-article-opinion -y"
+  },
+  {
+    "name": "soia-pkm-interpret-article-analysis",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "为 vault 长文或论文生成独立 AI 解读，帮助判断是否值得深挖，且不改原文或代写用户观点。触发：「解读这篇」「精读这篇」「值得细读吗」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-interpret-article-analysis -y"
+  },
+  {
+    "name": "soia-pkm-library-book-catalog",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "纯本地、幂等、可重复运行地维护 Obsidian 书库：补建待读记录并重新生成图书馆、阅读记录和按类型总览，不依赖微信读书。Triggers：「重新生成图书馆总览」「更新阅读记录总览」「补建待读记录」「书库整理」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-library-book-catalog -y"
+  },
+  {
+    "name": "soia-pkm-library-weread-sync",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "同步微信读书已读书目与划线到 Obsidian 书库，并调用微信读书 API 补单本书详情。Triggers：「同步微信读书」「同步划线」「同步已读书目」「补一下这本书的详情」「补书详情」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-library-weread-sync -y"
+  },
+  {
+    "name": "soia-pkm-maintain",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "维护 Obsidian vault 的健康状态、全库地图与 AI 会话日志。触发：「vault 周维护」「重建全库地图」「接入会话日志」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-maintain -y"
+  },
+  {
+    "name": "soia-pkm-organize-article-moc",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "将 Obsidian 文章库按元数据、主题双链、月份和两级 MOC 规范化整理。触发：「整理文章库」「重建 MOC」「收藏归类」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-organize-article-moc -y"
+  },
+  {
+    "name": "soia-pkm-reading-plan",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "把书单、主题或观点映射组织成按字数排期的可执行阅读计划，并落为 Obsidian 笔记。触发：「做读书计划」「书单排期」「规划下半年阅读」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-reading-plan -y"
+  },
+  {
+    "name": "soia-pkm-transform-article-notebooklm",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "用 NotebookLM 把文章转换为试卷、闪卡、脑图、播客、学习笔记等学习类产物，降级为本地 Markdown。Triggers：「生成试卷」「做成闪卡」「生成脑图」「做播客」「NotebookLM」「generate quiz」「make flashcards」「mindmap」「podcast」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-transform-article-notebooklm -y"
+  },
+  {
+    "name": "soia-pkm-transform-article-ppt",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "把文章、提纲或主题转换为以可编辑 PPTX 为正式母版的演示媒体包。触发：「做 PPT」「生成 PPTX」「转成课件」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-transform-article-ppt -y"
+  },
+  {
+    "name": "soia-pkm-transform-article-visual",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "把文章转换为长图、信息图、海报、封面、插画等视觉产物。HTML/CSS 截图为本地默认方案，可选 Open Design 或 Codex 图生成。Triggers：「生成长图」「做成信息图」「转成海报」「生成封面」「做成图片」「export visual」「make infographic」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-transform-article-visual -y"
+  },
+  {
+    "name": "soia-pkm-transform-obsidian-pdf",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint。Triggers：「转成PDF」「导出PDF」「归档并转PDF」「生成PDF」「export PDF」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-transform-obsidian-pdf -y"
+  },
+  {
+    "name": "soia-pkm-translate-article-zh",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "将外文文章按 quick、normal 或 refined 模式翻译成独立中文稿，保持术语一致且不覆盖原文。触发：「翻译这篇」「精翻」「继续润色」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-translate-article-zh -y"
+  },
+  {
+    "name": "soia-safe-audit-fix-codebase",
+    "repo": "soia-open-safe-skills",
+    "description": "接收本地代码库路径，先以只读方式完成架构、依赖、攻击面、配置和代码安全审计，输出带 file:line 证据的整体项目报告与修复批次预览；只有客户明确确认具体 Finding、文件范围和测试计划后，才调用修复闭环修改代码并完成直接测试、回归与复核。用于“审计这个项目”“扫描代码安全问题”“给代码路径出安全报告”“确认后修复并测试”等场景。",
+    "install_cmd": "npx skills add soia-team/soia-open-safe-skills -g -a '*' -s soia-safe-audit-fix-codebase -y"
+  },
+  {
+    "name": "soia-safe-track-vulnerability-intel",
+    "repo": "soia-open-safe-skills",
+    "description": "聚合、去重并核验公开安全漏洞情报，按时间窗、技术栈或资产清单生成带来源覆盖、影响条件、优先级、检测与修复建议的专业报告。用于“收录安全漏洞”“漏洞日报/周报”“跟踪 CVE/GHSA/KEV”“分析某个漏洞”“根据 SBOM 生成漏洞报告”等场景；不得把有限来源称为全互联网完整收录。",
+    "install_cmd": "npx skills add soia-team/soia-open-safe-skills -g -a '*' -s soia-safe-track-vulnerability-intel -y"
+  }
+]

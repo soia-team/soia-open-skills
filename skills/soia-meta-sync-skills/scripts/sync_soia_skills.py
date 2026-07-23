@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -39,6 +40,13 @@ class Target:
     id: str
     label: str
     path: Path
+
+
+@dataclass
+class SyncConfig:
+    source_dir: str | None
+    targets: list[str]
+    excludes: dict[str, list[str]]
 
 
 TARGETS = {
@@ -92,6 +100,149 @@ def display_path(path: Path) -> str:
 
 def default_source_dir() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def default_config_file() -> Path:
+    override = os.environ.get("SOIA_META_SYNC_SKILLS_CONFIG_FILE")
+    if override:
+        return Path(override).expanduser()
+    if os.name == "nt" and os.environ.get("APPDATA"):
+        base = Path(os.environ["APPDATA"])
+    else:
+        base = Path.home() / ".config"
+    return base / "soia-skills" / "soia-meta-sync-skills" / "config.yml"
+
+
+def clean_config_scalar(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        if value[0] == '"':
+            try:
+                parsed = json.loads(value)
+            except json.JSONDecodeError:
+                return value[1:-1]
+            return parsed if isinstance(parsed, str) else value[1:-1]
+        return value[1:-1].replace("''", "'")
+    return value
+
+
+def parse_inline_config_list(value: str) -> list[str]:
+    value = value.strip()
+    if not value:
+        return []
+    if not (value.startswith("[") and value.endswith("]")):
+        raise ValueError(f"expected an inline YAML list, got: {value}")
+    inner = value[1:-1].strip()
+    if not inner:
+        return []
+    return [clean_config_scalar(item) for item in inner.split(",") if item.strip()]
+
+
+def split_config_mapping(value: str) -> tuple[str, str] | None:
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(value):
+        if escaped:
+            escaped = False
+            continue
+        if quote == '"' and char == "\\":
+            escaped = True
+            continue
+        if char in {"'", '"'}:
+            if quote == char:
+                quote = None
+            elif quote is None:
+                quote = char
+            continue
+        if char == ":" and quote is None:
+            return value[:index], value[index + 1:]
+    return None
+
+
+def load_config(path: Path) -> SyncConfig:
+    if not path.is_file():
+        return SyncConfig(None, [], {})
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError) as exc:
+        raise ValueError(f"cannot read config file {display_path(path)}: {exc}") from exc
+
+    source_dir: str | None = None
+    targets: list[str] = []
+    excludes: dict[str, list[str]] = {}
+    section: str | None = None
+    exclude_target: str | None = None
+    for line_no, raw in enumerate(lines, start=1):
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        indent = len(raw) - len(raw.lstrip(" "))
+        stripped = raw.strip()
+        if indent == 0:
+            section = None
+            exclude_target = None
+            mapping = split_config_mapping(stripped)
+            if mapping is None:
+                raise ValueError(f"invalid config line {line_no}: expected key: value")
+            key, value = mapping
+            key = key.strip()
+            value = value.strip()
+            if key == "source_dir":
+                source_dir = clean_config_scalar(value) or None
+            elif key in {"targets", "excludes"}:
+                section = key
+                if value and value != "{}":
+                    raise ValueError(f"invalid config line {line_no}: {key} must be a YAML block")
+            continue
+        if section == "targets" and stripped.startswith("- "):
+            target = clean_config_scalar(stripped[2:])
+            if target:
+                targets.append(target)
+            continue
+        if section == "excludes":
+            mapping = split_config_mapping(stripped)
+            if indent == 2 and mapping is not None:
+                raw_target, value = mapping
+                exclude_target = clean_config_scalar(raw_target)
+                if not exclude_target:
+                    raise ValueError(f"invalid config line {line_no}: empty exclude target")
+                excludes[exclude_target] = parse_inline_config_list(value)
+                continue
+            if indent >= 4 and stripped.startswith("- ") and exclude_target:
+                skill = clean_config_scalar(stripped[2:])
+                if skill:
+                    excludes[exclude_target].append(skill)
+                continue
+        raise ValueError(f"invalid config line {line_no}: unsupported YAML shape")
+
+    for target, names in excludes.items():
+        invalid = [name for name in names if not is_managed_soia_skill(name)]
+        if invalid:
+            raise ValueError(
+                f"config excludes for {target} contain non-SOIA names: {', '.join(invalid)}"
+            )
+        excludes[target] = list(dict.fromkeys(names))
+    return SyncConfig(source_dir, list(dict.fromkeys(targets)), excludes)
+
+
+def save_config(path: Path, config: SyncConfig) -> None:
+    lines = ["# User-owned defaults. CLI arguments take precedence.", "schema_version: 3"]
+    if config.source_dir:
+        lines.append(f"source_dir: {json.dumps(config.source_dir, ensure_ascii=False)}")
+    if config.targets:
+        lines.append("targets:")
+        lines.extend(f"  - {json.dumps(target, ensure_ascii=False)}" for target in config.targets)
+    lines.append("excludes:")
+    if config.excludes:
+        for target in sorted(config.excludes):
+            lines.append(f"  {json.dumps(target, ensure_ascii=False)}:")
+            lines.extend(
+                f"    - {json.dumps(skill, ensure_ascii=False)}"
+                for skill in sorted(set(config.excludes[target]))
+            )
+    else:
+        lines[-1] = "excludes: {}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 # Audit log: this sync tool creates/replaces symlinks and removes retired or
@@ -160,6 +311,14 @@ def selected_targets(tokens: list[str]) -> list[Target]:
         seen.add(resolved)
         deduped.append(target)
     return deduped
+
+
+def target_config_key(target: Target) -> str:
+    target_path = target.path.resolve(strict=False)
+    for target_id, known in TARGETS.items():
+        if expanded(known.path).resolve(strict=False) == target_path:
+            return target_id
+    return display_path(target.path)
 
 
 def ensure_not_source_target(source_dir: Path, targets: list[Target]) -> None:
@@ -353,11 +512,14 @@ def sync(
     dry_run: bool,
     cleanup_retired: bool = True,
     prune: bool = True,
+    excludes_by_target: dict[str, set[str]] | None = None,
 ) -> int:
     linked = 0
     cleaned = 0
     overwritten = 0
     created_targets = 0
+    excluded_unlinked = 0
+    excludes_by_target = excludes_by_target or {}
 
     # Audit log setup happens before any stdout output; log content is additive
     # and never changes what already gets printed below.
@@ -379,6 +541,11 @@ def sync(
     for target in targets:
         print(f"\n[{target.id}] {target.label}: {display_path(target.path)}")
         audit_lines.append(f"target {target.id}: {target.path}")
+        target_excludes = excludes_by_target.get(target_config_key(target), set())
+        target_skills = [skill for skill in skills if skill not in target_excludes]
+        if target_excludes:
+            print(f"  excludes: {', '.join(sorted(target_excludes))}")
+            audit_lines.append(f"  excludes: {', '.join(sorted(target_excludes))}")
         if not target.path.exists():
             created_targets += 1
             print("  create target directory")
@@ -394,7 +561,19 @@ def sync(
                     print(f"  remove retired: {retired}")
                     audit_lines.append(f"  removed retired entry: {retired_path}")
 
-        for skill in skills:
+        for skill in sorted(target_excludes):
+            excluded_path = target.path / skill
+            if excluded_path.is_symlink():
+                if not dry_run:
+                    excluded_path.unlink()
+                excluded_unlinked += 1
+                print(f"  unlink excluded: {skill}")
+                audit_lines.append(f"  unlinked excluded symlink: {excluded_path}")
+            elif existing_path(excluded_path):
+                print(f"  keep excluded non-symlink: {skill}")
+                audit_lines.append(f"  kept excluded non-symlink: {excluded_path}")
+
+        for skill in target_skills:
             source = source_dir / skill
             dest = target.path / skill
             replaced = remove_path(dest, dry_run)
@@ -411,7 +590,7 @@ def sync(
             linked += 1
 
         if prune:
-            planned_names = set(skills)
+            planned_names = set(target_skills) | target_excludes
             if cleanup_retired:
                 planned_names.update(RETIRED_SKILLS)
             for dangling_path in prune_dangling_soia_symlinks(
@@ -426,6 +605,7 @@ def sync(
     print(f"- retired dirs cleaned: {cleaned}")
     print(f"- overwritten skill entries: {overwritten}")
     print(f"- symlinked skill entries: {linked}")
+    print(f"- excluded symlinks removed: {excluded_unlinked}")
     print("- unrelated target entries: untouched")
 
     audit_lines.append(
@@ -433,7 +613,8 @@ def sync(
         f"target_dirs_created={created_targets} "
         f"retired_dirs_cleaned={cleaned} "
         f"overwritten_skill_entries={overwritten} "
-        f"symlinked_skill_entries={linked}"
+        f"symlinked_skill_entries={linked} "
+        f"excluded_symlinks_removed={excluded_unlinked}"
     )
     log_dir.mkdir(parents=True, exist_ok=True)
     # Microseconds prevent a dry-run followed immediately by write mode from
@@ -453,10 +634,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--source-dir",
-        default=str(default_source_dir()),
         help=(
-            "Directory containing SOIA skill folders. Defaults to the installed shared skill "
-            "directory inferred from this script, or this repo's skills/ directory when run in source."
+            "Directory containing SOIA skill folders. CLI overrides config; otherwise defaults "
+            "to the installed shared skill directory inferred from this script."
         ),
     )
     parser.add_argument(
@@ -468,6 +648,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--skills",
         action="append",
         help="Comma-separated managed skill names to sync. Omit for the full discovered set.",
+    )
+    parser.add_argument(
+        "--exclude-skills",
+        action="append",
+        help=(
+            "Comma-separated soia-* skill names to skip and unlink for every selected target "
+            "in this run."
+        ),
+    )
+    parser.add_argument(
+        "--save-excludes",
+        action="store_true",
+        help="Merge --exclude-skills into the private config for each selected target.",
+    )
+    parser.add_argument(
+        "--config-file",
+        type=Path,
+        help="Private config path; overrides SOIA_META_SYNC_SKILLS_CONFIG_FILE and the default.",
     )
     parser.add_argument(
         "--optional",
@@ -506,6 +704,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    config_path = (args.config_file or default_config_file()).expanduser()
+    try:
+        config = load_config(config_path)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
     if args.list_targets:
         for target_id in DEFAULT_ORDER:
             target = target_from_token(target_id)
@@ -513,13 +718,28 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{target.id:10} {display_path(target.path):34} {exists}  {target.label}")
         return 0
 
-    source_dir = expanded(Path(args.source_dir))
+    source_value = args.source_dir or config.source_dir or str(default_source_dir())
+    source_dir = expanded(Path(source_value))
     if not source_dir.is_dir():
         print(f"error: source-dir is not a directory: {source_dir}", file=sys.stderr)
         return 2
 
     discovered_skills = discover_skills(source_dir, args.optional)
     requested_skill_tokens = parse_target_tokens(args.skills)
+    cli_excludes = parse_target_tokens(args.exclude_skills)
+    invalid_excludes = [name for name in cli_excludes if not is_managed_soia_skill(name)]
+    if invalid_excludes:
+        print(
+            f"error: --exclude-skills accepts only soia-* names: {', '.join(invalid_excludes)}",
+            file=sys.stderr,
+        )
+        return 2
+    if args.save_excludes and not cli_excludes:
+        print("error: --save-excludes requires --exclude-skills", file=sys.stderr)
+        return 2
+    if args.save_excludes and args.dry_run:
+        print("error: --save-excludes cannot be combined with --dry-run", file=sys.stderr)
+        return 2
     try:
         skills = select_skills(discovered_skills, requested_skill_tokens)
     except ValueError as exc:
@@ -554,13 +774,31 @@ def main(argv: list[str] | None = None) -> int:
             print(skill)
         return 0
 
-    tokens = parse_target_tokens(args.targets)
+    cli_target_tokens = parse_target_tokens(args.targets)
+    tokens = cli_target_tokens or config.targets
     try:
         targets = selected_targets(tokens)
         ensure_not_source_target(source_dir, targets)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+
+    excludes_by_target: dict[str, set[str]] = {}
+    for target in targets:
+        key = target_config_key(target)
+        persistent = set(config.excludes.get(key, []))
+        excludes_by_target[key] = persistent | set(cli_excludes)
+
+    if args.save_excludes:
+        for target in targets:
+            key = target_config_key(target)
+            config.excludes[key] = sorted(excludes_by_target[key])
+        try:
+            save_config(config_path, config)
+        except OSError as exc:
+            print(f"error: cannot save config file {display_path(config_path)}: {exc}", file=sys.stderr)
+            return 2
+        print(f"saved excludes: {display_path(config_path)}")
 
     return sync(
         source_dir,
@@ -569,6 +807,7 @@ def main(argv: list[str] | None = None) -> int:
         args.dry_run,
         cleanup_retired=not bool(requested_skill_tokens),
         prune=not args.no_prune,
+        excludes_by_target=excludes_by_target,
     )
 
 
