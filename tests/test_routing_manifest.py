@@ -54,6 +54,19 @@ class RoutingManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate public skill names"):
             MODULE.build_manifest(payloads, ("repo-a", "repo-b"))
 
+    def test_router_entry_point_is_not_its_own_route_target(self) -> None:
+        entries = MODULE.entries_from_contents(
+            "soia-open-skills",
+            [
+                {"name": "soia-meta-find-skill", "type": "dir"},
+                {"name": "soia-meta-prompt-clarity", "type": "dir"},
+            ],
+        )
+        self.assertEqual(
+            [entry["skill_name"] for entry in entries],
+            ["soia-meta-prompt-clarity"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -114,12 +114,6 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-dev-run-ops-inspection",
-    "repo": "soia-open-dev-infra-skills",
-    "skillPath": "skills/soia-dev-run-ops-inspection",
-    "visibility": "public"
-  },
-  {
     "skill_name": "soia-dev-task-execute",
     "repo": "soia-open-dev-coding-skills",
     "skillPath": "skills/soia-dev-task-execute",
@@ -127,7 +121,7 @@
   },
   {
     "skill_name": "soia-dev-terminal-ops",
-    "repo": "soia-open-dev-infra-skills",
+    "repo": "soia-open-dev-coding-skills",
     "skillPath": "skills/soia-dev-terminal-ops",
     "visibility": "public"
   },
@@ -441,18 +435,6 @@
     "skill_name": "soia-pkm-translate-article-zh",
     "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-translate-article-zh",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-safe-audit-fix-codebase",
-    "repo": "soia-open-safe-skills",
-    "skillPath": "skills/soia-safe-audit-fix-codebase",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-safe-track-vulnerability-intel",
-    "repo": "soia-open-safe-skills",
-    "skillPath": "skills/soia-safe-track-vulnerability-intel",
     "visibility": "public"
   }
 ]

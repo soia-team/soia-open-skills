@@ -114,12 +114,6 @@
     "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-review-panel -y"
   },
   {
-    "name": "soia-dev-run-ops-inspection",
-    "repo": "soia-open-dev-infra-skills",
-    "description": "执行系统巡检、日检清单、异常上报与恢复通告，并按日归档巡检结果；适用于 SRE 例行运维检查。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-infra-skills -g -a '*' -s soia-dev-run-ops-inspection -y"
-  },
-  {
     "name": "soia-dev-task-execute",
     "repo": "soia-open-dev-coding-skills",
     "description": "执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务。",
@@ -127,9 +121,9 @@
   },
   {
     "name": "soia-dev-terminal-ops",
-    "repo": "soia-open-dev-infra-skills",
+    "repo": "soia-open-dev-coding-skills",
     "description": "管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；在终止进程前用日志、CPU、网络等多信号交叉判断，并执行 TERM→复查→KILL 确认门。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-infra-skills -g -a '*' -s soia-dev-terminal-ops -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-terminal-ops -y"
   },
   {
     "name": "soia-edu-compose-lesson-plan",
@@ -442,17 +436,5 @@
     "repo": "soia-open-pkm-vault-skills",
     "description": "将外文文章按 quick、normal 或 refined 模式翻译成独立中文稿，保持术语一致且不覆盖原文。触发：「翻译这篇」「精翻」「继续润色」",
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-translate-article-zh -y"
-  },
-  {
-    "name": "soia-safe-audit-fix-codebase",
-    "repo": "soia-open-safe-skills",
-    "description": "接收本地代码库路径，先以只读方式完成架构、依赖、攻击面、配置和代码安全审计，输出带 file:line 证据的整体项目报告与修复批次预览；只有客户明确确认具体 Finding、文件范围和测试计划后，才调用修复闭环修改代码并完成直接测试、回归与复核。用于“审计这个项目”“扫描代码安全问题”“给代码路径出安全报告”“确认后修复并测试”等场景。",
-    "install_cmd": "npx skills add soia-team/soia-open-safe-skills -g -a '*' -s soia-safe-audit-fix-codebase -y"
-  },
-  {
-    "name": "soia-safe-track-vulnerability-intel",
-    "repo": "soia-open-safe-skills",
-    "description": "聚合、去重并核验公开安全漏洞情报，按时间窗、技术栈或资产清单生成带来源覆盖、影响条件、优先级、检测与修复建议的专业报告。用于“收录安全漏洞”“漏洞日报/周报”“跟踪 CVE/GHSA/KEV”“分析某个漏洞”“根据 SBOM 生成漏洞报告”等场景；不得把有限来源称为全互联网完整收录。",
-    "install_cmd": "npx skills add soia-team/soia-open-safe-skills -g -a '*' -s soia-safe-track-vulnerability-intel -y"
   }
 ]

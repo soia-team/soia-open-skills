@@ -31,7 +31,7 @@ PLUGIN_DEFINITIONS = (
     PluginDefinition(
         "soia-open-dev-coding-skills",
         "soia-dev-coding",
-        "开发编码技能：工程协议、代码审查、缺陷修复、任务执行与 AI 派发",
+        "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
         "Developer Tools",
     ),
     PluginDefinition(
@@ -56,18 +56,6 @@ PLUGIN_DEFINITIONS = (
         "soia-open-dev-release-skills",
         "soia-dev-release",
         "发布技能：发布清单、灰度验证与回滚预案",
-        "Developer Tools",
-    ),
-    PluginDefinition(
-        "soia-open-dev-infra-skills",
-        "soia-dev-infra",
-        "基础设施与运维技能：终端长任务诊断、系统巡检",
-        "Developer Tools",
-    ),
-    PluginDefinition(
-        "soia-open-safe-skills",
-        "soia-safe",
-        "安全技能：代码安全审计与漏洞情报跟踪",
         "Developer Tools",
     ),
     PluginDefinition(

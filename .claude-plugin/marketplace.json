@@ -7,11 +7,11 @@
   "plugins": [
     {
       "name": "soia-dev-coding",
-      "description": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行与 AI 派发",
+      "description": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-dev-coding-skills",
-        "sha": "4ad5a6df0902de00b5ffed95d3f29c40e8ffb022"
+        "sha": "bc2f7391864122501af6d2a20a803931f608d511"
       }
     },
     {
@@ -48,24 +48,6 @@
         "source": "github",
         "repo": "soia-team/soia-open-dev-release-skills",
         "sha": "b93821e1b1d7d241331a6e9bdd0d7a7841ca89ce"
-      }
-    },
-    {
-      "name": "soia-dev-infra",
-      "description": "基础设施与运维技能：终端长任务诊断、系统巡检",
-      "source": {
-        "source": "github",
-        "repo": "soia-team/soia-open-dev-infra-skills",
-        "sha": "a51fa94f93ce74e8c7e68fcbb52294d8f44043b5"
-      }
-    },
-    {
-      "name": "soia-safe",
-      "description": "安全技能：代码安全审计与漏洞情报跟踪",
-      "source": {
-        "source": "github",
-        "repo": "soia-team/soia-open-safe-skills",
-        "sha": "00a2ba5daf1c375a8007a5e67ad6a5d2765ea1f0"
       }
     },
     {
