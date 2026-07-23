@@ -1,0 +1,29 @@
+{
+  "name": "soia-meta",
+  "version": "0.1.0",
+  "description": "SOIA 技能生态门户：规范真源、技能目录与跨仓路由清单。",
+  "author": {
+    "name": "SOIA Team",
+    "url": "https://github.com/soia-team"
+  },
+  "homepage": "https://github.com/soia-team/soia-open-skills",
+  "repository": "https://github.com/soia-team/soia-open-skills",
+  "license": "MIT",
+  "keywords": ["soia", "skills", "meta", "routing"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SOIA 元技能库",
+    "shortDescription": "SOIA 生态规范、技能目录与跨仓路由。",
+    "longDescription": "提供 SOIA 公开技能生态的共享规范、路由检索与发布收尾工作流。",
+    "developerName": "SOIA Team",
+    "category": "Developer Tools",
+    "capabilities": ["Discover", "Guide", "Write"],
+    "websiteURL": "https://github.com/soia-team/soia-open-skills",
+    "defaultPrompt": [
+      "帮我查找适合当前任务的 SOIA 技能。",
+      "帮我把这段需求整理成可执行提示词。",
+      "帮我检查 SOIA 技能发布后的本机安装状态。"
+    ],
+    "brandColor": "#1D4ED8"
+  }
+}
