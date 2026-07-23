@@ -115,7 +115,7 @@
   },
   {
     "skill_name": "soia-dev-run-ops-inspection",
-    "repo": "soia-open-dev-ts-skills",
+    "repo": "soia-open-dev-infra-skills",
     "skillPath": "skills/soia-dev-run-ops-inspection",
     "visibility": "public"
   },
@@ -127,7 +127,7 @@
   },
   {
     "skill_name": "soia-dev-terminal-ops",
-    "repo": "soia-open-dev-ts-skills",
+    "repo": "soia-open-dev-infra-skills",
     "skillPath": "skills/soia-dev-terminal-ops",
     "visibility": "public"
   },
