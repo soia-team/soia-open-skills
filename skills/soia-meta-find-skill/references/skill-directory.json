@@ -19,15 +19,15 @@
   },
   {
     "name": "soia-dev-agent-cli-dispatch",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "外部 AI CLI 调度与模型路由，支持受控派活与用量回执。触发：「派活给外部 AI」「调用 agy」「多 CLI 派发」",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-agent-cli-dispatch -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-agent-cli-dispatch -y"
   },
   {
     "name": "soia-dev-agent-md-advisor",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "AI 项目指令与配置设计顾问，提供诊断、起草和改写建议。触发：「审查我的 AGENTS.md」「CLAUDE.md 怎么写」「多个 AI 入口怎么管」",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-agent-md-advisor -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-agent-md-advisor -y"
   },
   {
     "name": "soia-dev-archify-diagrams",
@@ -37,9 +37,9 @@
   },
   {
     "name": "soia-dev-coding-protocol",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "为普通工程代码改动建立最小范围、验证前置、anti-fake-fix 与写后复核契约；适用于修复、重构、实现和评审。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-coding-protocol -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-coding-protocol -y"
   },
   {
     "name": "soia-dev-design-draft-prd",
@@ -55,9 +55,9 @@
   },
   {
     "name": "soia-dev-doc-sync",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "审计并修复任意代码仓的 docs、README、CHANGELOG、VERSION 与明确真源之间的事实漂移；先建立真源优先级与证据，再按依赖顺序同步派生文档。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-doc-sync -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-doc-sync -y"
   },
   {
     "name": "soia-dev-drawio-visio-diagrams",
@@ -67,15 +67,15 @@
   },
   {
     "name": "soia-dev-fix-loop",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "用五步闭环处理代码审查或测试发现：复现、决策、修复、回归复核与回执，防止遗漏、假修复和无证据收口。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-fix-loop -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-fix-loop -y"
   },
   {
     "name": "soia-dev-github-ops",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "GitHub gh CLI 运维、PR 合规审查与修复。触发：「查 CI 挂了」「发 release」「加协作者权限」",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-github-ops -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-github-ops -y"
   },
   {
     "name": "soia-dev-officecli-ops",
@@ -91,39 +91,39 @@
   },
   {
     "name": "soia-dev-project-scaffold",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "为任意新 Git 项目生成最小 AI 协作基线：可编辑的 AGENTS.md 和 docs 导航目录；在写入前确认目标路径。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-project-scaffold -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-project-scaffold -y"
   },
   {
     "name": "soia-dev-release-plan-checklist",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "为互联网软件发版生成发布清单、预检门、灰度验证与发布后核对；适用于上线、部署、回滚规划。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-release-plan-checklist -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-release-plan-checklist -y"
   },
   {
     "name": "soia-dev-review-panel",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "Multi-lens, adversarially-verified review of a code diff or skill package. Never edits/merges/publishes. Triggers：「多角度审一下这个改动」「用几个视角复查」「对抗式复核一下」「审一下这个技能包」",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-review-panel -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-review-panel -y"
   },
   {
     "name": "soia-dev-task-execute",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-task-execute -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-task-execute -y"
   },
   {
     "name": "soia-dev-terminal-ops",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；在终止进程前用日志、CPU、网络等多信号交叉判断，并执行 TERM→复查→KILL 确认门。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-terminal-ops -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-terminal-ops -y"
   },
   {
     "name": "soia-dev-test-draft-doc",
-    "repo": "soia-open-dev-coding-skills",
+    "repo": "soia-open-dev-skills",
     "description": "从需求、PRD 或变更说明生成测试计划、测试用例与验收对照；适用于测试设计、回归清单和质量评审。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-test-draft-doc -y"
+    "install_cmd": "npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-test-draft-doc -y"
   },
   {
     "name": "soia-edu-compose-lesson-plan",

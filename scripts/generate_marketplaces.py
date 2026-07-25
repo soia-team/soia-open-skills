@@ -30,7 +30,7 @@ class PluginDefinition(NamedTuple):
 # and only main-branch revisions require live GitHub lookups.
 PLUGIN_DEFINITIONS = (
     PluginDefinition(
-        "soia-open-dev-coding-skills",
+        "soia-open-dev-skills",
         "soia-dev-coding",
         "开发编码技能库",
         "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",

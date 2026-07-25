@@ -24,7 +24,7 @@ npx skills add soia-team/soia-open-media-content-skills -g -a '*' -y
 
 ```bash
 npx skills add soia-team/soia-open-skills -g -a '*' -y
-npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -y
+npx skills add soia-team/soia-open-dev-skills -g -a '*' -y
 npx skills add soia-team/soia-open-dev-design-skills -g -a '*' -y
 ```
 

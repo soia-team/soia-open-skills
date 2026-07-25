@@ -76,7 +76,7 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s '*' -y
 ```bash
 repos=(
   soia-open-cwork-office-skills
-  soia-open-dev-coding-skills
+  soia-open-dev-skills
   soia-open-dev-design-skills
   soia-open-edu-course-skills
   soia-open-env-skills
