@@ -52,7 +52,7 @@ class FindSkillRouterTests(unittest.TestCase):
                     [
                         {
                             "name": "soia-pkm-clip-remote",
-                            "repo": "soia-open-pkm-clip-skills",
+                            "repo": "soia-open-pkm-vault-skills",
                             "description": "剪藏网页",
                             "install_cmd": "npx skills add remote",
                         }
@@ -75,7 +75,7 @@ class FindSkillRouterTests(unittest.TestCase):
             entries = [
                 {
                     "name": f"soia-pkm-clip-example-{index}",
-                    "repo": "soia-open-pkm-clip-skills",
+                    "repo": "soia-open-pkm-vault-skills",
                     "description": f"剪藏资源示例 {index}",
                     "install_cmd": f"npx skills add example-{index}",
                 }

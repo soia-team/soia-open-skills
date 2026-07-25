@@ -19,16 +19,12 @@ The public SOIA Skills portal for shared specifications, ecosystem navigation, t
 |---|---|
 | [`soia-open-skills`](https://github.com/soia-team/soia-open-skills) | Ecosystem portal, shared specifications, public routing, and meta skills. |
 | [`soia-open-env-skills`](https://github.com/soia-team/soia-open-env-skills) | Development-environment diagnosis, installation, and upgrade support. |
-| [`soia-open-pkm-clip-skills`](https://github.com/soia-team/soia-open-pkm-clip-skills) | Clipping and importing web, social, and cloud-drive material. |
-| [`soia-open-pkm-vault-skills`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Markdown knowledge-base bootstrap, organization, distillation, transformation, and library maintenance. |
+| [`soia-open-pkm-vault-skills`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Clipping and importing web, social, and cloud-drive material, plus Markdown knowledge-base bootstrap, organization, distillation, transformation, and library maintenance. |
 | [`soia-open-media-content-skills`](https://github.com/soia-team/soia-open-media-content-skills) | Article creation, cover production, and multi-platform content publishing. |
 | [`soia-open-cwork-office-skills`](https://github.com/soia-team/soia-open-cwork-office-skills) | Integrations for collaborative office tools and document services. |
-| [`soia-open-dev-coding-skills`](https://github.com/soia-team/soia-open-dev-coding-skills) | Coding, task execution, code review, fixes, GitHub, and terminal operations (10 public skills). |
-| [`soia-open-dev-design-skills`](https://github.com/soia-team/soia-open-dev-design-skills) | Open Design, architecture diagrams, charting, and Office design workflows. |
+| [`soia-open-dev-coding-skills`](https://github.com/soia-team/soia-open-dev-coding-skills) | Coding, task execution, code review, fixes, GitHub, terminal operations, testing, and software release. |
+| [`soia-open-dev-design-skills`](https://github.com/soia-team/soia-open-dev-design-skills) | Open Design, architecture diagrams, charting, Office design, and product-requirement workflows. |
 | [`soia-open-edu-course-skills`](https://github.com/soia-team/soia-open-edu-course-skills) | Course outlines, teaching materials, and assessment design. |
-| [`soia-open-dev-product-skills`](https://github.com/soia-team/soia-open-dev-product-skills) | Product requirements, user stories, and requirements-review workflows. |
-| [`soia-open-dev-testing-skills`](https://github.com/soia-team/soia-open-dev-testing-skills) | Test cases, test documentation, and quality-assurance workflows. |
-| [`soia-open-dev-release-skills`](https://github.com/soia-team/soia-open-dev-release-skills) | Software release checklists, preflight checks, and release verification. |
 
 The complete machine-readable skill catalog is [`routing/routing-manifest.json`](routing/routing-manifest.json).
 
@@ -38,16 +34,16 @@ The complete machine-readable skill catalog is [`routing/routing-manifest.json`]
 
 ### Plugin method (recommended)
 
-Plugins install and toggle a domain-sized group of skills. For example, install the knowledge-clipping plugin:
+Plugins install and toggle a domain-sized group of skills. For example, install the knowledge-base plugin:
 
 ```bash
 claude plugin marketplace add soia-team/soia-open-skills
-/plugin install soia-pkm-clip@soia
+/plugin install soia-pkm-vault@soia
 
 codex plugin marketplace add soia-team/soia-open-skills
-codex plugin add soia-pkm-clip@soia
+codex plugin add soia-pkm-vault@soia
 
-qwen extensions install https://github.com/soia-team/soia-open-skills:soia-pkm-clip
+qwen extensions install https://github.com/soia-team/soia-open-skills:soia-pkm-vault
 ```
 
 Use `claude plugin enable`, `claude plugin disable`, and `claude plugin update` to manage installed Claude plugins.
@@ -74,7 +70,7 @@ For installation sets organized by machine role, see [`docs/install-profiles.md`
 
 - [`SKILL_SPEC.md`](SKILL_SPEC.md): skill structure, naming, frontmatter, and validation requirements.
 - [`DATA_STORAGE_SPEC.md`](DATA_STORAGE_SPEC.md): storage boundaries for configuration, credentials, state, caches, and outputs.
-- [`docs/install-guide.en.md`](docs/install-guide.en.md): complete installation guide by method and AI agent.
+- [`docs/install-guide.en.md`](docs/install-guide.en.md): navigation entry for the modular installation guide.
 - [`docs/install-profiles.md`](docs/install-profiles.md): installation profiles by use case.
 - [`docs/plugin-dev.md`](docs/plugin-dev.md): Codex local-plugin iteration and portal refresh after domain-plugin releases.
 

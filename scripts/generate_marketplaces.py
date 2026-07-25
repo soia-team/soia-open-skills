@@ -44,38 +44,10 @@ PLUGIN_DEFINITIONS = (
         "Creativity",
     ),
     PluginDefinition(
-        "soia-open-dev-product-skills",
-        "soia-dev-product",
-        "产品需求技能库",
-        "产品需求技能：PRD 起草、用户故事与验收标准",
-        "Productivity",
-    ),
-    PluginDefinition(
-        "soia-open-dev-testing-skills",
-        "soia-dev-testing",
-        "测试质量技能库",
-        "测试技能：测试计划、用例设计与回归清单",
-        "Developer Tools",
-    ),
-    PluginDefinition(
-        "soia-open-dev-release-skills",
-        "soia-dev-release",
-        "发布运维技能库",
-        "发布技能：发布清单、灰度验证与回滚预案",
-        "Developer Tools",
-    ),
-    PluginDefinition(
         "soia-open-cwork-office-skills",
         "soia-cwork-office",
         "办公协作技能库",
         "办公协作技能：飞书知识库与云盘、ProcessOn 图表",
-        "Productivity",
-    ),
-    PluginDefinition(
-        "soia-open-pkm-clip-skills",
-        "soia-pkm-clip",
-        "知识剪藏技能库",
-        "知识剪藏与网盘技能：网页、公众号、X、抖音、小红书、GitHub 归档与云盘操作",
         "Productivity",
     ),
     PluginDefinition(

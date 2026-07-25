@@ -1,6 +1,6 @@
 # 分域安装配置
 
-[完整安装指南](install-guide.md) · [English installation guide](install-guide.en.md)
+[完整安装指南](install/README.md) · [English installation guide](install/README.en.md)
 
 按机器的主要用途安装必要仓库，减少所有宿主启动时需要索引的技能描述。以下命令均从远端仓库安装到用户级；`-a '*'` 表示写入所有受支持的 agent 目标，`-y` 跳过交互确认。
 
@@ -8,7 +8,7 @@
 
 | 场景 | 安装范围 | 适合任务 |
 |---|---|---|
-| 写作机 | PKM 剪藏 + PKM vault + media | 收集素材、整理知识库、写作与发布 |
+| 写作机 | PKM vault + media | 收集素材、整理知识库、写作与发布 |
 | 编码机 | meta + dev coding + dev design | 编码闭环、终端操作与设计资产 |
 | 教育机 | edu + PKM vault 精选子集 | 课程大纲、教案、阅读计划与教学资料整理 |
 | 最小 | 3 个 meta 技能 | 提示词澄清、技能同步与发布收尾 |
@@ -16,7 +16,6 @@
 ### 写作机
 
 ```bash
-npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -y
 npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -y
 npx skills add soia-team/soia-open-media-content-skills -g -a '*' -y
 ```
