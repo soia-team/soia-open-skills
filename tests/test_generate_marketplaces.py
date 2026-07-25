@@ -68,7 +68,7 @@ class MarketplaceGenerationTests(unittest.TestCase):
         self.assertEqual(claude["owner"], {"name": "soia-team"})
         self.assertEqual(len(claude["plugins"]), 2)
         external = claude["plugins"][0]
-        self.assertEqual(external["name"], "soia-dev-coding")
+        self.assertEqual(external["name"], "soia-dev")
         self.assertEqual(external["source"]["source"], "github")
         self.assertEqual(external["source"]["sha"], self.SHA)
         self.assertRegex(external["source"]["sha"], r"^[0-9a-f]{40}$")

@@ -12,7 +12,7 @@
 
 - `<仓库名>`：例如 `soia-open-skills`、`soia-open-dev-skills`。
 - `<技能名>`：例如 `soia-meta-prompt-clarity`。
-- `<域插件名>`：例如 `soia-pkm-vault`、`soia-dev-coding`。
+- `<域插件名>`：例如 `soia-pkm-vault`、`soia-dev`。
 
 ## 通用方案（推荐起点）
 
