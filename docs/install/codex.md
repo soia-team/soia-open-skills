@@ -5,7 +5,7 @@ Codex 直接读取共享真源 `~/.agents/skills`，npx 安装后立即可用；
 ## 路线 A：npx 安装技能
 
 ```bash
-npx skills add soia-team/soia-open-dev-skills -g -a codex -s soia-dev-protocol -y
+npx skills add soia-team/soia-open-dev-skills -g -a codex -s soia-dev-coding-protocol -y
 ```
 
 技能本体写入 `~/.agents/skills`，Codex 从该目录直接读取，无需额外同步步骤。
