@@ -19,16 +19,12 @@ SOIA Skills 的公开生态门户：提供共享规范、跨仓导航、公开�
 |---|---|
 | [`soia-open-skills`](https://github.com/soia-team/soia-open-skills) | 生态门户、共享规范、公开路由和 meta 技能。 |
 | [`soia-open-env-skills`](https://github.com/soia-team/soia-open-env-skills) | 开发环境的诊断、安装与升级支持。 |
-| [`soia-open-pkm-clip-skills`](https://github.com/soia-team/soia-open-pkm-clip-skills) | 网页、社交内容和云盘资料的剪藏与导入。 |
-| [`soia-open-pkm-vault-skills`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Markdown 知识库的初始化、整理、提炼、转换和书库维护。 |
+| [`soia-open-pkm-vault-skills`](https://github.com/soia-team/soia-open-pkm-vault-skills) | 网页、社交内容和云盘资料的剪藏与导入，以及 Markdown 知识库的初始化、整理、提炼、转换和书库维护。 |
 | [`soia-open-media-content-skills`](https://github.com/soia-team/soia-open-media-content-skills) | 文章创作、封面制作与多平台内容发布。 |
 | [`soia-open-cwork-office-skills`](https://github.com/soia-team/soia-open-cwork-office-skills) | 协作办公工具与文档服务的集成操作。 |
-| [`soia-open-dev-coding-skills`](https://github.com/soia-team/soia-open-dev-coding-skills) | 编码、任务执行、代码评审、修复、GitHub 与终端操作（10 个公开技能）。 |
-| [`soia-open-dev-design-skills`](https://github.com/soia-team/soia-open-dev-design-skills) | Open Design、架构图、图表和 Office 设计工作流。 |
+| [`soia-open-dev-coding-skills`](https://github.com/soia-team/soia-open-dev-coding-skills) | 编码、任务执行、代码评审、修复、GitHub、终端操作、测试质量与软件发布。 |
+| [`soia-open-dev-design-skills`](https://github.com/soia-team/soia-open-dev-design-skills) | Open Design、架构图、图表、Office 设计与产品需求工作流。 |
 | [`soia-open-edu-course-skills`](https://github.com/soia-team/soia-open-edu-course-skills) | 课程大纲、教学材料和测评设计。 |
-| [`soia-open-dev-product-skills`](https://github.com/soia-team/soia-open-dev-product-skills) | 产品需求、用户故事和需求评审工作流。 |
-| [`soia-open-dev-testing-skills`](https://github.com/soia-team/soia-open-dev-testing-skills) | 测试用例、测试文档和质量保障工作流。 |
-| [`soia-open-dev-release-skills`](https://github.com/soia-team/soia-open-dev-release-skills) | 软件发布清单、预检和发布验证。 |
 
 完整的机器可读技能目录见 [`routing/routing-manifest.json`](routing/routing-manifest.json)。
 
@@ -38,16 +34,16 @@ SOIA Skills 的公开生态门户：提供共享规范、跨仓导航、公开�
 
 ### 插件方式（推荐）
 
-插件方式按领域安装和开关整组技能；例如安装知识剪藏插件：
+插件方式按领域安装和开关整组技能；例如安装知识库插件：
 
 ```bash
 claude plugin marketplace add soia-team/soia-open-skills
-/plugin install soia-pkm-clip@soia
+/plugin install soia-pkm-vault@soia
 
 codex plugin marketplace add soia-team/soia-open-skills
-codex plugin add soia-pkm-clip@soia
+codex plugin add soia-pkm-vault@soia
 
-qwen extensions install https://github.com/soia-team/soia-open-skills:soia-pkm-clip
+qwen extensions install https://github.com/soia-team/soia-open-skills:soia-pkm-vault
 ```
 
 Claude 可用 `claude plugin enable`、`claude plugin disable` 和 `claude plugin update` 管理已安装插件。
@@ -74,7 +70,7 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-prompt-clarity 
 
 - [`SKILL_SPEC.md`](SKILL_SPEC.md)：技能结构、命名、frontmatter 和验证要求。
 - [`DATA_STORAGE_SPEC.md`](DATA_STORAGE_SPEC.md)：配置、凭据、状态、缓存和输出的存储边界。
-- [`docs/install-guide.md`](docs/install-guide.md)：按安装方式和 AI agent 分类的完整安装指南。
+- [`docs/install-guide.md`](docs/install-guide.md)：模块化安装指南的导航入口。
 - [`docs/install-profiles.md`](docs/install-profiles.md)：按使用场景组织的安装方案。
 - [`docs/plugin-dev.md`](docs/plugin-dev.md)：Codex 本地插件迭代与领域插件发版后的元仓刷新流程。
 
