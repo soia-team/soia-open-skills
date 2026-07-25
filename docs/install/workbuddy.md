@@ -1,10 +1,24 @@
 # WorkBuddy 安装指南
 
-同步工具可把共享技能软链接到 `~/.workbuddy/skills`。
+WorkBuddy 需要把 `~/.agents/skills` 中的全局技能同步为宿主目录软链接。
 
-## 安装
+## 安装全局本体
 
-先按 [npx 通用方案](README.md#1-npx-通用安装按技能安装)完成底座安装，再预览同步：
+```bash
+npx skills add soia-team/<仓库名> -g \
+  -a '*' -s <技能名> -y
+```
+
+## 同步 WorkBuddy 入口
+
+先安装同步工具：
+
+```bash
+npx skills add soia-team/soia-open-skills -g \
+  -a '*' -s soia-meta-sync-skills -y
+```
+
+再预览同步：
 
 ```bash
 python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
@@ -14,24 +28,17 @@ python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
   --dry-run
 ```
 
-确认预览后移除 `--dry-run` 执行。
+确认预览后，移除 `--dry-run` 再执行同一命令。
 
-## 验证
+## 验证与管理
 
 ```bash
-readlink ~/.workbuddy/skills/<技能名>
+test -f ~/.agents/skills/<技能名>/SKILL.md
+npx skills ls -g
+npx skills update -g
+npx skills remove -g -a '*' -s <技能名> -y
 ```
 
-## 更新
-
-软链接安装的更新由 npx 管理，[同通用方案](README.md#1-npx-通用安装按技能安装)。
-
-## 卸载
-
-可用同步工具排除该技能，或使用对应的 npx remove，[同通用方案](README.md#1-npx-通用安装按技能安装)。
-
-## 特有说明
-
-WorkBuddy 也支持通过 SkillHub 或 zip 导入；zip 的包根目录必须包含 `SKILL.md`。
+同步只建立宿主入口，不会把 WorkBuddy 目录变成技能本体来源。
 
 [← 返回安装指南](README.md)

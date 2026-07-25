@@ -1,78 +1,51 @@
 # Codex 安装指南
 
-Codex 直接读取共享真源 `~/.agents/skills`，npx 安装后立即可用；同时支持插件市场。
+Codex 原生读取 `$HOME/.agents/skills`。`~/.codex/skills` 中的软链接对 Codex 的读取没有额外作用。
 
-## 路线 A：npx 安装技能
+## 路线 A：npx
 
 ```bash
-npx skills add soia-team/soia-open-dev-skills -g -a codex -s soia-dev-coding-protocol -y
+npx skills add soia-team/<仓库名> -g \
+  -a codex -s <技能名> -y
 ```
 
-技能本体写入 `~/.agents/skills`，Codex 从该目录直接读取，无需额外同步步骤。
+技能本体进入 `~/.agents/skills`，Codex 随后直接读取该全局目录。`-a codex` 不会把技能隔离到 Codex，也不会阻止其他原生读取全局目录的宿主看到它。
 
-`~/.codex/skills` 目录中指向共享真源的软链接对 Codex 而言是冗余的——它已经在发现链中包含 `$HOME/.agents/skills`。
+`--copy` 不改变 Codex 的读取路径；即使目标目录生成副本，Codex 仍读取 `~/.agents/skills`。
 
-## 路线 B：插件市场
+验证、更新和卸载：
 
-### 注册市场
+```bash
+test -f ~/.agents/skills/<技能名>/SKILL.md
+npx skills ls -g -a codex
+npx skills update -g
+npx skills remove -g -a '*' -s <技能名> -y
+```
+
+## 路线 B：Codex 插件
 
 ```bash
 codex plugin marketplace add soia-team/soia-open-skills
+codex plugin add <域插件名>@soia
 ```
 
-Codex 读取仓库根的 `.agents/plugins/marketplace.json`（其原生清单格式）。
+市场定义来自仓库根目录 `.agents/plugins/marketplace.json`。插件安装到 `~/.codex/plugins/cache/soia/<域插件名>/`；市场和插件记录写入 `~/.codex/config.toml` 的 `[marketplaces.*]` 与 `[plugins."<插件名>@<市场>"]`。
 
-### 安装领域插件
+### 插件是叠加，不是替代
 
-```bash
-codex plugin add soia-dev@soia
-```
+Codex 会同时读取：
 
-可用插件：`soia-dev`、`soia-dev-design`、`soia-pkm-vault`、`soia-media-content`、`soia-cwork-office`、`soia-edu-course`、`soia-env`、`soia-meta`。
+1. 全局 `~/.agents/skills`；
+2. 已安装的 Codex 插件。
 
-### 插件是叠加而非替代（重要）
+因此，安装 Codex 插件不会减少全局索引，移除插件也不会隐藏 `~/.agents/skills` 中的同名技能。若目标是减少 Codex 读取的全局技能，必须调整全局安装集合；不能靠插件安装或插件移除实现。
 
-Codex 的插件技能**叠加**在共享真源之上：
-
-```
-Codex 实际加载的技能
-  = ~/.agents/skills 全部技能（共享真源，无法通过插件关闭）
-  + 已安装插件的技能
-  + Codex 内置技能（~/.codex/skills/.system）
-```
-
-因此**安装插件不会减少 Codex 的常驻索引**。若目标是降低 Codex 的上下文占用，只能缩减 `~/.agents/skills` 本身的技能数量——例如只在共享真源保留高频技能，长尾技能通过 `soia-meta-find-skill` 按需检索安装。
-
-## 验证
+验证、更新和卸载插件：
 
 ```bash
 codex plugin list
+codex plugin marketplace upgrade soia
+codex plugin remove <域插件名>@soia
 ```
-
-查看 Codex 实际加载了哪些技能及其来源路径：
-
-```bash
-codex debug prompt-input
-```
-
-## 更新
-
-```bash
-codex plugin marketplace add soia-team/soia-open-skills
-```
-
-重新执行 `marketplace add` 会刷新市场清单。npx 路线用 `npx skills update`。
-
-## 卸载
-
-```bash
-codex plugin remove soia-dev@soia
-```
-
-## 特有说明
-
-- 技能列表占用上下文预算约 2%，技能过多时每条描述会被自动压缩。
-- 插件配置记录在 `~/.codex/config.toml` 的 `[marketplaces.*]` 与 `[plugins."名@市场"]` 段。
-- Codex 的技能发现链依次为：当前目录 `.agents/skills` → 上级目录 → 仓库根 → `$HOME/.agents/skills` → `/etc/codex/skills` → 内置。
 
 [← 返回安装指南](README.md)

@@ -1,39 +1,23 @@
 # Trae 安装指南
 
-Trae Skills（Beta）采用开放标准，目录为 `.trae/skills` 或 `~/.trae/skills`；需要显式软链。
+Trae 需要在自己的技能目录中获得同步软链接。npx 的 agent id `trae` 负责建立该入口；技能本体仍先进入 `~/.agents/skills`。
 
 ## 安装
 
-先按 [npx 通用方案](README.md#1-npx-通用安装按技能安装)完成底座安装，再预览同步：
-
 ```bash
-python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
-  --source-dir ~/.agents/skills \
-  --targets trae \
-  --skills <技能名> \
-  --dry-run
+npx skills add soia-team/<仓库名> -g \
+  -a trae -s <技能名> -y
 ```
 
-确认预览后移除 `--dry-run`。
-
-## 验证
+## 验证与管理
 
 ```bash
-readlink ~/.trae/skills/<技能名>
+test -f ~/.agents/skills/<技能名>/SKILL.md
+npx skills ls -g -a trae
+npx skills update -g
+npx skills remove -g -a '*' -s <技能名> -y
 ```
 
-中国版还应探测 `~/.trae-cn`。
-
-## 更新
-
-先运行 `npx skills update <技能名> -g`，再重跑同步。
-
-## 卸载
-
-[同通用方案](README.md#1-npx-通用安装按技能安装)。
-
-## 特有说明
-
-技能按需调用；rules 位于 `.trae/rules/`。Trae 以自定义 Agents 为主，MCP 配置自 v1.3 起位于 `~/.trae/mcp.json`，并可按 Agent 选装工具。
+如果当前会话没有发现新入口，请重启 Trae 会话。
 
 [← 返回安装指南](README.md)

@@ -1,124 +1,110 @@
 # Claude Code 安装指南
 
-Claude Code 从 `~/.claude/skills`（用户级）或 `.claude/skills`（项目级）加载技能，同时支持插件市场。两条通道相互独立。
+Claude Code 有两条独立的技能通道：
 
-## 路线 A：npx 安装技能
+- npx：技能本体在 `~/.agents/skills`，Claude 入口在 `~/.claude/skills`。
+- 插件：插件在 `~/.claude/plugins/cache/<市场>/<插件>/<sha>/`，启用状态写入对应设置文件的 `enabledPlugins`。
 
-```bash
-npx skills add soia-team/soia-open-pkm-vault-skills -g -a claude-code -s soia-pkm-clip-web -y
-```
-
-技能本体写入 `~/.agents/skills`，并在 `~/.claude/skills` 建立入口。加 `--copy` 会在 `~/.claude/skills` 放实体副本而非软链接。
-
-项目级安装（在目标项目目录执行，不加 `-g`）：
+## 路线 A：npx
 
 ```bash
-npx skills add soia-team/soia-open-pkm-vault-skills -a claude-code -s soia-pkm-clip-web -y
+npx skills add soia-team/<仓库名> -g \
+  -a claude-code -s <技能名> -y
 ```
 
-## 路线 B：插件市场（推荐）
+这不是“只装到 Claude”。技能本体仍会先进入 `~/.agents/skills`，`-a claude-code` 只负责建立 Claude 入口。
 
-### 注册市场
+需要让 Claude 目录保存实体副本时可以加 `--copy`：
+
+```bash
+npx skills add soia-team/<仓库名> -g \
+  -a claude-code -s <技能名> --copy -y
+```
+
+`--copy` 不改变全局本体先进入 `~/.agents/skills` 的机制。
+
+验证、更新和卸载：
+
+```bash
+test -f ~/.agents/skills/<技能名>/SKILL.md
+ls -ld ~/.claude/skills/<技能名>
+npx skills update -g
+npx skills remove -g -a '*' -s <技能名> -y
+```
+
+## 路线 B：Claude 插件
+
+先注册 SOIA 市场，再选择领域插件：
 
 ```bash
 claude plugin marketplace add soia-team/soia-open-skills
+claude plugin install <域插件名>@soia --scope user
 ```
 
-### 安装领域插件
-
-```bash
-claude plugin install soia-pkm-vault@soia
-```
-
-可用插件：`soia-dev`、`soia-dev-design`、`soia-pkm-vault`、`soia-media-content`、`soia-cwork-office`、`soia-edu-course`、`soia-env`、`soia-meta`。
-
-### 插件工作原理
-
-```
-仓库根 .claude-plugin/marketplace.json     市场清单，声明有哪些插件
-        ↓ claude plugin marketplace add
-本机注册（~/.claude/plugins/known_marketplaces.json）
-        ↓ claude plugin install <插件>@soia
-插件缓存 ~/.claude/plugins/cache/soia/<插件>/<sha>/
-        ↓ 状态记入 settings.json 的 enabledPlugins
-新会话启动时，该插件全部技能的描述进入索引
-```
-
-插件缓存独立于 `~/.agents/skills`，因此插件安装不会影响 npx 通道，也不会增加共享真源的内容。
+市场定义来自仓库根目录 `.claude-plugin/marketplace.json`。插件安装到 `~/.claude/plugins/cache/soia/<域插件名>/<sha>/`，不进入 `~/.agents/skills`。
 
 ### 三种作用域
 
-| 作用域 | 配置文件 | 用途 |
-|---|---|---|
-| `user`（默认） | `~/.claude/settings.json` | 个人全局，所有项目生效 |
-| `project` | `<项目>/.claude/settings.json` | 团队共享，随仓库提交 |
-| `local` | `<项目>/.claude/settings.local.json` | 本机本项目，通常 gitignore |
+| 作用域 | 命令参数 | `enabledPlugins` 所在文件 | 用途 |
+|---|---|---|---|
+| `user` | `--scope user` | `~/.claude/settings.json` | 当前用户的所有项目 |
+| `project` | `--scope project` | `.claude/settings.json` | 当前项目的团队共享配置，应提交版本库 |
+| `local` | `--scope local` | `.claude/settings.local.json` | 当前项目的本机配置，不用于团队共享 |
 
-优先级：project > user。团队共享插件的做法是在项目 `.claude/settings.json` 中声明市场与启用项，成员信任该目录后会收到安装提示：
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "soia": { "source": { "source": "github", "repo": "soia-team/soia-open-skills" } }
-  },
-  "enabledPlugins": { "soia-dev@soia": true }
-}
-```
-
-指定作用域安装：
+项目配置优先于用户配置。团队希望项目成员使用同一组领域插件时，在项目根目录执行：
 
 ```bash
-claude plugin install soia-dev@soia --scope project
+claude plugin install <域插件名>@soia --scope project
+git add .claude/settings.json
 ```
 
-## 验证
+这里只把项目级插件选择写入版本库；插件内容仍由每位用户的 Claude 插件缓存管理。个人在同一项目中的临时选择使用 `local`：
 
 ```bash
-claude plugin list
+claude plugin install <域插件名>@soia --scope local
 ```
+
+### 启用、停用、详情与更新
+
+用户作用域：
 
 ```bash
-claude plugin details soia-pkm-vault
+claude plugin disable <域插件名>@soia --scope user
+claude plugin enable <域插件名>@soia --scope user
+claude plugin update <域插件名>@soia --scope user
 ```
 
-`details` 会显示该插件包含的技能清单，以及它们进入每个会话的常驻 token 成本（Always-on）。
-
-## 领域开关
+项目作用域：
 
 ```bash
-claude plugin disable soia-pkm-vault
+claude plugin disable <域插件名>@soia --scope project
+claude plugin enable <域插件名>@soia --scope project
+claude plugin update <域插件名>@soia --scope project
 ```
+
+本地项目作用域：
 
 ```bash
-claude plugin enable soia-pkm-vault
+claude plugin disable <域插件名>@soia --scope local
+claude plugin enable <域插件名>@soia --scope local
+claude plugin update <域插件名>@soia --scope local
 ```
 
-禁用后该插件的全部技能退出索引，常驻上下文成本归零；重新启用即刻恢复，无需重新下载。
+查看组件清单和 always-on token 成本：
 
-## 更新
+```bash
+claude plugin details <域插件名>@soia
+```
+
+停用插件后，该插件不产生上下文成本。插件更新后需要重启 Claude Code 才会应用。
+
+更新市场清单或卸载指定作用域：
 
 ```bash
 claude plugin marketplace update soia
+claude plugin uninstall <域插件名>@soia --scope user
+claude plugin uninstall <域插件名>@soia --scope project
+claude plugin uninstall <域插件名>@soia --scope local
 ```
-
-```bash
-claude plugin update soia-pkm-vault
-```
-
-第三方市场默认不自动更新，需要手动执行以上命令。
-
-## 卸载
-
-```bash
-claude plugin uninstall soia-pkm-vault
-```
-
-npx 安装的技能用 `npx skills remove -g -a claude-code -s <技能名> -y` 移除。
-
-## 特有说明
-
-- 技能索引占用上下文预算的 1%，描述超过 1536 字符会被截断；技能正文在被调用时才载入。
-- 同一技能若同时经 npx 和插件安装，会出现两份索引条目，建议二选一。
-- 插件内的技能调用名为 `插件名:技能名`，npx 安装的技能使用原始技能名。
 
 [← 返回安装指南](README.md)

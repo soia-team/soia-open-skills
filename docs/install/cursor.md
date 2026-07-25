@@ -1,6 +1,6 @@
 # Cursor 安装指南
 
-Cursor 原生支持 `.cursor/skills` 与 `~/.agents/skills` 等 AgentSkills 目录；全局 npx 安装后即可由共享目录覆盖。
+Cursor 原生直读 `~/.agents/skills`，因此 npx 写入全局技能本体后无需额外同步。
 
 ## 安装
 
@@ -9,22 +9,15 @@ npx skills add soia-team/<仓库名> -g \
   -a cursor -s <技能名> -y
 ```
 
-## 验证
+`-a cursor` 不会把技能隔离到 Cursor；它只决定目标入口。
 
-执行 `npx skills list -g -a cursor`，或新开 Cursor 会话确认技能可用。
-
-## 更新
+## 验证与管理
 
 ```bash
-npx skills update <技能名> -g
+test -f ~/.agents/skills/<技能名>/SKILL.md
+npx skills ls -g -a cursor
+npx skills update -g
+npx skills remove -g -a '*' -s <技能名> -y
 ```
-
-## 卸载
-
-[同通用方案](README.md#1-npx-通用安装按技能安装)。
-
-## 特有说明
-
-技能由 `description` 按需触发；`.cursor/rules/*.mdc` 可按 `paths` glob 等四种模式生效，也可使用 `disable-model-invocation`。Cursor 还支持扩展、Marketplace、`hooks.json` 与 `.cursor/mcp.json`；MCP 可在侧栏逐项开关。已有的 `~/.cursor/skills` 软链可退役以避免重复。
 
 [← 返回安装指南](README.md)

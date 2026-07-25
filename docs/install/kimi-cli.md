@@ -1,34 +1,23 @@
 # Kimi CLI 安装指南
 
-Kimi CLI 需要从共享真源分发到 `~/.kimi/skills`，同步后重开会话加载技能。
+Kimi 需要在自己的技能目录中获得同步软链接。npx 的 agent id `kimi` 负责建立该入口；技能本体仍先进入 `~/.agents/skills`。
 
 ## 安装
 
-先按 [npx 通用方案](README.md#1-npx-通用安装按技能安装)完成底座安装，再执行一次同步：
-
 ```bash
-python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
-  --source-dir ~/.agents/skills \
-  --targets kimi \
-  --skills <技能名>
+npx skills add soia-team/<仓库名> -g \
+  -a kimi -s <技能名> -y
 ```
 
-## 验证
+## 验证与管理
 
 ```bash
-readlink ~/.kimi/skills/<技能名>
+test -f ~/.agents/skills/<技能名>/SKILL.md
+npx skills ls -g -a kimi
+npx skills update -g
+npx skills remove -g -a '*' -s <技能名> -y
 ```
 
-## 更新
-
-共享真源的更新[同通用方案](README.md#1-npx-通用安装按技能安装)。
-
-## 卸载
-
-共享真源的卸载[同通用方案](README.md#1-npx-通用安装按技能安装)。
-
-## 特有说明
-
-需要为一次任务限定技能子集时，可重复指定 `kimi --skills-dir <技能目录>`。`--skills-dir` 会替换本次启动的自动发现目录；需要多个目录时重复传入。
+如果当前会话没有发现新入口，请重启 Kimi 会话。
 
 [← 返回安装指南](README.md)

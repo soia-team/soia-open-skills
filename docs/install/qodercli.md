@@ -1,34 +1,27 @@
 # qodercli 安装指南
 
-qodercli 原生发现 `~/.qoder/skills` 和项目的 `.qoder/skills`，且用户级优先于项目级。
+qodercli 支持 npx 技能入口，也属于支持 SOIA 插件市场路线的四个宿主之一。
 
-## 安装
+## 路线 A：npx
+
+qodercli 需要在自己的技能目录中获得同步软链接。使用 agent id `qoder`：
 
 ```bash
 npx skills add soia-team/<仓库名> -g \
   -a qoder -s <技能名> -y
 ```
 
-qodercli 的插件格式与 Claude Code 同构，可近乎零改动复用 SOIA 插件市场。
-
-## 验证
+技能本体仍先进入 `~/.agents/skills`；`-a qoder` 只建立 qodercli 入口。
 
 ```bash
-npx skills list -g -a qoder
+test -f ~/.agents/skills/<技能名>/SKILL.md
+npx skills ls -g -a qoder
+npx skills update -g
+npx skills remove -g -a '*' -s <技能名> -y
 ```
 
-在 qodercli 中运行 `/skills reload`，并确认技能出现在可用列表。
+## 路线 B：插件市场
 
-## 更新
-
-npx 安装使用 `npx skills update <技能名> -g`；插件市场安装则按 qodercli 的插件管理命令更新或启用/停用。
-
-## 卸载
-
-[同通用方案](README.md#1-npx-通用安装按技能安装)。
-
-## 特有说明
-
-可通过 `--plugin-dir <插件目录>` 为一次运行指定插件目录。插件与 MCP 均支持启用/停用；可用 `--permission-mode` 和 `--tools` 限制本次运行的权限及工具。
+插件路线把领域插件放入 qodercli 自己的插件缓存，不进入 `~/.agents/skills`，管理粒度为整个领域。插件安装和启停请使用当前 qodercli 版本提供的插件市场命令。
 
 [← 返回安装指南](README.md)

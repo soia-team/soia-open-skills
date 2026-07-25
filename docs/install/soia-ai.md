@@ -1,35 +1,21 @@
 # SOIA AI 安装指南
 
-SOIA AI 从共享真源分发到 `~/.soia/skills`，使用 `soia` target，避免手工复制。
-
-## 安装
-
-先按 [npx 通用方案](README.md#1-npx-通用安装按技能安装)完成底座安装，再同步技能：
+通用 npx 路线保证技能本体安装到 `~/.agents/skills`：
 
 ```bash
-python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
-  --source-dir ~/.agents/skills \
-  --targets soia \
-  --skills <技能名> \
-  --dry-run
+npx skills add soia-team/<仓库名> -g \
+  -a '*' -s <技能名> -y
 ```
 
-确认来源、目标和待创建或摘除的链接后，再移除 `--dry-run` 执行。
+本指南的已验证宿主读取清单没有定义 SOIA AI 的自动读取目录，因此不要把某个专用目录写成默认机制。请在所用 SOIA AI 版本中把技能来源配置为 `~/.agents/skills`，或使用该版本明确支持的同步入口。
 
-## 验证
+验证全局本体与管理安装：
 
-[同通用方案](README.md#第四步验证全量安装)。
-
-## 更新
-
-[同通用方案](README.md#1-npx-通用安装按技能安装)。
-
-## 卸载
-
-[同通用方案](README.md#1-npx-通用安装按技能安装)。
-
-## 特有说明
-
-使用 `soia` target，避免手工复制。
+```bash
+test -f ~/.agents/skills/<技能名>/SKILL.md
+npx skills ls -g
+npx skills update -g
+npx skills remove -g -a '*' -s <技能名> -y
+```
 
 [← 返回安装指南](README.md)

@@ -1,40 +1,23 @@
-# Antigravity CLI（agy）安装指南
+# Antigravity CLI（`agy`）安装指南
 
-Antigravity CLI 的技能目录为 `~/.gemini/antigravity-cli/skills/`；npx 和同步工具都可以建立软链接。
+Antigravity 使用 npx 的 agent id `agy`。技能本体先进入 `~/.agents/skills`，`-a agy` 再建立宿主入口。
 
 ## 安装
 
 ```bash
 npx skills add soia-team/<仓库名> -g \
-  -a antigravity-cli -s <技能名> -y
+  -a agy -s <技能名> -y
 ```
 
-较新版本的 `agy` 也可导入 Claude 插件：
+## 验证与管理
 
 ```bash
-agy plugin import claude
+test -f ~/.agents/skills/<技能名>/SKILL.md
+npx skills ls -g -a agy
+npx skills update -g
+npx skills remove -g -a '*' -s <技能名> -y
 ```
 
-## 验证
-
-```bash
-readlink ~/.gemini/antigravity-cli/skills/<技能名>
-agy plugin list
-```
-
-## 更新
-
-npx 安装[同通用方案](README.md#1-npx-通用安装按技能安装)。
-
-## 卸载
-
-```bash
-npx skills remove -g -a antigravity-cli -s <技能名> -y
-agy plugin uninstall
-```
-
-## 特有说明
-
-插件可用 `agy plugin enable` 和 `agy plugin disable` 管理。npx 安装仍使用 npx 更新和卸载。
+`-a agy` 不是隔离安装；全局本体始终存在于 `~/.agents/skills`。
 
 [← 返回安装指南](README.md)
