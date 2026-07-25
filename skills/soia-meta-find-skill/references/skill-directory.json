@@ -42,6 +42,12 @@
     "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-coding-protocol -y"
   },
   {
+    "name": "soia-dev-design-draft-prd",
+    "repo": "soia-open-dev-design-skills",
+    "description": "起草互联网通用 PRD、产品需求文档与用户故事；适用于一句话需求补全、功能范围和验收标准梳理。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-design-skills -g -a '*' -s soia-dev-design-draft-prd -y"
+  },
+  {
     "name": "soia-dev-design-explorer",
     "repo": "soia-open-dev-design-skills",
     "description": "基于 Open Design（经 soia-dev-open-design-ops）做高保真 HTML 原型、设计变体、幻灯片、动画探索与设计评审；要求用户品牌输入、五分类输出落点与可复现验证。",
@@ -52,18 +58,6 @@
     "repo": "soia-open-dev-coding-skills",
     "description": "审计并修复任意代码仓的 docs、README、CHANGELOG、VERSION 与明确真源之间的事实漂移；先建立真源优先级与证据，再按依赖顺序同步派生文档。",
     "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-doc-sync -y"
-  },
-  {
-    "name": "soia-dev-draft-prd",
-    "repo": "soia-open-dev-product-skills",
-    "description": "起草互联网通用 PRD、产品需求文档与用户故事；适用于一句话需求补全、功能范围和验收标准梳理。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-product-skills -g -a '*' -s soia-dev-draft-prd -y"
-  },
-  {
-    "name": "soia-dev-draft-test-doc",
-    "repo": "soia-open-dev-testing-skills",
-    "description": "从需求、PRD 或变更说明生成测试计划、测试用例与验收对照；适用于测试设计、回归清单和质量评审。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-testing-skills -g -a '*' -s soia-dev-draft-test-doc -y"
   },
   {
     "name": "soia-dev-drawio-visio-diagrams",
@@ -96,16 +90,16 @@
     "install_cmd": "npx skills add soia-team/soia-open-dev-design-skills -g -a '*' -s soia-dev-open-design-ops -y"
   },
   {
-    "name": "soia-dev-plan-release-checklist",
-    "repo": "soia-open-dev-release-skills",
-    "description": "为互联网软件发版生成发布清单、预检门、灰度验证与发布后核对；适用于上线、部署、回滚规划。",
-    "install_cmd": "npx skills add soia-team/soia-open-dev-release-skills -g -a '*' -s soia-dev-plan-release-checklist -y"
-  },
-  {
     "name": "soia-dev-project-scaffold",
     "repo": "soia-open-dev-coding-skills",
     "description": "为任意新 Git 项目生成最小 AI 协作基线：可编辑的 AGENTS.md 和 docs 导航目录；在写入前确认目标路径。",
     "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-project-scaffold -y"
+  },
+  {
+    "name": "soia-dev-release-plan-checklist",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "为互联网软件发版生成发布清单、预检门、灰度验证与发布后核对；适用于上线、部署、回滚规划。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-release-plan-checklist -y"
   },
   {
     "name": "soia-dev-review-panel",
@@ -124,6 +118,12 @@
     "repo": "soia-open-dev-coding-skills",
     "description": "管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；在终止进程前用日志、CPU、网络等多信号交叉判断，并执行 TERM→复查→KILL 确认门。",
     "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-terminal-ops -y"
+  },
+  {
+    "name": "soia-dev-test-draft-doc",
+    "repo": "soia-open-dev-coding-skills",
+    "description": "从需求、PRD 或变更说明生成测试计划、测试用例与验收对照；适用于测试设计、回归清单和质量评审。",
+    "install_cmd": "npx skills add soia-team/soia-open-dev-coding-skills -g -a '*' -s soia-dev-test-draft-doc -y"
   },
   {
     "name": "soia-edu-compose-lesson-plan",
@@ -283,21 +283,21 @@
   },
   {
     "name": "soia-pkm-alipan-curator",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "阿里云盘资源顾问：提供 inventory/organize/catalog/plan 四类工作流，盘点和整理资源、生成 Obsidian 馆藏与增量 Excel/家庭导航，并按用户提供的学情生成学习计划。Triggers：「整理云盘」「云盘盘点」「更新云盘索引」「更新Excel总索引」「生成家庭导航Excel」「给云盘建图书馆」「用网盘资源做学习计划」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-alipan-curator -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-alipan-curator -y"
   },
   {
     "name": "soia-pkm-alipan-drive-ops",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "阿里云盘原子操作层：安装/登录 aliyunpan、显式 driveId 双盘操作、目录浏览、移动/重命名/删除、下载上传、容量查询、全盘 JSONL 扫描。作为 curator 的底层依赖。Triggers：「看下云盘」「云盘里有什么」「登录阿里云盘」「下载云盘文件」「云盘登录过期了」「全盘扫描云盘」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-alipan-drive-ops -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-alipan-drive-ops -y"
   },
   {
     "name": "soia-pkm-baidu-netdisk-ops",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "百度网盘原子操作与只读 JSONL 扫描适配。触发：「看下百度网盘」「登录百度网盘」「扫描百度网盘」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-baidu-netdisk-ops -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-baidu-netdisk-ops -y"
   },
   {
     "name": "soia-pkm-bootstrap-vault-base",
@@ -319,51 +319,51 @@
   },
   {
     "name": "soia-pkm-clip-douyin",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "归档单条抖音视频到 Obsidian vault，并保留本地媒体索引。触发：「归档这条抖音」「clip 这个抖音视频」「只要抖音文案」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-douyin -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-douyin -y"
   },
   {
     "name": "soia-pkm-clip-drive",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "把云盘/本地的存量资料（PDF/Word/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理。Triggers：「导入云盘资料」「把这批 PDF 导进来」「clip 这个文档」「整理云盘」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-drive -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-drive -y"
   },
   {
     "name": "soia-pkm-clip-github-repo",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "将 GitHub 开源仓库归档为 Obsidian vault 的项目卡和调研笔记。触发：「归档这个项目 URL」「clip 这个 repo」「刷新项目卡」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-github-repo -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-github-repo -y"
   },
   {
     "name": "soia-pkm-clip-rednote",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "归档小红书单篇笔记（图文或视频）到 Obsidian vault。纯 stdlib 解析 __INITIAL_STATE__，无需登录；媒体存本地 Downloads，vault 只留轻量 Markdown。Triggers：「归档这条小红书」「clip 这篇小红书笔记」「archive this rednote」「存这篇 rednote」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-rednote -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-rednote -y"
   },
   {
     "name": "soia-pkm-clip-web",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "归档网页或博客文章到 Obsidian vault，并按统一规范落地。触发：「归档这个网页」「clip 这个链接」「存这篇博客」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-web -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-web -y"
   },
   {
     "name": "soia-pkm-clip-wechat-account",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "批量归档用户自己管理的微信公众号已发文章到 Obsidian vault。支持官方 API、公众号后台接口、登录态 Cookie 三条路线，并按 url 去重。Triggers：「同步我的公众号」「批量拉取我公众号历史文章」「批量归档我的公众号」「导入公众号已发文章」「clip 我的公众号」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-wechat-account -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-wechat-account -y"
   },
   {
     "name": "soia-pkm-clip-wechat-article",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "归档单篇微信公众号文章到 Obsidian vault：抓取静态 HTML，提取标题、作者、正文、发布时间和配图，按 clip 家族规范落地；需要 PDF 时优先用 Obsidian 导出。Triggers：「归档这篇公众号」「clip 这个公众号文章」「存这篇微信文章」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-wechat-article -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-wechat-article -y"
   },
   {
     "name": "soia-pkm-clip-x",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "description": "归档 X/Twitter 推文、thread、Article 到 Obsidian vault。基于 fxtwitter API，单条零配置；可选同步 Telegram 收藏。需要 PDF 时优先用 Obsidian 导出。Triggers：「归档这条 X」「archive this」「clip 这条推文」「整理这条 thread」「同步我的电报收藏」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-clip-skills -g -a '*' -s soia-pkm-clip-x -y"
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-x -y"
   },
   {
     "name": "soia-pkm-distill-article-opinion",
