@@ -9,7 +9,7 @@
       "description": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
       "source": {
         "source": "url",
-        "url": "https://github.com/soia-team/soia-open-dev-coding-skills.git",
+        "url": "https://github.com/soia-team/soia-open-dev-skills.git",
         "ref": "e02b7ad6d0ed935382ffcbd19cb2c3110939bcb6"
       },
       "interface": {

@@ -84,7 +84,7 @@ class FindSkillRouterTests(unittest.TestCase):
             entries.append(
                 {
                     "name": "soia-dev-review-example",
-                    "repo": "soia-open-dev-coding-skills",
+                    "repo": "soia-open-dev-skills",
                     "description": "剪藏需求的代码审查示例",
                     "install_cmd": "npx skills add review",
                 }

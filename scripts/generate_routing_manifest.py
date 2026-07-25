@@ -23,7 +23,7 @@ PUBLIC_REPOSITORIES = (
     "soia-open-pkm-vault-skills",
     "soia-open-media-content-skills",
     "soia-open-cwork-office-skills",
-    "soia-open-dev-coding-skills",
+    "soia-open-dev-skills",
     "soia-open-dev-design-skills",
     "soia-open-edu-course-skills",
 )

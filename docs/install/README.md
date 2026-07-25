@@ -10,7 +10,7 @@
 
 文中的占位符含义如下：
 
-- `<仓库名>`：例如 `soia-open-skills`、`soia-open-dev-coding-skills`。
+- `<仓库名>`：例如 `soia-open-skills`、`soia-open-dev-skills`。
 - `<技能名>`：例如 `soia-meta-prompt-clarity`。
 - `<域插件名>`：例如 `soia-pkm-vault`、`soia-dev-coding`。
 
@@ -104,7 +104,7 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s '*' -y
 ```bash
 repos=(
   soia-open-cwork-office-skills
-  soia-open-dev-coding-skills
+  soia-open-dev-skills
   soia-open-dev-design-skills
   soia-open-edu-course-skills
   soia-open-env-skills

@@ -36,7 +36,7 @@ class MarketplaceGenerationTests(unittest.TestCase):
                 [
                     {
                         "skill_name": "soia-dev-task-execute",
-                        "repo": "soia-open-dev-coding-skills",
+                        "repo": "soia-open-dev-skills",
                     },
                     {
                         "skill_name": "soia-meta-prompt-clarity",
@@ -92,7 +92,7 @@ class MarketplaceGenerationTests(unittest.TestCase):
         )
         self.assertEqual(codex["plugins"][1]["source"], {"source": "local", "path": "./"})
         self.assertEqual(codex["plugins"][1]["interface"]["displayName"], "SOIA 元技能库")
-        self.assertEqual(revisions, {"soia-open-dev-coding-skills": self.SHA})
+        self.assertEqual(revisions, {"soia-open-dev-skills": self.SHA})
 
     def test_fetch_main_sha_uses_gh_and_rejects_non_full_sha(self) -> None:
         completed = subprocess.CompletedProcess(
