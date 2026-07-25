@@ -31,7 +31,7 @@ class PluginDefinition(NamedTuple):
 PLUGIN_DEFINITIONS = (
     PluginDefinition(
         "soia-open-dev-skills",
-        "soia-dev-coding",
+        "soia-dev",
         "开发编码技能库",
         "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
         "Developer Tools",
