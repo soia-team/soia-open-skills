@@ -42,6 +42,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-dev-design-draft-prd",
+    "repo": "soia-open-dev-design-skills",
+    "skillPath": "skills/soia-dev-design-draft-prd",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-dev-design-explorer",
     "repo": "soia-open-dev-design-skills",
     "skillPath": "skills/soia-dev-design-explorer",
@@ -51,18 +57,6 @@
     "skill_name": "soia-dev-doc-sync",
     "repo": "soia-open-dev-coding-skills",
     "skillPath": "skills/soia-dev-doc-sync",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-dev-draft-prd",
-    "repo": "soia-open-dev-product-skills",
-    "skillPath": "skills/soia-dev-draft-prd",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-dev-draft-test-doc",
-    "repo": "soia-open-dev-testing-skills",
-    "skillPath": "skills/soia-dev-draft-test-doc",
     "visibility": "public"
   },
   {
@@ -96,15 +90,15 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-dev-plan-release-checklist",
-    "repo": "soia-open-dev-release-skills",
-    "skillPath": "skills/soia-dev-plan-release-checklist",
-    "visibility": "public"
-  },
-  {
     "skill_name": "soia-dev-project-scaffold",
     "repo": "soia-open-dev-coding-skills",
     "skillPath": "skills/soia-dev-project-scaffold",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-release-plan-checklist",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-release-plan-checklist",
     "visibility": "public"
   },
   {
@@ -123,6 +117,12 @@
     "skill_name": "soia-dev-terminal-ops",
     "repo": "soia-open-dev-coding-skills",
     "skillPath": "skills/soia-dev-terminal-ops",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-test-draft-doc",
+    "repo": "soia-open-dev-coding-skills",
+    "skillPath": "skills/soia-dev-test-draft-doc",
     "visibility": "public"
   },
   {
@@ -283,19 +283,19 @@
   },
   {
     "skill_name": "soia-pkm-alipan-curator",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-alipan-curator",
     "visibility": "public"
   },
   {
     "skill_name": "soia-pkm-alipan-drive-ops",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-alipan-drive-ops",
     "visibility": "public"
   },
   {
     "skill_name": "soia-pkm-baidu-netdisk-ops",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-baidu-netdisk-ops",
     "visibility": "public"
   },
@@ -319,49 +319,49 @@
   },
   {
     "skill_name": "soia-pkm-clip-douyin",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-clip-douyin",
     "visibility": "public"
   },
   {
     "skill_name": "soia-pkm-clip-drive",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-clip-drive",
     "visibility": "public"
   },
   {
     "skill_name": "soia-pkm-clip-github-repo",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-clip-github-repo",
     "visibility": "public"
   },
   {
     "skill_name": "soia-pkm-clip-rednote",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-clip-rednote",
     "visibility": "public"
   },
   {
     "skill_name": "soia-pkm-clip-web",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-clip-web",
     "visibility": "public"
   },
   {
     "skill_name": "soia-pkm-clip-wechat-account",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-clip-wechat-account",
     "visibility": "public"
   },
   {
     "skill_name": "soia-pkm-clip-wechat-article",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-clip-wechat-article",
     "visibility": "public"
   },
   {
     "skill_name": "soia-pkm-clip-x",
-    "repo": "soia-open-pkm-clip-skills",
+    "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-clip-x",
     "visibility": "public"
   },

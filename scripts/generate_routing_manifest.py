@@ -20,16 +20,12 @@ OWNER = "soia-team"
 PUBLIC_REPOSITORIES = (
     "soia-open-skills",
     "soia-open-env-skills",
-    "soia-open-pkm-clip-skills",
     "soia-open-pkm-vault-skills",
     "soia-open-media-content-skills",
     "soia-open-cwork-office-skills",
     "soia-open-dev-coding-skills",
     "soia-open-dev-design-skills",
     "soia-open-edu-course-skills",
-    "soia-open-dev-product-skills",
-    "soia-open-dev-testing-skills",
-    "soia-open-dev-release-skills",
 )
 
 PORTAL_REPOSITORY = "soia-open-skills"

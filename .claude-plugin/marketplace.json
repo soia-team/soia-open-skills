@@ -11,7 +11,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-dev-coding-skills",
-        "sha": "b3c06fc84423ebc08e4a1869a59971a9bddc964c"
+        "sha": "e02b7ad6d0ed935382ffcbd19cb2c3110939bcb6"
       }
     },
     {
@@ -20,34 +20,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-dev-design-skills",
-        "sha": "690602bbb3447b0c83499771e0f8f78ac9adb19a"
-      }
-    },
-    {
-      "name": "soia-dev-product",
-      "description": "产品需求技能：PRD 起草、用户故事与验收标准",
-      "source": {
-        "source": "github",
-        "repo": "soia-team/soia-open-dev-product-skills",
-        "sha": "eb96a92f2207ced6ec4d652855b020b772591e50"
-      }
-    },
-    {
-      "name": "soia-dev-testing",
-      "description": "测试技能：测试计划、用例设计与回归清单",
-      "source": {
-        "source": "github",
-        "repo": "soia-team/soia-open-dev-testing-skills",
-        "sha": "8c5376022e2b094c440fd90e29b966397e4b17f9"
-      }
-    },
-    {
-      "name": "soia-dev-release",
-      "description": "发布技能：发布清单、灰度验证与回滚预案",
-      "source": {
-        "source": "github",
-        "repo": "soia-team/soia-open-dev-release-skills",
-        "sha": "51cca99694302c6ea6c02a51575de44881598de1"
+        "sha": "8d5f2c050e08d2232a46e58ce1fc0343603f7dd3"
       }
     },
     {
@@ -56,16 +29,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-cwork-office-skills",
-        "sha": "812147187787089aee807a8619c738b50593a0b7"
-      }
-    },
-    {
-      "name": "soia-pkm-clip",
-      "description": "知识剪藏与网盘技能：网页、公众号、X、抖音、小红书、GitHub 归档与云盘操作",
-      "source": {
-        "source": "github",
-        "repo": "soia-team/soia-open-pkm-clip-skills",
-        "sha": "23ad4bbcb7762abfedbfee7bf0dd15550a3d1d09"
+        "sha": "47a17d97dfa61010e594159075ed2c2d46f9c40a"
       }
     },
     {
@@ -74,7 +38,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-pkm-vault-skills",
-        "sha": "98b3f939ee4f38a95f3c4b254abc2a979f294240"
+        "sha": "1fc03da63ef1f6c04e3258ca6ee5d4d368672d43"
       }
     },
     {

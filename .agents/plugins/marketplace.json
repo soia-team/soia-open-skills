@@ -10,7 +10,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-coding-skills.git",
-        "ref": "b3c06fc84423ebc08e4a1869a59971a9bddc964c"
+        "ref": "e02b7ad6d0ed935382ffcbd19cb2c3110939bcb6"
       },
       "interface": {
         "displayName": "开发编码技能库",
@@ -29,7 +29,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-design-skills.git",
-        "ref": "690602bbb3447b0c83499771e0f8f78ac9adb19a"
+        "ref": "8d5f2c050e08d2232a46e58ce1fc0343603f7dd3"
       },
       "interface": {
         "displayName": "设计与文档技能库",
@@ -43,92 +43,16 @@
       "category": "Creativity"
     },
     {
-      "name": "soia-dev-product",
-      "description": "产品需求技能：PRD 起草、用户故事与验收标准",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/soia-team/soia-open-dev-product-skills.git",
-        "ref": "eb96a92f2207ced6ec4d652855b020b772591e50"
-      },
-      "interface": {
-        "displayName": "产品需求技能库",
-        "shortDescription": "产品需求技能：PRD 起草、用户故事与验收标准",
-        "category": "Productivity"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "soia-dev-testing",
-      "description": "测试技能：测试计划、用例设计与回归清单",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/soia-team/soia-open-dev-testing-skills.git",
-        "ref": "8c5376022e2b094c440fd90e29b966397e4b17f9"
-      },
-      "interface": {
-        "displayName": "测试质量技能库",
-        "shortDescription": "测试技能：测试计划、用例设计与回归清单",
-        "category": "Developer Tools"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Developer Tools"
-    },
-    {
-      "name": "soia-dev-release",
-      "description": "发布技能：发布清单、灰度验证与回滚预案",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/soia-team/soia-open-dev-release-skills.git",
-        "ref": "51cca99694302c6ea6c02a51575de44881598de1"
-      },
-      "interface": {
-        "displayName": "发布运维技能库",
-        "shortDescription": "发布技能：发布清单、灰度验证与回滚预案",
-        "category": "Developer Tools"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Developer Tools"
-    },
-    {
       "name": "soia-cwork-office",
       "description": "办公协作技能：飞书知识库与云盘、ProcessOn 图表",
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-cwork-office-skills.git",
-        "ref": "812147187787089aee807a8619c738b50593a0b7"
+        "ref": "47a17d97dfa61010e594159075ed2c2d46f9c40a"
       },
       "interface": {
         "displayName": "办公协作技能库",
         "shortDescription": "办公协作技能：飞书知识库与云盘、ProcessOn 图表",
-        "category": "Productivity"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
-    },
-    {
-      "name": "soia-pkm-clip",
-      "description": "知识剪藏与网盘技能：网页、公众号、X、抖音、小红书、GitHub 归档与云盘操作",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/soia-team/soia-open-pkm-clip-skills.git",
-        "ref": "23ad4bbcb7762abfedbfee7bf0dd15550a3d1d09"
-      },
-      "interface": {
-        "displayName": "知识剪藏技能库",
-        "shortDescription": "知识剪藏与网盘技能：网页、公众号、X、抖音、小红书、GitHub 归档与云盘操作",
         "category": "Productivity"
       },
       "policy": {
@@ -143,7 +67,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-pkm-vault-skills.git",
-        "ref": "98b3f939ee4f38a95f3c4b254abc2a979f294240"
+        "ref": "1fc03da63ef1f6c04e3258ca6ee5d4d368672d43"
       },
       "interface": {
         "displayName": "知识库技能库",
