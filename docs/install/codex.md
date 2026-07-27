@@ -75,4 +75,29 @@ codex plugin remove soia-dev@soia
 - 插件配置记录在 `~/.codex/config.toml` 的 `[marketplaces.*]` 与 `[plugins."名@市场"]` 段。
 - Codex 的技能发现链依次为：当前目录 `.agents/skills` → 上级目录 → 仓库根 → `$HOME/.agents/skills` → `/etc/codex/skills` → 内置。
 
+
+## 保持更新
+
+Codex 没有自动更新机制，需要手动刷新市场清单后重新安装插件。
+
+```bash
+codex plugin marketplace add soia-team/soia-open-skills
+```
+
+```bash
+codex plugin add <域插件名>@soia
+```
+
+`marketplace add` 会刷新已注册市场的清单；随后 `plugin add` 会覆盖安装到最新版本。
+
+市场清单由元仓 CI 每日自动刷新（sha pin 指向各域仓最新提交），因此上述命令拿到的始终是最新发布内容。
+
+若缓存导致版本未更新，先清理缓存再重试：
+
+```bash
+rm -rf ~/.codex/.tmp/marketplaces/soia
+```
+
+npx 路线的更新使用 `npx skills update -g`。
+
 [← 返回安装指南](README.md)

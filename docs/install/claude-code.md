@@ -121,4 +121,61 @@ npx 安装的技能用 `npx skills remove -g -a claude-code -s <技能名> -y` �
 - 同一技能若同时经 npx 和插件安装，会出现两份索引条目，建议二选一。
 - 插件内的技能调用名为 `插件名:技能名`，npx 安装的技能使用原始技能名。
 
+
+## 保持更新
+
+SOIA 的市场清单由元仓 CI 每日自动刷新（sha pin 指向各域仓最新提交），因此你只需要让本地拉取这份清单。
+
+### 手动更新
+
+界面：`Manage plugins` → 目标插件齿轮 → 更新；或 `Browse plugins` → Sync 刷新市场清单。
+
+命令：
+
+```bash
+claude plugin marketplace update soia
+```
+
+```bash
+claude plugin update <域插件名>@soia
+```
+
+### 开启自动更新（推荐）
+
+第三方市场默认不自动更新。在 `~/.claude/settings.json` 中为 soia 市场开启：
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "soia": {
+      "source": { "source": "github", "repo": "soia-team/soia-open-skills" },
+      "autoUpdate": true
+    }
+  }
+}
+```
+
+开启后 Claude Code 启动时会自动拉取最新市场清单并更新已安装插件。
+
+### 团队统一配置
+
+在项目根目录的 `.claude/settings.json` 中声明市场与启用的插件，提交到版本库；成员信任该目录后会收到安装提示，无需各自配置：
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "soia": {
+      "source": { "source": "github", "repo": "soia-team/soia-open-skills" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "soia-dev@soia": true,
+    "soia-pkm-vault@soia": true
+  }
+}
+```
+
+项目级配置优先于用户级配置。
+
 [← 返回安装指南](README.md)

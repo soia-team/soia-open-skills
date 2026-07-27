@@ -139,3 +139,15 @@ python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py --sou
 **如何安装私有仓库的技能？** 需要仓库访问权限，命令相同（`npx skills add soia-team/soia-private-corp-skills -g -a '*' -s <技能名> -y`），先确认 `gh auth status` 已登录。
 
 **如何更新？** npx 路线：`npx skills update`；插件路线：`claude plugin update <插件名>` 或 `claude plugin marketplace update soia`。
+
+## 保持更新
+
+SOIA 市场清单由元仓 CI 每日自动刷新，指向各域仓最新提交。你只需让本地拉取这份清单：
+
+| 宿主 | 手动更新 | 自动更新 |
+|---|---|---|
+| Claude Code | 界面 Sync + 齿轮更新；或 `claude plugin marketplace update soia` 后 `claude plugin update <插件>@soia` | 在 `~/.claude/settings.json` 为 soia 市场设 `autoUpdate: true`（[配置方法](claude-code.md#保持更新)） |
+| Codex | `codex plugin marketplace add soia-team/soia-open-skills` 后 `codex plugin add <插件>@soia` | 不支持，需手动 |
+| npx 路线（所有宿主） | `npx skills update -g` | 不支持，需手动 |
+
+团队场景可在项目 `.claude/settings.json` 中统一声明市场与插件并提交版本库，成员无需各自配置，详见 [Claude Code 指南](claude-code.md#团队统一配置)。
