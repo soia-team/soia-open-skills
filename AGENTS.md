@@ -134,7 +134,7 @@ Rules:
 - After merge/push, verify the real install from the remote package:
 
 ```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s <skill-name> -y
+claude plugin update soia-meta@soia   # 交付走插件市场，勿装全局
 ```
 
 Forbidden outside local testing:
@@ -180,15 +180,29 @@ and will not be tracked by `npx skills check`.
 Open a PR (if branch protection requires it) or merge directly. The skill
 becomes available from the remote package only after it lands on main.
 
-### 4. Install from remote (the only correct final install)
+### 4. Publish through the plugin marketplace
 
-```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s <new-skill-name> -y
-```
+Skills reach users through the SOIA plugin marketplace, not through a global
+`npx skills add -g`. Once the change is on main:
 
-This registers the skill in `~/.agents/.skill-lock.json` and creates proper
-symlinks in `~/.claude/skills/` and `~/.agents/skills/`. Future updates via
-`npx skills check` will track it.
+1. **Bump `version`** in `.claude-plugin/plugin.json` and
+   `.codex-plugin/plugin.json`. This is mandatory. Claude Code compares the
+   plugin `version` field, not the marketplace sha pin — without a bump,
+   `claude plugin update` answers "already at the latest version" and users
+   never receive the change even though the pin moved.
+2. **Refresh the marketplace sha pin** in the meta repo `soia-open-skills`.
+   Its `main` is protected, so the refresh has to go through a PR; CI cannot
+   push it. The `soia-meta-skill-release` skill drives the whole sequence —
+   say 「发布技能」 or 「更新插件」 rather than running the steps by hand.
+3. **Users update** with `claude plugin update soia-meta@soia` or
+   `codex plugin add soia-meta@soia`.
+
+Do not install SOIA skills into your own `~/.agents/skills` with
+`npx skills add -g`. That directory is reserved for a small set of third-party
+skills; a SOIA skill placed there becomes a second copy that drifts from the
+plugin version and appears twice in every agent's index. (End users who prefer
+per-skill installs may still use the npx route — see `docs/install/` in the
+meta repo. That is a consumer choice, not the maintainer's delivery path.)
 
 ### Why not manual symlinks?
 
@@ -256,12 +270,17 @@ rm -rf ~/.agents/skills/<old-name>
 rm -f  ~/.claude/skills/<old-name>
 ```
 
-12. Install new skills from remote:
+12. Publish the rename through the plugin marketplace:
 
 ```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s <new-name-1> -s <new-name-2> -y
+# bump version in .claude-plugin/plugin.json and .codex-plugin/plugin.json first,
+# then let soia-meta-skill-release refresh the pin and guide client updates
+claude plugin update soia-meta@soia
 ```
 
+Renames only reach users after the pin refresh lands on the meta repo's main.
+Do not `npx skills add -g` the new names — that puts a drifting second copy in
+`~/.agents/skills`.
 **Phase 4 — Update downstream docs**
 
 13. Update your maintainer-local architecture notes (kept outside this repo).
