@@ -84,6 +84,9 @@ class MarketplaceGenerationTests(unittest.TestCase):
                 "displayName": "开发编码技能库",
                 "shortDescription": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
                 "category": "Developer Tools",
+                "brandColor": "#FB923C",
+                "composerIcon": "./assets/plugins/soia-dev.svg",
+                "logo": "./assets/plugins/soia-dev.png",
             },
         )
         self.assertEqual(
@@ -125,6 +128,23 @@ class MarketplaceGenerationTests(unittest.TestCase):
             self.assertEqual(MODULE.main(self.arguments("--check")), 1)
         self.assertEqual(self.claude_output.read_text(encoding="utf-8"), "stale\n")
 
+
+
+    def test_every_entry_icon_exists_inside_the_portal_repo(self) -> None:
+        """市场列表在安装前画图标，此时应用只有元仓；条目引用的资源必须在元仓内。
+
+        回归 2026-07-27：图标原本只放在各域仓，列表拿不到，全部回退成通用图标。
+        """
+        root = Path(__file__).resolve().parents[1]
+        manifest = json.loads((root / ".agents/plugins/marketplace.json").read_text(encoding="utf-8"))
+        missing = [
+            f"{plugin['name']}.{field}={path}"
+            for plugin in manifest["plugins"]
+            for field in ("composerIcon", "logo")
+            if (path := plugin.get("interface", {}).get(field))
+            and not (root / path).is_file()
+        ]
+        self.assertEqual(missing, [])
 
 if __name__ == "__main__":
     unittest.main()
