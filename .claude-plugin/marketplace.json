@@ -38,7 +38,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-pkm-vault-skills",
-        "sha": "a00350bd78b33e5a1d3ea7a3ba21dd57fbd2b0cf"
+        "sha": "50912b609d0d83938899211f5b86be87f6faeccc"
       }
     },
     {
@@ -65,7 +65,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-env-skills",
-        "sha": "916516551f22aea25f0620a09d67b8bb27a6045a"
+        "sha": "294c5738173c28d5c6936fdd438ed7f06e4d2966"
       }
     },
     {
