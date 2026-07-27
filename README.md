@@ -20,7 +20,7 @@ SOIA Skills 的公开生态门户：提供共享规范、跨仓导航、公开�
 | [`soia-open-skills`](https://github.com/soia-team/soia-open-skills) | 生态门户、共享规范、公开路由和 meta 技能。 |
 | [`soia-open-env-skills`](https://github.com/soia-team/soia-open-env-skills) | 开发环境的诊断、安装与升级支持。 |
 | [`soia-open-pkm-vault-skills`](https://github.com/soia-team/soia-open-pkm-vault-skills) | 网页、社交内容和云盘资料的剪藏与导入，以及 Markdown 知识库的初始化、整理、提炼、转换和书库维护。 |
-| [`soia-open-media-content-skills`](https://github.com/soia-team/soia-open-media-content-skills) | 文章创作、封面制作与多平台内容发布。 |
+| [`soia-open-media-content-skills`](https://github.com/soia-team/soia-open-media-content-skills) | 文章创作、文章图片生成与多平台内容发布。 |
 | [`soia-open-cwork-office-skills`](https://github.com/soia-team/soia-open-cwork-office-skills) | 协作办公工具与文档服务的集成操作。 |
 | [`soia-open-dev-skills`](https://github.com/soia-team/soia-open-dev-skills) | 编码、任务执行、代码评审、修复、GitHub、终端操作、测试质量与软件发布。 |
 | [`soia-open-dev-design-skills`](https://github.com/soia-team/soia-open-dev-design-skills) | Open Design、架构图、图表、Office 设计与产品需求工作流。 |

@@ -234,9 +234,9 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-media-cover-image",
+    "skill_name": "soia-media-generate-article-image",
     "repo": "soia-open-media-content-skills",
-    "skillPath": "skills/soia-media-cover-image",
+    "skillPath": "skills/soia-media-generate-article-image",
     "visibility": "public"
   },
   {

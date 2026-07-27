@@ -234,10 +234,10 @@
     "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-compose-article-draft -y"
   },
   {
-    "name": "soia-media-cover-image",
+    "name": "soia-media-generate-article-image",
     "repo": "soia-open-media-content-skills",
-    "description": "为文章生成适配发布渠道的封面图。触发：「生成文章封面」「做张小红书封面」「cover image」",
-    "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-cover-image -y"
+    "description": "为文章生成封面、正文小结卡、康奈尔笔记或视觉隐喻海报，并完成 Prompt 落盘和位图验收。触发：「生成文章图片」「正文小结图」「康奈尔笔记图」「Godot 像素海报」",
+    "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-generate-article-image -y"
   },
   {
     "name": "soia-media-publish-rednote-card",

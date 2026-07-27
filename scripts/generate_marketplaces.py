@@ -61,7 +61,7 @@ PLUGIN_DEFINITIONS = (
         "soia-open-media-content-skills",
         "soia-media-content",
         "新媒体内容技能库",
-        "新媒体内容技能：文章成文、封面图与公众号、X、小红书发布",
+        "新媒体内容技能：文章成文、文章图片与公众号、X、小红书发布",
         "Creativity",
     ),
     PluginDefinition(

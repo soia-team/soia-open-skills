@@ -38,16 +38,16 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-pkm-vault-skills",
-        "sha": "1d07dfb73b44a04ab43323a98133a03d40c2f687"
+        "sha": "dac7f7dd846367db9434f210820c56bfe51a0138"
       }
     },
     {
       "name": "soia-media-content",
-      "description": "新媒体内容技能：文章成文、封面图与公众号、X、小红书发布",
+      "description": "新媒体内容技能：文章成文、文章图片与公众号、X、小红书发布",
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-media-content-skills",
-        "sha": "9304c8e7f6d5231ebec118c7308808bc002a0b45"
+        "sha": "d9d05c8dff6b057d4626f84317207624b862794e"
       }
     },
     {
