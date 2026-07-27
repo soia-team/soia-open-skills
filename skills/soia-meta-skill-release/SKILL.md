@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新与客户端更新。触发：「发布技能」「更新插件」「技能发布收尾」
-version: 2.2.0
+version: 3.0.0
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-07-27 11:09:24
+updated_at: 2026-07-27 16:02:23
 created_by: gpt-5.6-terra
 updated_by: claude opus 5
 dependencies:
@@ -82,13 +82,23 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 
 ## 工作流
 
+交付走插件市场，`--install-mode` 默认 `plugin`。**默认不会向 `~/.agents/skills` 安装任何技能**——那样会与插件副本并存，同一技能出现两份索引且各自漂移。
+
+### `plugin` 模式（默认）
+
+1. 有 `--removed` 时清理 `.agents`、`.claude`、`.soia`、`.workbuddy`、`.codex` 五处同名残留。改名清理在两种模式下都执行：残留的旧名副本会盖过插件更新继续应答。
+2. 读取仓库版本填入回执；装机版本记 `-`，软链记 `plugin`，结果记 `published`。
+3. 打印用户实际收到改动还需要的步骤：bump 双份 `plugin.json` 的 version → 元仓重生成市场清单并提 PR 合并 → 客户端 `plugin update` → `plugin details` 验证。
+
+### `npx` 模式（`--install-mode npx`，显式 opt-in）
+
 1. 逐项执行 `npx skills add <repo> -g -a <agents> -s <skill> -y`。
-2. 有 `--removed` 时执行同参 `npx skills remove`，并清理 `.agents`、`.claude`、`.soia`、`.workbuddy`、`.codex` 五处同名残留。
+2. 有 `--removed` 时执行同参 `npx skills remove`，并清理五处残留。
 3. 执行 `npx skills update -g -y`，覆盖交叉引用的连带更新。
 4. 遍历 `~/.agents/skills`：对有 `SKILL.md` 且 Codex 侧缺失的技能，创建相对软链；历史实证目录没有 `SKILL.md`，不进入 Codex。
 5. 调用已安装的 `soia-meta-sync-skills`，目标为 `soia,workbuddy`。
 6. 对账 `~/.agents/.skill-lock.json`：所有新技能必须来自 `--repo`，旧名必须零残留。
-7. 按 `--repo-dir` → 进程环境 → 私有 v2 config → 只读 v1 config 回退 → 旧版兼容目录的顺序解析 checkout，并对比每项 `SKILL.md` version 与 `~/.agents/skills` 装机 version。
+7. 按 `--repo-dir` → 进程环境 → 私有 v2 config → 只读 v1 config 回退 → 旧版兼容目录的顺序解析 checkout，并对比每项 `SKILL.md` version 与装机 version。
 
 
 ## 插件发布与更新流程（域仓改动后）
