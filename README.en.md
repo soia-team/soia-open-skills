@@ -20,7 +20,7 @@ The public SOIA Skills portal for shared specifications, ecosystem navigation, t
 | [`soia-open-skills`](https://github.com/soia-team/soia-open-skills) | Ecosystem portal, shared specifications, public routing, and meta skills. |
 | [`soia-open-env-skills`](https://github.com/soia-team/soia-open-env-skills) | Development-environment diagnosis, installation, and upgrade support. |
 | [`soia-open-pkm-vault-skills`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Clipping and importing web, social, and cloud-drive material, plus Markdown knowledge-base bootstrap, organization, distillation, transformation, and library maintenance. |
-| [`soia-open-media-content-skills`](https://github.com/soia-team/soia-open-media-content-skills) | Article creation, cover production, and multi-platform content publishing. |
+| [`soia-open-media-content-skills`](https://github.com/soia-team/soia-open-media-content-skills) | Article creation, article image generation, and multi-platform content publishing. |
 | [`soia-open-cwork-office-skills`](https://github.com/soia-team/soia-open-cwork-office-skills) | Integrations for collaborative office tools and document services. |
 | [`soia-open-dev-skills`](https://github.com/soia-team/soia-open-dev-skills) | Coding, task execution, code review, fixes, GitHub, terminal operations, testing, and software release. |
 | [`soia-open-dev-design-skills`](https://github.com/soia-team/soia-open-dev-design-skills) | Open Design, architecture diagrams, charting, Office design, and product-requirement workflows. |

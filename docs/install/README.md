@@ -80,7 +80,7 @@ codex plugin add soia-pkm-vault@soia
 | `soia-dev` | soia-open-dev-skills | 开发全流程：工程协议、代码审查、缺陷修复、任务执行、终端操作、测试、发版 |
 | `soia-dev-design` | soia-open-dev-design-skills | 设计与文档产线：Open Design、Archify、draw.io/Visio、OfficeCLI、PRD |
 | `soia-pkm-vault` | soia-open-pkm-vault-skills | 知识库：剪藏（网页/公众号/X/抖音/小红书/GitHub）、网盘、整理、提炼、转换、书库 |
-| `soia-media-content` | soia-open-media-content-skills | 新媒体：文章成文、封面图、公众号/X/小红书发布 |
+| `soia-media-content` | soia-open-media-content-skills | 新媒体：文章成文、文章图片、公众号/X/小红书发布 |
 | `soia-cwork-office` | soia-open-cwork-office-skills | 办公协作：飞书知识库与云盘、ProcessOn 图表 |
 | `soia-edu-course` | soia-open-edu-course-skills | 教育课程：课程大纲设计、教案编写 |
 | `soia-env` | soia-open-env-skills | 环境：AI CLI 与运行时安装、网络诊断、系统维护 |
