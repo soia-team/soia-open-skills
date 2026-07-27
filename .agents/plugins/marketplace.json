@@ -10,7 +10,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-skills.git",
-        "ref": "1219f8400e74d3d999d24fad15dec36250f8e109"
+        "ref": "77fc6a748ec924718ef401f3085ebd64609fc0bc"
       },
       "interface": {
         "displayName": "开发编码技能库",
@@ -29,7 +29,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-design-skills.git",
-        "ref": "8f41ec016a5eeb3e3a893996a9d791e441378014"
+        "ref": "7e7b06cffc70df8da8a912259b46ea82e1c946ac"
       },
       "interface": {
         "displayName": "设计与文档技能库",
@@ -48,7 +48,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-cwork-office-skills.git",
-        "ref": "e8bb09679d05218c7b9f6f6ad194b634e3a50e62"
+        "ref": "5426d270be7c1cedad11d417898e0224f4a217bc"
       },
       "interface": {
         "displayName": "办公协作技能库",
@@ -67,7 +67,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-pkm-vault-skills.git",
-        "ref": "60f24825bb83427cec4b2cc5338b3ed5a7105580"
+        "ref": "757163ebd5189905e09e10198706eb7d773abe68"
       },
       "interface": {
         "displayName": "知识库技能库",
@@ -86,7 +86,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-media-content-skills.git",
-        "ref": "92b168e0861c9d7cef231c89a6728f039939721e"
+        "ref": "920a4f68436355386565b7f16c43d0f14601bcf2"
       },
       "interface": {
         "displayName": "新媒体内容技能库",
@@ -105,7 +105,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-edu-course-skills.git",
-        "ref": "06bc12b8c0f663714913293a5e7e322133e2531a"
+        "ref": "d949e18c6f15d4c93f461c06ae44741f35afc5b5"
       },
       "interface": {
         "displayName": "教育课程技能库",
@@ -124,7 +124,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-env-skills.git",
-        "ref": "6545c8b3a26a99670860ff7aae1d68dd1e1c9d4b"
+        "ref": "9d99f7e43b837db725f1c2e7027fa0e3faeb2215"
       },
       "interface": {
         "displayName": "环境运维技能库",
