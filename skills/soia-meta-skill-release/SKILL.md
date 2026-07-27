@@ -1,11 +1,11 @@
 ---
 name: soia-meta-skill-release
 description: 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新与客户端更新。触发：「发布技能」「更新插件」「技能发布收尾」
-version: 2.1.0
+version: 2.1.1
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-07-27 10:44:15
+updated_at: 2026-07-27 10:57:16
 created_by: gpt-5.6-terra
-updated_by: claude opus 5
+updated_by: gpt-5.6-sol
 dependencies:
   hard: [soia-meta-sync-skills]
 ---
@@ -20,12 +20,13 @@ dependencies:
 
 | 客户想要 | 技能会做 | 客户能看到 |
 | --- | --- | --- |
-| 发布 merge 后的一个或多个技能 | 安装、更新、软链同步并核对 lock/版本 | 六列发布回执 |
+| 发布 merge 后的一个或多个技能 | 刷新插件市场，并安装、更新、同步和核对版本 | workflow URL、客户端指令与六列发布回执 |
+| 更新域插件 | 核对域仓 main 与市场 sha pin，指导 Claude/Codex 更新 | pin 对账结果与插件版本 |
 | 重命名或删除旧技能 | 移除旧安装与全部受管目录残留 | 已清理数量与零残留验证 |
 
 ### 客户如何使用
 
-先确认目标技能已 merge 到远端仓库；本技能不执行 git、PR、merge、push 或发布远端状态。再提供仓库、技能名单和可选旧名：
+先确认目标技能已 merge 到远端仓库；本技能不执行 git、PR、merge 或 push。用户说「发布技能」或「更新插件」即授权按下方插件发布流程刷新市场清单；再提供仓库、技能名单、域插件名和可选旧名：
 
 ```bash
 python3 skills/soia-meta-skill-release/scripts/release_skills.py \
@@ -57,6 +58,8 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 | `soia-meta-sync-skills` | 强依赖 | 同步 SOIA 与 WorkBuddy 软链 | 先安装该技能再重试 |
 | Python 3 | 强依赖 | 执行发布脚本 | 安装 Python 3 后重试 |
 | PyYAML | 可选依赖 | 读取私有 `config.yml` | 传 `--repo-dir` 或使用当前进程环境变量 |
+| GitHub CLI `gh` | 插件发布强依赖 | 核对合并、触发并验证市场刷新 | 完成 `gh auth login` 后重试 |
+| Claude/Codex CLI | 客户端更新依赖 | 更新并验证对应客户端插件 | 只输出适用客户端的安装与验证指令 |
 
 ### 私密信息与中间数据
 
@@ -70,6 +73,85 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 | --- | --- | --- | --- | --- | --- |
 | `<skill>` | install/update/remove | `<version>` | `<version>` | agents / claude / codex | ok / removed / failed |
 
+## 插件发布流程（域仓改动后）
+
+用户说「发布技能」或「更新插件」且域仓改动已经完成评审时，封装执行以下步骤。`<domain-repo>` 是域仓名，`<pr>` 是域仓 PR 号或 URL，`<插件>` 是市场中的域插件名。任一步证据不一致即停止，不把等待刷新或未验证写成成功。
+
+### 1. 确认域仓改动已合并到 main
+
+```bash
+gh pr view <pr> --repo soia-team/<domain-repo> \
+  --json state,mergedAt,mergeCommit,url
+gh api repos/soia-team/<domain-repo>/commits/main --jq .sha
+```
+
+只有 PR `state` 为 `MERGED`、`mergedAt` 非空，且目标改动能在 `main` 提交中确认时继续。记录域仓 `main` 的完整 SHA 为 `<domain-main-sha>`。
+
+### 2. 触发元仓市场清单刷新
+
+```bash
+gh workflow run refresh-marketplace.yml \
+  --repo soia-team/soia-open-skills
+```
+
+这是远端状态变更；只在用户已经要求「发布技能」或「更新插件」后执行。不得触发其他 workflow，也不得合并刷新产生的 PR。
+
+### 3. 等待并确认 workflow 成功
+
+```bash
+gh run list --repo soia-team/soia-open-skills \
+  --workflow refresh-marketplace.yml --limit 1 \
+  --json databaseId,status,conclusion,createdAt,url
+gh run watch <run-id> --repo soia-team/soia-open-skills --exit-status
+```
+
+确认列出的 run 是本次触发的新 run，再用其 `databaseId` 作为 `<run-id>` 等待。只有 `status=completed` 且 `conclusion=success` 才继续；回执保留真实 run URL。
+
+### 4. 确认 sha pin 已更新
+
+```bash
+domain_sha="$(gh api repos/soia-team/<domain-repo>/commits/main --jq .sha)"
+market_sha="$(
+  gh api repos/soia-team/soia-open-skills/contents/.claude-plugin/marketplace.json \
+    -H 'Accept: application/vnd.github.raw+json' |
+  jq -r --arg repo "soia-team/<domain-repo>" \
+    '.plugins[] | select(.source | type == "object") |
+     select(.source.repo == $repo) | .source.sha'
+)"
+test -n "$market_sha" && test "$domain_sha" = "$market_sha"
+```
+
+比较完整 SHA，不只比较前缀。插件条目不存在、SHA 为空或两者不等都算失败；报告两侧实际值，不继续指导客户更新。
+
+### 5. 指导客户端更新
+
+Claude Code：
+
+```bash
+claude plugin marketplace update soia
+claude plugin update <插件>@soia
+```
+
+更新后必须完全退出并重启 Claude Code，才能让新技能与指令生效。
+
+Codex：
+
+```bash
+codex plugin marketplace add soia-team/soia-open-skills
+codex plugin add <插件>@soia
+```
+
+只给客户实际使用的客户端指令；不要把 Claude 与 Codex 的命令混用，也不要声称尚未执行的客户端更新已经完成。
+
+### 6. 验证客户端版本
+
+```bash
+claude plugin list
+codex plugin list
+```
+
+在对应列表中确认 `<插件>@soia` 已存在并显示期望版本。最终回执包含域仓 PR、域仓 `main` SHA、workflow URL 与结论、marketplace sha pin、客户端、插件名和观察到的版本；无法在客户机器执行时明确标记为「待客户验证」。
+
 ## 工作流
 
 1. 逐项执行 `npx skills add <repo> -g -a <agents> -s <skill> -y`。
@@ -80,78 +162,6 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 6. 对账 `~/.agents/.skill-lock.json`：所有新技能必须来自 `--repo`，旧名必须零残留。
 7. 按 `--repo-dir` → 进程环境 → 私有 v2 config → 只读 v1 config 回退 → 旧版兼容目录的顺序解析 checkout，并对比每项 `SKILL.md` version 与 `~/.agents/skills` 装机 version。
 
-
-## 插件发布与更新流程（域仓改动后）
-
-技能改动合并到域仓 main 后，插件用户不会立即拿到——市场清单里的 sha pin 仍指向旧提交。执行以下步骤完成发布。
-
-### 1. 确认域仓改动已合并
-
-```bash
-gh api repos/soia-team/<域仓>/commits/main --jq '.sha'
-```
-
-### 2. 刷新市场清单
-
-```bash
-gh workflow run refresh-marketplace.yml --repo soia-team/soia-open-skills
-```
-
-该 workflow 重新生成两份市场清单与路由索引，检测到 sha 变化时自动提交到 main。它也每天 UTC 00:00 自动运行一次。
-
-### 3. 确认刷新成功
-
-```bash
-gh run list --repo soia-team/soia-open-skills --workflow refresh-marketplace.yml --limit 1 --json status,conclusion
-```
-
-`conclusion` 为 `success` 后继续。若为 `startup_failure`，检查 workflow 中的 action 是否按仓库策略 pin 了 SHA。
-
-### 4. 核对 sha pin 已更新
-
-```bash
-gh api repos/soia-team/soia-open-skills/contents/.claude-plugin/marketplace.json --jq '.content' | base64 -d | python3 -c "import json,sys;print({p['name']:p.get('source',{}).get('sha','')[:12] for p in json.load(sys.stdin)['plugins']})"
-```
-
-与第 1 步的域仓 sha 对比，一致即表示清单已是最新。
-
-### 5. 指导客户端更新
-
-Claude Code：
-
-```bash
-claude plugin marketplace update soia
-```
-
-```bash
-claude plugin update <域插件名>@soia
-```
-
-更新后需重启 Claude Code 生效。已开启 `autoUpdate` 的用户会在下次启动时自动完成这两步。
-
-Codex：
-
-```bash
-codex plugin marketplace add soia-team/soia-open-skills
-```
-
-```bash
-codex plugin add <域插件名>@soia
-```
-
-Codex 无自动更新机制，必须手动执行。缓存导致版本未变时先清理：`rm -rf ~/.codex/.tmp/marketplaces/soia`。
-
-### 6. 验证
-
-```bash
-claude plugin list
-```
-
-```bash
-codex plugin list
-```
-
-确认目标插件版本已变化、状态为 enabled。
 
 ### 域仓与插件对照
 
