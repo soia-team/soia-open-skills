@@ -32,6 +32,16 @@ python3 skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
 ### 依赖与安装
 
 ```bash
+claude plugin marketplace add soia-team/soia-open-skills
+```
+
+```bash
+claude plugin install soia-meta@soia
+```
+
+只要这一个技能时，可用 npx 路线。注意技能会落进共享真源 `~/.agents/skills`；若同时装了插件，同一技能会出现两份索引且各自漂移，建议二选一：
+
+```bash
 npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-sync-skills -y
 ```
 
