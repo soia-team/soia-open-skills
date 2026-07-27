@@ -1,7 +1,9 @@
 {
   "name": "soia-meta",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "SOIA 生态管理技能：技能检索、多 AI 同步、发布收尾、提示词起草",
-  "author": { "name": "soia-team" },
+  "author": {
+    "name": "soia-team"
+  },
   "homepage": "https://github.com/soia-team/soia-open-skills"
 }
