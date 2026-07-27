@@ -1,6 +1,6 @@
 {
   "name": "soia-meta",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "SOIA 生态管理技能：技能检索、多 AI 同步、发布收尾、提示词起草",
   "author": {
     "name": "soia-team"
@@ -20,7 +20,7 @@
       "帮我检索一个合适的 SOIA 技能"
     ],
     "longDescription": "SOIA 生态管理技能库：按需检索全生态技能、把技能同步到多个 AI 工具目录、完成技能发布收尾与版本对账，以及起草和诊断中英文提示词。",
-    "composerIcon": "./assets/icon.png",
+    "composerIcon": "./assets/icon.svg",
     "logo": "./assets/icon.png",
     "brandColor": "#F5A623"
   }
