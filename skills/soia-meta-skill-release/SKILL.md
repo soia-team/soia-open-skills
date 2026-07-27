@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新与客户端更新。触发：「发布技能」「更新插件」「技能发布收尾」
-version: 2.1.0
+version: 2.2.0
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-07-27 10:44:15
+updated_at: 2026-07-27 11:09:24
 created_by: gpt-5.6-terra
 updated_by: claude opus 5
 dependencies:
@@ -91,29 +91,51 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 gh api repos/soia-team/<域仓>/commits/main --jq '.sha'
 ```
 
-### 2. 刷新市场清单
+### 2. 在元仓重新生成市场清单
+
+元仓 main 受分支保护（必须走 PR + `audit` 必过 + `enforce_admins`），因此刷新只能以 PR 形式提交，不能直推。在元仓 checkout 中执行：
 
 ```bash
-gh workflow run refresh-marketplace.yml --repo soia-team/soia-open-skills
+git checkout main && git pull && git checkout -b chore/refresh-marketplace
 ```
-
-该 workflow 重新生成两份市场清单与路由索引，检测到 sha 变化时自动提交到 main。它也每天 UTC 00:00 自动运行一次。
-
-### 3. 确认刷新成功
 
 ```bash
-gh run list --repo soia-team/soia-open-skills --workflow refresh-marketplace.yml --limit 1 --json status,conclusion
+python3 scripts/generate_marketplaces.py && python3 scripts/generate_router_index.py
 ```
 
-`conclusion` 为 `success` 后继续。若为 `startup_failure`，检查 workflow 中的 action 是否按仓库策略 pin 了 SHA。
+两个脚本重新拉取各域仓 main 的最新 sha，改写 `.claude-plugin/marketplace.json`、`.agents/plugins/marketplace.json` 与路由索引。若 `git status` 无变化，说明清单已是最新，跳到第 5 步。
+
+### 3. 提交 PR 并合并
+
+```bash
+git add -A && git commit -m "chore(marketplace): refresh sha pins" && git push -u origin chore/refresh-marketplace
+```
+
+```bash
+gh pr create --title "chore(marketplace): refresh sha pins" --body "刷新 sha pin 至各域仓最新提交。" --repo soia-team/soia-open-skills
+```
+
+等 `audit` 检查通过后合并：
+
+```bash
+gh pr checks <PR号> --repo soia-team/soia-open-skills
+```
+
+```bash
+gh pr merge <PR号> --squash --delete-branch --repo soia-team/soia-open-skills
+```
+
+`audit` 中的 marketplace freshness 检查会独立重算一次清单，两边不一致即失败——这道门保证发布出去的 pin 确实指向域仓当前 main。
 
 ### 4. 核对 sha pin 已更新
 
 ```bash
-gh api repos/soia-team/soia-open-skills/contents/.claude-plugin/marketplace.json --jq '.content' | base64 -d | python3 -c "import json,sys;print({p['name']:p.get('source',{}).get('sha','')[:12] for p in json.load(sys.stdin)['plugins']})"
+gh api repos/soia-team/soia-open-skills/contents/.claude-plugin/marketplace.json --jq '.content' | base64 -d | python3 -c "import json,sys;print({p['name']:str(p.get('source',{}).get('sha',''))[:12] for p in json.load(sys.stdin)['plugins']})"
 ```
 
 与第 1 步的域仓 sha 对比，一致即表示清单已是最新。
+
+> 不要用 `gh workflow run refresh-marketplace.yml`：CI 的 `GITHUB_TOKEN` 无法直推受保护的 main，它建的 PR 也不会触发 `audit` 检查（GitHub 为防递归而抑制），两条路都走不通。市场刷新是发布动作的一部分，由本流程显式完成。
 
 ### 5. 指导客户端更新
 
