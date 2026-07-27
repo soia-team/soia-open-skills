@@ -39,6 +39,16 @@ python3 skills/soia-meta-find-skill/scripts/find_skill.py --query <关键词> [-
 运行时只依赖 Python 3 标准库。安装本路由技能：
 
 ```bash
+claude plugin marketplace add soia-team/soia-open-skills
+```
+
+```bash
+claude plugin install soia-meta@soia
+```
+
+只要这一个技能时，可用 npx 路线。注意技能会落进共享真源 `~/.agents/skills`；若同时装了插件，同一技能会出现两份索引且各自漂移，建议二选一：
+
+```bash
 npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-find-skill -y
 ```
 
