@@ -290,6 +290,40 @@ def print_receipt(rows: Iterable[SkillReceipt]) -> None:
         print(f"| {row.name} | {row.action} | {row.repository_version} | {row.installed_version} | {row.links} | {row.result} |")
 
 
+REPO_TO_PLUGIN = {
+    "soia-open-skills": "soia-meta",
+    "soia-open-dev-skills": "soia-dev",
+    "soia-open-dev-design-skills": "soia-dev-design",
+    "soia-open-pkm-vault-skills": "soia-pkm-vault",
+    "soia-open-media-content-skills": "soia-media-content",
+    "soia-open-cwork-office-skills": "soia-cwork-office",
+    "soia-open-edu-course-skills": "soia-edu-course",
+    "soia-open-env-skills": "soia-env",
+}
+
+
+def print_plugin_publish_steps(repo: str, skills: list[str]) -> None:
+    """Print what still has to happen for users to receive the change.
+
+    Nothing was installed locally: delivery goes through the plugin marketplace.
+    """
+    repo_name = repo.rsplit("/", 1)[-1]
+    plugin = REPO_TO_PLUGIN.get(repo_name, "<域插件名>")
+    print()
+    print("插件模式：本次未向 ~/.agents/skills 安装任何技能。用户要收到改动，还需：")
+    print(f"  1. 在 {repo_name} 把 .claude-plugin/plugin.json 与 .codex-plugin/plugin.json 的")
+    print("     version 提上去——Claude Code 比对的是 version 字段而非 sha pin，不 bump 则")
+    print("     客户端回答「already at the latest version」。")
+    print("  2. 在元仓 soia-open-skills 重新生成市场清单并提 PR 合并（main 受保护，不能直推）：")
+    print("     python3 scripts/generate_marketplaces.py && python3 scripts/generate_router_index.py")
+    print(f"  3. 客户端更新：claude plugin update {plugin}@soia / codex plugin add {plugin}@soia")
+    print(f"  4. 验证：claude plugin details {plugin} 应列出 {', '.join(skills)}")
+    print()
+    print("如确实要走 npx 路线装进共享真源，显式传 --install-mode npx；")
+    print("注意这会与插件副本并存，同一技能出现两份索引且各自漂移。")
+    print()
+
+
 def release(args: argparse.Namespace, *, home: Path | None = None) -> int:
     user_home = Path.home() if home is None else home
     skills = parse_names(args.skills)
@@ -314,36 +348,55 @@ def release(args: argparse.Namespace, *, home: Path | None = None) -> int:
             print_receipt(rows)
             return 0
 
-        # 1. Install all requested skills in one call (one clone, not O(n)).
         agent_flags = [flag for a in agents.split(",") for flag in ("-a", a.strip()) if a.strip()]
-        skill_flags = [flag for name in skills for flag in ("-s", name)]
-        run_command(["npx", "skills", "add", args.repo, "-g", *agent_flags, *skill_flags, "-y"])
+        npx_install = getattr(args, "install_mode", "plugin") == "npx"
+
+        # 1. Install into the shared source only when the caller opts into route A.
+        #    Default delivery is the plugin marketplace; installing here as well would
+        #    put a second copy in ~/.agents/skills that drifts from the plugin version.
+        if npx_install:
+            skill_flags = [flag for name in skills for flag in ("-s", name)]
+            run_command(["npx", "skills", "add", args.repo, "-g", *agent_flags, *skill_flags, "-y"])
 
         # 2. Remove renamed/deleted skills in both skills.sh and all managed homes.
+        #    This runs in every mode: a stale global copy of a renamed skill outlives
+        #    the plugin update and keeps answering under the old name.
         if removed:
             removed_flags = [flag for name in removed for flag in ("-s", name)]
-            run_command(["npx", "skills", "remove", args.repo, "-g", *agent_flags, *removed_flags, "-y"])
+            if npx_install:
+                run_command(["npx", "skills", "remove", args.repo, "-g", *agent_flags, *removed_flags, "-y"])
             remove_old_skills(user_home, removed, dry_run=False)
 
-        # 3. Update cross-referenced skills.
-        run_command(["npx", "skills", "update", "-g", "-y"])
+        if npx_install:
+            # 3. Update cross-referenced skills.
+            run_command(["npx", "skills", "update", "-g", "-y"])
 
-        # 4. Fill the Codex discovery directory from the installed canonical source.
-        fill_codex_links(user_home, dry_run=False)
+            # 4. Fill the Codex discovery directory from the installed canonical source.
+            fill_codex_links(user_home, dry_run=False)
 
-        # 5. Keep SOIA and WorkBuddy consumer links in sync.
-        sync_script = installed_skill_dir(user_home, "soia-meta-sync-skills") / "scripts/sync_soia_skills.py"
-        run_command([sys.executable, str(sync_script), "--targets", "soia,workbuddy"])
+            # 5. Keep SOIA and WorkBuddy consumer links in sync.
+            sync_script = installed_skill_dir(user_home, "soia-meta-sync-skills") / "scripts/sync_soia_skills.py"
+            run_command([sys.executable, str(sync_script), "--targets", "soia,workbuddy"])
 
-        # 6. Verify the installer lock only after all installer-mutating commands.
-        verify_lock(user_home, args.repo, skills, removed)
+            # 6. Verify the installer lock only after all installer-mutating commands.
+            verify_lock(user_home, args.repo, skills, removed)
+        else:
+            print_plugin_publish_steps(args.repo, skills)
 
         # 7. Verify repository and installed versions with independent file reads.
+        #    Plugin mode installs nothing into the shared source, so there is no
+        #    installed version to compare against — report the repository version
+        #    and leave delivery verification to `claude plugin details`.
         for row in rows:
             if row.name in removed:
                 row.result = "removed"
                 continue
             row.repository_version = version_from_skill(repo_dir / "skills" / row.name / "SKILL.md")
+            if not npx_install:
+                row.installed_version = "-"
+                row.links = "plugin"
+                row.result = "published"
+                continue
             row.installed_version = version_from_skill(installed_skill_dir(user_home, row.name) / "SKILL.md")
             row.links = link_status(user_home, row.name)
             if row.repository_version != row.installed_version:
@@ -370,6 +423,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=f"private YAML config; otherwise {CONFIG_ENV} or the v2 default is used",
     )
     parser.add_argument("--dry-run", action="store_true", help="print the plan without commands or writes")
+    parser.add_argument(
+        "--install-mode",
+        choices=["plugin", "npx"],
+        default="plugin",
+        help=(
+            "plugin (default): skills are delivered through the plugin marketplace; "
+            "this run only cleans up renamed/deleted skills and prints the publish steps. "
+            "npx: legacy route A — installs into the shared source ~/.agents/skills, "
+            "which creates a second copy that drifts from the plugin version"
+        ),
+    )
     return parser.parse_args(argv)
 
 

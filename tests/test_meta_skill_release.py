@@ -111,7 +111,7 @@ class MetaSkillReleaseTests(unittest.TestCase):
     def test_steps_run_in_order_and_stop_on_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             home, repo = self.prepare_versions(Path(temp))
-            args = self.args("--repo-dir", str(repo))
+            args = self.args("--repo-dir", str(repo), "--install-mode", "npx")
             calls: list[list[str]] = []
 
             def fake_run(command):
@@ -122,6 +122,35 @@ class MetaSkillReleaseTests(unittest.TestCase):
             with patch.object(release_skills, "run_command", side_effect=fake_run):
                 self.assertEqual(release_skills.release(args, home=home), 1)
             self.assertEqual([call[:3] for call in calls], [["npx", "skills", "add"], ["npx", "skills", "update"]])
+
+    def test_default_mode_never_installs_into_the_shared_source(self) -> None:
+        """默认必须是插件模式：一条 npx 命令都不许发出。
+
+        回归 2026-07-27：脚本原先硬编码 `npx skills add -g`，每次「发布技能」都往
+        ~/.agents/skills 塞一份，与插件副本并存并各自漂移。
+        """
+        with tempfile.TemporaryDirectory() as temp:
+            home, repo = self.prepare_versions(Path(temp))
+            args = self.args("--repo-dir", str(repo))
+            self.assertEqual(args.install_mode, "plugin")
+            calls: list[list[str]] = []
+
+            with patch.object(release_skills, "run_command", side_effect=lambda c: calls.append(c)):
+                self.assertEqual(release_skills.release(args, home=home), 0)
+            self.assertEqual(calls, [])
+
+    def test_plugin_mode_still_cleans_renamed_skills_from_managed_homes(self) -> None:
+        """改名清理在两种模式下都得跑——残留的旧名副本会盖过插件更新继续应答。"""
+        with tempfile.TemporaryDirectory() as temp:
+            home, repo = self.prepare_versions(Path(temp))
+            for root in release_skills.INSTALL_ROOTS:
+                self.skill(home / root, "soia-old")
+            args = self.args("--repo-dir", str(repo), "--removed", "soia-old")
+
+            with patch.object(release_skills, "run_command", side_effect=lambda c: None):
+                self.assertEqual(release_skills.release(args, home=home), 0)
+            for root in release_skills.INSTALL_ROOTS:
+                self.assertFalse((home / root / "soia-old").exists())
 
     def test_removed_names_are_cleaned_from_five_directories(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
