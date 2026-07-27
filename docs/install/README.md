@@ -142,7 +142,7 @@ python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py --sou
 
 ## 保持更新
 
-SOIA 市场清单由元仓 CI 每日自动刷新，指向各域仓最新提交。你只需让本地拉取这份清单：
+SOIA 市场清单在每次技能发布时刷新（由 `soia-meta-skill-release` 技能提交 PR 更新 sha pin），指向各域仓当时的最新提交。你只需让本地拉取这份清单：
 
 | 宿主 | 手动更新 | 自动更新 |
 |---|---|---|
