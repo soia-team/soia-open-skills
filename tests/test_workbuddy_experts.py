@@ -76,6 +76,50 @@ class ExpertDefinitionTests(unittest.TestCase):
                 self.assertLessEqual(avatar.stat().st_size, 500 * 1024)
 
 
+class SharedIconSourceTests(unittest.TestCase):
+    """图标与头像必须同源，且清单 brandColor 不得另存一份。
+
+    回归 2026-07-29：配色表原本只在会话临时目录里，元仓 assets/plugins/、
+    8 个域仓 assets/、专家头像各存一份副本共 19 处，没有东西保证同源；
+    generate_marketplaces.py 还自带一张 BRAND_COLORS，图标换成紫色系后
+    那张表仍是琥珀期的橙色号，市场主题色与图标对不上。
+    """
+
+    def setUp(self) -> None:
+        spec = importlib.util.spec_from_file_location(
+            "generate_icons", ROOT / "scripts/generate_icons.py")
+        self.icons = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.icons)
+
+    def test_every_expert_borrows_a_known_plugin_palette(self) -> None:
+        for expert, (plugin, _) in self.icons.EXPERTS.items():
+            with self.subTest(expert=expert):
+                self.assertIn(plugin, self.icons.PALETTE)
+
+    def test_expert_definitions_and_icon_table_agree(self) -> None:
+        """experts/ 下新增了目录却忘了加头像配色，这里会红。"""
+        self.assertEqual(
+            {d.name for d in EXPERT_DIRS}, set(self.icons.EXPERTS),
+            "experts/ 目录与 generate_icons.py 的 EXPERTS 表不一致",
+        )
+
+    def test_marketplace_generator_reuses_the_icon_palette(self) -> None:
+        source = (ROOT / "scripts/generate_marketplaces.py").read_text(encoding="utf-8")
+        self.assertIn("_icons.PALETTE", source,
+                      "brandColor 必须取自 generate_icons.py，不得另存一张表")
+        self.assertNotRegex(source, r'BRAND_COLORS\s*=\s*\{\s*\n\s*"soia-',
+                            "检测到硬编码的 brandColor 表")
+
+    def test_every_plugin_has_a_distinct_glyph(self) -> None:
+        """gov 与 corp 曾被写成同一个盾牌+对勾，两个插件在市场里无法区分。"""
+        seen: dict[str, str] = {}
+        for name, glyph in self.icons.GLYPHS.items():
+            key = " ".join(glyph.split())
+            self.assertNotIn(key, seen,
+                             f"{name} 与 {seen.get(key)} 字形完全相同")
+            seen[key] = name
+
+
 class PluginJsonTests(unittest.TestCase):
     def setUp(self) -> None:
         self.spec = json.loads(

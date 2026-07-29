@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#6366F1"/>
-      <stop offset="1" stop-color="#312E81"/>
+      <stop offset="0" stop-color="#71717A"/>
+      <stop offset="1" stop-color="#27272A"/>
     </linearGradient>
     <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.30"/>
@@ -11,7 +11,7 @@
     </linearGradient>
     <linearGradient id="ink" x1="0" y1="0" x2="0.3" y2="1">
       <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#C7D2FE"/>
+      <stop offset="1" stop-color="#E4E4E7"/>
     </linearGradient>
   </defs>
 
@@ -19,17 +19,21 @@
     <rect width="1024" height="1024" rx="230" fill="url(#sheen)"/>
     <g transform="translate(512,452)" fill="none" stroke-width="40"
        stroke-linecap="round" stroke-linejoin="round">
-      <g stroke="#312E81" opacity="0.38" transform="translate(0,14)">
-      <polyline points="-150,-70 -228,0 -150,70"/>
-      <line x1="-40" y1="105" x2="40" y2="-105"/>
-      <polyline points="150,-70 228,0 150,70"/></g>
+      <g stroke="#27272A" opacity="0.38" transform="translate(0,14)">
+      <path d="M-172,-40 A172,172 0 0 1 118,-125"/>
+      <polyline points="60,-172 132,-128 88,-56"/>
+      <path d="M172,40 A172,172 0 0 1 -118,125"/>
+      <polyline points="-60,172 -132,128 -88,56"/>
+      <circle cx="0" cy="0" r="52"/></g>
       <g stroke="url(#ink)">
-      <polyline points="-150,-70 -228,0 -150,70"/>
-      <line x1="-40" y1="105" x2="40" y2="-105"/>
-      <polyline points="150,-70 228,0 150,70"/></g>
+      <path d="M-172,-40 A172,172 0 0 1 118,-125"/>
+      <polyline points="60,-172 132,-128 88,-56"/>
+      <path d="M172,40 A172,172 0 0 1 -118,125"/>
+      <polyline points="-60,172 -132,128 -88,56"/>
+      <circle cx="0" cy="0" r="52"/></g>
     </g>
     <text x="512" y="838" text-anchor="middle"
           font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
           font-size="108" font-weight="600" letter-spacing="4"
-          fill="#FFFFFF" fill-opacity="0.94">coding</text>
+          fill="#FFFFFF" fill-opacity="0.94">harness</text>
 </svg>

@@ -1,13 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 1024 1024">
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#818CF8"/>
-      <stop offset="1" stop-color="#4338CA"/>
+      <stop offset="0" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#5B21B6"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.30"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EDE9FE"/>
     </linearGradient>
   </defs>
-  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
-  <g transform="translate(512,512) scale(1.62)" fill="none" stroke="#FFFFFF"
-     stroke-width="52" stroke-linecap="round" stroke-linejoin="round">
+
+    <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
+    <rect width="1024" height="1024" rx="230" fill="url(#sheen)"/>
+    <g transform="translate(512,452)" fill="none" stroke-width="40"
+       stroke-linecap="round" stroke-linejoin="round">
+      <g stroke="#5B21B6" opacity="0.38" transform="translate(0,14)">
       <polygon points="0,-155 235,-45 0,65 -235,-45"/>
       <path d="M-135,-3 L-135,120 A135,72 0 0 0 135,120 L135,-3"/></g>
+      <g stroke="url(#ink)">
+      <polygon points="0,-155 235,-45 0,65 -235,-45"/>
+      <path d="M-135,-3 L-135,120 A135,72 0 0 0 135,120 L135,-3"/></g>
+    </g>
+    <text x="512" y="838" text-anchor="middle"
+          font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+          font-size="108" font-weight="600" letter-spacing="4"
+          fill="#FFFFFF" fill-opacity="0.94">course</text>
 </svg>

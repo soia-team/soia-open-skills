@@ -19,7 +19,7 @@
   <g clip-path="url(#round)">
     <rect width="1024" height="1024" fill="url(#bg)"/>
     <rect width="1024" height="1024" fill="url(#sheen)"/>
-    <g transform="translate(512,512)" fill="none" stroke-width="44"
+    <g transform="translate(512,512)" fill="none" stroke-width="40"
        stroke-linecap="round" stroke-linejoin="round">
       <g stroke="#3730A3" opacity="0.38" transform="translate(0,14)">
       <polygon points="-215,-25 215,-165 95,175 -10,60"/>

@@ -23,7 +23,7 @@ WorkBuddy 的「专家」是**角色化的 agent 预设**：一份人设 MD + �
   expert.json   展示元数据：花名、职业、分类、标签、推荐提示词、技能来源仓
   agent.md      人设：核心能力、工作流程、输出规范、注意事项
   avatar.png    头像，1024×1024，≤500KB
-  avatar.svg    头像母版，由 scripts/generate_expert_avatars.py 确定性生成
+  avatar.svg    头像母版，由 scripts/generate_icons.py 确定性生成
 ```
 
 技能不提交进本目录。原因是两边都有约束：WorkBuddy 校验器要求 `plugin.json` 里
@@ -51,7 +51,9 @@ python3 scripts/generate_workbuddy_experts.py
 ## 新增一个专家
 
 1. 建 `experts/<kebab-case-名>/`，照现有专家写 `expert.json` 与 `agent.md`。
-2. 在 `scripts/generate_expert_avatars.py` 的 `AVATARS` 与 `GLYPHS` 里加一条，跑它生成头像。
+2. 在 `scripts/generate_icons.py` 的 `EXPERTS` 表里加一条，指明借用哪个域插件的配色
+   （需要换字形时给出覆盖），跑 `python3 scripts/generate_icons.py` 生成头像。
+   头像与该域的插件图标同源于一张表，不要另建配色。
 3. 跑 `python3 -m unittest tests.test_workbuddy_experts` —— 官方的硬约束在这里复刻了一份，
    写坏的定义会在提交前被拦下，而不是等到用户机器上生成失败。
 4. 跑生成器验证官方校验器也放行。

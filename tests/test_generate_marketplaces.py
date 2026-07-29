@@ -84,7 +84,9 @@ class MarketplaceGenerationTests(unittest.TestCase):
                 "displayName": "开发编码技能库",
                 "shortDescription": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
                 "category": "Developer Tools",
-                "brandColor": "#FB923C",
+                # 断言取自配色真源，写死色号会让这条测试自己变成第二张表——
+                # 上一版就是这样：图标换成紫色系后，测试还在保护琥珀期的 #FB923C。
+                "brandColor": MODULE.BRAND_COLORS["soia-dev"],
                 "composerIcon": "./assets/plugins/soia-dev.svg",
                 "logo": "./assets/plugins/soia-dev.png",
             },
