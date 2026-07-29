@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
+import pathlib
 import re
 import subprocess
 import sys
@@ -30,25 +32,20 @@ class PluginDefinition(NamedTuple):
 # 因此把各插件图标在元仓再存一份，由市场条目的 interface 直接引用。
 # 条目级 interface 的 displayName/shortDescription 已实证被 UI 消费。
 ENTRY_ICON_DIR = "./assets/plugins"
-BRAND_COLORS = {
-    "soia-dev": "#FB923C",
-    "soia-dev-design": "#FBBF24",
-    "soia-pkm-vault": "#F97316",
-    "soia-media-content": "#5B5CE2",
-    "soia-cwork-office": "#38BDF8",
-    "soia-edu-course": "#818CF8",
-    "soia-env": "#84CC16",
-    "soia-meta": "#F5A623",
-}
+
+# brandColor 取自 generate_icons.py 的配色表，不在这里另存一份。
+# 曾经两处各存一张表，图标换成紫色系后这里仍留着琥珀期的橙色号，
+# 结果市场里的主题色与图标对不上——同一个事实只能有一个来源。
+_ICON_SPEC = importlib.util.spec_from_file_location(
+    "soia_generate_icons", pathlib.Path(__file__).resolve().parent / "generate_icons.py"
+)
+_icons = importlib.util.module_from_spec(_ICON_SPEC)
+_ICON_SPEC.loader.exec_module(_icons)
+BRAND_COLORS = {name: spec[2] for name, spec in _icons.PALETTE.items()}
 
 
 def entry_icons(name: str) -> dict[str, str]:
-    """媒体内容沿用其自带的紫色双尺寸设计，其余用统一矢量母版。"""
-    if name == "soia-media-content":
-        return {
-            "composerIcon": f"{ENTRY_ICON_DIR}/{name}-composer.png",
-            "logo": f"{ENTRY_ICON_DIR}/{name}.png",
-        }
+    """composerIcon 用矢量母版，logo 用 1024 位图；两者同源于 generate_icons.py。"""
     return {
         "composerIcon": f"{ENTRY_ICON_DIR}/{name}.svg",
         "logo": f"{ENTRY_ICON_DIR}/{name}.png",

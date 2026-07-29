@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#6366F1"/>
-      <stop offset="1" stop-color="#312E81"/>
+      <stop offset="0" stop-color="#C026D3"/>
+      <stop offset="1" stop-color="#581C87"/>
     </linearGradient>
     <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.30"/>
@@ -11,7 +11,7 @@
     </linearGradient>
     <linearGradient id="ink" x1="0" y1="0" x2="0.3" y2="1">
       <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#C7D2FE"/>
+      <stop offset="1" stop-color="#FAE8FF"/>
     </linearGradient>
   </defs>
 
@@ -19,17 +19,25 @@
     <rect width="1024" height="1024" rx="230" fill="url(#sheen)"/>
     <g transform="translate(512,452)" fill="none" stroke-width="40"
        stroke-linecap="round" stroke-linejoin="round">
-      <g stroke="#312E81" opacity="0.38" transform="translate(0,14)">
-      <polyline points="-150,-70 -228,0 -150,70"/>
-      <line x1="-40" y1="105" x2="40" y2="-105"/>
-      <polyline points="150,-70 228,0 150,70"/></g>
+      <g stroke="#581C87" opacity="0.38" transform="translate(0,14)">
+      <rect x="-215" y="-175" width="430" height="300" rx="30"/>
+      <line x1="-215" y1="55" x2="215" y2="55"/>
+      <line x1="0" y1="125" x2="0" y2="185"/>
+      <line x1="-110" y1="212" x2="110" y2="212"/>
+      <circle cx="-115" cy="-62" r="34"/>
+      <line x1="-30" y1="-10" x2="145" y2="-10"/>
+      <line x1="-30" y1="-108" x2="145" y2="-108"/></g>
       <g stroke="url(#ink)">
-      <polyline points="-150,-70 -228,0 -150,70"/>
-      <line x1="-40" y1="105" x2="40" y2="-105"/>
-      <polyline points="150,-70 228,0 150,70"/></g>
+      <rect x="-215" y="-175" width="430" height="300" rx="30"/>
+      <line x1="-215" y1="55" x2="215" y2="55"/>
+      <line x1="0" y1="125" x2="0" y2="185"/>
+      <line x1="-110" y1="212" x2="110" y2="212"/>
+      <circle cx="-115" cy="-62" r="34"/>
+      <line x1="-30" y1="-10" x2="145" y2="-10"/>
+      <line x1="-30" y1="-108" x2="145" y2="-108"/></g>
     </g>
     <text x="512" y="838" text-anchor="middle"
           font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
           font-size="108" font-weight="600" letter-spacing="4"
-          fill="#FFFFFF" fill-opacity="0.94">coding</text>
+          fill="#FFFFFF" fill-opacity="0.94">workspace</text>
 </svg>
