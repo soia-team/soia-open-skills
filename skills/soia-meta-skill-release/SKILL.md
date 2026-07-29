@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新与客户端更新。触发：「发布技能」「更新插件」「技能发布收尾」
-version: 3.1.0
+version: 3.2.0
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-07-27 19:32:48
+updated_at: 2026-07-29 14:14:06
 created_by: gpt-5.6-terra
 updated_by: claude opus 5
 dependencies:
@@ -171,10 +171,22 @@ claude plugin update <域插件名>@soia
 
 更新后需重启 Claude Code 生效。已开启 `autoUpdate` 的用户会在下次启动时自动完成这两步。
 
-Codex：**必须先删暂存目录再 add**，否则 `marketplace add` 会复用旧克隆，拉不到新增的资源文件：
+Codex：**先记录当前安装清单**——下面要删缓存，删错粒度会连带卸掉同市场的其他插件：
 
 ```bash
-rm -rf ~/.codex/.tmp/marketplaces/soia ~/.codex/plugins/cache/soia
+codex plugin list | grep '@soia' > /tmp/soia-installed-before.txt && cat /tmp/soia-installed-before.txt
+```
+
+**只删市场暂存**（`marketplace add` 会复用旧克隆，不删就拉不到新增的资源文件）：
+
+```bash
+rm -rf ~/.codex/.tmp/marketplaces/soia
+```
+
+**插件缓存只删目标那一个**，`soia` 是市场名不是插件名，`rm -rf ~/.codex/plugins/cache/soia` 会把该市场下**全部 8 个插件**一起删掉：
+
+```bash
+rm -rf ~/.codex/plugins/cache/soia/<域插件名>
 ```
 
 ```bash
@@ -183,6 +195,12 @@ codex plugin marketplace add soia-team/soia-open-skills
 
 ```bash
 codex plugin add <域插件名>@soia
+```
+
+**收尾比对安装清单**，确认没有连带损失；有缺失就逐个 `plugin add` 补回：
+
+```bash
+codex plugin list | grep '@soia' | diff /tmp/soia-installed-before.txt -
 ```
 
 Codex 无自动更新机制，必须手动执行。跳过删暂存这一步会出现「命令报成功、内容还是旧的」——2026-07-27 实际踩过：corp 市场的暂存停在没有 `assets/icon.svg` 的旧版本，`composerIcon` 指向不存在的文件，界面回退成通用图标，排查时误判为路径写错。
