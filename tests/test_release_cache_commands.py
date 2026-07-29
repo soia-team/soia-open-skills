@@ -40,6 +40,15 @@ class ReleaseCacheCommandTests(unittest.TestCase):
         self.assertIn("soia-installed-before.txt", self.code)
         self.assertIn("diff", self.code)
 
+    def test_claude_side_also_reconciles(self) -> None:
+        """Claude 侧同样需要对账。
+
+        回归 2026-07-27：一轮全量卸载重装后漏装 5 个插件（2 个开源 + 3 个私有），
+        直到手动核对才发现。`plugin update` 对未安装的插件只报 not installed，
+        不会自动补装。
+        """
+        self.assertIn("claude-soia-before.txt", self.code)
+
 
 if __name__ == "__main__":
     unittest.main()
