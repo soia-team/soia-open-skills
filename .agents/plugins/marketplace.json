@@ -10,7 +10,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-skills.git",
-        "ref": "07f1c343b07c1b09a7ff25265d34f93603a239b4"
+        "ref": "875def5aec074c7fc1bf3b714a59c86586525959"
       },
       "interface": {
         "displayName": "开发编码技能库",
@@ -32,7 +32,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-design-skills.git",
-        "ref": "f26d74f7f5ac19923bd5d0891108c05a48efbca3"
+        "ref": "3922f9a5c0b3f2a08a913db1be16695fd875a426"
       },
       "interface": {
         "displayName": "设计与文档技能库",
@@ -54,7 +54,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-cwork-office-skills.git",
-        "ref": "2d3e55273fccf4d327bc29bc348803652cb83d89"
+        "ref": "33be61fa01de0c843aaff502d6cbc0fc538cd493"
       },
       "interface": {
         "displayName": "办公协作技能库",
@@ -76,7 +76,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-pkm-vault-skills.git",
-        "ref": "445e7b7bbff7239c861698e061de22be02524623"
+        "ref": "61a2c2222343beb955a0e74320e878a37d1e3dea"
       },
       "interface": {
         "displayName": "知识库技能库",
@@ -98,7 +98,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-media-content-skills.git",
-        "ref": "2706753997d2202422326dbc96de162ea11e833b"
+        "ref": "b7f1783ecb8206bf60e22f75b01eee2aea1003e9"
       },
       "interface": {
         "displayName": "新媒体内容技能库",
@@ -142,7 +142,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-env-skills.git",
-        "ref": "7ef0352eafd4b1d295da9cfbd74e2cb317f8f3a9"
+        "ref": "ecc09866dd5c1f0207d1d7010aa3030c8aa7a6e8"
       },
       "interface": {
         "displayName": "环境运维技能库",
