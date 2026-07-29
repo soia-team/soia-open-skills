@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新与客户端更新。触发：「发布技能」「更新插件」「技能发布收尾」
-version: 3.2.0
+version: 3.3.0
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-07-29 14:14:06
+updated_at: 2026-07-29 14:34:03
 created_by: gpt-5.6-terra
 updated_by: claude opus 5
 dependencies:
@@ -159,7 +159,11 @@ gh api repos/soia-team/soia-open-skills/contents/.claude-plugin/marketplace.json
 
 ### 5. 指导客户端更新
 
-Claude Code：
+Claude Code：**先记录安装清单**，收尾要对账——`plugin update` 对未安装的插件会直接失败，卸载重装类操作也容易漏装：
+
+```bash
+claude plugin list | grep soia > /tmp/claude-soia-before.txt && cat /tmp/claude-soia-before.txt
+```
 
 ```bash
 claude plugin marketplace update soia
@@ -169,7 +173,15 @@ claude plugin marketplace update soia
 claude plugin update <域插件名>@soia
 ```
 
+收尾对账，缺失的逐个 `plugin install` 补回：
+
+```bash
+claude plugin list | grep soia | diff /tmp/claude-soia-before.txt -
+```
+
 更新后需重启 Claude Code 生效。已开启 `autoUpdate` 的用户会在下次启动时自动完成这两步。
+
+> `claude plugin details <名>` 对私有市场的插件要带市场后缀（`<名>@<市场>`），不带会报「not installed」，容易误判成插件丢失。核对安装状态用 `plugin list` 更可靠。
 
 Codex：**先记录当前安装清单**——下面要删缓存，删错粒度会连带卸掉同市场的其他插件：
 
