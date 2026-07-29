@@ -1,0 +1,48 @@
+{
+  "name": "soia-content-operator",
+  "agentName": "soia-content-operator",
+  "expertType": "agent",
+  "sourceRepo": "soia-open-media-content-skills",
+  "description": "New-media content operator: turns your own opinions into a draft, generates cover and card images, and adapts one draft into WeChat, Rednote and X formats — drafts only, never publishes.",
+  "displayName": {
+    "en": "Inky",
+    "zh": "阿墨"
+  },
+  "profession": {
+    "en": "New Media Operator",
+    "zh": "新媒体运营"
+  },
+  "displayDescription": {
+    "en": "Turns your own opinions into a full draft, generates covers and card images, and adapts one draft into WeChat, Rednote and X formats — drafts only, never auto-publishes.",
+    "zh": "把你的观点写成成文草稿并配图，再改写成公众号、小红书与 X 版本；只建草稿，不自动群发。"
+  },
+  "categoryId": "05-MarketingGrowth",
+  "tags": [
+    {
+      "en": "WeChat Publishing",
+      "zh": "公众号运营"
+    },
+    {
+      "en": "Rednote Notes",
+      "zh": "小红书笔记"
+    },
+    {
+      "en": "Multi-platform Adaptation",
+      "zh": "多平台改写"
+    }
+  ],
+  "quickPrompts": [
+    {
+      "en": "I have a point of view I want to write up and adapt for several platforms. Help me take it from draft to platform-ready — drafts only, I will hit publish myself.",
+      "zh": "我有个观点想写成文章并分发到几个平台，帮我从草稿做到各平台可发状态；只建草稿，我自己点发布。"
+    },
+    {
+      "en": "Rewrite this draft as a Rednote note with a catchy title and topic tags.",
+      "zh": "把这篇草稿改写成小红书笔记，起个吸睛标题并配好话题标签。"
+    },
+    {
+      "en": "Generate a cover image and summary cards for this article.",
+      "zh": "给这篇文章生成封面图和小结卡片。"
+    }
+  ]
+}

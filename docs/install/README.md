@@ -1,6 +1,6 @@
 # SOIA 技能安装指南
 
-[English](README.en.md) · [按使用场景选择安装组合](../install-profiles.md)
+[English](README.en.md) · [按使用场景选择安装组合](../install-profiles.md) · [先搞懂它怎么运转](../learning-guide.md)
 
 SOIA 技能分布在 8 个开源仓库（73 个技能）中，可安装到 Claude Code、Codex、Cursor 等 60+ AI 编码工具。
 

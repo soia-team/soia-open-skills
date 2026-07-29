@@ -4,6 +4,8 @@
 
 > **[打开完整安装指南 → `docs/install/README.md`](install/README.md)**
 
+想先搞懂这套东西怎么运转，再决定装什么，先读 **[学习指南](learning-guide.md)**。
+
 | AI agent | 直达链接 |
 |---|---|
 | Claude Code | [安装指南](install/claude-code.md) |

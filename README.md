@@ -83,6 +83,23 @@ Codex 用户把 `claude` 换成 `codex`、`install` 换成 `add` 即可，其余
 
 机器可读的全生态技能目录见 [routing-manifest.json](routing/routing-manifest.json)。
 
+## WorkBuddy 专家
+
+除 Claude 与 Codex 两份市场清单外，本仓还派生第三个分发面：把域技能组合封装成
+WorkBuddy 的**角色化专家**（人设 + 技能组合 + 展示元数据），不召唤就不在场。
+
+| 专家 | 花名 | 技能来源 |
+|---|---|---|
+| 知识库管家 | 阿藏 | `soia-pkm-vault`（26 个） |
+| 新媒体运营 | 阿墨 | `soia-media-content`（6 个） |
+| 办公资料助手 | 阿档 | `soia-cwork-office`（3 个） |
+
+```bash
+python3 scripts/generate_workbuddy_experts.py --dry-run
+```
+
+定义与新增方法见 [experts/README.md](experts/README.md)，安装见 [WorkBuddy 指南](docs/install/workbuddy.md)。
+
 ## 本仓技能
 
 | 技能 | 一句话职责 |
@@ -96,6 +113,7 @@ Codex 用户把 `claude` 换成 `codex`、`install` 换成 `add` 即可，其余
 
 | 文档 | 说明 |
 |---|---|
+| [docs/learning-guide.md](docs/learning-guide.md) | **先读这份**：整套生态怎么运转、为什么这么设计、常见疑问 |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | 技能结构、命名、frontmatter 与验证要求 |
 | [DATA_STORAGE_SPEC.md](DATA_STORAGE_SPEC.md) | 配置、凭据、状态、缓存与输出的存储边界 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 外部贡献者指南 + 维护者手册 |

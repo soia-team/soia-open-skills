@@ -83,6 +83,24 @@ for setups organized by machine purpose see [install-profiles.md](docs/install-p
 
 The machine-readable catalog of every skill is in [routing-manifest.json](routing/routing-manifest.json).
 
+## WorkBuddy experts
+
+Alongside the Claude and Codex marketplace manifests, this repo derives a third distribution
+face: domain skill sets packaged as WorkBuddy **role-based experts** (persona + skill set +
+display metadata). An expert is not in context until you summon it.
+
+| Expert | Nickname | Skills from |
+|---|---|---|
+| Knowledge Vault Curator | Archie | `soia-pkm-vault` (26) |
+| New Media Operator | Inky | `soia-media-content` (6) |
+| Workplace Docs Aide | Filo | `soia-cwork-office` (3) |
+
+```bash
+python3 scripts/generate_workbuddy_experts.py --dry-run
+```
+
+Definitions and how to add one: [experts/README.md](experts/README.md). Install: [WorkBuddy guide](docs/install/workbuddy.md).
+
 ## Skills in this repository
 
 | Skill | Responsibility |
@@ -96,6 +114,7 @@ The machine-readable catalog of every skill is in [routing-manifest.json](routin
 
 | Document | Covers |
 |---|---|
+| [docs/learning-guide.en.md](docs/learning-guide.en.md) | **Start here**: how the ecosystem works, why it is designed this way, and FAQs |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | Skill structure, naming, frontmatter, and validation requirements |
 | [DATA_STORAGE_SPEC.md](DATA_STORAGE_SPEC.md) | Boundaries for config, credentials, state, cache, and output |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contributor guide plus the maintainer handbook |
