@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#5B5CE2"/>
-      <stop offset="1" stop-color="#3730A3"/>
+      <stop offset="0" stop-color="#FB7185"/>
+      <stop offset="1" stop-color="#BE123C"/>
     </linearGradient>
     <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.30"/>
@@ -11,7 +11,7 @@
     </linearGradient>
     <linearGradient id="ink" x1="0" y1="0" x2="0.3" y2="1">
       <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#D6D6FF"/>
+      <stop offset="1" stop-color="#FFE4E9"/>
     </linearGradient>
   </defs>
 
@@ -19,7 +19,7 @@
     <rect width="1024" height="1024" rx="230" fill="url(#sheen)"/>
     <g transform="translate(512,452)" fill="none" stroke-width="40"
        stroke-linecap="round" stroke-linejoin="round">
-      <g stroke="#3730A3" opacity="0.38" transform="translate(0,14)">
+      <g stroke="#BE123C" opacity="0.38" transform="translate(0,14)">
       <polygon points="-215,-25 215,-165 95,175 -10,60"/>
       <line x1="-10" y1="60" x2="215" y2="-165"/></g>
       <g stroke="url(#ink)">

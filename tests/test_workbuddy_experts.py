@@ -23,6 +23,9 @@ gwe = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(gwe)
 
 # 官方 manifest 的分类枚举（app/cache/experts/manifest.json），随 WorkBuddy 发布
+# soia-design-brand-guidelines §配色 的 Primary，规范明写用于「插件与应用图标底色」
+BRAND_PRIMARY = "#F5A623"
+
 VALID_CATEGORIES = {
     "01-ProductDesign", "02-Engineering", "03-GameSpatial", "04-DataAI",
     "05-MarketingGrowth", "06-ContentCreative", "07-SalesCommerce",
@@ -109,6 +112,17 @@ class SharedIconSourceTests(unittest.TestCase):
                       "brandColor 必须取自 generate_icons.py，不得另存一张表")
         self.assertNotRegex(source, r'BRAND_COLORS\s*=\s*\{\s*\n\s*"soia-',
                             "检测到硬编码的 brandColor 表")
+
+    def test_brand_primary_anchors_the_palette(self) -> None:
+        """品牌规范 soia-design-brand-guidelines §配色 把 #F5A623 定为插件图标底色。
+
+        回归 2026-07-29：为了「统一图标来源」顺手把整套刷成紫色并部署到 8 个仓，
+        品牌锚点因此消失，且事前没查规范。改色值前先读规范，这条测试是提醒。
+        """
+        self.assertEqual(
+            self.icons.PALETTE["soia-meta"][2], BRAND_PRIMARY,
+            "soia-meta 应直接用品牌主色，它是整套配色的锚点",
+        )
 
     def test_every_plugin_has_a_distinct_glyph(self) -> None:
         """gov 与 corp 曾被写成同一个盾牌+对勾，两个插件在市场里无法区分。"""

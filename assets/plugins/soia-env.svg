@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#6366F1"/>
-      <stop offset="1" stop-color="#164E63"/>
+      <stop offset="0" stop-color="#84CC16"/>
+      <stop offset="1" stop-color="#3F6212"/>
     </linearGradient>
     <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.30"/>
@@ -11,7 +11,7 @@
     </linearGradient>
     <linearGradient id="ink" x1="0" y1="0" x2="0.3" y2="1">
       <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#CFFAFE"/>
+      <stop offset="1" stop-color="#EDFFCF"/>
     </linearGradient>
   </defs>
 
@@ -19,7 +19,7 @@
     <rect width="1024" height="1024" rx="230" fill="url(#sheen)"/>
     <g transform="translate(512,452)" fill="none" stroke-width="40"
        stroke-linecap="round" stroke-linejoin="round">
-      <g stroke="#164E63" opacity="0.38" transform="translate(0,14)">
+      <g stroke="#3F6212" opacity="0.38" transform="translate(0,14)">
       <circle cx="0" cy="0" r="82"/>
       <path d="M0,-215 L46,-172 L46,-150 L106,-116 L128,-124 L182,-98
                L166,-38 L150,-22 L150,22 L166,38 L182,98 L128,124 L106,116
