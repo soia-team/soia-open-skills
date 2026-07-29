@@ -166,6 +166,60 @@ the actual target is an explicitly confirmed SOIA product workspace.
   repo. If you need to inspect another ref, use `git show <ref>:<path>` or
   `git stash` instead.
 
+## 清理分支：不要相信 `git cherry` 和 `--merged`
+
+本仓群全部走 **squash 合并**。squash 把分支的 N 个提交压成一个**全新提交**，
+与原分支没有任何祖先关系，于是：
+
+| 命令 | 在 squash 流程下的表现 |
+|---|---|
+| `git branch --merged main` | 认不出，已合并的分支不会列出 |
+| `git branch -d <分支>` | 拒绝删除，报「未完全合并」 |
+| `git cherry origin/main <分支>` | **误报**，把已落地的提交标成 `+`（未落地） |
+
+2026-07-27 单日踩到 **3 次**：`codex/processon-virtual-scroll`、
+`fix/processon-collision-archive`、`feat/article-ppt-quality-contracts` 都被
+`git cherry` 报有 3–4 个未落地提交，实测文件内容 **100% 已在 main**。
+
+### 可靠判据：比文件内容，不比提交
+
+```bash
+BRANCH=<要检查的分支>
+git diff --name-only origin/main...$BRANCH | while read -r f; do
+  git diff --quiet "$BRANCH" origin/main -- "$f" || echo "真有差异: $f"
+done
+```
+
+无输出即表示分支内容已全部落地，可安全 `git branch -D` 删除。
+
+再补两个交叉验证：
+
+```bash
+# 1. 有没有只存在于分支、main 上没有的文件
+git diff --name-only "$BRANCH" origin/main | while read -r f; do
+  git show "origin/main:$f" >/dev/null 2>&1 || echo "main 缺少: $f"
+done
+
+# 2. main 上有没有对应的 squash 提交（按关键词搜）
+git log --oneline origin/main --since=<分支最后提交日期> | grep -i <关键词>
+```
+
+### 注意方向
+
+`git diff --stat $BRANCH origin/main` 常显示大量删除行——那通常是**分支落后于
+main**（缺了 main 后来的改动），不是分支有独家内容。判断「能否删除」只看上面
+第一个循环的输出。
+
+### 确有未落地内容时
+
+不要直接删。先判断它是否与 main 现行设计冲突（可能是已被推翻的旧方案），
+需要保留就开 PR 合并；确认放弃再删，并留存可还原的存档：
+
+```bash
+git bundle create <名>.bundle "$BRANCH"      # git clone <file> 可完整还原
+git diff origin/main..."$BRANCH" > <名>.patch # git apply 可直接打回
+```
+
 ## Skill Debug Install Rules
 
 Local checkout installation is only for temporary debugging. It is not a release
