@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#2563EB"/>
-      <stop offset="1" stop-color="#172554"/>
+      <stop offset="0" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#155E75"/>
     </linearGradient>
     <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.30"/>
@@ -11,7 +11,7 @@
     </linearGradient>
     <linearGradient id="ink" x1="0" y1="0" x2="0.3" y2="1">
       <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#DBEAFE"/>
+      <stop offset="1" stop-color="#D6FBFF"/>
     </linearGradient>
   </defs>
 
@@ -19,7 +19,7 @@
     <rect width="1024" height="1024" rx="230" fill="url(#sheen)"/>
     <g transform="translate(512,452)" fill="none" stroke-width="40"
        stroke-linecap="round" stroke-linejoin="round">
-      <g stroke="#172554" opacity="0.38" transform="translate(0,14)">
+      <g stroke="#155E75" opacity="0.38" transform="translate(0,14)">
       <path d="M0,-210 L200,-140 L200,20 A200,240 0 0 1 0,215
                A200,240 0 0 1 -200,20 L-200,-140 Z"/>
       <polyline points="-88,5 -22,72 96,-58"/></g>

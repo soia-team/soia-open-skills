@@ -16,7 +16,7 @@
         "displayName": "开发编码技能库",
         "shortDescription": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
         "category": "Developer Tools",
-        "brandColor": "#6366F1",
+        "brandColor": "#FB923C",
         "composerIcon": "./assets/plugins/soia-dev.svg",
         "logo": "./assets/plugins/soia-dev.png"
       },
@@ -38,7 +38,7 @@
         "displayName": "设计与文档技能库",
         "shortDescription": "设计与文档产线技能：Open Design、Archify、draw.io/Visio、OfficeCLI",
         "category": "Creativity",
-        "brandColor": "#8B5CF6",
+        "brandColor": "#FBBF24",
         "composerIcon": "./assets/plugins/soia-dev-design.svg",
         "logo": "./assets/plugins/soia-dev-design.png"
       },
@@ -60,7 +60,7 @@
         "displayName": "办公协作技能库",
         "shortDescription": "办公协作技能：飞书知识库与云盘、ProcessOn 图表",
         "category": "Productivity",
-        "brandColor": "#3B82F6",
+        "brandColor": "#38BDF8",
         "composerIcon": "./assets/plugins/soia-cwork-office.svg",
         "logo": "./assets/plugins/soia-cwork-office.png"
       },
@@ -82,7 +82,7 @@
         "displayName": "知识库技能库",
         "shortDescription": "知识库技能：初始化、整理、提炼、翻译、转换与书库",
         "category": "Productivity",
-        "brandColor": "#4F46E5",
+        "brandColor": "#F97316",
         "composerIcon": "./assets/plugins/soia-pkm-vault.svg",
         "logo": "./assets/plugins/soia-pkm-vault.png"
       },
@@ -104,7 +104,7 @@
         "displayName": "新媒体内容技能库",
         "shortDescription": "新媒体内容技能：文章成文、文章图片与公众号、X、小红书发布",
         "category": "Creativity",
-        "brandColor": "#5B5CE2",
+        "brandColor": "#FB7185",
         "composerIcon": "./assets/plugins/soia-media-content.svg",
         "logo": "./assets/plugins/soia-media-content.png"
       },
@@ -126,7 +126,7 @@
         "displayName": "教育课程技能库",
         "shortDescription": "教育课程技能：课程大纲设计与教案编写",
         "category": "Education & Research",
-        "brandColor": "#A78BFA",
+        "brandColor": "#818CF8",
         "composerIcon": "./assets/plugins/soia-edu-course.svg",
         "logo": "./assets/plugins/soia-edu-course.png"
       },
@@ -148,7 +148,7 @@
         "displayName": "环境运维技能库",
         "shortDescription": "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
         "category": "Developer Tools",
-        "brandColor": "#6366F1",
+        "brandColor": "#84CC16",
         "composerIcon": "./assets/plugins/soia-env.svg",
         "logo": "./assets/plugins/soia-env.png"
       },
@@ -169,7 +169,7 @@
         "displayName": "SOIA 元技能库",
         "shortDescription": "SOIA 技能生态门户：规范真源、技能目录与跨仓路由清单",
         "category": "Developer Tools",
-        "brandColor": "#7C3AED",
+        "brandColor": "#F5A623",
         "composerIcon": "./assets/plugins/soia-meta.svg",
         "logo": "./assets/plugins/soia-meta.png"
       },

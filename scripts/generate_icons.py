@@ -35,20 +35,27 @@ LABEL_Y = 838
 LABEL_SIZE = 108
 
 # 插件 → (标签, 深色停, 浅色停, 强调色)
-# 家族感靠结构（同圆角、同渐变构造、同线宽），辨识度靠色相偏移 + 字形。
+#
+# 品牌规范 soia-design-brand-guidelines §配色 规定：Primary 琥珀橙 #F5A623
+# 用于「插件与应用图标底色」。本表以它为锚点，每域只在色相上小幅偏移——
+# 家族感靠结构（同圆角、同渐变构造、同线宽），辨识度靠色相 + 字形。
+# soia-meta 用的就是品牌主色本身。
+#
+# 2026-07-29 教训：曾把整套刷成紫色再部署到 8 个仓，那不是「统一」要求的，
+# 是自作主张，且没先查品牌规范。改色值前先读规范。
 PALETTE: dict[str, tuple[str, str, str, str]] = {
-    "soia-dev": ("coding", "#312E81", "#6366F1", "#C7D2FE"),
-    "soia-dev-design": ("design", "#4C1D95", "#8B5CF6", "#DDD6FE"),
-    "soia-pkm-vault": ("vault", "#1E1B4B", "#4F46E5", "#C7D2FE"),
-    "soia-media-content": ("media", "#3730A3", "#5B5CE2", "#D6D6FF"),
-    "soia-cwork-office": ("cowork", "#1E3A8A", "#3B82F6", "#DBEAFE"),
-    "soia-edu-course": ("course", "#5B21B6", "#A78BFA", "#EDE9FE"),
-    "soia-env": ("env", "#164E63", "#6366F1", "#CFFAFE"),
-    "soia-meta": ("meta", "#2E1065", "#7C3AED", "#E9D5FF"),
-    "soia-gov": ("gov", "#3B0764", "#9333EA", "#F3E8FF"),
-    "soia-workspace": ("workspace", "#581C87", "#C026D3", "#FAE8FF"),
-    "soia-corp": ("corp", "#172554", "#2563EB", "#DBEAFE"),
-    "soia-harness": ("harness", "#27272A", "#71717A", "#E4E4E7"),
+    "soia-dev": ("coding", "#C2410C", "#FB923C", "#FFE8C7"),
+    "soia-dev-design": ("design", "#B45309", "#FBBF24", "#FFF3D1"),
+    "soia-pkm-vault": ("vault", "#9A3412", "#F97316", "#FFE0BF"),
+    "soia-media-content": ("media", "#BE123C", "#FB7185", "#FFE4E9"),
+    "soia-cwork-office": ("cowork", "#0E7490", "#38BDF8", "#DDF3FF"),
+    "soia-edu-course": ("course", "#4338CA", "#818CF8", "#E4E5FF"),
+    "soia-env": ("env", "#3F6212", "#84CC16", "#EDFFCF"),
+    "soia-meta": ("meta", "#78350F", "#F5A623", "#FFEDCB"),
+    "soia-gov": ("gov", "#5B21B6", "#A78BFA", "#EDE6FF"),
+    "soia-workspace": ("workspace", "#7C2D12", "#FDBA74", "#FFEBD6"),
+    "soia-corp": ("corp", "#155E75", "#22D3EE", "#D6FBFF"),
+    "soia-harness": ("harness", "#3F3F46", "#A1A1AA", "#F4F4F5"),
 }
 
 # 字形：以 (0,0) 为中心、约 470 见方的框内作图
