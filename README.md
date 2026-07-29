@@ -1,82 +1,106 @@
-# SOIA Skills 生态门户
+# SOIA Skills
 
-[English](README.en.md)
+[English](README.en.md) · 中文
 
-SOIA Skills 的公开生态门户：提供共享规范、跨仓导航、公开路由清单和生态级 meta 技能。
+一套按领域分装的 AI 工作流技能库，74 个技能覆盖开发、知识库、新媒体、办公协作、设计文档、课程与环境安装。装成插件，按需启停。
 
-## 技能目录
+## 这是什么
 
-| 技能名 | 一句话简介 |
-|---|---|
-| [`soia-meta-find-skill`](skills/soia-meta-find-skill/) | 按需求两级检索、定位并加载 SOIA 全生态技能。 |
-| [`soia-meta-prompt-clarity`](skills/soia-meta-prompt-clarity/) | 起草、诊断并规范化中英文提示词，同时保留原有语言与边界。 |
-| [`soia-meta-skill-release`](skills/soia-meta-skill-release/) | 协助完成技能发布后的安装、旧名清理和版本状态核对。 |
-| [`soia-meta-sync-skills`](skills/soia-meta-sync-skills/) | 将共享技能安全同步至用户明确选择的 AI 工具目录。 |
+「技能」是一份告诉 AI **怎么做某件具体的事**的说明书——包含步骤、边界、验收口径和踩过的坑。它不是提示词模板，而是可版本化、可测试、可组合的工程产物。
 
-## 生态拓扑
+本仓库是整个生态的**门户**：规范真源、跨仓导航、市场清单，以及 4 个管理生态自身的 meta 技能。**具体领域的技能在各自的仓库里**，通过插件市场统一分发。
 
-| 仓库 | 职责 |
-|---|---|
-| [`soia-open-skills`](https://github.com/soia-team/soia-open-skills) | 生态门户、共享规范、公开路由和 meta 技能。 |
-| [`soia-open-env-skills`](https://github.com/soia-team/soia-open-env-skills) | 开发环境的诊断、安装与升级支持。 |
-| [`soia-open-pkm-vault-skills`](https://github.com/soia-team/soia-open-pkm-vault-skills) | 网页、社交内容和云盘资料的剪藏与导入，以及 Markdown 知识库的初始化、整理、提炼、转换和书库维护。 |
-| [`soia-open-media-content-skills`](https://github.com/soia-team/soia-open-media-content-skills) | 文章创作、文章图片生成与多平台内容发布。 |
-| [`soia-open-cwork-office-skills`](https://github.com/soia-team/soia-open-cwork-office-skills) | 协作办公工具与文档服务的集成操作。 |
-| [`soia-open-dev-skills`](https://github.com/soia-team/soia-open-dev-skills) | 编码、任务执行、代码评审、修复、GitHub、终端操作、测试质量与软件发布。 |
-| [`soia-open-dev-design-skills`](https://github.com/soia-team/soia-open-dev-design-skills) | Open Design、架构图、图表、Office 设计与产品需求工作流。 |
-| [`soia-open-edu-course-skills`](https://github.com/soia-team/soia-open-edu-course-skills) | 课程大纲、教学材料和测评设计。 |
+```text
+soia-open-skills（你在这里）
+    ├── 规范    SKILL_SPEC.md · DATA_STORAGE_SPEC.md · CONTRIBUTING.md
+    ├── 市场    一次注册，8 个领域插件按需安装
+    └── meta    检索、同步、发布、提示词起草
+                    ↓
+        7 个领域仓（dev · pkm-vault · media · cwork · design · edu · env）
+```
 
-完整的机器可读技能目录见 [`routing/routing-manifest.json`](routing/routing-manifest.json)。
+### 适合什么场景
 
-## 安装
+- 「让 AI 帮我改代码，但它老是改完说『应该没问题』就交差。」
+- 「网上剪藏的文章散在各处，想收进一个能搜的本地知识库。」
+- 「写完文章要发公众号、X、小红书，每个平台格式都不一样。」
+- 「团队资料锁在飞书和 ProcessOn 里，想导出成本地文件。」
+- 「新机器要装一堆 AI CLI，每次都踩坑。」
 
-> **[完整安装指南 → `docs/install-guide.md`](docs/install-guide.md)**
+### 不负责什么
 
-### 插件方式（推荐）
+- 不是 AI 客户端。它扩展你已有的 Claude Code / Codex，不替代它们。
+- 不托管你的数据。所有内容留在你自己的机器上，技能只提供操作方法。
+- 不保存凭据。各平台登录态由官方流程持有，不进仓库、不进日志。
+- 不含公司内部流程。行业特定的需求、测试、发版规范在私有仓，不开源。
 
-插件方式按领域安装和开关整组技能；例如安装知识库插件：
+## 从哪里开始
+
+**第一次用，两条命令：**
 
 ```bash
 claude plugin marketplace add soia-team/soia-open-skills
-/plugin install soia-pkm-vault@soia
-
-codex plugin marketplace add soia-team/soia-open-skills
-codex plugin add soia-pkm-vault@soia
-
-qwen extensions install https://github.com/soia-team/soia-open-skills:soia-pkm-vault
 ```
-
-Claude 可用 `claude plugin enable`、`claude plugin disable` 和 `claude plugin update` 管理已安装插件。
-
-### npx 方式
-
-npx 方式保留单技能粒度，适合只安装某一个明确技能。
-
-按需安装单个技能：
 
 ```bash
-npx skills add soia-team/<仓库名> -g -a '*' -s <技能名> -y
+claude plugin install soia-meta@soia
 ```
 
-例如，安装提示词澄清技能：
+装完对 AI 说「**找个技能**」，`soia-meta-find-skill` 会按你的需求检索全生态 74 个技能并告诉你装哪个——不必先读完下面的表。
 
-```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-prompt-clarity -y
-```
+**已经知道要什么，直接装对应领域：**
 
-更多按机器用途组织的安装组合，见 [`docs/install-profiles.md`](docs/install-profiles.md)。
+| 我要做的 | 装这个 | 技能数 | 常驻成本 |
+|---|---|---|---|
+| 写代码、审代码、管 PR | `soia-dev` | 12 | ~971 tok |
+| 建知识库、剪藏、整理、转换 | `soia-pkm-vault` | 26 | ~2.8k tok |
+| 配电脑、装 AI CLI、诊断网络 | `soia-env` | 15 | ~1.5k tok |
+| 写文章、配图、多平台发布 | `soia-media-content` | 6 | ~691 tok |
+| PRD、原型、架构图、Office | `soia-dev-design` | 6 | ~548 tok |
+| 飞书、ProcessOn 资料导出 | `soia-cwork-office` | 3 | ~309 tok |
+| 课程大纲与教案 | `soia-edu-course` | 2 | ~140 tok |
+| 管理技能生态本身 | `soia-meta` | 4 | ~396 tok |
+
+> **常驻成本**指该插件的技能索引每次会话占用的上下文；技能正文只在命中时才载入。
+> 暂时不用的领域用 `claude plugin disable <插件名>` 关掉，成本归零，随时开回来。
+
+Codex 用户把 `claude` 换成 `codex`、`install` 换成 `add` 即可，其余相同。
+其他 60+ 宿主（Cursor、Zed、Windsurf 等）见 [安装指南](docs/install/README.md)；
+按机器用途组织的安装组合见 [install-profiles.md](docs/install-profiles.md)。
+
+## 生态拓扑
+
+| 仓库 | 职责 | 插件 |
+|---|---|---|
+| [soia-open-skills](https://github.com/soia-team/soia-open-skills) | 门户、规范真源、市场清单、meta 技能 | `soia-meta` |
+| [soia-open-dev-skills](https://github.com/soia-team/soia-open-dev-skills) | 工程契约：任务执行、修复闭环、评审、GitHub 运维 | `soia-dev` |
+| [soia-open-dev-design-skills](https://github.com/soia-team/soia-open-dev-design-skills) | 设计与文档产线：PRD、原型、架构图、Office | `soia-dev-design` |
+| [soia-open-pkm-vault-skills](https://github.com/soia-team/soia-open-pkm-vault-skills) | 知识库全生命周期：剪藏、整理、提炼、转换 | `soia-pkm-vault` |
+| [soia-open-media-content-skills](https://github.com/soia-team/soia-open-media-content-skills) | 内容生产最后一公里：成文、配图、分平台发布 | `soia-media-content` |
+| [soia-open-cwork-office-skills](https://github.com/soia-team/soia-open-cwork-office-skills) | 把 SaaS 平台里的资料导出成本地文件 | `soia-cwork-office` |
+| [soia-open-edu-course-skills](https://github.com/soia-team/soia-open-edu-course-skills) | 课程大纲与教案设计 | `soia-edu-course` |
+| [soia-open-env-skills](https://github.com/soia-team/soia-open-env-skills) | 环境就绪：网络诊断、运行时与 AI CLI 安装 | `soia-env` |
+
+机器可读的全生态技能目录见 [routing-manifest.json](routing/routing-manifest.json)。
+
+## 本仓技能
+
+| 技能 | 一句话职责 |
+|---|---|
+| [`soia-meta-find-skill`](skills/soia-meta-find-skill/) | 按需求检索全生态技能并加载，不必预先知道技能名。 |
+| [`soia-meta-skill-release`](skills/soia-meta-skill-release/) | 技能改动合并后完成市场发布、客户端更新与缓存回收。 |
+| [`soia-meta-sync-skills`](skills/soia-meta-sync-skills/) | 把共享技能源软链同步到你明确选择的 AI 工具目录。 |
+| [`soia-meta-prompt-clarity`](skills/soia-meta-prompt-clarity/) | 起草、诊断并规格化中英文提示词，保留原意与安全边界。 |
 
 ## 规范文档
 
-- [`SKILL_SPEC.md`](SKILL_SPEC.md)：技能结构、命名、frontmatter 和验证要求。
-- [`DATA_STORAGE_SPEC.md`](DATA_STORAGE_SPEC.md)：配置、凭据、状态、缓存和输出的存储边界。
-- [`docs/install-guide.md`](docs/install-guide.md)：模块化安装指南的导航入口。
-- [`docs/install-profiles.md`](docs/install-profiles.md)：按使用场景组织的安装方案。
-- [`docs/plugin-dev.md`](docs/plugin-dev.md)：Codex 本地插件迭代与领域插件发版后的元仓刷新流程。
-
-## 生态导航
-
-规范真源与全生态目录均位于 [`soia-team/soia-open-skills`](https://github.com/soia-team/soia-open-skills)。
+| 文档 | 说明 |
+|---|---|
+| [SKILL_SPEC.md](SKILL_SPEC.md) | 技能结构、命名、frontmatter 与验证要求 |
+| [DATA_STORAGE_SPEC.md](DATA_STORAGE_SPEC.md) | 配置、凭据、状态、缓存与输出的存储边界 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 外部贡献者指南 + 维护者手册 |
+| [docs/install/](docs/install/README.md) | 60+ AI 宿主的安装指南 |
+| [docs/plugin-dev.md](docs/plugin-dev.md) | 本地插件迭代与发版后的元仓刷新流程 |
 
 ## License
 
