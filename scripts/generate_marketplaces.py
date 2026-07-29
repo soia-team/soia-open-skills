@@ -25,6 +25,36 @@ class PluginDefinition(NamedTuple):
     category: str
 
 
+# 市场列表在插件安装前就要画图标，此时应用只克隆了元仓，拿不到域仓的 assets/。
+# 官方 bundled 市场把插件放在市场仓子目录里所以没这问题；我们是多仓拓扑，
+# 因此把各插件图标在元仓再存一份，由市场条目的 interface 直接引用。
+# 条目级 interface 的 displayName/shortDescription 已实证被 UI 消费。
+ENTRY_ICON_DIR = "./assets/plugins"
+BRAND_COLORS = {
+    "soia-dev": "#FB923C",
+    "soia-dev-design": "#FBBF24",
+    "soia-pkm-vault": "#F97316",
+    "soia-media-content": "#5B5CE2",
+    "soia-cwork-office": "#38BDF8",
+    "soia-edu-course": "#818CF8",
+    "soia-env": "#84CC16",
+    "soia-meta": "#F5A623",
+}
+
+
+def entry_icons(name: str) -> dict[str, str]:
+    """媒体内容沿用其自带的紫色双尺寸设计，其余用统一矢量母版。"""
+    if name == "soia-media-content":
+        return {
+            "composerIcon": f"{ENTRY_ICON_DIR}/{name}-composer.png",
+            "logo": f"{ENTRY_ICON_DIR}/{name}.png",
+        }
+    return {
+        "composerIcon": f"{ENTRY_ICON_DIR}/{name}.svg",
+        "logo": f"{ENTRY_ICON_DIR}/{name}.png",
+    }
+
+
 # Keep this ordered table aligned with the public spoke topology. Descriptions
 # mirror the repositories' GitHub descriptions so generation stays deterministic
 # and only main-branch revisions require live GitHub lookups.
@@ -190,6 +220,8 @@ def build_marketplaces(
                     "displayName": definition.display_name,
                     "shortDescription": definition.description,
                     "category": definition.category,
+                    "brandColor": BRAND_COLORS[definition.name],
+                    **entry_icons(definition.name),
                 },
                 "policy": {
                     "installation": "AVAILABLE",

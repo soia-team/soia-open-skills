@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新与客户端更新。触发：「发布技能」「更新插件」「技能发布收尾」
-version: 3.0.0
+version: 3.1.0
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-07-27 16:02:23
+updated_at: 2026-07-27 19:32:48
 created_by: gpt-5.6-terra
 updated_by: claude opus 5
 dependencies:
@@ -171,7 +171,11 @@ claude plugin update <域插件名>@soia
 
 更新后需重启 Claude Code 生效。已开启 `autoUpdate` 的用户会在下次启动时自动完成这两步。
 
-Codex：
+Codex：**必须先删暂存目录再 add**，否则 `marketplace add` 会复用旧克隆，拉不到新增的资源文件：
+
+```bash
+rm -rf ~/.codex/.tmp/marketplaces/soia ~/.codex/plugins/cache/soia
+```
 
 ```bash
 codex plugin marketplace add soia-team/soia-open-skills
@@ -181,9 +185,25 @@ codex plugin marketplace add soia-team/soia-open-skills
 codex plugin add <域插件名>@soia
 ```
 
-Codex 无自动更新机制，必须手动执行。缓存导致版本未变时先清理：`rm -rf ~/.codex/.tmp/marketplaces/soia`。
+Codex 无自动更新机制，必须手动执行。跳过删暂存这一步会出现「命令报成功、内容还是旧的」——2026-07-27 实际踩过：corp 市场的暂存停在没有 `assets/icon.svg` 的旧版本，`composerIcon` 指向不存在的文件，界面回退成通用图标，排查时误判为路径写错。
 
-### 6. 验证
+### 6. 回收旧版本缓存
+
+两家客户端在 `plugin update` 后都只新增版本目录，**不回收旧的**；Claude 的 `.in_use` 标记也不可靠（实测同一插件新旧两个版本都带这个文件）。不清理会线性堆积，并干扰排查——用 `find` 找资源会匹配到多个版本目录，`ls` 统计技能数会得出离谱结果。
+
+```bash
+python3 skills/soia-meta-skill-release/scripts/prune_plugin_cache.py
+```
+
+预演确认无误后执行：
+
+```bash
+python3 skills/soia-meta-skill-release/scripts/prune_plugin_cache.py --apply
+```
+
+按语义化版本取最高值保留，其余删除；非语义化版本目录（如官方插件的 `latest`）一律跳过。缓存随时可由市场重新拉取，删错也只是多下一次。
+
+### 7. 验证
 
 ```bash
 claude plugin list

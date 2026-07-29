@@ -10,12 +10,15 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-skills.git",
-        "ref": "571558ec2c136c74a820f8728528ce2a30f30ffd"
+        "ref": "067098ea8140c26d71caaaacd984347efa9b0970"
       },
       "interface": {
         "displayName": "开发编码技能库",
         "shortDescription": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
-        "category": "Developer Tools"
+        "category": "Developer Tools",
+        "brandColor": "#FB923C",
+        "composerIcon": "./assets/plugins/soia-dev.svg",
+        "logo": "./assets/plugins/soia-dev.png"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -29,12 +32,15 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-design-skills.git",
-        "ref": "b002aed38e00cbfcd383f5e2aa084ecc919ff548"
+        "ref": "798cfabfbb5081192dcbbdbd8178f32543500cd5"
       },
       "interface": {
         "displayName": "设计与文档技能库",
         "shortDescription": "设计与文档产线技能：Open Design、Archify、draw.io/Visio、OfficeCLI",
-        "category": "Creativity"
+        "category": "Creativity",
+        "brandColor": "#FBBF24",
+        "composerIcon": "./assets/plugins/soia-dev-design.svg",
+        "logo": "./assets/plugins/soia-dev-design.png"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -48,12 +54,15 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-cwork-office-skills.git",
-        "ref": "59d678e1afa82da2ff1f8cac048c50f161734a70"
+        "ref": "52524567b727cf23bf155863d85f20610fa55a02"
       },
       "interface": {
         "displayName": "办公协作技能库",
         "shortDescription": "办公协作技能：飞书知识库与云盘、ProcessOn 图表",
-        "category": "Productivity"
+        "category": "Productivity",
+        "brandColor": "#38BDF8",
+        "composerIcon": "./assets/plugins/soia-cwork-office.svg",
+        "logo": "./assets/plugins/soia-cwork-office.png"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -67,12 +76,15 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-pkm-vault-skills.git",
-        "ref": "a00350bd78b33e5a1d3ea7a3ba21dd57fbd2b0cf"
+        "ref": "d058f4ba5dcb2f539055d6ae78b4945f6eb03404"
       },
       "interface": {
         "displayName": "知识库技能库",
         "shortDescription": "知识库技能：初始化、整理、提炼、翻译、转换与书库",
-        "category": "Productivity"
+        "category": "Productivity",
+        "brandColor": "#F97316",
+        "composerIcon": "./assets/plugins/soia-pkm-vault.svg",
+        "logo": "./assets/plugins/soia-pkm-vault.png"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -86,12 +98,15 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-media-content-skills.git",
-        "ref": "f02abc4bddf27156c1efd832b18c79399ce54082"
+        "ref": "2706753997d2202422326dbc96de162ea11e833b"
       },
       "interface": {
         "displayName": "新媒体内容技能库",
         "shortDescription": "新媒体内容技能：文章成文、文章图片与公众号、X、小红书发布",
-        "category": "Creativity"
+        "category": "Creativity",
+        "brandColor": "#5B5CE2",
+        "composerIcon": "./assets/plugins/soia-media-content-composer.png",
+        "logo": "./assets/plugins/soia-media-content.png"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -105,12 +120,15 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-edu-course-skills.git",
-        "ref": "ac93c979d383a6c702b436089200129c814f9fa4"
+        "ref": "e293316330ca29fe4895cfac2858d6c42f68e962"
       },
       "interface": {
         "displayName": "教育课程技能库",
         "shortDescription": "教育课程技能：课程大纲设计与教案编写",
-        "category": "Education & Research"
+        "category": "Education & Research",
+        "brandColor": "#818CF8",
+        "composerIcon": "./assets/plugins/soia-edu-course.svg",
+        "logo": "./assets/plugins/soia-edu-course.png"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -124,12 +142,15 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-env-skills.git",
-        "ref": "916516551f22aea25f0620a09d67b8bb27a6045a"
+        "ref": "096f8fdeafa60cd671aecd13c97c3a645e16a2e6"
       },
       "interface": {
         "displayName": "环境运维技能库",
         "shortDescription": "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
-        "category": "Developer Tools"
+        "category": "Developer Tools",
+        "brandColor": "#84CC16",
+        "composerIcon": "./assets/plugins/soia-env.svg",
+        "logo": "./assets/plugins/soia-env.png"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -147,7 +168,10 @@
       "interface": {
         "displayName": "SOIA 元技能库",
         "shortDescription": "SOIA 技能生态门户：规范真源、技能目录与跨仓路由清单",
-        "category": "Developer Tools"
+        "category": "Developer Tools",
+        "brandColor": "#F5A623",
+        "composerIcon": "./assets/plugins/soia-meta.svg",
+        "logo": "./assets/plugins/soia-meta.png"
       },
       "policy": {
         "installation": "AVAILABLE",
