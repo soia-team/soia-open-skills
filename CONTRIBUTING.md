@@ -311,6 +311,24 @@ plugin version and appears twice in every agent's index. (End users who prefer
 per-skill installs may still use the npx route — see `docs/install/` in the
 meta repo. That is a consumer choice, not the maintainer's delivery path.)
 
+### 5. Refresh WorkBuddy experts if the domain has one
+
+Three domains (`soia-pkm-vault`, `soia-media-content`, `soia-cwork-office`) are
+also packaged as WorkBuddy experts. Their skill sets are **copies made at
+generation time**, not live references — a skill added, renamed, or deleted in
+one of those repos does not reach WorkBuddy until the generator reruns:
+
+```bash
+python3 scripts/generate_workbuddy_experts.py
+```
+
+The expert package is rebuilt as a whole directory, so a deleted skill really
+disappears rather than lingering. `experts/` in the meta repo holds only the
+definitions (persona, display metadata, avatar); definitions are validated by
+`tests/test_workbuddy_experts.py` in CI, while the final verdict comes from
+WorkBuddy's own `expert-manager` toolkit, which the generator invokes. Details
+in [`experts/README.md`](experts/README.md).
+
 ### Why not manual symlinks?
 
 - Manual `ln -s` skips `.skill-lock.json` — the skill becomes invisible to

@@ -1,6 +1,6 @@
 # SOIA Skills Installation Guide
 
-[中文](README.md) · [Installation profiles](../install-profiles.md)
+[中文](README.md) · [Installation profiles](../install-profiles.md) · [How the ecosystem works](../learning-guide.en.md)
 
 This concise guide covers the universal installer, domain plugins, on-demand routing, and host-specific notes. Placeholders such as `<repository>`, `<skill-name>`, and `<domain-plugin>` should be replaced before running a command.
 
