@@ -71,12 +71,23 @@ class CopySemanticsTests(unittest.TestCase):
 
 
 class RosterTests(unittest.TestCase):
-    def test_every_open_domain_repo_is_mapped(self) -> None:
+    def test_every_plugin_is_mapped(self) -> None:
         expected = {
+            # 8 开源
             "soia-dev", "soia-dev-design", "soia-pkm-vault", "soia-media-content",
             "soia-cwork-office", "soia-edu-course", "soia-env", "soia-meta",
+            # 4 私有（soia-private-skills 一仓三 plugin root）
+            "soia-gov", "soia-workspace", "soia-harness", "soia-corp",
         }
         self.assertEqual(set(iwe.DOMAIN_REPOS), expected)
+
+    def test_multi_root_repos_record_their_subdirectory(self) -> None:
+        """soia-private-skills 靠目录分隔出三个插件，root 相对路径不能丢。"""
+        self.assertEqual(iwe.DOMAIN_REPOS["soia-gov"], ("soia-private-skills", "."))
+        self.assertEqual(iwe.DOMAIN_REPOS["soia-workspace"],
+                         ("soia-private-skills", "workspace"))
+        self.assertEqual(iwe.DOMAIN_REPOS["soia-harness"],
+                         ("soia-private-skills", "harness"))
 
     def test_registration_goes_through_the_official_script(self) -> None:
         """官方规范铁律 12：禁止绕过 register_expert.py 直接写 marketplace.json。"""
