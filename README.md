@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/plugins/soia-meta.png" width="88" alt="">
+<img src="assets/hero.webp" width="640" alt="">
 
 # SOIA Skills
 
