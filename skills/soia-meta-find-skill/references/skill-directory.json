@@ -236,7 +236,7 @@
   {
     "name": "soia-media-generate-article-image",
     "repo": "soia-open-media-content-skills",
-    "description": "为文章生成封面、小结卡、学习笔记、视觉隐喻海报或技能库宣传卡/轮播，并完成事实清单、Prompt、确定性文字与位图验收。触发：「生成文章图片」「正文小结图」「康奈尔笔记图」「技能库宣传图」「朋友圈配图」「小红书轮播」",
+    "description": "为文章生成封面、小结卡、学习笔记、视觉隐喻海报或高信息密度技能库宣传卡/轮播，并完成深层事实采集、Prompt、确定性文字与位图验收。触发：「生成文章图片」「正文小结图」「康奈尔笔记图」「技能库宣传图」「朋友圈配图」「小红书轮播」",
     "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-generate-article-image -y"
   },
   {
@@ -272,7 +272,7 @@
   {
     "name": "soia-meta-skill-release",
     "repo": "soia-open-skills",
-    "description": "技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新与客户端更新。触发：「发布技能」「更新插件」「技能发布收尾」",
+    "description": "技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新、客户端更新与 WorkBuddy 专家安装。触发：「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「安装专家」",
     "install_cmd": "npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -y"
   },
   {
