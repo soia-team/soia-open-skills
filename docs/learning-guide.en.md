@@ -123,7 +123,14 @@ Hosts fall into two classes, and the class determines which layer of switch you 
 WorkBuddy is a special case worth calling out: its unit of on/off is not a plugin but an
 **expert** — a role-based agent preset that carries its own persona and skill set, and is not
 in context until summoned. This is the ecosystem's third distribution face, alongside the two
-marketplace manifests, derived from the definitions in `experts/`. See [experts/README.md](../experts/README.md).
+marketplace manifests, derived from each domain repo's `.codebuddy-plugin/plugin.json`. The
+granularity rule is unchanged: one repo, one expert.
+
+Two differences from Claude and Codex matter before you install: there is **no sha-pinned
+remote-repo layer** (a marketplace entry's `source` must be a path string), and custom experts
+are only detected in a **hardcoded `my-experts` directory**. So installation means placing a
+checkout of the domain repo in that directory — the equivalent of the clone Claude and Codex
+each keep in their own plugin cache. See the [WorkBuddy install guide](install/workbuddy.md).
 
 Per-host commands live in the [install guide's host pages](install/README.en.md).
 

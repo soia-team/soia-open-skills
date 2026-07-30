@@ -5,11 +5,13 @@
 元仓 assets/plugins/、8 个域仓 assets/、以及 WorkBuddy 专家头像里各存一份副本，
 共 19 处，没有任何东西保证它们同源。这个脚本把那张表收进仓里，三个面全部由它派生。
 
-三个面（同一字形与配色，只是承载surface不同）：
+两个面（同一字形与配色，只是承载 surface 不同）。
+WorkBuddy 专家的 avatar 不单独出图——它直接指域仓的 assets/icon.png，
+与 Codex 的 logo 是同一个文件：
 
     marketplace  assets/plugins/<插件>.svg|png   元仓市场条目，安装前就要显示
-    plugin       <域仓>/assets/icon.svg|png      该仓 .codex-plugin 的 composerIcon/logo
-    avatar       experts/<专家>/avatar.svg|png   WorkBuddy 专家头像，圆形无标签
+    plugin       <域仓>/assets/icon.svg|png      该仓的 composerIcon/logo，以及
+                                                 WorkBuddy 专家清单的 avatar
 
 brandColor 也从这张表出，写进清单时不用手抄，避免图标换色而清单还留着旧色号
 （实测发生过：图标已是紫色系，8 个 brandColor 仍是琥珀期的橙色）。
@@ -128,21 +130,6 @@ GLYPHS: dict[str, str] = {
       <path d="M172,40 A172,172 0 0 1 -118,125"/>
       <polyline points="-60,172 -132,128 -88,56"/>
       <circle cx="0" cy="0" r="52"/>""",
-}
-
-# 专家 → (借用哪个插件的配色, 字形覆盖或 None)
-#
-# 头像沿用所属域插件的色相，让「召唤哪个专家」与「装了哪个域插件」在视觉上对得上。
-# 只有知识库管家需要换字形：域插件是保险柜，但那张图靠底部 vault 标签才不歧义，
-# 头像没有标签位，保险柜在小尺寸下被认成相机，故改用摊开的书。
-EXPERTS: dict[str, tuple[str, str | None]] = {
-    "soia-vault-curator": ("soia-pkm-vault", """
-      <path d="M0,-108 C-62,-158 -148,-158 -200,-132 L-200,118
-               C-148,92 -62,92 0,142 C62,92 148,92 200,118 L200,-132
-               C148,-158 62,-158 0,-108 Z"/>
-      <line x1="0" y1="-108" x2="0" y2="142"/>"""),
-    "soia-content-operator": ("soia-media-content", None),
-    "soia-office-aide": ("soia-cwork-office", None),
 }
 
 # 域仓 → 该仓各 plugin root 对应的插件名。私有仓不在本仓工作副本里，
@@ -265,11 +252,6 @@ def main(argv: list[str] | None = None) -> int:
         base = REPO_ROOT / "assets/plugins" / plugin
         write_pair(base.with_suffix(".svg"), base.with_suffix(".png"), svg,
                    cairosvg, args.check, drift)
-    for expert, (plugin, glyph) in sorted(EXPERTS.items()):
-        svg = render(plugin, labelled=False, round_crop=True, glyph_override=glyph)
-        base = REPO_ROOT / "experts" / expert / "avatar"
-        write_pair(base.with_suffix(".svg"), base.with_suffix(".png"), svg,
-                   cairosvg, args.check, drift)
 
     if args.check:
         if drift:
@@ -277,11 +259,10 @@ def main(argv: list[str] | None = None) -> int:
             for path in drift:
                 print(f"   {pathlib.Path(path).relative_to(REPO_ROOT)}")
             return 1
-        print(f"icons are current ({len(PALETTE)} 插件 + {len(EXPERTS)} 专家头像)")
+        print(f"icons are current ({len(PALETTE)} 插件)")
         return 0
 
     print(f"  ✓ {len(PALETTE)} 个插件图标 → assets/plugins/")
-    print(f"  ✓ {len(EXPERTS)} 张专家头像 → experts/*/avatar.*")
     return 0
 
 

@@ -85,21 +85,22 @@ The machine-readable catalog of every skill is in [routing-manifest.json](routin
 
 ## WorkBuddy experts
 
-Alongside the Claude and Codex marketplace manifests, this repo derives a third distribution
-face: domain skill sets packaged as WorkBuddy **role-based experts** (persona + skill set +
-display metadata). An expert is not in context until you summon it.
+Alongside the Claude and Codex marketplace manifests, each domain repo derives a third
+manifest — `.codebuddy-plugin/plugin.json` — packaging that domain as a WorkBuddy
+**role-based expert** (persona + skill set + display metadata). An expert is not in
+context until you summon it.
 
-| Expert | Nickname | Skills from |
-|---|---|---|
-| Knowledge Vault Curator | Archie | `soia-pkm-vault` (26) |
-| New Media Operator | Inky | `soia-media-content` (6) |
-| Workplace Docs Aide | Filo | `soia-cwork-office` (3) |
+**One domain repo = one plugin = one expert**, the same granularity rule Claude and
+Codex follow. Skills are never copied: the manifest points at the repo's own `skills/`,
+and `avatar` points at the repo's own `assets/icon.png` — the same file Codex uses as its logo.
 
-```bash
-python3 scripts/generate_workbuddy_experts.py --dry-run
-```
+Expert definitions live in the domain repos, not here. Ready today: `soia-pkm-vault`
+(Knowledge Vault Curator / Soia Vault).
 
-Definitions and how to add one: [experts/README.md](experts/README.md). Install: [WorkBuddy guide](docs/install/workbuddy.md).
+Loading and its limits are in the [WorkBuddy install guide](docs/install/workbuddy.md) —
+WorkBuddy only detects custom experts in a hardcoded `my-experts` directory and has no
+sha-pinned remote-repo layer, which is where it differs from Claude and Codex.
+
 
 ## Skills in this repository
 

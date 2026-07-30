@@ -85,20 +85,17 @@ Codex 用户把 `claude` 换成 `codex`、`install` 换成 `add` 即可，其余
 
 ## WorkBuddy 专家
 
-除 Claude 与 Codex 两份市场清单外，本仓还派生第三个分发面：把域技能组合封装成
-WorkBuddy 的**角色化专家**（人设 + 技能组合 + 展示元数据），不召唤就不在场。
+除 Claude 与 Codex 两份市场清单外，域仓还派生第三张清单 `.codebuddy-plugin/plugin.json`，
+把该域封装成 WorkBuddy 的**角色化专家**（人设 + 技能组合 + 展示元数据），不召唤就不在场。
 
-| 专家 | 花名 | 技能来源 |
-|---|---|---|
-| 知识库管家 | 阿藏 | `soia-pkm-vault`（26 个） |
-| 新媒体运营 | 阿墨 | `soia-media-content`（6 个） |
-| 办公资料助手 | 阿档 | `soia-cwork-office`（3 个） |
+**一个域仓 = 一个插件 = 一个专家**，与 Claude/Codex 同一条粒度规则。技能不复制——
+清单直接引用本仓 `skills/`，`avatar` 直接用本仓 `assets/icon.png`（与 Codex 的 logo 同一个文件）。
 
-```bash
-python3 scripts/generate_workbuddy_experts.py --dry-run
-```
+专家定义放在各域仓，不在本仓。已就绪：`soia-pkm-vault`（知识库管家 / Soia Vault）。
 
-定义与新增方法见 [experts/README.md](experts/README.md)，安装见 [WorkBuddy 指南](docs/install/workbuddy.md)。
+装载与限制见 [WorkBuddy 安装指南](docs/install/workbuddy.md)——WorkBuddy 的自建专家
+只认硬编码目录 `my-experts`，没有按 sha pin 拉远端仓那一层，这点与 Claude/Codex 不同。
+
 
 ## 本仓技能
 
