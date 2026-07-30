@@ -34,16 +34,22 @@ import sys
 
 MY_EXPERTS = "plugins/marketplaces/my-experts"
 
-# 插件名 → 域仓名。私有仓不在此表，它们的专家由各自仓库自行决定是否开放。
+# 插件名 → (仓名, 该插件在仓内的 plugin root)。
+# soia-private-skills 一仓三 plugin root，靠目录分隔，所以要记 root 相对路径。
+# 私有仓只有仓库授权者能 clone，找不到时脚本会提示而非报错。
 DOMAIN_REPOS = {
-    "soia-dev": "soia-open-dev-skills",
-    "soia-dev-design": "soia-open-dev-design-skills",
-    "soia-pkm-vault": "soia-open-pkm-vault-skills",
-    "soia-media-content": "soia-open-media-content-skills",
-    "soia-cwork-office": "soia-open-cwork-office-skills",
-    "soia-edu-course": "soia-open-edu-course-skills",
-    "soia-env": "soia-open-env-skills",
-    "soia-meta": "soia-open-skills",
+    "soia-dev": ("soia-open-dev-skills", "."),
+    "soia-dev-design": ("soia-open-dev-design-skills", "."),
+    "soia-pkm-vault": ("soia-open-pkm-vault-skills", "."),
+    "soia-media-content": ("soia-open-media-content-skills", "."),
+    "soia-cwork-office": ("soia-open-cwork-office-skills", "."),
+    "soia-edu-course": ("soia-open-edu-course-skills", "."),
+    "soia-env": ("soia-open-env-skills", "."),
+    "soia-meta": ("soia-open-skills", "."),
+    "soia-gov": ("soia-private-skills", "."),
+    "soia-workspace": ("soia-private-skills", "workspace"),
+    "soia-harness": ("soia-private-skills", "harness"),
+    "soia-corp": ("soia-private-corp-skills", "."),
 }
 
 # 复制时排除：本机产物与版本库，不应进专家包
@@ -68,9 +74,11 @@ def workbuddy_config_dir() -> pathlib.Path:
     ).expanduser()
 
 
-def locate_repo(repo_name: str, search_roots: list[pathlib.Path]) -> pathlib.Path | None:
+def locate_root(repo_name: str, sub: str,
+                search_roots: list[pathlib.Path]) -> pathlib.Path | None:
+    """定位某插件的 plugin root。sub 为 "." 时就是仓根，否则是仓内子目录。"""
     for root in search_roots:
-        candidate = root / repo_name
+        candidate = root / repo_name if sub == "." else root / repo_name / sub
         if (candidate / ".codebuddy-plugin/plugin.json").exists():
             return candidate
     return None
@@ -128,11 +136,13 @@ def main(argv: list[str] | None = None) -> int:
     plans: list[tuple[str, pathlib.Path]] = []
     missing: list[str] = []
     for plugin in wanted:
-        repo = locate_repo(DOMAIN_REPOS[plugin], search_roots)
-        if repo is None:
-            missing.append(f"{plugin} → {DOMAIN_REPOS[plugin]}")
+        repo_name, sub = DOMAIN_REPOS[plugin]
+        root = locate_root(repo_name, sub, search_roots)
+        if root is None:
+            label = repo_name if sub == "." else f"{repo_name}/{sub}"
+            missing.append(f"{plugin} → {label}")
         else:
-            plans.append((plugin, repo))
+            plans.append((plugin, root))
 
     print(f"专家目录：{target_root}")
     for plugin, repo in plans:
@@ -140,11 +150,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {plugin:20s} {manifest['profession']['zh']:10s} "
               f"{len(manifest['skills']):2d} 个技能 ← {repo}")
     if missing:
-        print("\n⚠️  以下域仓没找到（缺 .codebuddy-plugin/plugin.json，或不在搜索路径下）：")
+        print("\n⚠️  以下 plugin root 没找到（缺 .codebuddy-plugin/plugin.json，或不在搜索路径下）：")
         for m in missing:
             print(f"   {m}")
         print(f"   搜索路径：{', '.join(str(r) for r in search_roots)}")
-        print("   用 --repos-root 指定，或先 git clone 对应域仓。")
+        print("   用 --repos-root 指定，或先 git clone 对应仓。")
+        print("   私有仓（soia-private-skills / soia-private-corp-skills）只有")
+        print("   仓库授权者能 clone；没有权限时它们不出现是正常的。")
 
     if args.dry_run:
         print("\n（--dry-run，未写入任何文件）")
