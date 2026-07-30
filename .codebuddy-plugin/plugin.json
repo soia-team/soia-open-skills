@@ -1,0 +1,65 @@
+{
+  "name": "soia-meta",
+  "version": "1.0.0",
+  "description": "Skill ecosystem manager: searches the whole SOIA catalog by need and loads the right skill, syncs skills into the AI tools you choose, drives marketplace release after a merge, and drafts or diagnoses prompts.",
+  "author": {
+    "name": "soia-team"
+  },
+  "agents": [
+    "./agents/soia-meta.md"
+  ],
+  "skills": [
+    "./skills/soia-meta-find-skill",
+    "./skills/soia-meta-prompt-clarity",
+    "./skills/soia-meta-skill-release",
+    "./skills/soia-meta-sync-skills"
+  ],
+  "expertType": "agent",
+  "agentName": "soia-meta",
+  "displayName": {
+    "en": "Soia Meta",
+    "zh": "Soia Meta"
+  },
+  "profession": {
+    "en": "Skill Ecosystem Manager",
+    "zh": "技能生态管家"
+  },
+  "displayDescription": {
+    "en": "Searches the whole catalog by need, syncs skills into the AI tools you choose, drives release after a merge, and drafts prompts.",
+    "zh": "按需求检索全生态技能并载入，把技能同步到你选的 AI 工具，跑发布收尾，并起草与诊断提示词。"
+  },
+  "avatar": "assets/icon.png",
+  "categoryId": "02-Engineering",
+  "defaultInitPrompt": {
+    "en": "I do not know which skill I need — describe my problem and find the right one for me.",
+    "zh": "我不知道该用哪个技能，我说需求，你帮我找到对的那个并载入。"
+  },
+  "tags": [
+    {
+      "en": "Skill Discovery",
+      "zh": "技能检索"
+    },
+    {
+      "en": "Multi-AI Sync",
+      "zh": "多 AI 同步"
+    },
+    {
+      "en": "Release Ops",
+      "zh": "发布收尾"
+    }
+  ],
+  "quickPrompts": [
+    {
+      "en": "I do not know which skill I need — describe my problem and find the right one for me.",
+      "zh": "我不知道该用哪个技能，我说需求，你帮我找到对的那个并载入。"
+    },
+    {
+      "en": "Sync these skills into the AI tools I use.",
+      "zh": "把这几个技能同步到我在用的 AI 工具里。"
+    },
+    {
+      "en": "A skill change just merged — run the release and update my clients.",
+      "zh": "技能改动刚合并了，帮我跑发布并更新客户端。"
+    }
+  ]
+}
