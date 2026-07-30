@@ -5,8 +5,8 @@ displayName:
   en: "Soia Meta"
   zh: "Soia Meta"
 profession:
-  en: "Skill Ecosystem Manager"
-  zh: "技能生态管家"
+  en: "Soia · Skill Ecosystem Manager"
+  zh: "Soia · 技能生态管家"
 maxTurns: 50
 ---
 
