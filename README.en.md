@@ -1,127 +1,120 @@
+<div align="center">
+
+<img src="assets/plugins/soia-meta.png" width="88" alt="">
+
 # SOIA Skills
+
+**The hard part isn't learning a skill — it's remembering which one to call**
+
+74 public skills, 8 domains, one entry point. Describe the goal; you don't have to memorize the catalog
 
 [中文](README.md) · English
 
-AI workflow skills packaged by domain — 74 skills across development, knowledge vaults, social content, collaborative office, design docs, courses, and environment setup. Install as plugins, enable what you need.
+</div>
 
-## What this is
+---
 
-A "skill" is a written procedure that tells an AI **how to do one specific thing** — steps, boundaries, acceptance criteria, and the traps already discovered. It is not a prompt template; it is a versioned, testable, composable engineering artifact.
+## What it solves
 
-This repository is the ecosystem **portal**: specifications, cross-repo navigation, the marketplace manifest, and four meta skills that manage the ecosystem itself. **Domain skills live in their own repositories** and are distributed through the plugin marketplace.
+Once a skill library gets large, the real cost is not learning any single skill — it's **remembering which ones exist**. This repo is the ecosystem portal: specifications, cross-repo navigation, the marketplace manifest, and 4 meta skills that manage the ecosystem itself.
 
-```text
-soia-open-skills (you are here)
-    ├── Specs      SKILL_SPEC.md · DATA_STORAGE_SPEC.md · CONTRIBUTING.md
-    ├── Market     register once, install any of 8 domain plugins
-    └── Meta       search, sync, release, prompt drafting
-                    ↓
-        7 domain repos (dev · pkm-vault · media · cwork · design · edu · env)
+```mermaid
+flowchart TB
+    A["You say: archive this into my vault"] --> B["soia-meta-find-skill<br/>searches by need, no skill name required"]
+    B --> C["Resolves to soia-pkm-clip-web<br/>tells you which plugin and what it costs"]
+    C --> D["One command installs the domain plugin"]
+    D --> E["Claude Code · Codex · WorkBuddy<br/>all three hosts"]
 ```
 
-### When to use it
+## 8 domain plugins
 
-- "I want AI to fix this code, but it keeps saying 'should be fine' and calling it done."
-- "My clipped articles are scattered everywhere; I want one searchable local vault."
-- "After writing a piece I have to reformat it for WeChat, X, and Rednote separately."
-- "Team material is locked inside Feishu and ProcessOn; I want local files."
-- "Setting up a new machine with a dozen AI CLIs goes wrong every time."
+Install a domain and get every skill in it. **Always-on** is the context the skill index consumes each session; bodies load only when a skill fires.
 
-### What it does not do
+| Domain plugin | What it does | Skills | Always-on |
+|---|---|---:|---:|
+| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Vault: capture, organize, distill, transform | 26 | ~2.8k |
+| [`soia-env`](https://github.com/soia-team/soia-open-env-skills) | Environment: AI CLI installs, network diagnosis, disk hygiene | 15 | ~1.5k |
+| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | Development: change loop, testing, release, repo ops | 12 | ~971 |
+| [`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) | Content: drafting, imagery, per-platform adaptation | 6 | ~728 |
+| [`soia-dev-design`](https://github.com/soia-team/soia-open-dev-design-skills) | Design: PRDs, prototypes, diagrams, Office | 6 | ~548 |
+| **`soia-meta`** (this repo) | Ecosystem: search, sync, release, prompts | 4 | ~428 |
+| [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | Collaboration: Feishu and ProcessOn material to local files | 3 | ~309 |
+| [`soia-edu-course`](https://github.com/soia-team/soia-open-edu-course-skills) | Courses: outlines and lesson plans | 2 | ~140 |
 
-- Not an AI client. It extends the Claude Code / Codex you already use rather than replacing them.
-- Does not host your data. Everything stays on your machine; the skills only supply the method.
-- Does not store credentials. Platform sessions stay in their official flows — never in the repo or logs.
-- No internal company process. Industry-specific requirement, test, and release standards live in private repos.
+> `claude plugin disable <plugin>@soia` on a domain you are not using drops it to zero; enable it again any time.
 
-## Where to start
+## Start here
 
-**First time — two commands:**
+Two commands, then say "**find me a skill**":
 
 ```bash
-claude plugin marketplace add soia-team/soia-open-skills
+claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-meta@soia
 ```
 
 ```bash
-claude plugin install soia-meta@soia
+codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia-meta@soia
 ```
 
-Then just say "**find me a skill**". `soia-meta-find-skill` searches all 74 skills against your need and tells you which plugin to install — no need to read the table below first.
+WorkBuddy is a desktop app with no CLI, so a skill does the work — tell your agent "install into WorkBuddy", or run:
 
-**Already know what you want — install that domain directly:**
+```bash
+python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
+```
 
-| What you want to do | Install | Skills | Always-on cost |
-|---|---|---|---|
-| Write code, review code, manage PRs | `soia-dev` | 12 | ~971 tok |
-| Build a vault: clip, organize, transform | `soia-pkm-vault` | 26 | ~2.8k tok |
-| Set up a machine, install AI CLIs, diagnose the network | `soia-env` | 15 | ~1.5k tok |
-| Write articles, generate imagery, publish everywhere | `soia-media-content` | 6 | ~691 tok |
-| PRDs, prototypes, architecture diagrams, Office files | `soia-dev-design` | 6 | ~548 tok |
-| Export material from Feishu and ProcessOn | `soia-cwork-office` | 3 | ~309 tok |
-| Course outlines and lesson plans | `soia-edu-course` | 2 | ~140 tok |
-| Manage the skill ecosystem itself | `soia-meta` | 4 | ~396 tok |
+With no arguments it installs all 12 experts; pass plugin names to pick. Restart the client, then summon under Experts → My Experts — this repo's expert is **Soia · 技能生态管家**.
 
-> **Always-on cost** is the context that plugin's skill index consumes in every session; skill bodies load only when a skill is actually triggered.
-> Turn off a domain you are not using with `claude plugin disable <plugin>` — the cost drops to zero and comes back instantly.
+## 4 meta skills
 
-Codex users: swap `claude` for `codex` and `install` for `add`; everything else is identical.
-For the other 60+ hosts (Cursor, Zed, Windsurf, …) see the [install guide](docs/install/README.md);
-for setups organized by machine purpose see [install-profiles.md](docs/install-profiles.md).
+### 01 Ecosystem management　`One sentence of need → found, installed, synced, released`
 
-## Ecosystem
+| Skill | Responsibility | Ready |
+|---|---|:-:|
+| `soia-meta-find-skill` | Searches the whole ecosystem by need and loads the right skill — no need to know its name | ✅ |
+| `soia-meta-sync-skills` | Symlinks a skill source into the AI tool directories you explicitly choose | ✅ |
+| `soia-meta-skill-release` | After a merge: marketplace publish, client update, WorkBuddy expert install, cache reclamation | ✅ |
+| `soia-meta-prompt-clarity` | Drafts, diagnoses and specifies prompts in Chinese or English, preserving intent and safety boundaries | ✅ |
 
-| Repository | Responsibility | Plugin |
+✅ All four work right after install
+
+## Three hosts, one set of skills
+
+A domain repo is simultaneously a plugin for all three — skills are never copied, and the icon is literally the same file:
+
+| Host | Unit of loading | Toggle |
 |---|---|---|
-| [soia-open-skills](https://github.com/soia-team/soia-open-skills) | Portal, specifications, marketplace manifest, meta skills | `soia-meta` |
-| [soia-open-dev-skills](https://github.com/soia-team/soia-open-dev-skills) | Engineering contracts: task execution, fix loops, review, GitHub ops | `soia-dev` |
-| [soia-open-dev-design-skills](https://github.com/soia-team/soia-open-dev-design-skills) | Design and document pipeline: PRDs, prototypes, diagrams, Office | `soia-dev-design` |
-| [soia-open-pkm-vault-skills](https://github.com/soia-team/soia-open-pkm-vault-skills) | Full vault lifecycle: capture, organize, distill, transform | `soia-pkm-vault` |
-| [soia-open-media-content-skills](https://github.com/soia-team/soia-open-media-content-skills) | Last mile of content: drafting, imagery, per-platform publishing | `soia-media-content` |
-| [soia-open-cwork-office-skills](https://github.com/soia-team/soia-open-cwork-office-skills) | Export SaaS-locked material into local files | `soia-cwork-office` |
-| [soia-open-edu-course-skills](https://github.com/soia-team/soia-open-edu-course-skills) | Course outline and lesson plan design | `soia-edu-course` |
-| [soia-open-env-skills](https://github.com/soia-team/soia-open-env-skills) | Environment readiness: network diagnosis, runtimes, AI CLI installs | `soia-env` |
+| Claude Code | Domain plugin | `plugin enable/disable`, zero context cost |
+| Codex | Domain plugin | Marketplace-level enable |
+| WorkBuddy | **Role-based expert** (12 of them) | Summon / switch expert; not in context until summoned |
 
-The machine-readable catalog of every skill is in [routing-manifest.json](routing/routing-manifest.json).
+## What it does not do
 
-## WorkBuddy experts
+- **Not an AI client.** It extends the Claude Code / Codex you already use rather than replacing them.
+- **Does not host your data.** Everything stays on your machine; the skills only supply the method.
+- **Does not store credentials.** Platform sessions stay in their official flows — never in the repo or logs.
+- **No internal company process.** Industry-specific requirement, test and release standards live in private repos.
 
-Alongside the Claude and Codex marketplace manifests, each domain repo derives a third
-manifest — `.codebuddy-plugin/plugin.json` — packaging that domain as a WorkBuddy
-**role-based expert** (persona + skill set + display metadata). An expert is not in
-context until you summon it.
-
-**One domain repo = one plugin = one expert**, the same granularity rule Claude and
-Codex follow. Skills are never copied: the manifest points at the repo's own `skills/`,
-and `avatar` points at the repo's own `assets/icon.png` — the same file Codex uses as its logo.
-
-Expert definitions live in the domain repos, not here. Ready today: `soia-pkm-vault`
-(Knowledge Vault Curator / Soia Vault).
-
-Loading and its limits are in the [WorkBuddy install guide](docs/install/workbuddy.md) —
-WorkBuddy only detects custom experts in a hardcoded `my-experts` directory and has no
-sha-pinned remote-repo layer, which is where it differs from Claude and Codex.
-
-
-## Skills in this repository
-
-| Skill | Responsibility |
-|---|---|
-| [`soia-meta-find-skill`](skills/soia-meta-find-skill/) | Search the whole ecosystem by need and load the right skill — no need to know its name. |
-| [`soia-meta-skill-release`](skills/soia-meta-skill-release/) | After a skill change merges, publish to the marketplace, update clients, reclaim caches. |
-| [`soia-meta-sync-skills`](skills/soia-meta-sync-skills/) | Symlink a shared skill source into the AI tool directories you explicitly choose. |
-| [`soia-meta-prompt-clarity`](skills/soia-meta-prompt-clarity/) | Draft, diagnose, and specify prompts in Chinese or English, preserving intent and safety boundaries. |
-
-## Specifications
+## Documentation
 
 | Document | Covers |
 |---|---|
-| [docs/learning-guide.en.md](docs/learning-guide.en.md) | **Start here**: how the ecosystem works, why it is designed this way, and FAQs |
-| [SKILL_SPEC.md](SKILL_SPEC.md) | Skill structure, naming, frontmatter, and validation requirements |
-| [DATA_STORAGE_SPEC.md](DATA_STORAGE_SPEC.md) | Boundaries for config, credentials, state, cache, and output |
+| [docs/learning-guide.en.md](docs/learning-guide.en.md) | **Start here**: how the ecosystem works, why it is designed this way, FAQs |
+| [docs/install/](docs/install/README.en.md) | Install guides for 60+ AI hosts |
+| [docs/install-profiles.md](docs/install-profiles.md) | Setups organized by machine purpose |
+| [SKILL_SPEC.md](SKILL_SPEC.md) | Skill structure, naming, frontmatter, validation |
+| [DATA_STORAGE_SPEC.md](DATA_STORAGE_SPEC.md) | Boundaries for config, credentials, state, cache, output |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contributor guide plus the maintainer handbook |
-| [docs/install/](docs/install/README.md) | Install guides for 60+ AI hosts |
-| [docs/plugin-dev.md](docs/plugin-dev.md) | Local plugin iteration and the portal refresh after a domain release |
+| [routing/routing-manifest.json](routing/routing-manifest.json) | Machine-readable catalog of every skill |
+
+## Contributing
+
+Before committing a skill change:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py' && python3 scripts/audit_skills.py --strict && python3 scripts/generate_expert_manifest.py --check
+```
+
+Full workflow in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE)
+MIT — see [LICENSE](./LICENSE).
