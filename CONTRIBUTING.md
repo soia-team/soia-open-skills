@@ -220,6 +220,18 @@ git bundle create <名>.bundle "$BRANCH"      # git clone <file> 可完整还原
 git diff origin/main..."$BRANCH" > <名>.patch # git apply 可直接打回
 ```
 
+## 不安装就查插件组件与成本
+
+排查「技能有没有被装进去」「常驻成本多少」时，不必先装一遍：
+
+```bash
+claude --plugin-dir <仓路径> plugin details <插件名>
+```
+
+输出包含技能清单、Agents / Hooks / MCP 数量，以及每个组件的常驻与触发 token 成本。
+比装完再 `plugin details` 快得多，也不污染本机安装状态。这条在验证
+`.claude-plugin/plugin.json` 的字段语义（哪些是 replaces、哪些是 adds-to）时特别有用。
+
 ## Skill Debug Install Rules
 
 Local checkout installation is only for temporary debugging. It is not a release
@@ -313,28 +325,116 @@ meta repo. That is a consumer choice, not the maintainer's delivery path.)
 
 ### 5. WorkBuddy expert manifest
 
-A domain repo that ships a WorkBuddy expert carries a third manifest,
-`.codebuddy-plugin/plugin.json`, next to the Claude and Codex ones. It declares the
-persona (`agents/<plugin-name>.md`), the skill set, and the display metadata. Nothing is
-copied: `skills` points at the repo's own `skills/`, and `avatar` points at the repo's own
-`assets/icon.png` — the same file Codex uses as its logo.
+一个域仓同时是 Claude 插件、Codex 插件和 **WorkBuddy 专家**——三张清单并列在同一个仓：
 
-Keep the `skills` array in sync after adding, renaming, or deleting a skill:
+```text
+.claude-plugin/plugin.json      Claude
+.codex-plugin/plugin.json       Codex
+.codebuddy-plugin/plugin.json   WorkBuddy 专家     ← 第三张
+agents/<插件名>.md               专家人设
+skills/                         三方共用，不复制
+assets/icon.png                 Codex 的 logo + 专家的 avatar，同一个文件
+```
+
+粒度与另两家一致：**一个域仓 = 一个插件 = 一个专家**，标识符也统一
+（`plugin.json` 的 `name` = `agentName` = `agents/<名>.md` 的文件名 = 插件名）。
+
+改动技能后同步 `skills` 数组：
 
 ```bash
 python3 scripts/generate_expert_manifest.py
 ```
 
-`--check` runs in CI, so a stale array turns the build red rather than shipping an expert
-that silently misses a skill.
+`--check` 已进 CI，数组过期会让构建变红，而不是发出一个静默少了技能的专家。
 
-One cross-host trap to know about: WorkBuddy requires the persona at `agents/<name>.md`,
-but Claude Code reads a plugin's root `agents/` directory as **subagents** — a different
-concept entirely. Without a guard, installing the plugin in Claude Code adds an unwanted
-subagent. `.claude-plugin/plugin.json` therefore sets `"agents": []`, which replaces the
-default scan. Verified with `claude --plugin-dir <path> plugin details <name>`: `Agents (1)`
-without the guard, `Agents (0)` with it. Codex has no plugin-level `agents` concept and
-needs no guard.
+#### 跨宿主冲突：仓根 `agents/`
+
+WorkBuddy **强制**人设放在 `agents/<名>.md`（缺这个目录它的校验器直接报错），
+而 Claude Code 把 plugin root 的 `agents/*.md` 读成 **subagent**——同一个目录名，
+两种完全不同的含义。不处理就会凭空多出一个 subagent，而且它的 frontmatter 里是
+WorkBuddy 的字段（`profession`、`maxTurns`），Claude 看不懂。
+
+`.claude-plugin/plugin.json` 因此必须设 `"agents": []`（该字段是 replaces 语义）。
+Codex 没有 plugin 级 `agents` 概念，无需处理。
+
+验证不必安装：
+
+```bash
+claude --plugin-dir <仓路径> plugin details <插件名>
+```
+
+不写 `agents` 时输出 `Agents (1)`，写了 `"agents": []` 输出 `Agents (0)`。
+这条命令还会打印各技能的常驻与触发成本，调试插件时比装一遍再看快得多。
+
+#### 命名规范
+
+`profession` 是**卡片标题**，`displayName`（花名）在列表里根本不显示。所以品牌与
+可见性都靠 `profession`：
+
+| | 格式 | 例 |
+|---|---|---|
+| 开源 | `Soia · <职业>` | `Soia · 知识库管家` |
+| 私有 | `Soia · <职业> 🔒` | `Soia · 产品治理管家 🔒` |
+
+两条约束：
+
+- **必须是职业，不是东西**。官方字段定义是「职业/定位」。曾把 harness 填成
+  「开发期工具」、workspace 填成「工作区配套」——都是名词性的东西，不是人。
+  改名前先读该域技能的正文确定它究竟在做什么职业（harness 读完发现是
+  拿真实样本判漏报误报、出补丁建议，本质是 QA，于是定为「技能质量工程师」）。
+- **私有标记不要占 `tags`**。`tags` 固定正好 3 个，挪一个出来会丢领域信息。
+  也没有可设的角标字段——云端专家条目的字段与插件能填的完全一样，
+  官方那个「特邀专家」角标不是插件层能控制的。🔒 一个字符比「（私有）」省 3 个字，
+  实测最长标题 16 字仍不截断。
+
+#### 清单的硬性约束（照抄官方校验器）
+
+| 字段 | 约束 |
+|---|---|
+| `tags` | 正好 3 个，多一个少一个都判错 |
+| `quickPrompts` | 正好 3 个 |
+| `defaultInitPrompt` | 必须等于 `quickPrompts[0]`，由生成器取，别手写 |
+| `displayDescription.zh` | 40–50 个中文字，超出只是 warning 但要守 |
+| `agents` | 路径数组，且 `agents/` 目录必须存在 |
+| frontmatter | **禁止**声明 `tools`，权限由宿主统一分配 |
+| `categoryId` | 取自官方枚举，写错不会报错但会归错类 |
+
+#### 装载：没有 `workbuddy plugin` 这种命令
+
+WorkBuddy 是 Electron 桌面端，**没有 CLI**。不要去找 `claude plugin install` /
+`codex plugin add` 的对等物——它不存在，也做不出来。安装由发布技能的脚本代劳：
+
+```bash
+python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py --dry-run
+```
+
+三条实测约束决定了它只能这么实现，改这个脚本前先读懂：
+
+| 约束 | 实测结论 |
+|---|---|
+| 目录 | 自建专家只认硬编码的 `my-experts`，应用内出现 38 处（含 `=== "my-experts" ? true : targetExpert.isCustomExpert` 这类分支）。别处放了不显示 |
+| 软链 | **不行**。官方 `validate_expert.py` 对路径 `resolve()`，穿透后判定「不在专家目录下」 |
+| 远端 | 市场条目 `source` 只能是路径字符串，**没有 sha pin 那一层**；`expert/install` 深链要 `sharecode`，走官方云 |
+
+所以装载方式是把域仓 checkout 复制进那个目录——与 Claude/Codex 各自在插件缓存里
+放一份克隆是对等的做法。注册一律调官方 `register_expert.py`，官方规范明确禁止
+绕过它直接写 `marketplace.json`。装完必须让客户**重启 WorkBuddy**。
+
+`soia-env-workbuddy-install` 只管客户端本身的安装与验证，不管专家——两者别混。
+
+#### 写测试时的两个坑
+
+- **不要硬假设 `.codex-plugin/plugin.json` 存在**。`soia-private-skills` 只走
+  Claude 侧私有市场，没有那张清单。断言 avatar 存在照旧守，「与 Codex logo 同一文件」
+  这条在缺清单时 `skipTest`。
+- **复制技能内容时过滤本机产物**。`__pycache__`、`.git`、`.venv` 一并拷进去过——
+  一次未过滤的生成里 3 个技能的包有 1.1MB 是字节码，单个 `.pyc` 达 272KB，
+  还会把绑定本机 Python 版本的产物发给用户。
+
+#### 占位技能要如实标注
+
+人设里不得美化未实现的能力。`soia-corp` 的两个巡检技能 description 明写「占位待补」，
+它的人设因此写明「用户问到时如实说明尚未实现，不要临时编一套流程冒充」。
 
 
 ### Why not manual symlinks?
@@ -458,6 +558,41 @@ Mistakes made and fixed — read before your next split:
    skills table — update it manually and remove deprecated rows.
 6. **Grep for the old name across everything.** Old names hide in SKILL.md
    body text, install commands, vault docs, and update logs.
+
+## 图形资产：一张表派生所有面
+
+配色与字形表的唯一真源是元仓 `scripts/generate_icons.py`。它派生：
+
+| 面 | 产物 | 用途 |
+|---|---|---|
+| marketplace | `assets/plugins/<插件>.svg\|png` | 元仓市场条目，安装前就要显示 |
+| plugin | `<域仓>/assets/icon.svg\|png` | 该仓的 `composerIcon` / `logo`，以及 WorkBuddy 专家的 `avatar` |
+
+`brandColor` 也从这张表出，`generate_marketplaces.py` 直接引用，不另存第二份。
+`--check` 已进 CI，手改资产即红。
+
+部署到某个域仓：
+
+```bash
+python3 scripts/generate_icons.py --deploy <域仓路径>
+```
+
+### 改色值前先读品牌规范
+
+`soia-design-brand-guidelines` §配色 规定 Primary 琥珀橙 `#F5A623` 用于
+「插件与应用图标底色」。本表以它为锚点，每域只在色相上小幅偏移；`soia-meta`
+用的就是品牌主色本身。
+
+2026-07-29 的教训：为了「统一图标来源」顺手把整套刷成紫色并部署到 8 个仓，
+品牌锚点因此消失——那不是「统一」这个任务要求的，是自作主张，且事前没查规范。
+`tests/test_icon_source.py` 现在锁住锚点，改 `soia-meta` 的主色即变红。
+
+### 两条曾经踩过的坑
+
+- **不要让测试变成第二张表**。`test_generate_marketplaces` 里曾写死 `#FB923C`，
+  图标换色后那条断言还在保护已废弃的橙色。断言应取自配色真源。
+- **每个插件的字形必须互异**。gov 与 corp 曾是同一个盾牌加对勾，两个插件在市场里
+  无法区分。`test_every_plugin_has_a_distinct_glyph` 守这一条。
 
 ## 域仓与插件对照
 
