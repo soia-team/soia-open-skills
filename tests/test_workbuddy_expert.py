@@ -46,11 +46,20 @@ class CrossHostManifestTests(unittest.TestCase):
         self.assertEqual(EXPERT["agentName"], CLAUDE["name"])
 
     def test_avatar_reuses_the_codex_logo(self) -> None:
-        """图形资产只有一套：专家头像与 Codex logo 是同一个文件。"""
-        codex = json.loads((ROOT / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+        """图形资产只有一套：专家头像与 Codex logo 是同一个文件。
+
+        本仓可能没有 .codex-plugin（私有仓只走 Claude 侧市场时就没有）。
+        那种情况下没有 logo 可比，但 avatar 存在这一条仍要守——它是
+        WorkBuddy 唯一的图形来源。
+        """
+        avatar = EXPERT["avatar"].lstrip("./")
+        self.assertTrue((ROOT / avatar).is_file(), f"avatar 不存在: {avatar}")
+        codex_manifest = ROOT / ".codex-plugin/plugin.json"
+        if not codex_manifest.exists():
+            self.skipTest("本 plugin root 无 .codex-plugin，无 logo 可比")
+        codex = json.loads(codex_manifest.read_text(encoding="utf-8"))
         logo = codex.get("interface", {}).get("logo", "").lstrip("./")
-        self.assertEqual(EXPERT["avatar"].lstrip("./"), logo)
-        self.assertTrue((ROOT / EXPERT["avatar"]).is_file())
+        self.assertEqual(avatar, logo)
 
 
 class ExpertContractTests(unittest.TestCase):
