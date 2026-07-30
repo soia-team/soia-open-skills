@@ -1,7 +1,7 @@
 ---
 name: soia-meta-skill-release
-description: 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新与客户端更新。触发：「发布技能」「更新插件」「技能发布收尾」
-version: 3.3.0
+description: 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新、客户端更新与 WorkBuddy 专家安装。触发：「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「安装专家」
+version: 3.4.0
 created_at: 2026-07-21 00:00:00
 updated_at: 2026-07-29 14:34:03
 created_by: gpt-5.6-terra
@@ -217,7 +217,35 @@ codex plugin list | grep '@soia' | diff /tmp/soia-installed-before.txt -
 
 Codex 无自动更新机制，必须手动执行。跳过删暂存这一步会出现「命令报成功、内容还是旧的」——2026-07-27 实际踩过：corp 市场的暂存停在没有 `assets/icon.svg` 的旧版本，`composerIcon` 指向不存在的文件，界面回退成通用图标，排查时误判为路径写错。
 
-### 6. 回收旧版本缓存
+### 6. WorkBuddy 专家（客户在用 WorkBuddy 时才做）
+
+WorkBuddy 是 Electron 桌面端，**没有 CLI**——不存在 `workbuddy plugin install`，
+也没有能指向我们 GitHub 的市场通道。所以这一步由脚本代劳，不要去找对等命令：
+
+```bash
+python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py --dry-run
+```
+
+确认计划后执行（不带参数装全部，也可只给要装的插件名）：
+
+```bash
+python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
+```
+
+脚本把域仓 checkout 复制进 `my-experts/plugins/<插件名>`，再调 WorkBuddy 官方
+`register_expert.py` 注册。三条实测约束决定了只能这么做：
+
+| 约束 | 实测结论 |
+|---|---|
+| 目录 | 自建专家只认硬编码的 `my-experts`，应用内出现 38 处；别处放了不显示 |
+| 软链 | 不行。官方 `validate_expert.py` 对路径 `resolve()`，穿透后判定「不在专家目录下」 |
+| 远端 | 市场条目 `source` 只能是路径字符串，没有 sha pin 层；`expert/install` 深链要 `sharecode`，走官方云 |
+
+装完**必须让客户重启 WorkBuddy**，否则新专家不出现在【专家·技能·连接器 → 我的专家】。
+
+验证：召唤该专家后问「你有多少个可用技能」，该域技能应全部在场；不召唤时不在场。
+
+### 7. 回收旧版本缓存
 
 两家客户端在 `plugin update` 后都只新增版本目录，**不回收旧的**；Claude 的 `.in_use` 标记也不可靠（实测同一插件新旧两个版本都带这个文件）。不清理会线性堆积，并干扰排查——用 `find` 找资源会匹配到多个版本目录，`ls` 统计技能数会得出离谱结果。
 
@@ -233,7 +261,7 @@ python3 skills/soia-meta-skill-release/scripts/prune_plugin_cache.py --apply
 
 按语义化版本取最高值保留，其余删除；非语义化版本目录（如官方插件的 `latest`）一律跳过。缓存随时可由市场重新拉取，删错也只是多下一次。
 
-### 7. 验证
+### 8. 验证
 
 ```bash
 claude plugin list
