@@ -122,7 +122,12 @@ npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-w
 
 WorkBuddy 是个特例，值得单独说：它的开关单位不是插件而是**专家**——一个角色化的 agent 预设，
 自带人设与一组技能，召唤时才进场。这是本生态的第三个分发面，与两份市场清单并列，
-由 `experts/` 的定义派生。见 [experts/README.md](../experts/README.md)。
+由域仓的 `.codebuddy-plugin/plugin.json` 派生，仍然是**一仓一专家**。
+
+它与 Claude/Codex 有两点不同，装之前要知道：**没有按 sha pin 拉远端仓那一层**
+（市场条目的 `source` 只能是路径字符串），且自建专家**只认硬编码目录 `my-experts`**。
+所以装载方式是在该目录下放一份域仓 checkout——与 Claude/Codex 各自在插件缓存里
+有一份克隆是对等的。见 [WorkBuddy 安装指南](install/workbuddy.md)。
 
 各宿主的具体命令见 [安装指南的分宿主页](install/README.md#按-ai-工具查看)。
 

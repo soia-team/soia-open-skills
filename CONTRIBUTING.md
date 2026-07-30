@@ -311,23 +311,31 @@ plugin version and appears twice in every agent's index. (End users who prefer
 per-skill installs may still use the npx route — see `docs/install/` in the
 meta repo. That is a consumer choice, not the maintainer's delivery path.)
 
-### 5. Refresh WorkBuddy experts if the domain has one
+### 5. WorkBuddy expert manifest
 
-Three domains (`soia-pkm-vault`, `soia-media-content`, `soia-cwork-office`) are
-also packaged as WorkBuddy experts. Their skill sets are **copies made at
-generation time**, not live references — a skill added, renamed, or deleted in
-one of those repos does not reach WorkBuddy until the generator reruns:
+A domain repo that ships a WorkBuddy expert carries a third manifest,
+`.codebuddy-plugin/plugin.json`, next to the Claude and Codex ones. It declares the
+persona (`agents/<plugin-name>.md`), the skill set, and the display metadata. Nothing is
+copied: `skills` points at the repo's own `skills/`, and `avatar` points at the repo's own
+`assets/icon.png` — the same file Codex uses as its logo.
+
+Keep the `skills` array in sync after adding, renaming, or deleting a skill:
 
 ```bash
-python3 scripts/generate_workbuddy_experts.py
+python3 scripts/generate_expert_manifest.py
 ```
 
-The expert package is rebuilt as a whole directory, so a deleted skill really
-disappears rather than lingering. `experts/` in the meta repo holds only the
-definitions (persona, display metadata, avatar); definitions are validated by
-`tests/test_workbuddy_experts.py` in CI, while the final verdict comes from
-WorkBuddy's own `expert-manager` toolkit, which the generator invokes. Details
-in [`experts/README.md`](experts/README.md).
+`--check` runs in CI, so a stale array turns the build red rather than shipping an expert
+that silently misses a skill.
+
+One cross-host trap to know about: WorkBuddy requires the persona at `agents/<name>.md`,
+but Claude Code reads a plugin's root `agents/` directory as **subagents** — a different
+concept entirely. Without a guard, installing the plugin in Claude Code adds an unwanted
+subagent. `.claude-plugin/plugin.json` therefore sets `"agents": []`, which replaces the
+default scan. Verified with `claude --plugin-dir <path> plugin details <name>`: `Agents (1)`
+without the guard, `Agents (0)` with it. Codex has no plugin-level `agents` concept and
+needs no guard.
+
 
 ### Why not manual symlinks?
 
