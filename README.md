@@ -98,6 +98,7 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
 | 文档 | 说明 |
 |---|---|
 | [docs/learning-guide.md](docs/learning-guide.md) | **先读这份**：整套生态怎么运转、为什么这么设计、常见疑问 |
+| [docs/skills/](docs/skills/README.md) | **74 个技能逐个详情页**：触发词、产物、用法示例与安装 |
 | [docs/install/](docs/install/README.md) | 60+ AI 宿主的安装指南 |
 | [docs/install-profiles.md](docs/install-profiles.md) | 按机器用途组织的安装组合 |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | 技能结构、命名、frontmatter 与验证要求 |

@@ -1,0 +1,54 @@
+# soia-media-publish-rednote-card
+
+> 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议。只产出文本并由客户人工发布，不接平台 API
+
+所属：[`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) · [技能源码](https://github.com/soia-team/soia-open-media-content-skills/tree/main/skills/soia-media-publish-rednote-card) · [← 全部技能](README.md)
+
+## 怎么触发
+
+装好后用自然语言说话即可，Agent 按下列意图命中本技能：
+
+「发成小红书」「小红书笔记」「改成 rednote」「rednote 这篇」
+
+## 能力与用法
+
+### 这个技能可以做什么
+
+从文章中提炼一个明确的分享角度，组织成适合移动端快速阅读的笔记：一个有信息承诺的标题、3–5 段短文、相关话题标签，以及与内容匹配的配图建议。
+
+| 客户想要 | 技能会做 | 客户能看到 |
+|---|---|---|
+| 把文章发成小红书笔记 | 提炼角度、重写标题和短段落、补充标签 | 一份可复制的 rednote Markdown 文案 |
+| 需要视觉素材方向 | 给出封面/配图的主体、构图、文字和比例建议 | 可执行的配图建议；需要时可衔接 `soia-media-generate-article-image` |
+| 发布到 rednote | 只生成发布文本 | “产出文本、人工发布”；不会调用 API 或发布内容 |
+
+### 客户如何使用
+
+1. 说明“发成小红书”“小红书笔记”或“rednote 这篇”，并提供成文草稿、文件内容或路径。
+2. 如有要求，一并说明目标读者、账号口吻、标题禁用词、是否突出方法/清单/故事，以及想要的配图风格。
+3. Agent 先确定单一分享角度，再输出标题、正文、标签和配图建议；默认不覆盖原稿，客户指定路径时才另存。
+4. 客户人工复制文案、准备图片并发布到 rednote；本 skill 不代替平台后台操作。
+
+## 安装
+
+本技能随 `soia-media-content` 领域插件一起安装：
+
+```bash
+claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-media-content@soia
+```
+
+```bash
+codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia-media-content@soia
+```
+
+WorkBuddy 由技能代劳——对 AI 说「装到 WorkBuddy」即可。
+
+只想要这一个技能：
+
+```bash
+npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-publish-rednote-card -y
+```
+
+---
+
+本页由 `scripts/generate_skill_pages.py` 从该技能的 `SKILL.md` 派生，请勿手改——改 `SKILL.md` 后重跑生成器。
