@@ -98,6 +98,7 @@ A domain repo is simultaneously a plugin for all three — skills are never copi
 | Document | Covers |
 |---|---|
 | [docs/learning-guide.en.md](docs/learning-guide.en.md) | **Start here**: how the ecosystem works, why it is designed this way, FAQs |
+| [docs/skills/](docs/skills/README.md) | **Per-skill pages for all 74 skills**: triggers, outputs, usage examples, install |
 | [docs/install/](docs/install/README.en.md) | Install guides for 60+ AI hosts |
 | [docs/install-profiles.md](docs/install-profiles.md) | Setups organized by machine purpose |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | Skill structure, naming, frontmatter, validation |
