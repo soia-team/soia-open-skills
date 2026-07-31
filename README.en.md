@@ -10,6 +10,14 @@
 
 [中文](README.md) · English
 
+<p align="center">
+  <img alt="plugin version" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsoia-team%2Fsoia-open-skills%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=plugin&color=F5A623&prefix=v">
+  <img alt="skills" src="https://img.shields.io/badge/skills-4-brightgreen">
+  <img alt="hosts" src="https://img.shields.io/badge/hosts-Claude%20%C2%B7%20Codex%20%C2%B7%20WorkBuddy-8A2BE2">
+  <img alt="always-on cost" src="https://img.shields.io/badge/always--on-~428%20tok-lightgrey">
+  <img alt="license" src="https://img.shields.io/github/license/soia-team/soia-open-skills?color=blue">
+</p>
+
 </div>
 
 ---
