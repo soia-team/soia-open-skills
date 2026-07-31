@@ -10,6 +10,14 @@
 
 [English](README.en.md) · 中文
 
+<p align="center">
+  <img alt="plugin version" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsoia-team%2Fsoia-open-skills%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=plugin&color=F5A623&prefix=v">
+  <img alt="skills" src="https://img.shields.io/badge/技能-4-brightgreen">
+  <img alt="hosts" src="https://img.shields.io/badge/宿主-Claude%20%C2%B7%20Codex%20%C2%B7%20WorkBuddy-8A2BE2">
+  <img alt="always-on cost" src="https://img.shields.io/badge/常驻-~428%20tok-lightgrey">
+  <img alt="license" src="https://img.shields.io/github/license/soia-team/soia-open-skills?color=blue">
+</p>
+
 </div>
 
 ---
@@ -91,7 +99,7 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
 - **不是 AI 客户端**。它扩展你已有的 Claude Code / Codex，不替代它们。
 - **不托管你的数据**。所有内容留在你自己的机器上，技能只提供操作方法。
 - **不保存凭据**。各平台登录态由官方流程持有，不进仓库、不进日志。
-- **不含公司内部流程**。行业特定的需求、测试、发版规范在私有仓，不开源。
+- **不含公司内部流程**。行业特定的需求、测试、发版规范不在本生态开源范围内。
 
 ## 文档
 
