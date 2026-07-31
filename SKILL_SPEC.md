@@ -17,8 +17,8 @@ python3 scripts/audit_skills.py
 
 The template is intentionally generic: it shows config discovery, provider setup boundaries, and validation language without encoding any maintainer-specific vault layout.
 
-`soia-open-skills` and `soia-private-skills` intentionally use the same template
-path and outer structure:
+Every SOIA skill repository intentionally uses the same template path and outer
+structure:
 
 ```text
 templates/skill-template/
@@ -112,8 +112,7 @@ dependencies:
 
 Rules:
 
-- `hard` / `optional` list SOIA-managed skill names only (published from
-  soia-open-skills or soia-private-skills).
+- `hard` / `optional` list SOIA-managed skill names only.
 - `hard` means the core workflow cannot complete without the dependency;
   `soia-dev-sync-skills` expands the transitive hard closure on single-skill
   sync and warns when a hard dependency is missing from the shared source.

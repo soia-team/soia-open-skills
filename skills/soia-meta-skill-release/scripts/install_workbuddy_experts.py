@@ -34,23 +34,13 @@ import sys
 
 MY_EXPERTS = "plugins/marketplaces/my-experts"
 
-# 插件名 → (仓名, 该插件在仓内的 plugin root)。
-# soia-private-skills 一仓三 plugin root，靠目录分隔，所以要记 root 相对路径。
-# 私有仓只有仓库授权者能 clone，找不到时脚本会提示而非报错。
-DOMAIN_REPOS = {
-    "soia-dev": ("soia-open-dev-skills", "."),
-    "soia-dev-design": ("soia-open-dev-design-skills", "."),
-    "soia-pkm-vault": ("soia-open-pkm-vault-skills", "."),
-    "soia-media-content": ("soia-open-media-content-skills", "."),
-    "soia-cwork-office": ("soia-open-cwork-office-skills", "."),
-    "soia-edu-course": ("soia-open-edu-course-skills", "."),
-    "soia-env": ("soia-open-env-skills", "."),
-    "soia-meta": ("soia-open-skills", "."),
-    "soia-gov": ("soia-private-skills", "."),
-    "soia-workspace": ("soia-private-skills", "workspace"),
-    "soia-harness": ("soia-private-skills", "harness"),
-    "soia-corp": ("soia-private-corp-skills", "."),
-}
+# 不维护「插件名 → 仓名」的硬编码表：那会把非公开仓的仓名、插件名与目录结构
+# 写进这个公开仓的源码里。改为自动发现——扫搜索路径下每个带
+# .codebuddy-plugin/plugin.json 的 plugin root，插件名从该清单的 name 字段读。
+#
+# 一个仓可能有多个 plugin root（靠目录分隔），所以要往下多找一层。
+PLUGIN_MANIFEST = ".codebuddy-plugin/plugin.json"
+MAX_ROOT_DEPTH = 2  # 仓根本身，以及仓根下一层的子目录
 
 # 复制时排除：本机产物与版本库，不应进专家包
 COPY_IGNORE = shutil.ignore_patterns(
@@ -74,14 +64,34 @@ def workbuddy_config_dir() -> pathlib.Path:
     ).expanduser()
 
 
-def locate_root(repo_name: str, sub: str,
-                search_roots: list[pathlib.Path]) -> pathlib.Path | None:
-    """定位某插件的 plugin root。sub 为 "." 时就是仓根，否则是仓内子目录。"""
+def discover_plugin_roots(search_roots: list[pathlib.Path]) -> dict[str, pathlib.Path]:
+    """扫出搜索路径下所有可用的 plugin root。
+
+    插件名以 .codebuddy-plugin/plugin.json 的 name 字段为准，不靠目录名猜——
+    一个仓可能靠目录分隔出多个 plugin root，目录名与插件名并不一一对应。
+
+    找不到的仓不报错：非公开仓只有授权者能 clone，它们不出现是正常情况。
+    """
+    found: dict[str, pathlib.Path] = {}
     for root in search_roots:
-        candidate = root / repo_name if sub == "." else root / repo_name / sub
-        if (candidate / ".codebuddy-plugin/plugin.json").exists():
-            return candidate
-    return None
+        if not root.is_dir():
+            continue
+        for repo in sorted(root.iterdir()):
+            if not repo.is_dir():
+                continue
+            candidates = [repo]
+            candidates += [d for d in sorted(repo.iterdir()) if d.is_dir()]
+            for cand in candidates:
+                manifest = cand / PLUGIN_MANIFEST
+                if not manifest.is_file():
+                    continue
+                try:
+                    name = json.loads(manifest.read_text(encoding="utf-8"))["name"]
+                except (json.JSONDecodeError, KeyError, OSError):
+                    continue
+                found.setdefault(name, cand)
+    return found
+
 
 
 def install_one(plugin: str, repo: pathlib.Path, target_root: pathlib.Path) -> pathlib.Path:
@@ -117,46 +127,36 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("plugins", nargs="*", metavar="PLUGIN",
-                        help=f"要安装的插件名，缺省为全部。可选：{', '.join(sorted(DOMAIN_REPOS))}")
+                        help="要安装的插件名，缺省为搜索路径下发现的全部")
     parser.add_argument("--repos-root", type=pathlib.Path, action="append", default=None,
-                        help="存放各域仓的目录，可重复；缺省为元仓的上级目录")
+                        help="存放各仓的目录，可重复；缺省为元仓的上级目录")
     parser.add_argument("--dry-run", action="store_true", help="只打印计划，不写文件")
     args = parser.parse_args(argv)
 
-    wanted = args.plugins or sorted(DOMAIN_REPOS)
-    unknown = [p for p in wanted if p not in DOMAIN_REPOS]
-    if unknown:
-        print(f"❌ 未知插件名：{', '.join(unknown)}", file=sys.stderr)
-        print(f"   可选：{', '.join(sorted(DOMAIN_REPOS))}", file=sys.stderr)
+    search_roots = args.repos_root or [repo_root.parent]
+    available = discover_plugin_roots(search_roots)
+    if not available:
+        print(f"❌ 搜索路径下没有发现任何 plugin root：{', '.join(str(r) for r in search_roots)}",
+              file=sys.stderr)
+        print("   用 --repos-root 指定各仓所在目录。", file=sys.stderr)
         return 2
 
-    search_roots = args.repos_root or [repo_root.parent]
-    target_root = workbuddy_config_dir() / MY_EXPERTS
+    wanted = args.plugins or sorted(available)
+    unknown = [p for p in wanted if p not in available]
+    if unknown:
+        print(f"❌ 搜索路径下没有这些插件：{', '.join(unknown)}", file=sys.stderr)
+        print(f"   已发现：{', '.join(sorted(available))}", file=sys.stderr)
+        print("   缺少的仓可能你没有访问权限，或还没 clone 下来。", file=sys.stderr)
+        return 2
 
-    plans: list[tuple[str, pathlib.Path]] = []
-    missing: list[str] = []
-    for plugin in wanted:
-        repo_name, sub = DOMAIN_REPOS[plugin]
-        root = locate_root(repo_name, sub, search_roots)
-        if root is None:
-            label = repo_name if sub == "." else f"{repo_name}/{sub}"
-            missing.append(f"{plugin} → {label}")
-        else:
-            plans.append((plugin, root))
+    target_root = workbuddy_config_dir() / MY_EXPERTS
+    plans = [(p, available[p]) for p in wanted]
 
     print(f"专家目录：{target_root}")
     for plugin, repo in plans:
-        manifest = json.loads((repo / ".codebuddy-plugin/plugin.json").read_text(encoding="utf-8"))
-        print(f"  {plugin:20s} {manifest['profession']['zh']:10s} "
+        manifest = json.loads((repo / PLUGIN_MANIFEST).read_text(encoding="utf-8"))
+        print(f"  {plugin:20s} {manifest['profession']['zh']:12s} "
               f"{len(manifest['skills']):2d} 个技能 ← {repo}")
-    if missing:
-        print("\n⚠️  以下 plugin root 没找到（缺 .codebuddy-plugin/plugin.json，或不在搜索路径下）：")
-        for m in missing:
-            print(f"   {m}")
-        print(f"   搜索路径：{', '.join(str(r) for r in search_roots)}")
-        print("   用 --repos-root 指定，或先 git clone 对应仓。")
-        print("   私有仓（soia-private-skills / soia-private-corp-skills）只有")
-        print("   仓库授权者能 clone；没有权限时它们不出现是正常的。")
 
     if args.dry_run:
         print("\n（--dry-run，未写入任何文件）")

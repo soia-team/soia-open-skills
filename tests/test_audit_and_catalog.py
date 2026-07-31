@@ -347,9 +347,9 @@ class RepoNameResolutionTest(unittest.TestCase):
             self._git(root, "init")
             self._git(
                 root, "remote", "add", "origin",
-                "git@github.com:soia-team/soia-private-skills.git",
+                "git@github.com:soia-team/some-other-repo.git",
             )
-            self.assertEqual(catalog.resolve_repo_name(root), "soia-private-skills")
+            self.assertEqual(catalog.resolve_repo_name(root), "some-other-repo")
 
     def test_falls_back_to_directory_name_without_git(self) -> None:
         with tempfile.TemporaryDirectory(suffix="-soia-open-skills") as tmp:

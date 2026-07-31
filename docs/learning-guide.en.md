@@ -27,7 +27,7 @@ The whole ecosystem has only five concepts. Confusing them is the source of most
 ## 2. The whole ecosystem in one diagram
 
 ```text
-Source of truth: 10 Git repos, 100 skills (74 open + 26 private)
+Source of truth: 8 Git repos, 74 skills
         │
         │   routing/routing-manifest.json (machine-readable index, generated)
         ▼
@@ -35,7 +35,6 @@ Portal repo generator: scripts/generate_marketplaces.py
         │
         ├─→ .claude-plugin/marketplace.json    ← Claude Code / Qwen / agy
         ├─→ .agents/plugins/marketplace.json   ← Codex native
-        └─→ Self-referencing private marketplaces (source: "./", local gh credentials)
         │
         ▼
 Host installs: claude plugin install soia-pkm-vault@soia
@@ -177,7 +176,7 @@ All of the plugin's skills enter the index — that is where always-on cost come
 It is the machine-readable source of truth mapping skill → repo → path, serving five purposes: (1) `find-skills` routing queries, (2) ecosystem-wide duplicate-name CI checks, (3) cross-repo hard-dependency closure, (4) the data source for the marketplace generator, (5) install-doc generation. CI regenerates it after any repo publishes.
 
 **Q: Why can't a `skills` array in `plugin.json` expose only a subset?**
-Neither host allows it, for different reasons. **Codex**: the official validator requires `skills` to be a string that normalizes to exactly `"skills"`; an array is rejected outright. **Claude**: the official field table states `skills` **adds to** the default `skills/` scan — while `commands`, `agents`, and `workflows` in the same table all say "replaces". Testing confirms the array is a no-op. **Only directory separation actually splits plugin content**, which is how `soia-private-skills` serves three plugins from one repo (`skills/`, `workspace/skills/`, `harness/skills/`).
+Neither host allows it, for different reasons. **Codex**: the official validator requires `skills` to be a string that normalizes to exactly `"skills"`; an array is rejected outright. **Claude**: the official field table states `skills` **adds to** the default `skills/` scan — while `commands`, `agents`, and `workflows` in the same table all say "replaces". Testing confirms the array is a no-op. **Only directory separation actually splits plugin content** — to ship several plugins from one repo, each plugin root needs its own directory (with its own `skills/` and `.claude-plugin/plugin.json`), not a subset listed in the manifest.
 
 **Q: A skill did not fire — how do I diagnose it?**
 In order: (1) is the plugin installed (`claude plugin list`), (2) is it enabled, (3) do the triggers in its description match what you actually said, (4) does the same skill exist twice (npx and plugin side by side). Item 4 is the sneakiest — check `~/.agents/skills` for a directory of the same name.
@@ -185,8 +184,8 @@ In order: (1) is the plugin installed (`claude plugin list`), (2) is it enabled,
 **Q: `plugin update` says "already at the latest version" but I changed the code.**
 Claude Code compares the `version` field in `plugin.json`, **not the sha**. Change content without bumping the version and the client sees nothing. Release flow in [plugin-dev.md](plugin-dev.md).
 
-**Q: How are private repos distributed?**
-The two private repos host **self-referencing marketplaces** (`source: "./"`) that use your local `gh` credentials, so only repo-authorized users can install them. No private entry appears in any public manifest.
+**Q: How do I publish skills that are not public?**
+Make the repo a **self-referencing marketplace** (`source: "./"`) backed by your local `gh` credentials — only repo collaborators can install it, and it never appears in a public manifest. The generators derive manifests from public repos only, so non-public content never reaches a public artifact.
 
 ---
 

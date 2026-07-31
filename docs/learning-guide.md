@@ -27,7 +27,7 @@
 ## 二、一张图看懂全生态
 
 ```text
-真源：10 个 Git 仓库，共 100 个技能（开源 74 + 私有 26）
+真源：8 个 Git 仓库，共 74 个技能
         │
         │   routing/routing-manifest.json（机器可读索引，生成物）
         ▼
@@ -35,7 +35,6 @@
         │
         ├─→ .claude-plugin/marketplace.json    ← Claude Code / Qwen / agy 消费
         ├─→ .agents/plugins/marketplace.json   ← Codex 原生消费
-        └─→ 私有仓自指市场（source: "./"，走本机 gh 凭证）
         │
         ▼
 宿主装载：claude plugin install soia-pkm-vault@soia
@@ -174,7 +173,7 @@ SOIA 技能的 frontmatter 用七个字段（`name` `description` `version` `cre
 技能→仓→路径的机器可读真源，服务五件事：① `find-skills` 路由查询 ② 全生态重名 CI 检查 ③ 跨仓硬依赖闭包 ④ 市场清单生成器的数据源 ⑤ 安装文档生成。任一仓发布后由 CI 重新生成。
 
 **Q：为什么 `plugin.json` 里列 `skills` 数组不能只暴露技能子集？**
-两个宿主都不行，原因不同。**Codex**：官方校验器要求 `skills` 必须是字符串且规范化后等于 `"skills"`，传数组直接判错。**Claude**：官方字段表写明 `skills` 是「**Adds to** the default `skills/` scan」——同表 `commands`/`agents`/`workflows` 都是 "replaces"，唯独 `skills` 是叠加。实测证实数组是 no-op。**只有目录分隔能真正拆分插件内容**，这也是 `soia-private-skills` 一仓三插件（`skills/`、`workspace/skills/`、`harness/skills/`）的做法。
+两个宿主都不行，原因不同。**Codex**：官方校验器要求 `skills` 必须是字符串且规范化后等于 `"skills"`，传数组直接判错。**Claude**：官方字段表写明 `skills` 是「**Adds to** the default `skills/` scan」——同表 `commands`/`agents`/`workflows` 都是 "replaces"，唯独 `skills` 是叠加。实测证实数组是 no-op。**只有目录分隔能真正拆分插件内容**——要在一个仓里放多个插件，就得让每个 plugin root 各占一个目录（各自带 `skills/` 与 `.claude-plugin/plugin.json`），而不是靠清单里列子集。
 
 **Q：技能没触发怎么查？**
 按序：① 插件装了吗（`claude plugin list`）② 启用了吗 ③ description 里的触发词和你说的话对得上吗 ④ 是不是同名技能有两份（npx 与插件并存）。第 ④ 项是最隐蔽的，检查 `~/.agents/skills` 里有没有同名目录。
@@ -182,8 +181,8 @@ SOIA 技能的 frontmatter 用七个字段（`name` `description` `version` `cre
 **Q：`plugin update` 说「已是最新」，但我明明改了代码？**
 Claude Code 比对的是 `plugin.json` 的 `version` 字段，**不是 sha**。改了内容不 bump 版本号，客户端就认为无事发生。发版流程见 [plugin-dev.md](plugin-dev.md)。
 
-**Q：私有仓怎么分发？**
-两个私有仓建**自指市场**（`source: "./"`），走本机 `gh` 凭证，只有仓库授权者装得上。公开市场清单不含任何私有条目。
+**Q：怎么发布不公开的技能？**
+把仓做成**自指市场**（`source: "./"`）走本机 `gh` 凭证即可——只有仓库授权者装得上，公开市场清单不会含它。生成器只从公开仓派生清单，非公开内容不进任何公开产物。
 
 ---
 

@@ -54,10 +54,6 @@ PALETTE: dict[str, tuple[str, str, str, str]] = {
     "soia-edu-course": ("course", "#4338CA", "#818CF8", "#E4E5FF"),
     "soia-env": ("env", "#3F6212", "#84CC16", "#EDFFCF"),
     "soia-meta": ("meta", "#78350F", "#F5A623", "#FFEDCB"),
-    "soia-gov": ("gov", "#5B21B6", "#A78BFA", "#EDE6FF"),
-    "soia-workspace": ("workspace", "#7C2D12", "#FDBA74", "#FFEBD6"),
-    "soia-corp": ("corp", "#155E75", "#22D3EE", "#D6FBFF"),
-    "soia-harness": ("harness", "#3F3F46", "#A1A1AA", "#F4F4F5"),
 }
 
 # 字形：以 (0,0) 为中心、约 470 见方的框内作图
@@ -102,38 +98,12 @@ GLYPHS: dict[str, str] = {
       <line x1="0" y1="-165" x2="0" y2="-225"/>
       <line x1="143" y1="82" x2="195" y2="112"/>
       <line x1="-143" y1="82" x2="-195" y2="112"/>""",
-    "soia-gov": """
-      <circle cx="0" cy="-172" r="40"/>
-      <line x1="0" y1="-132" x2="0" y2="150"/>
-      <line x1="-198" y1="-150" x2="198" y2="-150"/>
-      <line x1="-198" y1="-150" x2="-198" y2="-40"/>
-      <line x1="198" y1="-150" x2="198" y2="-40"/>
-      <path d="M-286,-40 L-110,-40 A88,96 0 0 1 -286,-40 Z"/>
-      <path d="M110,-40 L286,-40 A88,96 0 0 1 110,-40 Z"/>
-      <line x1="-96" y1="196" x2="96" y2="196"/>
-      <path d="M-48,150 L48,150 L62,196 L-62,196 Z"/>""",
-    "soia-workspace": """
-      <rect x="-215" y="-175" width="430" height="300" rx="30"/>
-      <line x1="-215" y1="55" x2="215" y2="55"/>
-      <line x1="0" y1="125" x2="0" y2="185"/>
-      <line x1="-110" y1="212" x2="110" y2="212"/>
-      <circle cx="-115" cy="-62" r="34"/>
-      <line x1="-30" y1="-10" x2="145" y2="-10"/>
-      <line x1="-30" y1="-108" x2="145" y2="-108"/>""",
-    "soia-corp": """
-      <path d="M0,-210 L200,-140 L200,20 A200,240 0 0 1 0,215
-               A200,240 0 0 1 -200,20 L-200,-140 Z"/>
-      <polyline points="-88,5 -22,72 96,-58"/>""",
-    "soia-harness": """
-      <path d="M-172,-40 A172,172 0 0 1 118,-125"/>
-      <polyline points="60,-172 132,-128 88,-56"/>
-      <path d="M172,40 A172,172 0 0 1 -118,125"/>
-      <polyline points="-60,172 -132,128 -88,56"/>
-      <circle cx="0" cy="0" r="52"/>""",
 }
 
-# 域仓 → 该仓各 plugin root 对应的插件名。私有仓不在本仓工作副本里，
-# 但表放这儿，指向它的克隆时同样可用。
+# 域仓 → 该仓各 plugin root 对应的插件名。
+#
+# 这里只列公开仓。非公开仓的图标由它自己维护——把本脚本 --deploy 指向那个仓的
+# 克隆即可，无需在这个公开仓里登记它的名字。用 --palette 传入该仓自己的配色。
 DEPLOY_TARGETS: dict[str, list[tuple[str, str]]] = {
     "soia-open-dev-skills": [(".", "soia-dev")],
     "soia-open-dev-design-skills": [(".", "soia-dev-design")],
@@ -143,12 +113,6 @@ DEPLOY_TARGETS: dict[str, list[tuple[str, str]]] = {
     "soia-open-edu-course-skills": [(".", "soia-edu-course")],
     "soia-open-env-skills": [(".", "soia-env")],
     "soia-open-skills": [(".", "soia-meta")],
-    "soia-private-corp-skills": [(".", "soia-corp")],
-    "soia-private-skills": [
-        (".", "soia-gov"),
-        ("workspace", "soia-workspace"),
-        ("harness", "soia-harness"),
-    ],
 }
 
 _DEFS = """  <defs>
