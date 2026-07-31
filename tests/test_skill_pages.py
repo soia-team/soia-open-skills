@@ -51,6 +51,29 @@ class OutputLocationTests(unittest.TestCase):
                 self.assertIn(f"]({p.name})", index)
 
 
+class DomainReadmeLinkTests(unittest.TestCase):
+    """各域仓 README 的技能表链到本仓详情页——跨仓链接没有编译期检查，
+    技能改名或删除时这些 URL 会静默 404，所以在这里守。"""
+
+    PORTAL = "https://github.com/soia-team/soia-open-skills/blob/main/docs/skills"
+
+    def test_every_linked_page_exists(self) -> None:
+        import re
+        v7 = ROOT.parent
+        pages = {p.stem for p in PAGES.glob("*.md") if p.name != "README.md"}
+        broken = []
+        for repo in sorted(v7.glob("soia-open-*/")):
+            for f in ("README.md", "README.en.md"):
+                readme = repo / f
+                if not readme.exists():
+                    continue
+                for name in re.findall(rf"{re.escape(self.PORTAL)}/([\w-]+)\.md",
+                                       readme.read_text(encoding="utf-8")):
+                    if name not in pages:
+                        broken.append(f"{repo.name}/{f} → {name}")
+        self.assertEqual(broken, [], "域仓 README 链到了不存在的技能详情页")
+
+
 class ContentTests(unittest.TestCase):
     def setUp(self) -> None:
         self.pages = {p.stem: p.read_text(encoding="utf-8")

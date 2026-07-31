@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/hero.webp" width="640" alt="">
+<img src="assets/plugins/soia-meta.png" width="88" alt="">
 
 # SOIA Skills
 
@@ -69,10 +69,10 @@ With no arguments it installs all 12 experts; pass plugin names to pick. Restart
 
 | Skill | Responsibility | Ready |
 |---|---|:-:|
-| `soia-meta-find-skill` | Searches the whole ecosystem by need and loads the right skill — no need to know its name | ✅ |
-| `soia-meta-sync-skills` | Symlinks a skill source into the AI tool directories you explicitly choose | ✅ |
-| `soia-meta-skill-release` | After a merge: marketplace publish, client update, WorkBuddy expert install, cache reclamation | ✅ |
-| `soia-meta-prompt-clarity` | Drafts, diagnoses and specifies prompts in Chinese or English, preserving intent and safety boundaries | ✅ |
+| [`soia-meta-find-skill`](https://github.com/soia-team/soia-open-skills/blob/main/docs/skills/soia-meta-find-skill.md) | Searches the whole ecosystem by need and loads the right skill — no need to know its name | ✅ |
+| [`soia-meta-sync-skills`](https://github.com/soia-team/soia-open-skills/blob/main/docs/skills/soia-meta-sync-skills.md) | Symlinks a skill source into the AI tool directories you explicitly choose | ✅ |
+| [`soia-meta-skill-release`](https://github.com/soia-team/soia-open-skills/blob/main/docs/skills/soia-meta-skill-release.md) | After a merge: marketplace publish, client update, WorkBuddy expert install, cache reclamation | ✅ |
+| [`soia-meta-prompt-clarity`](https://github.com/soia-team/soia-open-skills/blob/main/docs/skills/soia-meta-prompt-clarity.md) | Drafts, diagnoses and specifies prompts in Chinese or English, preserving intent and safety boundaries | ✅ |
 
 ✅ All four work right after install
 
