@@ -424,8 +424,8 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py --dr
 
 #### 写测试时的两个坑
 
-- **不要硬假设 `.codex-plugin/plugin.json` 存在**。`soia-private-skills` 只走
-  Claude 侧私有市场，没有那张清单。断言 avatar 存在照旧守，「与 Codex logo 同一文件」
+- **不要硬假设 `.codex-plugin/plugin.json` 存在**。并非每个 plugin root 都有
+  Codex 那一面。断言 avatar 存在照旧守，「与 Codex logo 同一文件」
   这条在缺清单时 `skipTest`。
 - **复制技能内容时过滤本机产物**。`__pycache__`、`.git`、`.venv` 一并拷进去过——
   一次未过滤的生成里 3 个技能的包有 1.1MB 是字节码，单个 `.pyc` 达 272KB，
@@ -433,8 +433,8 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py --dr
 
 #### 占位技能要如实标注
 
-人设里不得美化未实现的能力。`soia-corp` 的两个巡检技能 description 明写「占位待补」，
-它的人设因此写明「用户问到时如实说明尚未实现，不要临时编一套流程冒充」。
+人设里不得美化未实现的能力。若某技能的 description 写着「占位待补」，它的人设必须写明
+「用户问到时如实说明尚未实现，不要临时编一套流程冒充」。
 
 
 ### Why not manual symlinks?

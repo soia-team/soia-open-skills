@@ -10,7 +10,7 @@ The batch script discovers current managed skills mechanically:
 - Include optional non-SOIA entries only when the user selects optional sync or the script is run with `--optional`.
 - Exclude support files and nested helper directories that do not contain their own `SKILL.md`.
 
-This removes two old allowlist problems: adding a new `soia-*` skill requires adding the folder, not editing the sync script, and installing open + private packages into one shared source produces one complete target set.
+This removes two old allowlist problems: adding a new `soia-*` skill requires adding the folder, not editing the sync script, and installing several packages into one shared source produces one complete target set.
 
 ## Included SOIA Domains
 
@@ -38,18 +38,18 @@ Public PKM:
 
 Optional skills are linked only when the user selects optional sync or the script is run with `--optional`.
 
-There are currently no optional non-SOIA skills in `soia-private-skills`.
+There are currently no optional non-SOIA skills in the non-public source.
 
 ## Retired Cleanup Names
 
 Retired names are removed from target agent directories during SOIA batch sync.
 
 - `soia-dev-project-init` - merged into `soia-dev-project-scaffold`.
-- `soia-gov-ui-validation` - merged into `soia-gov-ui-design`.
-- `soia-gov-tauri-real-device-test` - merged into `soia-gov-ui-design` Stage 2 (2026-04-24).
+- `soia-gov-ui-validation` - merged into its successor.
+- `soia-gov-tauri-real-device-test` - merged into its successor's Stage 2 (2026-04-24).
 - `soia-brand-guidelines` - renamed to `soia-design-brand-guidelines` (2026-04-24).
-- `jiuan-docs-v5-project-structure` - v5 legacy; not shipped by `soia-private-skills`.
-- `jiuan-docs-v5-references` - v5 legacy; not shipped by `soia-private-skills`.
+- `jiuan-docs-v5-project-structure` - v5 legacy; no longer shipped.
+- `jiuan-docs-v5-references` - v5 legacy; no longer shipped.
 
 ## Cleanup Boundary
 

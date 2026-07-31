@@ -70,24 +70,58 @@ class CopySemanticsTests(unittest.TestCase):
         self.assertFalse((rebuilt / "skills/removed").exists())
 
 
-class RosterTests(unittest.TestCase):
-    def test_every_plugin_is_mapped(self) -> None:
-        expected = {
-            # 8 开源
-            "soia-dev", "soia-dev-design", "soia-pkm-vault", "soia-media-content",
-            "soia-cwork-office", "soia-edu-course", "soia-env", "soia-meta",
-            # 4 私有（soia-private-skills 一仓三 plugin root）
-            "soia-gov", "soia-workspace", "soia-harness", "soia-corp",
-        }
-        self.assertEqual(set(iwe.DOMAIN_REPOS), expected)
+class DiscoveryTests(unittest.TestCase):
+    """插件清单靠自动发现，不靠硬编码表。
 
-    def test_multi_root_repos_record_their_subdirectory(self) -> None:
-        """soia-private-skills 靠目录分隔出三个插件，root 相对路径不能丢。"""
-        self.assertEqual(iwe.DOMAIN_REPOS["soia-gov"], ("soia-private-skills", "."))
-        self.assertEqual(iwe.DOMAIN_REPOS["soia-workspace"],
-                         ("soia-private-skills", "workspace"))
-        self.assertEqual(iwe.DOMAIN_REPOS["soia-harness"],
-                         ("soia-private-skills", "harness"))
+    回归 2026-07-31：脚本原先维护一张「插件名 → 仓名 + 目录」的表，把非公开仓的
+    仓名、插件名与目录结构写进了这个公开仓的源码。改为扫 .codebuddy-plugin/plugin.json
+    自动发现，插件名以清单的 name 字段为准。
+    """
+
+    def setUp(self) -> None:
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def _make_root(self, path: pathlib.Path, name: str) -> None:
+        (path / ".codebuddy-plugin").mkdir(parents=True, exist_ok=True)
+        (path / ".codebuddy-plugin/plugin.json").write_text(
+            json.dumps({"name": name, "skills": [], "profession": {"zh": "x"}}),
+            encoding="utf-8")
+
+    def test_no_hardcoded_repository_names(self) -> None:
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn("DOMAIN_REPOS", source,
+                         "不得维护硬编码的「插件名 → 仓名」表")
+        for leaked in ("soia-private", "soia-gov", "soia-corp",
+                       "soia-workspace", "soia-harness"):
+            with self.subTest(name=leaked):
+                self.assertNotIn(leaked, source,
+                                 f"公开仓的脚本不得写死非公开插件名 {leaked}")
+
+    def test_discovers_plugin_root_at_repo_root(self) -> None:
+        self._make_root(self.tmp / "some-repo", "plugin-a")
+        found = iwe.discover_plugin_roots([self.tmp])
+        self.assertEqual(set(found), {"plugin-a"})
+
+    def test_discovers_multiple_roots_in_one_repo(self) -> None:
+        """一个仓可靠目录分隔出多个 plugin root，每个都要发现。"""
+        repo = self.tmp / "multi-repo"
+        self._make_root(repo, "plugin-main")
+        self._make_root(repo / "second", "plugin-second")
+        found = iwe.discover_plugin_roots([self.tmp])
+        self.assertEqual(set(found), {"plugin-main", "plugin-second"})
+        self.assertEqual(found["plugin-second"], repo / "second")
+
+    def test_plugin_name_comes_from_manifest_not_directory(self) -> None:
+        """目录名与插件名并不一一对应，必须读清单。"""
+        self._make_root(self.tmp / "directory-name", "totally-different")
+        found = iwe.discover_plugin_roots([self.tmp])
+        self.assertIn("totally-different", found)
+        self.assertNotIn("directory-name", found)
+
+    def test_missing_repos_are_simply_absent(self) -> None:
+        """没权限 clone 的仓不出现即可，不该报错。"""
+        self.assertEqual(iwe.discover_plugin_roots([self.tmp / "nope"]), {})
 
     def test_registration_goes_through_the_official_script(self) -> None:
         """官方规范铁律 12：禁止绕过 register_expert.py 直接写 marketplace.json。"""

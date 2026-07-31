@@ -340,9 +340,8 @@ def has_skill_md(path: Path) -> bool:
 def is_managed_soia_skill(name: str) -> bool:
     """Treat every installed `soia-*` skill as managed.
 
-    The shared source may contain skills from both soia-open-skills and
-    soia-private-skills. Repository ownership controls publishing, while this
-    script controls target links; excluding public PKM names here made a full
+    The shared source may contain skills published from more than one repository.
+    Repository ownership controls publishing, while this script controls target links; excluding public PKM names here made a full
     sync silently incomplete and broke explicit --skills requests.
     """
     return name.startswith("soia-")
@@ -769,8 +768,8 @@ def main(argv: list[str] | None = None) -> int:
     for dep, requirer in missing_deps:
         print(
             f"warning: hard dependency not in source-dir: {dep} (required by {requirer}). "
-            f"Install it first, e.g. `npx skills add soia-team/soia-open-skills -g -a '*' -s {dep} -y` "
-            "(or the soia-private-skills package), then re-run this sync.",
+            f"Install it first, e.g. `npx skills add soia-team/<repo> -g -a '*' -s {dep} -y` "
+            "using whichever repository publishes it, then re-run this sync.",
             file=sys.stderr,
         )
 

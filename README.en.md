@@ -91,7 +91,7 @@ A domain repo is simultaneously a plugin for all three — skills are never copi
 - **Not an AI client.** It extends the Claude Code / Codex you already use rather than replacing them.
 - **Does not host your data.** Everything stays on your machine; the skills only supply the method.
 - **Does not store credentials.** Platform sessions stay in their official flows — never in the repo or logs.
-- **No internal company process.** Industry-specific requirement, test and release standards live in private repos.
+- **No internal company process.** Industry-specific requirement, test and release standards are out of scope for this open-source ecosystem.
 
 ## Documentation
 

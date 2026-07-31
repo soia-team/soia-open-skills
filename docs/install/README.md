@@ -136,7 +136,7 @@ python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py --sou
 
 **如何减少常驻上下文？** ① 路线 A 只用 `-s` 安装需要的技能；② 路线 B 装插件后用 `disable` 关闭暂时不用的领域；③ 长尾技能通过 `soia-meta-find-skill` 按需检索后再安装。
 
-**如何安装私有仓库的技能？** 需要仓库访问权限，命令相同（`npx skills add soia-team/soia-private-corp-skills -g -a '*' -s <技能名> -y`），先确认 `gh auth status` 已登录。
+**如何安装非公开仓库的技能？** 命令形式与公开仓完全相同，把仓名换成你有权限的那个即可；前提是 `gh auth status` 已登录且你在该仓的授权名单里。没有权限时命令会直接失败，不会泄露仓内容。
 
 **如何更新？** npx 路线：`npx skills update`；插件路线：`claude plugin update <插件名>` 或 `claude plugin marketplace update soia`。
 
