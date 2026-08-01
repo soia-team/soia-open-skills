@@ -61,7 +61,9 @@ family=celebration_ceremony，use_case=wedding，output_mode=campaign_pack，生
 
 **L2：选组合块。** 根据客户选择，只加载一个 family、一个 information_structure、一个
 visual_mechanism、一个 aesthetic_system 和一个 text_strategy 的词条；未指定的轴从该家族
-的 `default_*` 和 `common_*` 中给出 1 个明确建议，并让客户确认或直接生成。
+的 `default_*` 和 `common_*` 中给出 1 个明确建议，并让客户确认或直接生成。每个命中的词条
+还必须读取 [组合块执行契约](references/prompt-block-contract.yml)，把 `compile_fields` 变成
+本次 Prompt 的真实值；只写“高级、电影感、信息密度高”视为未编译。
 
 **L3：生成与验收。** 选定组合后才读取长 Prompt、来源事实、品牌资产、社交卡契约和质量门；
 落盘完整组合轴后调用 imagegen，完成 `view_image`、文字和移动端验收。
