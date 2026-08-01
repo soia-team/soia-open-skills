@@ -1,6 +1,6 @@
 # soia-pkm-bootstrap-vault-obsidian
 
-> 将已有 Markdown vault 配置为 Obsidian 消费端，并衔接通用 vault 基座
+> 以 dry-run 和保留未知配置的结构化合并方式，把已有 Markdown vault 配置为 Obsidian 消费端，启用 Bases 与可选宽页 CSS
 
 所属：[`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) · [技能源码](https://github.com/soia-team/soia-open-pkm-vault-skills/tree/main/skills/soia-pkm-bootstrap-vault-obsidian) · [← 全部技能](README.md)
 
@@ -14,10 +14,11 @@
 
 ### 这个技能可以做什么
 
-- 安装或检查 Obsidian 1.9+。
-- 启用核心插件 **Bases**，用于书库、文章库等数据库视图。
-- 检查 `.obsidian/` 与 `snippets/wide-page.css` 是否已由 base 脚本生成，并说明手动启用步骤。
-- 提供 Tars、Terminal、Obsidian Git 等可选配置边界。
+- 检查 Obsidian 客户端是否可用；版本信息需以本机或官方当前信息为准。
+- dry-run 预览并结构化合并 `core-plugins.json`、`appearance.json` 与可选 `app.json`，兼容新版对象和旧版列表两种核心插件格式。
+- 保留未知核心插件、主题、snippet 和 JSON 键；启用 Bases 与宽页 CSS 时不覆盖客户现有配置。
+- 为工作台、精选长期知识和工作台历史补充三个 create-only `.base` 视图；已有视图始终保留。
+- apply 前备份将修改的现有文件；支持 `--check` 验收。
 
 本 skill 不创建 PARA 骨架、不替代 base，也不把 Obsidian 数据反向写回其他云端知识库。
 
@@ -25,10 +26,10 @@
 
 其他可识别说法包括「配置 Obsidian」「装 Obsidian 插件」「Obsidian 特化配置」「启用 Bases」；从零建立通用 vault 骨架时先使用 `soia-pkm-bootstrap-vault-base`。
 
-1. 先安装并运行 `soia-pkm-bootstrap-vault-base`，通用初始化使用 `--no-obsidian`；如果要让脚本同时生成 CSS snippet，则按下方命令不带该参数运行。
-2. 提供已有 vault 路径，确认 Obsidian 是否已安装及版本。
-3. 按本 skill 完成核心插件和可选插件配置。
-4. 在 Obsidian 中打开目标 vault，确认规则、模板和文章能正常显示。
+1. 先用 base 初始化或确认已有 Markdown vault；base 不写 `.obsidian`。
+2. 提供 vault 路径，先运行脚本默认 dry-run。
+3. 展示 JSON 合并和 CSS create/drift 清单，客户确认后加 `--apply`。
+4. 运行 `--check`，再在 Obsidian 中打开 Bases 和普通笔记验证。
 
 ## 安装
 
