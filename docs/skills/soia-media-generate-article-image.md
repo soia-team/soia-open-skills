@@ -16,7 +16,7 @@
 
 | 客户想要 | `image_type` / `preset` | 客户能看到 |
 |---|---|---|
-| 公众号、X、小红书文章封面 | `cover` / `godot_pixel_metaphor` 或 `auto` | 完整 Prompt、PNG/JPG 封面、视觉验收回执 |
+| 公众号、X、小红书文章封面 | `cover` / `editorial_research_minimal`、`godot_pixel_metaphor` 或 `auto` | 完整 Prompt、PNG/JPG 封面、视觉验收回执 |
 | 正文段落或章节小结图 | `summary_card` / `editorial_summary_card` | 可嵌入正文的编辑式小结卡 |
 | 把文章总结成康奈尔笔记 | `learning_note` / `cornell_notes` | A4 竖版康奈尔笔记信息图 |
 | 技能库、插件集合宣传图 | `social_card` 或 `carousel` / `social_skill_catalog` | 事实清单、朋友圈单图或小红书轮播、机器验收回执 |
