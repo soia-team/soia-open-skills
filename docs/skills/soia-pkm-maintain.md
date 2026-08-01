@@ -1,6 +1,6 @@
 # soia-pkm-maintain
 
-> 维护 Obsidian vault 的健康状态、全库地图与 AI 会话日志
+> 旧版 vault 维护技能的兼容路由，将健康检查、工作台生命周期和 AI 会话日志请求转到职责明确的新技能
 
 所属：[`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) · [技能源码](https://github.com/soia-team/soia-open-pkm-vault-skills/tree/main/skills/soia-pkm-maintain) · [← 全部技能](README.md)
 
@@ -8,24 +8,23 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「vault 周维护」「重建全库地图」「接入会话日志」
+「vault 周维护」「重建全库地图」「整理工作台」「接入会话日志」
 
 ## 能力与用法
 
 ### 这个技能可以做什么
 
-Obsidian vault 维护技能（支撑类）——三个工作流：①周维护（lint 四类体检 + 周简报）②全库地图重生成 ③AI 会话日志接入（Claude Code / Codex 双平台）。底层机械脚本纯 Python stdlib / bash，参数化支持任意 vault 路径，不硬编码具体库
+| 旧请求 | 新技能 |
+|---|---|
+| vault 周维护、死链/标签/过期检查、重建地图 | `soia-pkm-maintain-vault-health` |
+| 整理工作台、清 Inbox、冻结证据、归档历史 | `soia-pkm-manage-vault-lifecycle` |
+| Claude/Codex 会话日志、SessionEnd、notify | `soia-pkm-log-agent-sessions` |
 
-| 客户想要 | 技能会做 | 客户能看到 |
-|---|---|---|
-| 完成本技能覆盖的工作 | 读取用户请求、必要上下文和本技能正文流程，执行最小可靠步骤 | 客户会看到 Obsidian/vault 文件变更、终端日志、生成产物路径和最终回执。 |
-| 缺少依赖、权限、配置或 key | 停止需要外部状态的动作，明确指出缺什么 | 安装命令、申请地址、配置路径或需要客户确认的问题 |
-| 执行完成 | 汇总成功、跳过、失败、文件变更和验证结果 | 一段可复制进工单/日志的完成回执 |
+只读搜索不属于旧 maintain 的实现，直接使用 `soia-pkm-query-vault`。
 
 ### 客户如何使用
 
-1. 用自然语言说明目标，并提供必要输入：文件、URL、repo、workspace、proposal、vault 或平台账号状态。
-2. 能 dry-run 或预览的动作先给预览；涉及删除、覆盖、发送、发布、写远端状态时先征求客户确认。
+旧提示词仍可触发本技能；Agent 必须立即说明实际路由到哪个新技能，并遵循目标技能的 dry-run、授权、日志与验收规则。不要继续在本文件拼装新的“万能维护”工作流。
 
 ## 安装
 

@@ -27,8 +27,8 @@
 
 1. 提供文章路径、完整正文、明确主题或技能仓路径；给出用途、平台、比例和必须逐字出现的文字。
 2. 如有参考图，明确每张图是“风格参考”“构图参考”还是“编辑目标”。
-3. 指定 `image_type`、交付家族 `preset`、`use_case`、`visual_mechanism`、`aesthetic_system`、模型适配和 `output_dir`；省略时由 Agent 依据文章与用途推荐，并在生成前说明假设。客户说“直接生成”时可跳过确认。
-4. Agent 读取 [模板注册表](references/template-registry.yml)、[组合索引](references/prompt-composition-index.yml) 和对应机制/美学词条；宣传卡先从实际仓库生成 `facts.yml`。若任务是“推荐一个仓库并重点推荐一个技能”，还要完整读取仓库 `README.md` 与重点技能 `SKILL.md`，生成可追溯的 `content-facts.yml`，再为每一张图写完整成品 Prompt。默认由 imagegen 直出整张海报；只有高风险精确字段未通过时才局部确定性校正。
+3. 指定 `image_type`、交付家族 `preset`、Prompt 家族 `family`、使用场景、信息结构、视觉机制、美学系统、模型适配和 `output_dir`；省略时由 Agent 依据文章与用途推荐，并在生成前说明假设。客户说“直接生成”时可跳过确认。
+4. Agent 读取 [模板注册表](references/template-registry.yml)、[组合索引](references/prompt-composition-index.yml)、[家族目录](references/prompt-family-catalog.md) 和对应机制/结构/文字/美学词条；宣传卡先从实际仓库生成 `facts.yml`。若任务是“推荐一个仓库并重点推荐一个技能”，还要完整读取仓库 `README.md` 与重点技能 `SKILL.md`，生成可追溯的 `content-facts.yml`，再为每一张图写完整成品 Prompt。默认由 imagegen 直出整张海报；只有高风险精确字段未通过时才局部确定性校正。
 5. 多仓系列先用 [批次清单样例](references/social-card-batch.example.yml) 明确纳入与排除范围；脚本拒绝同一仓同时出现在两边。
 6. 生成后必须用 `view_image` 检查比例、构图和参考图；密集宣传卡还要核对语义密度、OCR、CTA、二维码、移动端缩略图、事实指纹和伪证据。失败时重生主视觉或重跑确定性合成源，不直接涂改位图。
 

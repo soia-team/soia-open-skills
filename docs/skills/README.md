@@ -1,6 +1,6 @@
 # 技能详情页
 
-全生态 74 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 75 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
@@ -13,9 +13,9 @@
 | [`soia-pkm-alipan-curator`](soia-pkm-alipan-curator.md) | 规划并整理阿里云盘资源，产出可复核的馆藏索引与学习规划 |
 | [`soia-pkm-alipan-drive-ops`](soia-pkm-alipan-drive-ops.md) | 执行阿里云盘登录、浏览与文件操作，并为资源整理提供底层能力 |
 | [`soia-pkm-baidu-netdisk-ops`](soia-pkm-baidu-netdisk-ops.md) | 百度网盘原子操作与只读 JSONL 扫描适配 |
-| [`soia-pkm-bootstrap-vault-base`](soia-pkm-bootstrap-vault-base.md) | 初始化知识库中立的 Markdown vault 骨架、多 AI 入口与 PKM 闭环，不包含平台特化配置 |
+| [`soia-pkm-bootstrap-vault-base`](soia-pkm-bootstrap-vault-base.md) | 以 plan-first、create-only、可检查的方式初始化平台中立的 AI-native Markdown vault 基座，包含分区下钻规则、工作台生命周期、模板与多 AI 适配层 |
 | [`soia-pkm-bootstrap-vault-ima`](soia-pkm-bootstrap-vault-ima.md) | 把已有本地 Markdown vault 接入腾讯 ima 知识库消费端：安装客户端、建立目录映射、用 ima 官方 Skills 配置本地文件夹监控同步并验证检索 |
-| [`soia-pkm-bootstrap-vault-obsidian`](soia-pkm-bootstrap-vault-obsidian.md) | 将已有 Markdown vault 配置为 Obsidian 消费端，并衔接通用 vault 基座 |
+| [`soia-pkm-bootstrap-vault-obsidian`](soia-pkm-bootstrap-vault-obsidian.md) | 以 dry-run 和保留未知配置的结构化合并方式，把已有 Markdown vault 配置为 Obsidian 消费端，启用 Bases 与可选宽页 CSS |
 | [`soia-pkm-clip-douyin`](soia-pkm-clip-douyin.md) | 归档单条抖音视频到 Obsidian vault，并保留本地媒体索引 |
 | [`soia-pkm-clip-drive`](soia-pkm-clip-drive.md) | 把云盘/本地的存量资料（PDF/Word/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理 |
 | [`soia-pkm-clip-github-repo`](soia-pkm-clip-github-repo.md) | 将 GitHub 开源仓库归档为 Obsidian vault 的项目卡和调研笔记 |
@@ -28,7 +28,7 @@
 | [`soia-pkm-interpret-article-analysis`](soia-pkm-interpret-article-analysis.md) | 为 vault 长文或论文生成独立 AI 解读，帮助判断是否值得深挖，且不改原文或代写用户观点 |
 | [`soia-pkm-library-book-catalog`](soia-pkm-library-book-catalog.md) | 纯本地、幂等、可重复运行地维护 Obsidian 书库：补建待读记录并重新生成图书馆、阅读记录和按类型总览，不依赖微信读书 |
 | [`soia-pkm-library-weread-sync`](soia-pkm-library-weread-sync.md) | 同步微信读书已读书目与划线到 Obsidian 书库，并调用微信读书 API 补单本书详情 |
-| [`soia-pkm-maintain`](soia-pkm-maintain.md) | 维护 Obsidian vault 的健康状态、全库地图与 AI 会话日志 |
+| [`soia-pkm-maintain`](soia-pkm-maintain.md) | 旧版 vault 维护技能的兼容路由，将健康检查、工作台生命周期和 AI 会话日志请求转到职责明确的新技能 |
 | [`soia-pkm-organize-article-moc`](soia-pkm-organize-article-moc.md) | 将 Obsidian 文章库按元数据、主题双链、月份和两级 MOC 规范化整理 |
 | [`soia-pkm-reading-plan`](soia-pkm-reading-plan.md) | 把书单、主题或观点映射组织成按字数排期的可执行阅读计划，并落为 Obsidian 笔记 |
 | [`soia-pkm-transform-article-notebooklm`](soia-pkm-transform-article-notebooklm.md) | 用 NotebookLM 将文章转换为学习材料 |
@@ -37,7 +37,7 @@
 | [`soia-pkm-transform-obsidian-pdf`](soia-pkm-transform-obsidian-pdf.md) | 用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint |
 | [`soia-pkm-translate-article-zh`](soia-pkm-translate-article-zh.md) | 将外文文章按 quick、normal 或 refined 模式翻译成独立中文稿，保持术语一致且不覆盖原文 |
 
-## `soia-env`　15 个技能
+## `soia-env`　16 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
@@ -51,6 +51,7 @@
 | [`soia-env-kimi-cli-install`](soia-env-kimi-cli-install.md) | 面向小白检查、安装、登录和按明确授权更新 Moonshot AI Kimi Code CLI；识别官方独立安装与 npm 来源，默认只报告版本和产品自动更新状态 |
 | [`soia-env-network-diagnose`](soia-env-network-diagnose.md) | 只读诊断小白安装工具时的网络问题：检查 DNS、HTTPS、代理、证书、官方源和超时，区分故障来源，并用固定七列列表汇报网络状态与处理结果 |
 | [`soia-env-node-install`](soia-env-node-install.md) | 为新手安装、验证或按授权更新 Node.js 与 npm |
+| [`soia-env-open-skills-install`](soia-env-open-skills-install.md) | 在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，支持全部/单插件/单技能粒度与指定宿主 |
 | [`soia-env-opencode-cli-install`](soia-env-opencode-cli-install.md) | 为新手安装、登录、配置或按授权更新 OpenCode CLI |
 | [`soia-env-python-install`](soia-env-python-install.md) | 为新手安装、验证或按授权更新 Python 与 pip |
 | [`soia-env-qoder-cli-install`](soia-env-qoder-cli-install.md) | 面向小白检查、安装、登录和按明确授权更新 Qoder CLI；识别官方独立安装、Homebrew 与 npm 来源，默认只报告版本和自动更新设置 |
