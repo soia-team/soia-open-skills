@@ -308,7 +308,7 @@
   {
     "name": "soia-pkm-bootstrap-vault-base",
     "repo": "soia-open-pkm-vault-skills",
-    "description": "初始化知识库中立的 Markdown vault 骨架、多 AI 入口与 PKM 闭环，不包含平台特化配置。触发：「初始化知识库」「从零建 Markdown 知识库」「搭通用 vault 骨架」",
+    "description": "以 plan-first、create-only、可检查的方式初始化平台中立的 AI-native Markdown vault 基座，包含分区下钻规则、工作台生命周期、模板与多 AI 适配层。触发：「初始化知识库」「新建 Markdown vault」「搭建 AI-native PKM」",
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-bootstrap-vault-base -y"
   },
   {
@@ -320,7 +320,7 @@
   {
     "name": "soia-pkm-bootstrap-vault-obsidian",
     "repo": "soia-open-pkm-vault-skills",
-    "description": "将已有 Markdown vault 配置为 Obsidian 消费端，并衔接通用 vault 基座。触发：「配置 Obsidian vault」「启用 Obsidian Bases」「接入 Obsidian 消费端」",
+    "description": "以 dry-run 和保留未知配置的结构化合并方式，把已有 Markdown vault 配置为 Obsidian 消费端，启用 Bases 与可选宽页 CSS。触发：「配置 Obsidian vault」「启用 Obsidian Bases」「接入 Obsidian 消费端」",
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-bootstrap-vault-obsidian -y"
   },
   {
@@ -378,6 +378,12 @@
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-distill-article-opinion -y"
   },
   {
+    "name": "soia-pkm-extract-vault-knowledge",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "从工作台、冻结证据、文章、项目研究或历史导入语料中提炼去状态、可复用且带来源的长期知识，同时保留原始证据并隔离敏感信息。触发：「提炼到资料库」「沉淀长期知识」「整理 20 区」「从这份报告抽方法」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-extract-vault-knowledge -y"
+  },
+  {
     "name": "soia-pkm-interpret-article-analysis",
     "repo": "soia-open-pkm-vault-skills",
     "description": "为 vault 长文或论文生成独立 AI 解读，帮助判断是否值得深挖，且不改原文或代写用户观点。触发：「解读这篇」「精读这篇」「值得细读吗」",
@@ -396,16 +402,34 @@
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-library-weread-sync -y"
   },
   {
-    "name": "soia-pkm-maintain",
+    "name": "soia-pkm-log-agent-sessions",
     "repo": "soia-open-pkm-vault-skills",
-    "description": "维护 Obsidian vault 的健康状态、全库地图与 AI 会话日志。触发：「vault 周维护」「重建全库地图」「接入会话日志」",
-    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-maintain -y"
+    "description": "为 Claude Code、Codex 等本地 AI 接入最小化 vault 会话改动快照，支持去重、dry-run、既有 notify 合并和安全卸载。触发：「接入 AI 会话日志」「记录 Codex 改动」「配置 SessionEnd 日志」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-log-agent-sessions -y"
+  },
+  {
+    "name": "soia-pkm-maintain-vault-health",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "只读审计 Markdown/Obsidian vault 的死链、歧义文件名、标签策略与过期内容，并按授权重建知识库地图或周健康简报。触发：「vault 周维护」「检查知识库健康」「重建全库地图」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-maintain-vault-health -y"
+  },
+  {
+    "name": "soia-pkm-manage-vault-lifecycle",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "规划并安全执行 Markdown/Obsidian vault 的 Inbox、工作台、冻结证据、长期知识与历史归档分流。触发：「整理工作台」「清理 Inbox」「归档已完成项目」「做 vault 生命周期迁移」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-manage-vault-lifecycle -y"
   },
   {
     "name": "soia-pkm-organize-article-moc",
     "repo": "soia-open-pkm-vault-skills",
     "description": "将 Obsidian 文章库按元数据、主题双链、月份和两级 MOC 规范化整理。触发：「整理文章库」「重建 MOC」「收藏归类」",
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-organize-article-moc -y"
+  },
+  {
+    "name": "soia-pkm-query-vault",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "以只读方式检索 Markdown/Obsidian vault 的文件名、正文、frontmatter、标签、反向链接与分区清单，并按当前状态、稳定知识、冻结证据、历史归档排序。触发：「在知识库里找」「搜索 PKM」「从 vault 回答」「查反向链接」",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-query-vault -y"
   },
   {
     "name": "soia-pkm-reading-plan",

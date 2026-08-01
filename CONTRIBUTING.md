@@ -158,9 +158,20 @@ the actual target is an explicitly confirmed SOIA product workspace.
 
 ## Git Workflow
 
-- Use short-lived branches with `feat/`, `fix/`, or `chore/` prefixes. Open a
-  PR, require CI to pass, then merge into the protected `main` branch. Do not
-  create long-lived branches or push directly to `main`.
+- Use short-lived branches with `feat/`, `fix/`, or `chore/` prefixes. In
+  domain repositories the integration branch is `dev` (the default branch):
+  open PRs against `dev`, require the `audit` check to pass, then merge.
+  `main` always equals the latest formal release and only accepts release PRs
+  from `dev` (dropping the `-SNAPSHOT` version suffix), driven by
+  `soia-meta-skill-release`. Do not create long-lived feature branches or push
+  directly to `main` or `dev`.
+- On `dev` the plugin version carries a `-SNAPSHOT` suffix naming the next
+  release target (e.g. `1.9.0-SNAPSHOT`); it stays unchanged between releases —
+  individual dev states are identified by commit SHA, not version bumps.
+  `-SNAPSHOT` never reaches the marketplace: the pin generator refuses to pin a
+  commit whose plugin manifest carries the suffix.
+- This portal repository has no `dev` branch: its `main` changes only as part
+  of a release action (marketplace pins, routing, docs), via PRs to `main`.
 - **No worktrees.** Never run `git worktree add` in this repository. Worktrees
   lock branches and block deletion; they caused real cleanup incidents in this
   repo. If you need to inspect another ref, use `git show <ref>:<path>` or

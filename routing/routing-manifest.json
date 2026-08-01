@@ -378,6 +378,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-pkm-extract-vault-knowledge",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-extract-vault-knowledge",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-pkm-interpret-article-analysis",
     "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-interpret-article-analysis",
@@ -396,15 +402,33 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-pkm-maintain",
+    "skill_name": "soia-pkm-log-agent-sessions",
     "repo": "soia-open-pkm-vault-skills",
-    "skillPath": "skills/soia-pkm-maintain",
+    "skillPath": "skills/soia-pkm-log-agent-sessions",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-maintain-vault-health",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-maintain-vault-health",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-manage-vault-lifecycle",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-manage-vault-lifecycle",
     "visibility": "public"
   },
   {
     "skill_name": "soia-pkm-organize-article-moc",
     "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-organize-article-moc",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-query-vault",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-query-vault",
     "visibility": "public"
   },
   {
