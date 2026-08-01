@@ -61,7 +61,9 @@ class MarketplaceGenerationTests(unittest.TestCase):
     def test_fixture_builds_both_marketplace_structures(self) -> None:
         definitions = MODULE.selected_definitions(self.manifest)
         claude, codex, revisions = MODULE.build_marketplaces(
-            definitions, sha_fetcher=lambda _repository: self.SHA
+            definitions,
+            sha_fetcher=lambda _repository: self.SHA,
+            version_fetcher=lambda _repository, _sha: "1.0.0",
         )
 
         self.assertEqual(claude["name"], "soia")
@@ -119,16 +121,39 @@ class MarketplaceGenerationTests(unittest.TestCase):
             )
 
     def test_check_succeeds_when_outputs_match(self) -> None:
-        with mock.patch.object(MODULE, "fetch_main_sha", return_value=self.SHA):
+        with mock.patch.object(MODULE, "fetch_main_sha", return_value=self.SHA), \
+             mock.patch.object(MODULE, "fetch_plugin_version", return_value="1.0.0"):
             self.assertEqual(MODULE.main(self.arguments()), 0)
             self.assertEqual(MODULE.main(self.arguments("--check")), 0)
 
     def test_check_fails_without_overwriting_stale_output(self) -> None:
-        with mock.patch.object(MODULE, "fetch_main_sha", return_value=self.SHA):
+        with mock.patch.object(MODULE, "fetch_main_sha", return_value=self.SHA), \
+             mock.patch.object(MODULE, "fetch_plugin_version", return_value="1.0.0"):
             self.assertEqual(MODULE.main(self.arguments()), 0)
             self.claude_output.write_text("stale\n", encoding="utf-8")
             self.assertEqual(MODULE.main(self.arguments("--check")), 1)
         self.assertEqual(self.claude_output.read_text(encoding="utf-8"), "stale\n")
+
+    def test_release_gate_refuses_snapshot_manifest(self) -> None:
+        """发布门禁：dev 通道的 -SNAPSHOT 版本绝不允许被 pin 进市场清单。"""
+        with self.assertRaisesRegex(ValueError, "release gate.*-SNAPSHOT"):
+            MODULE.build_marketplaces(
+                MODULE.selected_definitions(self.manifest),
+                sha_fetcher=lambda _repository: self.SHA,
+                version_fetcher=lambda _repository, _sha: "1.9.0-SNAPSHOT",
+            )
+
+    def test_fetch_plugin_version_decodes_contents_payload(self) -> None:
+        import base64
+
+        manifest = base64.b64encode(json.dumps({"version": "1.2.3"}).encode()).decode()
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout=json.dumps({"content": manifest}), stderr=""
+        )
+        with mock.patch.object(MODULE.subprocess, "run", return_value=completed):
+            self.assertEqual(
+                MODULE.fetch_plugin_version("soia-open-example-skills", self.SHA), "1.2.3"
+            )
 
 
 

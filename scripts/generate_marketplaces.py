@@ -134,6 +134,23 @@ def fetch_main_sha(repository: str) -> str:
     return sha
 
 
+def fetch_plugin_version(repository: str, sha: str) -> str:
+    """Fetch the Claude plugin manifest version at a pinned revision."""
+    import base64
+
+    payload = run_gh_json(
+        ["api", f"repos/{OWNER}/{repository}/contents/.claude-plugin/plugin.json?ref={sha}"]
+    )
+    content = payload.get("content") if isinstance(payload, Mapping) else None
+    if not isinstance(content, str):
+        raise ValueError(f"no plugin manifest found at {OWNER}/{repository}@{sha[:12]}")
+    manifest = json.loads(base64.b64decode(content).decode("utf-8"))
+    version = manifest.get("version")
+    if not isinstance(version, str) or not version:
+        raise ValueError(f"plugin manifest at {OWNER}/{repository}@{sha[:12]} has no version")
+    return version
+
+
 def load_routed_repositories(manifest_path: Path) -> set[str]:
     """Return repositories that currently publish at least one routed skill."""
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -168,10 +185,13 @@ def selected_definitions(manifest_path: Path) -> list[PluginDefinition]:
 def build_marketplaces(
     definitions: Sequence[PluginDefinition],
     sha_fetcher: Callable[[str], str] | None = None,
+    version_fetcher: Callable[[str, str], str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, str]]:
     """Build both marketplace payloads and return external repository SHAs."""
     if sha_fetcher is None:
         sha_fetcher = fetch_main_sha
+    if version_fetcher is None:
+        version_fetcher = fetch_plugin_version
     revisions: dict[str, str] = {}
     for definition in definitions:
         if definition.repository != PORTAL_REPOSITORY:
@@ -179,6 +199,13 @@ def build_marketplaces(
             if SHA_PATTERN.fullmatch(sha) is None:
                 raise ValueError(
                     f"invalid main SHA returned for {OWNER}/{definition.repository}: {sha!r}"
+                )
+            # 发布门禁：-SNAPSHOT 是 dev 通道的开发版本标记，永远不允许被 pin 进市场清单
+            version = version_fetcher(definition.repository, sha)
+            if "-SNAPSHOT" in version:
+                raise ValueError(
+                    f"release gate: {OWNER}/{definition.repository}@{sha[:12]} carries "
+                    f"development version {version!r}; refusing to pin a -SNAPSHOT manifest"
                 )
             revisions[definition.repository] = sha
 

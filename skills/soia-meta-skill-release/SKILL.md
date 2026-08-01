@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
-description: 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新、客户端更新与 WorkBuddy 专家安装。触发：「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「安装专家」
-version: 3.4.1
+description: 域仓正式发版（dev→main、tag、Release、notes）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」
+version: 4.0.0
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-08-01 16:50:00
+updated_at: 2026-08-02 12:00:00
 created_by: gpt-5.6-terra
 updated_by: claude fable 5
 dependencies:
@@ -100,6 +100,29 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 6. 对账 `~/.agents/.skill-lock.json`：所有新技能必须来自 `--repo`，旧名必须零残留。
 7. 按 `--repo-dir` → 进程环境 → 私有 v2 config → 只读 v1 config 回退 → 旧版兼容目录的顺序解析 checkout，并对比每项 `SKILL.md` version 与装机 version。
 
+
+## 正式发版（dev 分支制）
+
+域仓采用双通道：`dev` 承接日常合并（版本带 `-SNAPSHOT` 声明下个目标，期间不变，
+状态身份用 commit SHA）；`main` 永远等于最新正式版。客户说**「正式发版 X」**时执行：
+
+```bash
+python3 skills/soia-meta-skill-release/scripts/formal_release.py \
+  --repo soia-team/<域仓> --repo-dir <本地路径> --summary "<一句话摘要>" --dry-run
+```
+
+复核 dry-run 计划后去掉 `--dry-run` 执行。脚本按序完成五步，每步失败即停：
+
+1. 定稿 PR → dev：各 manifest（claude/codex/codebuddy 独立轨道）摘掉 `-SNAPSHOT`
+2. 发版 PR dev → main：正文为 Release Notes 草稿（`generate_release_notes.py`
+   按 conventional 前缀归类上个 tag 以来的提交）
+3. `v<X.Y.Z>` tag 打在 main HEAD 并推送
+4. `gh release create`（标题 `<插件名> v<X.Y.Z>`）
+5. 重开列车 PR → dev：各 manifest 进入 next-minor `-SNAPSHOT`
+
+随后继续本技能既有的 pin 刷新与客户端更新流程（下节）。**发布门禁**：元仓
+`generate_marketplaces.py` 会读取待 pin 提交的 manifest 版本，含 `-SNAPSHOT`
+直接拒绝生成清单——SNAPSHOT 结构上到不了任何客户端。
 
 ## 插件发布与更新流程（域仓改动后）
 
