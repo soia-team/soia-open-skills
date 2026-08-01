@@ -198,6 +198,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-env-open-skills-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-open-skills-install",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-env-opencode-cli-install",
     "repo": "soia-open-env-skills",
     "skillPath": "skills/soia-env-opencode-cli-install",
