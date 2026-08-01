@@ -198,6 +198,12 @@
     "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-node-install -y"
   },
   {
+    "name": "soia-env-open-skills-install",
+    "repo": "soia-open-env-skills",
+    "description": "在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，支持全部/单插件/单技能粒度与指定宿主。触发：「装好所有 SOIA 插件」「在 Codex 下装 SOIA」「更新 soia-dev 插件」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-open-skills-install -y"
+  },
+  {
     "name": "soia-env-opencode-cli-install",
     "repo": "soia-open-env-skills",
     "description": "为新手安装、登录、配置或按授权更新 OpenCode CLI。触发：「安装 OpenCode」「配置 OpenCode CLI」「OpenCode 登录」",
