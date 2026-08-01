@@ -1,11 +1,11 @@
 ---
 name: soia-meta-skill-release
 description: 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新、客户端更新与 WorkBuddy 专家安装。触发：「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「安装专家」
-version: 3.4.0
+version: 3.4.1
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-07-29 14:34:03
+updated_at: 2026-08-01 16:50:00
 created_by: gpt-5.6-terra
-updated_by: claude opus 5
+updated_by: claude fable 5
 dependencies:
   hard: [soia-meta-sync-skills]
 ---

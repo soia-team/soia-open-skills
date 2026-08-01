@@ -176,8 +176,6 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  ✓ 已安装并注册 {plugin}")
 
     print(f"\n完成 {len(plans)} 个专家。**重启 WorkBuddy** 后在【专家·技能·连接器 → 我的专家】可见。")
-    if missing:
-        print(f"另有 {len(missing)} 个未安装，见上方提示。")
     return 0
 
 
