@@ -236,7 +236,7 @@
   {
     "name": "soia-media-generate-article-image",
     "repo": "soia-open-media-content-skills",
-    "description": "为文章生成封面、小结卡、学习笔记、视觉隐喻海报或高信息密度技能库宣传卡/轮播，并完成深层事实采集、Prompt、确定性文字与位图验收。触发：「生成文章图片」「正文小结图」「康奈尔笔记图」「技能库宣传图」「朋友圈配图」「小红书轮播」",
+    "description": "为文章生成封面、小结卡、学习笔记、视觉隐喻海报或高信息密度技能库宣传卡/轮播；按使用场景、视觉机制、美学系统和模型能力组合 Prompt，并完成事实、文字与位图验收。触发：「生成文章图片」「提示词组合」「正文小结图」「康奈尔笔记图」「技能库宣传图」「朋友圈配图」「小红书轮播」",
     "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-generate-article-image -y"
   },
   {
