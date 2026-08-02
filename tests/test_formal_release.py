@@ -44,6 +44,38 @@ class ReleaseNotesTests(unittest.TestCase):
         self.assertNotIn("<!--", notes)
 
 
+class ChangelogTests(unittest.TestCase):
+    NOTES = "# v1.9.0\n\n本版聚焦发布自动化。\n\n## 新增\n- feat: a (#1)\n"
+
+    def test_entry_transforms_notes_heading(self) -> None:
+        entry = RELEASE.changelog_entry("1.9.0", self.NOTES, "2026-08-02")
+        self.assertTrue(entry.startswith("## v1.9.0 — 2026-08-02"))
+        self.assertIn("本版聚焦发布自动化。", entry)
+        self.assertNotIn("# v1.9.0\n", entry.split("——")[0])
+
+    def test_prepend_creates_file_with_header(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            RELEASE.prepend_changelog(Path(tmp), "1.9.0", self.NOTES, date="2026-08-02")
+            text = (Path(tmp) / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("# Changelog"))
+        self.assertIn("## v1.9.0 — 2026-08-02", text)
+
+    def test_prepend_keeps_existing_entries_newest_first(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            RELEASE.prepend_changelog(Path(tmp), "1.9.0", self.NOTES, date="2026-08-01")
+            RELEASE.prepend_changelog(
+                Path(tmp), "1.10.0", "# v1.10.0\n\n下一版。\n", date="2026-08-02")
+            text = (Path(tmp) / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertLess(text.find("## v1.10.0"), text.find("## v1.9.0"))
+        self.assertEqual(text.count("# Changelog"), 1)
+
+
 class VersionHelperTests(unittest.TestCase):
     def test_strip_snapshot(self) -> None:
         self.assertEqual(RELEASE.strip_snapshot("1.9.0-SNAPSHOT"), "1.9.0")

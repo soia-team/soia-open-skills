@@ -51,6 +51,38 @@ def next_snapshot(release_version: str) -> str:
     return f"{x}.{int(y) + 1}.0-SNAPSHOT"
 
 
+CHANGELOG_HEADER = (
+    "# Changelog\n\n"
+    "本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；\n"
+    "更早的版本演进见 git 提交历史与 GitHub Releases。\n"
+)
+
+
+def changelog_entry(version: str, notes: str, date: str) -> str:
+    """把 notes 草稿（首行为 # vX.Y.Z）转成 CHANGELOG 条目。"""
+    body = notes.split("\n", 1)[1] if notes.startswith("#") else notes
+    return f"## v{version} — {date}\n\n{body.strip()}\n"
+
+
+def prepend_changelog(worktree: pathlib.Path, version: str, notes: str,
+                      date: str | None = None) -> None:
+    """新条目前插到 CHANGELOG.md；保留既有条目，文件不存在则创建。"""
+    import datetime
+
+    date = date or datetime.date.today().isoformat()
+    path = worktree / "CHANGELOG.md"
+    old_entries = ""
+    if path.exists():
+        text = path.read_text(encoding="utf-8")
+        idx = text.find("## ")
+        old_entries = text[idx:].rstrip() + "\n" if idx != -1 else ""
+    entry = changelog_entry(version, notes, date)
+    parts = [CHANGELOG_HEADER, entry]
+    if old_entries:
+        parts.append(old_entries)
+    path.write_text("\n".join(parts), encoding="utf-8")
+
+
 def read_manifest_versions(repo_dir: pathlib.Path, ref: str) -> dict[str, str]:
     versions: dict[str, str] = {}
     for manifest in MANIFESTS:
@@ -168,23 +200,30 @@ def main(argv: list[str] | None = None) -> int:
             print("\n（--dry-run，未执行）")
             return 0
 
-        # 1. 定稿 PR → dev
-        pr_flow(
-            args.repo, repo_dir, base="dev",
-            branch=f"release/v{release_version}-finalize",
-            title=f"release: finalize v{release_version} (drop -SNAPSHOT)",
-            body="发版定稿：各 manifest 摘掉 -SNAPSHOT。",
-            edit=lambda wt: rewrite_versions(wt, strip_snapshot),
-        )
-
-        # 2. 发版 PR dev → main
+        # notes 先于定稿生成（span=上个 tag..origin/dev），供 CHANGELOG 与发版 PR 共用
         notes_script = pathlib.Path(__file__).parent / "generate_release_notes.py"
-        run(["git", "fetch", "origin", "dev"], cwd=repo_dir)
         notes = run(
             [sys.executable, str(notes_script), "--repo-dir", str(repo_dir),
              "--ref", "origin/dev", "--release-version", release_version,
              "--summary", args.summary]
         )
+
+        # 1. 定稿 PR → dev：摘 SNAPSHOT + CHANGELOG 前插（发版即更新，与 Release 同源）
+        def finalize_edit(wt: pathlib.Path) -> None:
+            rewrite_versions(wt, strip_snapshot)
+            prepend_changelog(wt, release_version, notes)
+
+        pr_flow(
+            args.repo, repo_dir, base="dev",
+            branch=f"release/v{release_version}-finalize",
+            title=f"release: finalize v{release_version} (drop -SNAPSHOT)",
+            body="发版定稿：各 manifest 摘掉 -SNAPSHOT，Release Notes 前插 CHANGELOG.md。",
+            edit=finalize_edit,
+        )
+
+        # 2. 发版 PR dev → main
+        run(["git", "fetch", "origin",
+             "+refs/heads/dev:refs/remotes/origin/dev"], cwd=repo_dir)
         pr_url = run(
             ["gh", "pr", "create", "--repo", args.repo, "--base", "main",
              "--head", "dev", "--title", f"release: {plugin_name} v{release_version}",

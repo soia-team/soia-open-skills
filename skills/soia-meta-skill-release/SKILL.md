@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
-description: 域仓正式发版（dev→main、tag、Release、notes）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」
-version: 4.0.2
+description: 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」
+version: 4.1.0
 created_at: 2026-07-21 00:00:00
-updated_at: 2026-08-02 15:00:00
+updated_at: 2026-08-02 18:00:00
 created_by: gpt-5.6-terra
 updated_by: claude fable 5
 dependencies:
@@ -113,8 +113,10 @@ python3 skills/soia-meta-skill-release/scripts/formal_release.py \
 
 复核 dry-run 计划后去掉 `--dry-run` 执行。脚本按序完成五步，每步失败即停：
 
-1. 定稿 PR → dev：各 manifest（claude/codex/codebuddy 独立轨道）摘掉 `-SNAPSHOT`
-2. 发版 PR dev → main：正文为 Release Notes 草稿（`generate_release_notes.py`
+1. 定稿 PR → dev：各 manifest（claude/codex/codebuddy 独立轨道）摘掉 `-SNAPSHOT`，
+   并把 Release Notes **前插 `CHANGELOG.md`**——发版即更新、与 GitHub Release 同源，
+   CHANGELOG 跟着插件缓存走，装了插件的用户离线可读
+2. 发版 PR dev → main：正文为同一份 Release Notes 草稿（`generate_release_notes.py`
    按 conventional 前缀归类上个 tag 以来的提交）
 3. `v<X.Y.Z>` tag 打在 main HEAD 并推送
 4. `gh release create`（标题 `<插件名> v<X.Y.Z>`）
@@ -123,6 +125,21 @@ python3 skills/soia-meta-skill-release/scripts/formal_release.py \
 随后继续本技能既有的 pin 刷新与客户端更新流程（下节）。**发布门禁**：元仓
 `generate_marketplaces.py` 会读取待 pin 提交的 manifest 版本，含 `-SNAPSHOT`
 直接拒绝生成清单——SNAPSHOT 结构上到不了任何客户端。
+
+## 试装 dev（本地验证快照版）
+
+触发词：**「试装 dev」**、**「本地装 dev 版」**。dev 快照只做本地验证，绝不常驻安装。
+
+- **Claude Code（推荐，会话级）**：`claude --plugin-dir <域仓本地路径>` 启动会话，
+  当前检出（dev 时即 SNAPSHOT 版）被加载为插件，退出即卸、不污染安装态；可叠加
+  多个 `--plugin-dir`。只验证不开会话时用
+  `claude --plugin-dir <路径> plugin details <插件名>`（`--plugin-dir` 必须在
+  `plugin` 子命令之前）。
+- **WorkBuddy**：本地 checkout 切到 dev 后运行
+  `install_workbuddy_experts.py <插件名>`——脚本复制本地 checkout，装出的专家即
+  SNAPSHOT 版，界面版本号可直接分辨。
+- **Codex**：无会话级机制，**禁止**把 dev/SNAPSHOT 常驻安装——SNAPSHOT 会进入
+  客户端版本比较路径，这正是发布门禁在市场侧拦截的场景。
 
 ## 插件发布与更新流程（域仓改动后）
 
