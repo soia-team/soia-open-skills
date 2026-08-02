@@ -288,6 +288,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-pkm-clip-x-profile",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-clip-x-profile",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-pkm-alipan-curator",
     "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-alipan-curator",

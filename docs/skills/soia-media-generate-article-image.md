@@ -1,90 +1,43 @@
 # soia-media-generate-article-image
 
-> 为文章生成封面、小结卡、学习笔记、视觉隐喻海报或高信息密度技能库宣传卡/轮播；按使用场景、视觉机制、美学系统和模型能力组合 Prompt，并完成事实、文字与位图验收
+> 将文章、开源项目、品牌 Logo 或公开 X Prompt Deck 编译为可验收的图片与矢量资产，按组合轴生成 Prompt 并完成事实、文字和视觉验收
 
 所属：[`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) · [技能源码](https://github.com/soia-team/soia-open-media-content-skills/tree/main/skills/soia-media-generate-article-image) · [← 全部技能](README.md)
-
-## 怎么触发
-
-装好后用自然语言说话即可，Agent 按下列意图命中本技能：
-
-「生成文章图片」「提示词组合」「正文小结图」「康奈尔笔记图」「技能库宣传图」「朋友圈配图」「小红书轮播」
 
 ## 能力与用法
 
 ### 这个技能可以做什么
 
-| 客户想要 | `image_type` / `preset` | 客户能看到 |
-|---|---|---|
-| 公众号、X、小红书文章封面 | `cover` / `editorial_research_minimal`、`godot_pixel_metaphor` 或 `auto` | 完整 Prompt、PNG/JPG 封面、视觉验收回执 |
-| 正文段落或章节小结图 | `summary_card` / `editorial_summary_card` | 可嵌入正文的编辑式小结卡 |
-| 把文章总结成康奈尔笔记 | `learning_note` / `cornell_notes` | A4 竖版康奈尔笔记信息图 |
-| 技能库、插件集合宣传图 | `social_card` 或 `carousel` / `social_skill_catalog` | 事实清单、朋友圈单图或小红书轮播、机器验收回执 |
-| 插件市场图标、应用图标 | `icon` / `plugin_icon` | 字形设计稿；终稿须矢量重绘，规格见模板 |
-| 后续新增文章图片能力 | 优先登记到组合索引的使用场景/视觉机制/美学系统轴 | 只有交付结构或事实契约真正不同才新增 preset |
+支持六类交付：文章封面/小结卡、康奈尔笔记、视觉隐喻海报、技能库宣传单图/轮播、插件图标、品牌 Logo 系统。客户只需提供来源、用途、平台、比例和必须逐字出现的文字；有参考图时说明它是风格参考、构图参考还是编辑目标。
 
 ### 客户如何使用
 
-1. 提供文章路径、完整正文、明确主题或技能仓路径；给出用途、平台、比例和必须逐字出现的文字。
-2. 如有参考图，明确每张图是“风格参考”“构图参考”还是“编辑目标”。
-3. 指定 `image_type`、交付家族 `preset`、Prompt 家族 `family`、使用场景、信息结构、视觉机制、美学系统、模型适配和 `output_dir`；请求明确但省略某个轴时由 Agent 依据文章与用途推荐，并在生成前说明假设。请求含糊时必须先展示 L0 支持目录，由客户选择后再生成；只有组合足够明确时，“直接生成”才可跳过确认。
-4. Agent 读取 [模板注册表](references/template-registry.yml)、[组合索引](references/prompt-composition-index.yml)、[家族目录](references/prompt-family-catalog.md) 和对应机制/结构/文字/美学词条；宣传卡先从实际仓库生成 `facts.yml`。若任务是“推荐一个仓库并重点推荐一个技能”，还要完整读取仓库 `README.md` 与重点技能 `SKILL.md`，生成可追溯的 `content-facts.yml`，再为每一张图写完整成品 Prompt。默认由 imagegen 直出整张海报；只有高风险精确字段未通过时才局部确定性校正。
-5. 多仓系列先用 [批次清单样例](references/social-card-batch.example.yml) 明确纳入与排除范围；脚本拒绝同一仓同时出现在两边。
-6. 生成后必须用 `view_image` 检查比例、构图和参考图；密集宣传卡还要核对语义密度、OCR、CTA、二维码、移动端缩略图、事实指纹和伪证据。失败时重生主视觉或重跑确定性合成源，不直接涂改位图。
+1. 先明确 `image_type`、用途和输出形态；省略的组合轴由 Agent 给出假设。
+2. 请求含糊时先展示 L0 支持目录，让客户选择 `preset` 或 `family`；不得静默套用早安、字体蒙版或某个美学 preset。
+3. 选定后只加载命中的 references，编译完整 Prompt，调用 imagegen，执行 `view_image` 和对应质量门。
 
-### 渐进式选择与加载（必须遵守）
+### 需求不明确时：先反问，不生成
 
-本技能不在首次请求时加载全部长 Prompt。按以下层级推进：
-
-**L0：支持目录。** 只读取 `template-registry.yml` 与 `prompt-composition-index.yml` 的
-`support_catalog`。目录同时列出 6 个交付模板和 10 个 Prompt 家族；客户只说“生成图片/做海报/做得好看”，或没有说明用途、输出形态和主题家族时，
-先运行：
-
-```bash
-python3 scripts/resolve_prompt_composition.py --list-supported
-```
-
-向客户展示支持数量、交付模板和家族摘要，让客户选择 `preset` 或 `family`；不要默认套用早安、字体蒙版或
-`editorial_research_minimal`。
-
-**L1：选家族。** 客户选择后，只确认 `family`、用途、信息结构和输出形态。例如：
+当客户只说“做张好看的图”“帮我配个海报”或没有给出用途/输出形态时，先运行 L0 目录命令，再用下面的最小问题澄清；不要猜 preset，也不要先生成样图：
 
 ```text
-选择 presentation_grid；生成 10 页 PPT；主题是“AI 工作流”；比例 16:9。
+我先确认一下需求。我们目前支持：
+1. 文章封面 / 研究小结卡
+2. 康奈尔笔记信息图
+3. 视觉隐喻海报
+4. 技能库宣传单图 / 小红书轮播
+5. 插件或应用图标
+6. 品牌 Logo 系统（图形标、字标、组合和变体）
+7. 公开 X Prompt Deck → image 技能进化导入
+
+请回复：
+- 用途：封面、小结、笔记、海报、宣传卡、轮播、插件图标还是品牌 Logo？
+- 来源：文章/仓库/X Prompt Deck，还是只给一个主题？
+- 风格：从支持目录选一个 family，或描述你想要的视觉感觉？
+- 版式：比例、平台、张数；有没有必须逐字出现的标题、数字、URL、字标或 Logo？
 ```
 
-或：
-
-```text
-family=celebration_ceremony，use_case=wedding，output_mode=campaign_pack，生成 4 张请柬物料。
-```
-
-**L2：选组合块。** 根据客户选择，只加载一个 family、一个 information_structure、一个
-visual_mechanism、一个 aesthetic_system 和一个 text_strategy 的词条；未指定的轴从该家族
-的 `default_*` 和 `common_*` 中给出 1 个明确建议，并让客户确认或直接生成。每个命中的词条
-还必须读取 [组合块执行契约](references/prompt-block-contract.yml)，把 `compile_fields` 变成
-本次 Prompt 的真实值；只写“高级、电影感、信息密度高”视为未编译。
-
-**L3：生成与验收。** 选定组合后才读取长 Prompt、来源事实、品牌资产、社交卡契约和质量门；
-落盘完整组合轴后调用 imagegen，完成 `view_image`、文字和移动端验收。
-
-客户可以随时说“返回上一步换家族”或“保留家族，只换视觉机制”，不得因此复制一套新 preset。
-
-插件市场安装：
-
-```bash
-claude plugin marketplace add soia-team/soia-open-skills
-```
-
-```bash
-claude plugin install soia-media-content@soia
-```
-
-只要这一个技能时，可用 npx 路线。注意技能会落进共享真源 `~/.agents/skills`；若同时装了插件，同一技能会出现两份索引且各自漂移，建议二选一：
-
-```bash
-npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-generate-article-image -y
-```
+客户只回答部分问题时，只追问缺失且会改变路由的字段；比例、文字策略等次级轴由 Agent 给出一个可确认的默认值。客户明确说“直接生成”且用途、来源和输出形态已经足够确定时，才可跳过这段反问。
 
 ## 安装
 

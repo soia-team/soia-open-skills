@@ -83,12 +83,21 @@ def rewrite_versions(worktree: pathlib.Path, transform) -> dict[str, str]:
 def wait_checks(repo: str, pr_number: str, timeout_s: int = 900) -> None:
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
-        out = run(["gh", "pr", "checks", pr_number, "--repo", repo]) if True else ""
-        if "pending" not in out:
-            if "fail" in out:
-                raise ReleaseError(f"PR #{pr_number} checks failed:\n{out}")
-            return
-        time.sleep(20)
+        result = subprocess.run(
+            ["gh", "pr", "checks", pr_number, "--repo", repo],
+            capture_output=True, text=True,
+        )
+        out = result.stdout + result.stderr
+        # PR 刚建时 CI 尚未注册（no checks reported）或网络抖动：都按 pending 重试
+        if "no checks reported" in out or (result.returncode != 0 and "fail" not in out):
+            time.sleep(15)
+            continue
+        if "pending" in out:
+            time.sleep(20)
+            continue
+        if "fail" in out:
+            raise ReleaseError(f"PR #{pr_number} checks failed:\n{out}")
+        return
     raise ReleaseError(f"PR #{pr_number} checks timed out after {timeout_s}s")
 
 
@@ -138,7 +147,10 @@ def main(argv: list[str] | None = None) -> int:
     plugin_name = args.repo.rsplit("/", 1)[-1]
 
     try:
-        run(["git", "fetch", "origin", "dev", "main", "--tags"], cwd=repo_dir)
+        # 显式 refspec：single-branch 克隆下裸 fetch 不会创建 origin/dev 引用
+        run(["git", "fetch", "origin",
+             "+refs/heads/dev:refs/remotes/origin/dev",
+             "+refs/heads/main:refs/remotes/origin/main", "--tags"], cwd=repo_dir)
         dev_versions = read_manifest_versions(repo_dir, "origin/dev")
         release_version = strip_snapshot(dev_versions[".claude-plugin/plugin.json"])
 

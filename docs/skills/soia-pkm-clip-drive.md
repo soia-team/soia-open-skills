@@ -1,6 +1,6 @@
 # soia-pkm-clip-drive
 
-> 把云盘/本地的存量资料（PDF/Word/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理
+> 把云盘/本地的存量资料（PDF/Word/表格/演示文稿/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理；图片正文需显式 OCR
 
 所属：[`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) · [技能源码](https://github.com/soia-team/soia-open-pkm-vault-skills/tree/main/skills/soia-pkm-clip-drive) · [← 全部技能](README.md)
 
@@ -8,13 +8,13 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「导入云盘资料」「把这批 PDF 导进来」「clip 这个文档」「整理云盘」
+「导入云盘资料」「把这批 PDF 导进来」「clip 这个文档」「整理云盘」「OCR 这批图片」
 
 ## 能力与用法
 
 ### 这个技能可以做什么
 
-把云盘/本地的存量资料（PDF/Word/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理
+把云盘/本地的存量资料（PDF/Word/表格/演示文稿/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理。图片不能仅凭文件名当作正文，需用户明确要求并具备 OCR 后端。
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
