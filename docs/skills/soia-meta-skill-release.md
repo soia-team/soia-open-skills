@@ -1,6 +1,6 @@
 # soia-meta-skill-release
 
-> 技能 PR 合并后完成安装、旧名清理、多 AI 软链与 lock 对账，并执行插件市场刷新、客户端更新与 WorkBuddy 专家安装
+> 域仓正式发版（dev→main、tag、Release、notes）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装
 
 所属：[`soia-meta`](https://github.com/soia-team/soia-open-skills) · [技能源码](https://github.com/soia-team/soia-open-skills/tree/main/skills/soia-meta-skill-release) · [← 全部技能](README.md)
 
@@ -8,7 +8,7 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「安装专家」
+「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」
 
 ## 能力与用法
 

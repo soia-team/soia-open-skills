@@ -138,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     plugin_name = args.repo.rsplit("/", 1)[-1]
 
     try:
-        run(["git", "fetch", "origin", "dev", "main"], cwd=repo_dir)
+        run(["git", "fetch", "origin", "dev", "main", "--tags"], cwd=repo_dir)
         dev_versions = read_manifest_versions(repo_dir, "origin/dev")
         release_version = strip_snapshot(dev_versions[".claude-plugin/plugin.json"])
 
