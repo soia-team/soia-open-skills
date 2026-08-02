@@ -179,6 +179,15 @@ the actual target is an explicitly confirmed SOIA product workspace.
 
 ## 清理分支：不要相信 `git cherry` 和 `--merged`
 
+### 一线判据：PR 状态（优先用这个）
+
+- 分支有 **OPEN PR** → 在途，保留。
+- 对应 PR **MERGED / CLOSED** → 远程与本地都可删（`gh pr list --head <分支> --state all` 查询）。
+- **无 PR** → 用下面的文件内容比对法兜底。注意：分支合并后 main 又前进时，
+  内容比对会把「main 更新了同一批文件」误报为「分支有未落地内容」——此时交叉
+  验证 main 上是否存在对应的 squash 提交，再决定去留。
+- 常态卫生标准：每仓只保留 `main`、`dev` 与在途分支。
+
 本仓群全部走 **squash 合并**。squash 把分支的 N 个提交压成一个**全新提交**，
 与原分支没有任何祖先关系，于是：
 
