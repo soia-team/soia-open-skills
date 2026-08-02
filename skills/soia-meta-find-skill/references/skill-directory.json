@@ -242,7 +242,7 @@
   {
     "name": "soia-media-generate-article-image",
     "repo": "soia-open-media-content-skills",
-    "description": "为文章生成封面、小结卡、学习笔记、视觉隐喻海报或高信息密度技能库宣传卡/轮播；按使用场景、视觉机制、美学系统和模型能力组合 Prompt，并完成事实、文字与位图验收。触发：「生成文章图片」「提示词组合」「正文小结图」「康奈尔笔记图」「技能库宣传图」「朋友圈配图」「小红书轮播」",
+    "description": "将文章、开源项目、品牌 Logo 或公开 X Prompt Deck 编译为可验收的图片与矢量资产，按组合轴生成 Prompt 并完成事实、文字和视觉验收。",
     "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-generate-article-image -y"
   },
   {
@@ -332,7 +332,7 @@
   {
     "name": "soia-pkm-clip-drive",
     "repo": "soia-open-pkm-vault-skills",
-    "description": "把云盘/本地的存量资料（PDF/Word/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理。Triggers：「导入云盘资料」「把这批 PDF 导进来」「clip 这个文档」「整理云盘」",
+    "description": "把云盘/本地的存量资料（PDF/Word/表格/演示文稿/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理；图片正文需显式 OCR。Triggers：「导入云盘资料」「把这批 PDF 导进来」「clip 这个文档」「整理云盘」「OCR 这批图片」",
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-drive -y"
   },
   {
@@ -372,6 +372,12 @@
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-x -y"
   },
   {
+    "name": "soia-pkm-clip-x-profile",
+    "repo": "soia-open-pkm-vault-skills",
+    "description": "面向公开 X 账号的有限范围检索与研究：采集帖子窗口，按时间、关键词、主题、媒体、模型线索和内容条件筛选，输出账号概览、时间段总结、主题分析与可审计结果，并支持将明确选定的结果交给下游技能继续处理。",
+    "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-x-profile -y"
+  },
+  {
     "name": "soia-pkm-distill-article-opinion",
     "repo": "soia-open-pkm-vault-skills",
     "description": "通过苏格拉底式逐问，把用户对 vault 文章的回答整理成其本人观点，并写入「我的看法」或主题综述。触发：「补我的看法」「炼成观点」「主题观点综述」",
@@ -380,7 +386,7 @@
   {
     "name": "soia-pkm-extract-vault-knowledge",
     "repo": "soia-open-pkm-vault-skills",
-    "description": "从工作台、冻结证据、文章、项目研究或历史导入语料中提炼去状态、可复用且带来源的长期知识，同时保留原始证据并隔离敏感信息。触发：「提炼到资料库」「沉淀长期知识」「整理 20 区」「从这份报告抽方法」",
+    "description": "从整个 Markdown/Obsidian 知识库或指定模块的工作台、冻结证据、文章、项目研究与历史语料中，提炼去状态、可复用且带来源的长期知识，同时保留原始证据并隔离敏感信息。触发：「从知识库提炼长期知识」「把这份材料沉淀为知识」「从指定模块提炼」「从这份报告抽方法」",
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-extract-vault-knowledge -y"
   },
   {
@@ -410,13 +416,13 @@
   {
     "name": "soia-pkm-maintain-vault-health",
     "repo": "soia-open-pkm-vault-skills",
-    "description": "只读审计 Markdown/Obsidian vault 的死链、歧义文件名、标签策略与过期内容，并按授权重建知识库地图或周健康简报。触发：「vault 周维护」「检查知识库健康」「重建全库地图」",
+    "description": "只读检查整个 Markdown/Obsidian 知识库或指定模块的健康状态，审计死链、歧义文件名、标签策略与过期内容，并按授权重建地图或健康简报。触发：「检查知识库健康」「检查知识库某个模块」「维护知识库」「重建知识库地图」「vault 周维护」",
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-maintain-vault-health -y"
   },
   {
     "name": "soia-pkm-manage-vault-lifecycle",
     "repo": "soia-open-pkm-vault-skills",
-    "description": "规划并安全执行 Markdown/Obsidian vault 的 Inbox、工作台、冻结证据、长期知识与历史归档分流。触发：「整理工作台」「清理 Inbox」「归档已完成项目」「做 vault 生命周期迁移」",
+    "description": "规划并安全执行整个 Markdown/Obsidian 知识库，或知识库中指定模块的盘点、整理、改名、迁移、归档与清理。触发：「整理知识库」「整理知识库的某个模块」「治理资料库」「整理工作台/资料库/日志/归档」",
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-manage-vault-lifecycle -y"
   },
   {
@@ -428,7 +434,7 @@
   {
     "name": "soia-pkm-query-vault",
     "repo": "soia-open-pkm-vault-skills",
-    "description": "以只读方式检索 Markdown/Obsidian vault 的文件名、正文、frontmatter、标签、反向链接与分区清单，并按当前状态、稳定知识、冻结证据、历史归档排序。触发：「在知识库里找」「搜索 PKM」「从 vault 回答」「查反向链接」",
+    "description": "以只读方式搜索整个 Markdown/Obsidian 知识库或指定模块，检索文件名、正文、frontmatter、标签、反向链接、代码与附件，并按来源层级返回可核验结果。触发：「搜索知识库」「搜索知识库某个模块」「在知识库里找」「从知识库回答」「查需求/代码/PDF/Word/图片」「查反向链接」",
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-query-vault -y"
   },
   {

@@ -14,7 +14,7 @@
 
 ### 这个技能可以做什么
 
-- 创建 00/10/20/30/40/50/60/90 分区、下钻 `AGENTS.md`、工作台 Schema v2、长期知识 Schema 与对应模板。
+- 创建 00/10/20/30/40/50/60/90 分区、下钻 `AGENTS.md`、工作台 Schema v2、长期知识 Schema 与对应模板；20 区精选目录固定为 `10_主题知识`、`20_规范与手册`、`30_学习指南`，历史导入使用 `90_历史导入`。
 - 建立 `AGENTS.md` 唯一规则源及 Claude/Gemini/opencode/workbuddy 适配层。
 - 支持 JSON/YAML 自定义、默认 plan、显式 `--apply`、create-only 幂等和 `--check`。
 - 不创建 `.obsidian`、不安装插件、不配置 hook、不删除或覆盖现有文件。
