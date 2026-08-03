@@ -53,6 +53,7 @@ class SyncConfig:
 
 
 TARGETS = {
+    "pi": Target("pi", "Pi (pi-coding-agent)", Path("~/.pi/agent/skills")),
     "soia": Target("soia", "SOIA AI", Path("~/.soia/skills")),
     "workbuddy": Target("workbuddy", "WorkBuddy", Path("~/.workbuddy/skills")),
     "claude": Target("claude", "Claude Code", Path("~/.claude/skills")),
@@ -71,6 +72,7 @@ TARGETS = {
 }
 
 DEFAULT_ORDER = [
+    "pi",
     "claude",
     "qoder",
     "copilot",

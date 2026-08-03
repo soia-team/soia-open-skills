@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Iterable, Mapping
 
 
-INSTALL_ROOTS = (".agents/skills", ".claude/skills", ".soia/skills", ".workbuddy/skills", ".codex/skills")
+INSTALL_ROOTS = (".agents/skills", ".claude/skills", ".soia/skills", ".workbuddy/skills", ".codex/skills", ".pi/agent/skills")
 RECEIPT_LINK_ROOTS = (".agents/skills", ".claude/skills", ".codex/skills")
 SKILL_NAME = "soia-meta-skill-release"
 CONFIG_ENV = "SOIA_META_SKILL_RELEASE_CONFIG_FILE"
@@ -349,7 +349,29 @@ def release(args: argparse.Namespace, *, home: Path | None = None) -> int:
             return 0
 
         agent_flags = [flag for a in agents.split(",") for flag in ("-a", a.strip()) if a.strip()]
-        npx_install = getattr(args, "install_mode", "plugin") == "npx"
+        install_mode = getattr(args, "install_mode", "plugin")
+        npx_install = install_mode == "npx"
+        if install_mode == "ask":
+            if not sys.stdin.isatty():
+                raise ReleaseError(
+                    "--install-mode ask requires an interactive terminal; pass "
+                    "--install-mode plugin (publish only) or npx (install locally) explicitly"
+                )
+            print("\n[ask] 发布收尾：是否安装到本地 AI 目录？")
+            print("  默认：仅发布到插件市场（plugin），不装本地副本，避免与插件双份漂移。")
+            try:
+                response = input("  要安装到本地吗？[y/N] ").strip().lower()
+            except EOFError:
+                response = "n"
+            npx_install = response in ("y", "yes")
+            if npx_install:
+                try:
+                    edit = input(f"  安装到哪些 agents？当前: {agents} [回车确认 / 逗号分隔覆盖]: ").strip()
+                except EOFError:
+                    edit = ""
+                if edit:
+                    agents = edit
+                    agent_flags = [flag for a in agents.split(",") for flag in ("-a", a.strip()) if a.strip()]
 
         # 1. Install into the shared source only when the caller opts into route A.
         #    Default delivery is the plugin marketplace; installing here as well would
@@ -416,7 +438,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--repo", required=True, help="skills.sh source, for example owner/name")
     parser.add_argument("--skills", required=True, help="comma-separated installed skill names")
     parser.add_argument("--removed", help="comma-separated legacy skill names to remove")
-    parser.add_argument("--agents", default="claude-code,codex", help="skills.sh agent list")
+    parser.add_argument("--agents", default="claude-code,codex", help="skills.sh agent list, e.g. claude-code,codex,pi (supports any npx skills -a agent id)")
     parser.add_argument("--repo-dir", help="local checkout used for version verification")
     parser.add_argument(
         "--config",
@@ -425,13 +447,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true", help="print the plan without commands or writes")
     parser.add_argument(
         "--install-mode",
-        choices=["plugin", "npx"],
+        choices=["plugin", "npx", "ask"],
         default="plugin",
         help=(
             "plugin (default): skills are delivered through the plugin marketplace; "
             "this run only cleans up renamed/deleted skills and prints the publish steps. "
             "npx: legacy route A — installs into the shared source ~/.agents/skills, "
-            "which creates a second copy that drifts from the plugin version"
+            "which creates a second copy that drifts from the plugin version. "
+            "ask: interactive — prompts whether/how to install locally (requires a terminal)"
         ),
     )
     return parser.parse_args(argv)

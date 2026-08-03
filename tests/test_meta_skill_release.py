@@ -152,13 +152,13 @@ class MetaSkillReleaseTests(unittest.TestCase):
             for root in release_skills.INSTALL_ROOTS:
                 self.assertFalse((home / root / "soia-old").exists())
 
-    def test_removed_names_are_cleaned_from_five_directories(self) -> None:
+    def test_removed_names_are_cleaned_from_all_managed_homes(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             home = Path(temp) / "home"
             for root in release_skills.INSTALL_ROOTS:
                 self.skill(home / root, "soia-old")
             cleaned = release_skills.remove_old_skills(home, ["soia-old"], dry_run=False)
-            self.assertEqual(cleaned, {"soia-old": 5})
+            self.assertEqual(cleaned, {"soia-old": len(release_skills.INSTALL_ROOTS)})
             for root in release_skills.INSTALL_ROOTS:
                 self.assertFalse((home / root / "soia-old").exists())
 

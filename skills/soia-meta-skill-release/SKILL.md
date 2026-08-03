@@ -86,13 +86,17 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 
 ### `plugin` 模式（默认）
 
-1. 有 `--removed` 时清理 `.agents`、`.claude`、`.soia`、`.workbuddy`、`.codex` 五处同名残留。改名清理在两种模式下都执行：残留的旧名副本会盖过插件更新继续应答。
+1. 有 `--removed` 时清理 `.agents`、`.claude`、`.soia`、`.workbuddy`、`.codex`、`.pi/agent` 六处同名残留。改名清理在两种模式下都执行：残留的旧名副本会盖过插件更新继续应答。
 2. 读取仓库版本填入回执；装机版本记 `-`，软链记 `plugin`，结果记 `published`。
 3. 打印用户实际收到改动还需要的步骤：bump 双份 `plugin.json` 的 version → 元仓重生成市场清单并提 PR 合并 → 客户端 `plugin update` → `plugin details` 验证。
 
+### `ask` 模式（`--install-mode ask`，交互式选择）
+
+需要交互终端。执行时询问客户是否安装到本地：输入 `y` 则按 `--agents` 指定的目标走 npx 安装（可现场覆盖 agents 列表，如 `claude-code,pi`）；输入 `n`/回车则等同 `plugin` 模式，只发布不安装。非交互环境（agent 执行脚本）下使用 `ask` 会报错并提示改用 `plugin`/`npx`。
+
 ### `npx` 模式（`--install-mode npx`，显式 opt-in）
 
-1. 逐项执行 `npx skills add <repo> -g -a <agents> -s <skill> -y`。
+1. 逐项执行 `npx skills add <repo> -g -a <agents> -s <skill> -y`；`--agents` 支持任意 `npx skills -a` agent id，如 `claude-code`、`codex`、`pi`（Pi 安装到 `~/.pi/agent/skills`）。
 2. 有 `--removed` 时执行同参 `npx skills remove`，并清理五处残留。
 3. 执行 `npx skills update -g -y`，覆盖交叉引用的连带更新。
 4. 遍历 `~/.agents/skills`：对有 `SKILL.md` 且 Codex 侧缺失的技能，创建相对软链；历史实证目录没有 `SKILL.md`，不进入 Codex。
