@@ -257,7 +257,21 @@ def main(argv: list[str] | None = None) -> int:
             ),
         )
 
-        print(f"\n✅ {plugin_name} v{release_version} 已发布（tag + Release + 列车重开）")
+        # 6. 收尾断言：dev 必须已重开列车。发版中断在定稿与重开之间会让 dev
+        #    停在正式版本号且无人察觉（2026-08-03 实际发生两次），这里显式兜底。
+        run(["git", "fetch", "origin",
+             "+refs/heads/dev:refs/remotes/origin/dev"], cwd=repo_dir)
+        dev_version = read_manifest_versions(
+            repo_dir, "origin/dev")[".claude-plugin/plugin.json"]
+        if "-SNAPSHOT" not in dev_version:
+            raise ReleaseError(
+                f"发版已完成但 dev 未重开列车（当前 {dev_version}）——"
+                f"请提 PR 把各 manifest 置为 {next_snapshot(release_version)}；"
+                f"用 scripts/check_version_trains.py 复检全生态"
+            )
+
+        print(f"\n✅ {plugin_name} v{release_version} 已发布"
+              f"（tag + Release + 列车重开 → {dev_version}）")
         print("下一步：元仓刷 pin → 客户端更新 → 真机验收（skill-release 既有流程）")
         return 0
     except ReleaseError as exc:
