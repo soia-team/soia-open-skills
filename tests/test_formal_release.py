@@ -94,9 +94,11 @@ class VersionHelperTests(unittest.TestCase):
         with self.assertRaises(RELEASE.ReleaseError):
             RELEASE.strip_snapshot("1.9.0")
 
-    def test_next_snapshot_bumps_minor(self) -> None:
-        self.assertEqual(RELEASE.next_snapshot("1.9.0"), "1.10.0-SNAPSHOT")
-        self.assertEqual(RELEASE.next_snapshot("2.0.3"), "2.1.0-SNAPSHOT")
+    def test_next_snapshot_bumps_patch_not_minor(self) -> None:
+        """默认只 +patch：刚发完版还不知道下一版性质，+minor 属于预判。"""
+        self.assertEqual(RELEASE.next_snapshot("1.9.0"), "1.9.1-SNAPSHOT")
+        self.assertEqual(RELEASE.next_snapshot("2.0.3"), "2.0.4-SNAPSHOT")
+        self.assertEqual(RELEASE.next_snapshot("1.11.0"), "1.11.1-SNAPSHOT")
 
 
 class VersionTrainCheckerTests(unittest.TestCase):
