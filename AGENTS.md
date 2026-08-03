@@ -53,6 +53,17 @@ npx skills add soia-team/soia-open-skills -l --full-depth
 npx skills add soia-team/soia-open-skills -g --all
 ```
 
+## Git Workflow（本仓特有：默认分支是 main）
+
+- 本仓同样以 `dev` 为集成分支，但**默认分支保持 `main`**——本仓既是插件市场
+  又是插件（`soia-meta` 的 marketplace `source` 为 `"./"`，无 sha pin），
+  客户端克隆市场时取的是**默认分支**。把默认分支指向 `dev` 会让 `-SNAPSHOT`
+  直达所有客户端，且发布门禁拦不住（没有 pin 提交可检查）。
+- 因此：提 PR 必须**显式 `--base dev`**，不要依赖默认分支；`main` 只接收
+  由 `soia-meta-skill-release` 驱动的发版 PR，以及作为发布动作一部分的市场
+  pin 刷新。
+- `dev` 上 plugin.json 版本带 `-SNAPSHOT` 声明下个目标，feature PR 不改版本号。
+
 ## Open Items (current state)
 
 - **Formal release plan P3/P4** (see the 2026-08-01 release plan, owned at the v7 workspace level): SkillHub onboarding (env / media-content / pkm-vault first), WorkBuddy sharecode trial, Red Skill uploads, first Xiaohongshu notes — blocked on the user's market report; decisions D5-D8 still open.
