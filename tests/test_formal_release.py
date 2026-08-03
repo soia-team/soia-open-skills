@@ -11,12 +11,22 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "skills" / "soia-meta-skill-release" / "scripts"
 
 
-def load(name: str):
-    spec = importlib.util.spec_from_file_location(name, SCRIPTS / f"{name}.py")
+def _load(path: Path):
+    spec = importlib.util.spec_from_file_location(path.stem, path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def load(name: str):
+    """加载 skill-release 的发布脚本。"""
+    return _load(SCRIPTS / f"{name}.py")
+
+
+def load_script(name: str):
+    """加载元仓 scripts/ 下的治理脚本。"""
+    return _load(ROOT / "scripts" / f"{name}.py")
 
 
 NOTES = load("generate_release_notes")
@@ -87,6 +97,36 @@ class VersionHelperTests(unittest.TestCase):
     def test_next_snapshot_bumps_minor(self) -> None:
         self.assertEqual(RELEASE.next_snapshot("1.9.0"), "1.10.0-SNAPSHOT")
         self.assertEqual(RELEASE.next_snapshot("2.0.3"), "2.1.0-SNAPSHOT")
+
+
+class VersionTrainCheckerTests(unittest.TestCase):
+    """跨仓列车体检：dev 必带 -SNAPSHOT、main 必不带。
+
+    回归 2026-08-03：pkm 与 media 的发版中断在定稿与重开之间，dev 静默停在
+    正式版本号，无任何检测发现。
+    """
+
+    def setUp(self) -> None:
+        self.mod = load_script("check_version_trains")
+
+    def _inspect(self, main_v: str, dev_v: str) -> dict:
+        from unittest.mock import patch
+
+        with patch.object(self.mod, "fetch_version",
+                          side_effect=lambda _r, ref: dev_v if ref == "dev" else main_v):
+            return self.mod.inspect("demo")
+
+    def test_flags_dev_without_snapshot(self) -> None:
+        result = self._inspect("1.9.0", "1.9.0")
+        self.assertTrue(any("dev 未开列车" in p for p in result["problems"]))
+
+    def test_flags_snapshot_leaking_into_main(self) -> None:
+        result = self._inspect("1.9.0-SNAPSHOT", "1.10.0-SNAPSHOT")
+        self.assertTrue(any("main 带 -SNAPSHOT" in p for p in result["problems"]))
+
+    def test_healthy_pair_has_no_problems(self) -> None:
+        result = self._inspect("1.9.0", "1.10.0-SNAPSHOT")
+        self.assertEqual(result["problems"], [])
 
 
 if __name__ == "__main__":
