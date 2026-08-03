@@ -11,12 +11,22 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "skills" / "soia-meta-skill-release" / "scripts"
 
 
-def load(name: str):
-    spec = importlib.util.spec_from_file_location(name, SCRIPTS / f"{name}.py")
+def _load(path: Path):
+    spec = importlib.util.spec_from_file_location(path.stem, path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def load(name: str):
+    """加载 skill-release 的发布脚本。"""
+    return _load(SCRIPTS / f"{name}.py")
+
+
+def load_script(name: str):
+    """加载元仓 scripts/ 下的治理脚本。"""
+    return _load(ROOT / "scripts" / f"{name}.py")
 
 
 NOTES = load("generate_release_notes")
@@ -84,9 +94,105 @@ class VersionHelperTests(unittest.TestCase):
         with self.assertRaises(RELEASE.ReleaseError):
             RELEASE.strip_snapshot("1.9.0")
 
-    def test_next_snapshot_bumps_minor(self) -> None:
-        self.assertEqual(RELEASE.next_snapshot("1.9.0"), "1.10.0-SNAPSHOT")
-        self.assertEqual(RELEASE.next_snapshot("2.0.3"), "2.1.0-SNAPSHOT")
+    def test_next_snapshot_bumps_patch_not_minor(self) -> None:
+        """默认只 +patch：刚发完版还不知道下一版性质，+minor 属于预判。"""
+        self.assertEqual(RELEASE.next_snapshot("1.9.0"), "1.9.1-SNAPSHOT")
+        self.assertEqual(RELEASE.next_snapshot("2.0.3"), "2.0.4-SNAPSHOT")
+        self.assertEqual(RELEASE.next_snapshot("1.11.0"), "1.11.1-SNAPSHOT")
+
+
+class VersionTrainCheckerTests(unittest.TestCase):
+    """跨仓列车体检：dev 必带 -SNAPSHOT、main 必不带。
+
+    回归 2026-08-03：pkm 与 media 的发版中断在定稿与重开之间，dev 静默停在
+    正式版本号，无任何检测发现。
+    """
+
+    def setUp(self) -> None:
+        self.mod = load_script("check_version_trains")
+
+    def _inspect(self, main_v: str, dev_v: str) -> dict:
+        from unittest.mock import patch
+
+        with patch.object(self.mod, "fetch_version",
+                          side_effect=lambda _r, ref: dev_v if ref == "dev" else main_v):
+            return self.mod.inspect("demo")
+
+    def test_flags_dev_without_snapshot(self) -> None:
+        result = self._inspect("1.9.0", "1.9.0")
+        self.assertTrue(any("dev 未开列车" in p for p in result["problems"]))
+
+    def test_flags_snapshot_leaking_into_main(self) -> None:
+        result = self._inspect("1.9.0-SNAPSHOT", "1.10.0-SNAPSHOT")
+        self.assertTrue(any("main 带 -SNAPSHOT" in p for p in result["problems"]))
+
+    def test_healthy_pair_has_no_problems(self) -> None:
+        result = self._inspect("1.9.0", "1.10.0-SNAPSHOT")
+        self.assertEqual(result["problems"], [])
+
+
+class MergeConflictDetectionTests(unittest.TestCase):
+    """冲突检测必须靠退出码 + stage 条目，不能匹配 "CONFLICT" 文案。
+
+    回归 2026-08-03：初版按字符串匹配，在中文 locale 下 git 输出「冲突（内容）」，
+    检测静默失效——真造一个冲突仓才发现。
+    """
+
+    def setUp(self) -> None:
+        self.mod = load_script("check_version_trains")
+
+    def _make_repo(self, conflicting: bool) -> Path:
+        import os
+        import shutil
+        import subprocess
+        import tempfile
+
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, True)
+        env = {
+            "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "a@b",
+            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "a@b",
+            "PATH": os.environ["PATH"],
+        }
+
+        def git(*args: str) -> None:
+            subprocess.run(["git", "-C", tmp, *args], check=True,
+                           capture_output=True, env=env)
+
+        subprocess.run(["git", "init", "-q", tmp], check=True,
+                       capture_output=True, env=env)
+        git("branch", "-m", "main")
+        (Path(tmp) / "f.txt").write_text("base\n", encoding="utf-8")
+        git("add", ".")
+        git("commit", "-qm", "init")
+        git("checkout", "-qb", "dev")
+        (Path(tmp) / "f.txt").write_text("dev\n", encoding="utf-8")
+        git("commit", "-qam", "dev")
+        git("checkout", "-q", "main")
+        # conflicting=True 时两边改同一文件；否则 main 只新增无关文件
+        (Path(tmp) / ("f.txt" if conflicting else "g.txt")).write_text(
+            "main\n", encoding="utf-8")
+        git("add", ".")
+        git("commit", "-qam", "main")
+        git("update-ref", "refs/remotes/origin/main", "refs/heads/main")
+        git("update-ref", "refs/remotes/origin/dev", "refs/heads/dev")
+        return Path(tmp)
+
+    def _merge_tree(self, repo: Path):
+        import subprocess
+        return subprocess.run(
+            ["git", "-C", str(repo), "merge-tree", "--write-tree",
+             "origin/main", "origin/dev"], capture_output=True, text=True)
+
+    def test_detects_real_conflict(self) -> None:
+        result = self._merge_tree(self._make_repo(conflicting=True))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.mod.conflicted_paths(result.stdout), ["f.txt"])
+
+    def test_clean_merge_reports_no_conflict(self) -> None:
+        result = self._merge_tree(self._make_repo(conflicting=False))
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(self.mod.conflicted_paths(result.stdout), [])
 
 
 if __name__ == "__main__":

@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」
-version: 4.1.0
+version: 4.2.1
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-08-02 18:00:00
+updated_at: 2026-08-03 21:30:00
 created_by: gpt-5.6-terra
 updated_by: claude fable 5
 dependencies:
@@ -124,11 +124,46 @@ python3 skills/soia-meta-skill-release/scripts/formal_release.py \
    按 conventional 前缀归类上个 tag 以来的提交）
 3. `v<X.Y.Z>` tag 打在 main HEAD 并推送
 4. `gh release create`（标题 `<插件名> v<X.Y.Z>`）
-5. 重开列车 PR → dev：各 manifest 进入 next-minor `-SNAPSHOT`
+5. 重开列车 PR → dev：各 manifest **+patch** 进入 `-SNAPSHOT`
 
-随后继续本技能既有的 pin 刷新与客户端更新流程（下节）。**发布门禁**：元仓
-`generate_marketplaces.py` 会读取待 pin 提交的 manifest 版本，含 `-SNAPSHOT`
-直接拒绝生成清单——SNAPSHOT 结构上到不了任何客户端。
+随后继续本技能既有的 pin 刷新与客户端更新流程（下节）。
+
+### 版本号怎么定
+
+重开列车默认 **+patch**（1.11.0 → `1.11.1-SNAPSHOT`）——刚发完版还不知道下一版
+是修 bug 还是加技能，默认 +minor 等于预判「必有新功能」，实证会虚高：v1.11.0 实
+际只修了一个显示缺陷，按语义应是 1.10.1。与 Maven release 惯例一致。
+
+**发版前按内容确认版本**：加了新技能/新能力 → 手工把 dev 改成 minor（如
+`1.12.0-SNAPSHOT`）；有破坏性变更 → major。改完再跑发版，脚本以 dev 的版本为准。
+
+**技能自身版本要单独 bump**：`plugin.json` 是插件（交付单元）的版本，每个
+`skills/<name>/SKILL.md` 的 frontmatter `version` 是该技能自己的版本，两者独立。
+改了某个技能的正文或脚本，就要 bump 那个技能的 `version` 和 `updated_at`——
+CI 的 `check_skill_versions.py` 会拦（2026-08-03 漏过一次：改了 skill-release 的
+脚本与正文，技能版本却停在 4.1.0）。
+
+### 三条不可回退的发版约束（都由事故推导，勿改）
+
+1. **发版 PR（dev→main）必须 merge commit，不能 squash**。squash 造出与 dev 无
+   祖先关系的新提交，merge base 停在旧点，两边对同一批文件各自演进，下次发版 PR
+   必然 CONFLICTING，只能靠人工 sync PR 补救。
+2. **定稿与重开列车之间是不变量破窗期**：第 1 步摘掉 dev 的 `-SNAPSHOT` 后，直到
+   第 5 步重开前，dev 都处于违规状态。中断在此区间会静默留下「dev 停在正式版本
+   号」。脚本收尾有断言兜底，但**人工介入或中断后必须自查**。
+3. **发布门禁**：元仓 `generate_marketplaces.py` 读取待 pin 提交的 manifest，含
+   `-SNAPSHOT` 直接拒绝生成清单——SNAPSHOT 结构上到不了任何客户端。
+
+### 体检：随时可跑，盘点必跑
+
+```bash
+python3 scripts/generate_marketplaces.py --help >/dev/null  # 元仓 checkout 内
+python3 scripts/check_version_trains.py --repos-root <各仓父目录>
+```
+
+查两件事：①版本列车不变量（dev 带 `-SNAPSHOT`、main 不带）②下次发版能否干净
+合并。**报告生态状态时必须验这两个不变量，不能只抄版本号**——2026-08-03 的两次
+漏判都源于「只看数值对不对，没验规则成不成立」。
 
 ## 试装 dev（本地验证快照版）
 

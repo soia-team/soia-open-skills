@@ -5,8 +5,8 @@
 重开版本列车 PR(→dev)；pin 刷新与客户端更新仍走 skill-release 既有流程。
 
 每份 plugin manifest（claude/codex/codebuddy）独立版本轨道：定稿 = 摘掉各自
-的 -SNAPSHOT；重开列车 = 各自 next-minor + -SNAPSHOT。发布版本号取
-.claude-plugin/plugin.json 为准。
+的 -SNAPSHOT；重开列车 = 各自 +patch + -SNAPSHOT（下一版若够得上 minor/major，
+发版前手工把 dev 版本提上去）。发布版本号取 .claude-plugin/plugin.json 为准。
 
 --dry-run 只打印计划，不执行任何写操作。
 """
@@ -47,8 +47,15 @@ def strip_snapshot(version: str) -> str:
 
 
 def next_snapshot(release_version: str) -> str:
-    x, y, _z = release_version.split(".")
-    return f"{x}.{int(y) + 1}.0-SNAPSHOT"
+    """重开列车默认只 +patch。
+
+    刚发完版时还不知道下一版是修 bug 还是加技能，默认 +minor 等于预判「下一版
+    必然有新功能」——实证会虚高：v1.11.0 实际只修了一个显示缺陷，按语义应是
+    1.10.1。与 Maven release 插件同惯例：默认递增末位，发版前若内容够得上
+    minor/major 再手工把 dev 版本提上去。
+    """
+    x, y, z = release_version.split(".")
+    return f"{x}.{y}.{int(z) + 1}-SNAPSHOT"
 
 
 CHANGELOG_HEADER = (
@@ -186,6 +193,17 @@ def main(argv: list[str] | None = None) -> int:
         dev_versions = read_manifest_versions(repo_dir, "origin/dev")
         release_version = strip_snapshot(dev_versions[".claude-plugin/plugin.json"])
 
+        # 前置校验：发版 PR 必须能用 merge commit（见下方约束 1）。仓库若关掉了
+        # merge commit，走到第 2 步才会以 GraphQL 报错中断，此时 dev 已被定稿 PR
+        # 摘掉 -SNAPSHOT，正好落进不变量破窗期。2026-08-03 元仓实测踩到。
+        allows_merge = run(
+            ["gh", "api", f"repos/{args.repo}", "--jq", ".allow_merge_commit"])
+        if allows_merge.strip() != "true":
+            raise ReleaseError(
+                f"{args.repo} 未开启 merge commit，发版 PR 无法按规定合并。"
+                f"先执行：gh api -X PATCH repos/{args.repo} -f allow_merge_commit=true"
+            )
+
         plan = [
             f"1. 定稿 PR → dev：各 manifest 摘掉 -SNAPSHOT（发布版 {release_version}）",
             "2. 发版 PR：dev → main（正文 = Release Notes 草稿）",
@@ -231,7 +249,11 @@ def main(argv: list[str] | None = None) -> int:
         )
         pr_number = pr_url.rstrip("/").rsplit("/", 1)[-1]
         wait_checks(args.repo, pr_number)
-        run(["gh", "pr", "merge", pr_number, "--repo", args.repo, "--squash"])
+        # 发版 PR 必须用 merge commit，不能 squash：squash 会造出与 dev 无祖先关系的
+        # 新提交，merge base 就此停在旧点，dev 与 main 对同一批文件各自演进 → 下次
+        # 发版 PR 必然 CONFLICTING，只能靠人工 sync PR 补救（2026-08-03 pkm/media
+        # 两个仓实际发生）。merge commit 让 dev 的提交成为 main 的祖先，分叉不再累积。
+        run(["gh", "pr", "merge", pr_number, "--repo", args.repo, "--merge"])
 
         # 3+4. tag + Release
         run(["git", "fetch", "origin", "main"], cwd=repo_dir)
@@ -257,7 +279,21 @@ def main(argv: list[str] | None = None) -> int:
             ),
         )
 
-        print(f"\n✅ {plugin_name} v{release_version} 已发布（tag + Release + 列车重开）")
+        # 6. 收尾断言：dev 必须已重开列车。发版中断在定稿与重开之间会让 dev
+        #    停在正式版本号且无人察觉（2026-08-03 实际发生两次），这里显式兜底。
+        run(["git", "fetch", "origin",
+             "+refs/heads/dev:refs/remotes/origin/dev"], cwd=repo_dir)
+        dev_version = read_manifest_versions(
+            repo_dir, "origin/dev")[".claude-plugin/plugin.json"]
+        if "-SNAPSHOT" not in dev_version:
+            raise ReleaseError(
+                f"发版已完成但 dev 未重开列车（当前 {dev_version}）——"
+                f"请提 PR 把各 manifest 置为 {next_snapshot(release_version)}；"
+                f"用 scripts/check_version_trains.py 复检全生态"
+            )
+
+        print(f"\n✅ {plugin_name} v{release_version} 已发布"
+              f"（tag + Release + 列车重开 → {dev_version}）")
         print("下一步：元仓刷 pin → 客户端更新 → 真机验收（skill-release 既有流程）")
         return 0
     except ReleaseError as exc:
