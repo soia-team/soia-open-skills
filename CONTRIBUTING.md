@@ -170,8 +170,15 @@ the actual target is an explicitly confirmed SOIA product workspace.
   individual dev states are identified by commit SHA, not version bumps.
   `-SNAPSHOT` never reaches the marketplace: the pin generator refuses to pin a
   commit whose plugin manifest carries the suffix.
-- This portal repository has no `dev` branch: its `main` changes only as part
-  of a release action (marketplace pins, routing, docs), via PRs to `main`.
+- This portal repository also uses `dev`, but **its default branch stays
+  `main`** — unlike domain repos. Reason: the portal is both the marketplace and
+  a plugin (`soia-meta`, whose marketplace `source` is `"./"` with no sha pin),
+  and clients clone the marketplace at its **default branch**. Pointing the
+  default at `dev` would ship `-SNAPSHOT` builds straight to every client, and
+  the pin gate could not catch it — there is no pinned commit to inspect.
+  Therefore: open PRs with an explicit `--base dev`; releases go `dev` → `main`
+  through `soia-meta-skill-release`; clients keep receiving `main` only.
+  Marketplace pin refreshes are release actions and target `main` directly.
 - **No worktrees.** Never run `git worktree add` in this repository. Worktrees
   lock branches and block deletion; they caused real cleanup incidents in this
   repo. If you need to inspect another ref, use `git show <ref>:<path>` or
