@@ -231,7 +231,11 @@ def main(argv: list[str] | None = None) -> int:
         )
         pr_number = pr_url.rstrip("/").rsplit("/", 1)[-1]
         wait_checks(args.repo, pr_number)
-        run(["gh", "pr", "merge", pr_number, "--repo", args.repo, "--squash"])
+        # 发版 PR 必须用 merge commit，不能 squash：squash 会造出与 dev 无祖先关系的
+        # 新提交，merge base 就此停在旧点，dev 与 main 对同一批文件各自演进 → 下次
+        # 发版 PR 必然 CONFLICTING，只能靠人工 sync PR 补救（2026-08-03 pkm/media
+        # 两个仓实际发生）。merge commit 让 dev 的提交成为 main 的祖先，分叉不再累积。
+        run(["gh", "pr", "merge", pr_number, "--repo", args.repo, "--merge"])
 
         # 3+4. tag + Release
         run(["git", "fetch", "origin", "main"], cwd=repo_dir)
