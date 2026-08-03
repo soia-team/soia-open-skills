@@ -170,6 +170,17 @@ the actual target is an explicitly confirmed SOIA product workspace.
   individual dev states are identified by commit SHA, not version bumps.
   `-SNAPSHOT` never reaches the marketplace: the pin generator refuses to pin a
   commit whose plugin manifest carries the suffix.
+- **Release PRs (`dev` → `main`) must be merged with a merge commit, never
+  squashed.** A squash creates a commit with no ancestry link to `dev`, freezing
+  the merge base; both branches then evolve the same files independently and the
+  next release PR is guaranteed to conflict, recoverable only by a manual
+  main→dev sync. Feature PRs into `dev` stay squash-merged as usual.
+- Two invariants decay silently and only surface at the next release. Verify
+  them — do not just read version numbers — with
+  `python3 scripts/check_version_trains.py --repos-root <parent-of-repos>`:
+  (a) `dev` carries `-SNAPSHOT` and `main` does not; (b) `dev` → `main` still
+  merges cleanly. Both were breached on 2026-08-03 across two repos before any
+  check existed.
 - This portal repository also uses `dev`, but **its default branch stays
   `main`** — unlike domain repos. Reason: the portal is both the marketplace and
   a plugin (`soia-meta`, whose marketplace `source` is `"./"` with no sha pin),

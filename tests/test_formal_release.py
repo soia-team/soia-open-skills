@@ -129,5 +129,69 @@ class VersionTrainCheckerTests(unittest.TestCase):
         self.assertEqual(result["problems"], [])
 
 
+class MergeConflictDetectionTests(unittest.TestCase):
+    """冲突检测必须靠退出码 + stage 条目，不能匹配 "CONFLICT" 文案。
+
+    回归 2026-08-03：初版按字符串匹配，在中文 locale 下 git 输出「冲突（内容）」，
+    检测静默失效——真造一个冲突仓才发现。
+    """
+
+    def setUp(self) -> None:
+        self.mod = load_script("check_version_trains")
+
+    def _make_repo(self, conflicting: bool) -> Path:
+        import os
+        import shutil
+        import subprocess
+        import tempfile
+
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, True)
+        env = {
+            "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "a@b",
+            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "a@b",
+            "PATH": os.environ["PATH"],
+        }
+
+        def git(*args: str) -> None:
+            subprocess.run(["git", "-C", tmp, *args], check=True,
+                           capture_output=True, env=env)
+
+        subprocess.run(["git", "init", "-q", tmp], check=True,
+                       capture_output=True, env=env)
+        git("branch", "-m", "main")
+        (Path(tmp) / "f.txt").write_text("base\n", encoding="utf-8")
+        git("add", ".")
+        git("commit", "-qm", "init")
+        git("checkout", "-qb", "dev")
+        (Path(tmp) / "f.txt").write_text("dev\n", encoding="utf-8")
+        git("commit", "-qam", "dev")
+        git("checkout", "-q", "main")
+        # conflicting=True 时两边改同一文件；否则 main 只新增无关文件
+        (Path(tmp) / ("f.txt" if conflicting else "g.txt")).write_text(
+            "main\n", encoding="utf-8")
+        git("add", ".")
+        git("commit", "-qam", "main")
+        git("update-ref", "refs/remotes/origin/main", "refs/heads/main")
+        git("update-ref", "refs/remotes/origin/dev", "refs/heads/dev")
+        return Path(tmp)
+
+    def _merge_tree(self, repo: Path):
+        import subprocess
+        return subprocess.run(
+            ["git", "-C", str(repo), "merge-tree", "--write-tree",
+             "origin/main", "origin/dev"], capture_output=True, text=True)
+
+    def test_detects_real_conflict(self) -> None:
+        result = self._merge_tree(self._make_repo(conflicting=True))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.mod.conflicted_paths(result.stdout), ["f.txt"])
+
+    def test_clean_merge_reports_no_conflict(self) -> None:
+        result = self._merge_tree(self._make_repo(conflicting=False))
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(self.mod.conflicted_paths(result.stdout), [])
+
+
 if __name__ == "__main__":
     unittest.main()
