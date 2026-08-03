@@ -64,3 +64,21 @@ class SharedIconSourceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CodexInterfaceContractTests(unittest.TestCase):
+    """Codex 插件详情页的「网站」读 interface.websiteURL，顶层 homepage 不生效。
+
+    回归 2026-08-03：元仓有 homepage 但缺 websiteURL，界面显示「不可用」。
+    """
+
+    def test_codex_manifest_declares_website_url(self) -> None:
+        import json
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[1]
+        manifest = json.loads(
+            (root / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        url = manifest.get("interface", {}).get("websiteURL")
+        self.assertTrue(url, "interface.websiteURL 缺失，Codex 界面会显示「网站 不可用」")
+        self.assertTrue(url.startswith("https://"), url)

@@ -11,6 +11,7 @@
     "shortDescription": "技能检索、多 AI 同步、发布收尾、提示词起草",
     "developerName": "soia-team",
     "category": "Developer Tools",
+    "websiteURL": "https://github.com/soia-team/soia-open-skills",
     "capabilities": [
       "技能检索",
       "多 AI 同步",
