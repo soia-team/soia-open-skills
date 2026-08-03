@@ -193,6 +193,17 @@ def main(argv: list[str] | None = None) -> int:
         dev_versions = read_manifest_versions(repo_dir, "origin/dev")
         release_version = strip_snapshot(dev_versions[".claude-plugin/plugin.json"])
 
+        # 前置校验：发版 PR 必须能用 merge commit（见下方约束 1）。仓库若关掉了
+        # merge commit，走到第 2 步才会以 GraphQL 报错中断，此时 dev 已被定稿 PR
+        # 摘掉 -SNAPSHOT，正好落进不变量破窗期。2026-08-03 元仓实测踩到。
+        allows_merge = run(
+            ["gh", "api", f"repos/{args.repo}", "--jq", ".allow_merge_commit"])
+        if allows_merge.strip() != "true":
+            raise ReleaseError(
+                f"{args.repo} 未开启 merge commit，发版 PR 无法按规定合并。"
+                f"先执行：gh api -X PATCH repos/{args.repo} -f allow_merge_commit=true"
+            )
+
         plan = [
             f"1. 定稿 PR → dev：各 manifest 摘掉 -SNAPSHOT（发布版 {release_version}）",
             "2. 发版 PR：dev → main（正文 = Release Notes 草稿）",
