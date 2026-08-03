@@ -210,6 +210,12 @@
     "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-opencode-cli-install -y"
   },
   {
+    "name": "soia-env-pi-cli-install",
+    "repo": "soia-open-env-skills",
+    "description": "为小白安装、配置与授权更新 Pi（pi-coding-agent）CLI。触发：「安装 Pi」「pi 不存在」「更新 Pi CLI」「pi-coding-agent」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-pi-cli-install -y"
+  },
+  {
     "name": "soia-env-python-install",
     "repo": "soia-open-env-skills",
     "description": "为新手安装、验证或按授权更新 Python 与 pip。触发：「安装 Python」「更新 Python」「python 命令不存在」",

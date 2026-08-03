@@ -210,6 +210,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-env-pi-cli-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-pi-cli-install",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-env-python-install",
     "repo": "soia-open-env-skills",
     "skillPath": "skills/soia-env-python-install",
@@ -285,12 +291,6 @@
     "skill_name": "soia-meta-sync-skills",
     "repo": "soia-open-skills",
     "skillPath": "skills/soia-meta-sync-skills",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-pkm-clip-x-profile",
-    "repo": "soia-open-pkm-vault-skills",
-    "skillPath": "skills/soia-pkm-clip-x-profile",
     "visibility": "public"
   },
   {
@@ -375,6 +375,12 @@
     "skill_name": "soia-pkm-clip-x",
     "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-clip-x",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-pkm-clip-x-profile",
+    "repo": "soia-open-pkm-vault-skills",
+    "skillPath": "skills/soia-pkm-clip-x-profile",
     "visibility": "public"
   },
   {
