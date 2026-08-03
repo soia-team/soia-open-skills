@@ -53,6 +53,12 @@ npx skills add soia-team/soia-open-skills -l --full-depth
 npx skills add soia-team/soia-open-skills -g --all
 ```
 
+## Open Items (current state)
+
+- **Formal release plan P3/P4** (see the 2026-08-01 release plan, owned at the v7 workspace level): SkillHub onboarding (env / media-content / pkm-vault first), WorkBuddy sharecode trial, Red Skill uploads, first Xiaohongshu notes — blocked on the user's market report; decisions D5-D8 still open.
+- **Unattended marketplace refresh** is undecided (needs a PAT secret or a ruleset change that weakens classic branch protection) — awaiting user decision. Until then, refresh pins via the skill-release flow.
+- Version discipline is live: `dev` is the integration branch, `main` is always the latest formal release, plugin.json uses `-SNAPSHOT` during development, and the marketplace generator rejects manifests containing `-SNAPSHOT`. Do not revert this.
+
 ## 维护本仓技能
 
 技能契约、调试安装、新增/改名/拆分/删除的完整流程，以及插件市场发布步骤，统一见
