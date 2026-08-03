@@ -1,6 +1,6 @@
 # 技能详情页
 
-全生态 80 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 81 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
@@ -42,7 +42,7 @@
 | [`soia-pkm-transform-obsidian-pdf`](soia-pkm-transform-obsidian-pdf.md) | 用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint |
 | [`soia-pkm-translate-article-zh`](soia-pkm-translate-article-zh.md) | 将外文文章按 quick、normal 或 refined 模式翻译成独立中文稿，保持术语一致且不覆盖原文 |
 
-## `soia-env`　16 个技能
+## `soia-env`　17 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
@@ -58,6 +58,7 @@
 | [`soia-env-node-install`](soia-env-node-install.md) | 为新手安装、验证或按授权更新 Node.js 与 npm |
 | [`soia-env-open-skills-install`](soia-env-open-skills-install.md) | 在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，支持全部/单插件/单技能粒度与指定宿主 |
 | [`soia-env-opencode-cli-install`](soia-env-opencode-cli-install.md) | 为新手安装、登录、配置或按授权更新 OpenCode CLI |
+| [`soia-env-pi-cli-install`](soia-env-pi-cli-install.md) | 为小白安装、配置与授权更新 Pi（pi-coding-agent）CLI |
 | [`soia-env-python-install`](soia-env-python-install.md) | 为新手安装、验证或按授权更新 Python 与 pip |
 | [`soia-env-qoder-cli-install`](soia-env-qoder-cli-install.md) | 面向小白检查、安装、登录和按明确授权更新 Qoder CLI；识别官方独立安装、Homebrew 与 npm 来源，默认只报告版本和自动更新设置 |
 | [`soia-env-storage-cleanup`](soia-env-storage-cleanup.md) | 面向小白统计 SOIA 受管配置、状态、缓存和临时目录的空间占用，生成可清理清单并提醒删除风险；只有客户看过最新清单并明确授权后才执行删除，随后复核实际释放空间 |
