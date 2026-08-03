@@ -32,7 +32,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-design-skills.git",
-        "ref": "52c400f8955ccce203e2782d2552d6fc21680852"
+        "ref": "5ccbe59dc711c9af6f9a1ba0493fc884660d00d3"
       },
       "interface": {
         "displayName": "设计与文档技能库",
