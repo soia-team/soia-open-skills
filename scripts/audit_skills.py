@@ -225,6 +225,36 @@ def valid_frontmatter_datetime(value: str | None) -> bool:
     return True
 
 
+# Template placeholders and other fabricated-looking creator names. An AI
+# authoring or editing a skill must write its own concrete provider/model id
+# (e.g. `deepseek/deepseek-v4-flash`), never copy a placeholder from the
+# template. 2026-08-03: created_by/updated_by were fabricated when a skill was
+# copied from an existing one; this gate exists so the next copy is caught.
+FRONTMATTER_MODEL_NAME_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._/+-]*(?:\s+[A-Za-z0-9._/+-]+)*$"
+)
+FRONTMATTER_PLACEHOLDER_NAMES = {
+    "<model-name>",
+    "<concrete-model-name>",
+    "<your-skill-name>",
+    "your-skill-name",
+    "unknown",
+}
+
+
+def is_midnight_placeholder(value: str) -> bool:
+    """True when a datetime uses the fabricated-looking 00:00:00 time."""
+    return value.endswith(" 00:00:00")
+
+
+def is_future_timestamp(value: str) -> bool:
+    try:
+        ts = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return False
+    return ts > datetime.now()
+
+
 def grandfather_warning(path: str, message: str) -> Finding:
     """Expose an explicit legacy exception without making --strict fail."""
     return Finding("WARN", path, message, strict_blocking=False)
@@ -346,6 +376,43 @@ def audit_skill(root: Path, skill_dir: Path, findings: list[Finding]) -> None:
             findings.append(grandfather_warning(rel(skill_md, root), f"grandfathered {message}"))
         else:
             findings.append(Finding("ERROR", rel(skill_md, root), message))
+
+    # Metadata authenticity gate (2026-08-03): a fabricated timestamp or a
+    # template placeholder in the creator fields is a real failure, not a style
+    # nit — it breaks provenance and the next reader cannot tell who built it.
+    # Midnight 00:00:00 is WARN (15 legacy skills carry it; new skills must use
+    # the real time); future timestamps and placeholder creator names are ERROR.
+    for key in FRONTMATTER_DATETIME_FIELDS:
+        value = scalar_values.get(key) if key in fm else None
+        if not value or not valid_frontmatter_datetime(value):
+            continue
+        if is_midnight_placeholder(value):
+            findings.append(
+                Finding(
+                    "WARN",
+                    rel(skill_md, root),
+                    f"frontmatter {key} uses placeholder time 00:00:00; write the real creation/update timestamp",
+                )
+            )
+        elif is_future_timestamp(value):
+            findings.append(
+                Finding("ERROR", rel(skill_md, root), f"frontmatter {key} is in the future ({value})")
+            )
+
+    for key in ("created_by", "updated_by"):
+        value = scalar_values.get(key) if key in fm else None
+        if not value or not str(value).strip():
+            continue
+        creator = str(value).strip()
+        if creator in FRONTMATTER_PLACEHOLDER_NAMES or not FRONTMATTER_MODEL_NAME_RE.match(creator):
+            findings.append(
+                Finding(
+                    "ERROR",
+                    rel(skill_md, root),
+                    f"frontmatter {key} must name a concrete model/provider id "
+                    f"(e.g. deepseek/deepseek-v4-flash), got {creator!r}",
+                )
+            )
 
     if "name" in fm and fm.get("name") != skill_name:
         findings.append(Finding("ERROR", rel(skill_md, root), f"frontmatter name must match folder name: {skill_name!r}"))

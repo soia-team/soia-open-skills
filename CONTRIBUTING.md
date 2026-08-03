@@ -46,6 +46,11 @@
    `created_at`、`updated_at`、`created_by`、`updated_by`，并遵循
    [SKILL_SPEC.md](./SKILL_SPEC.md) 的字段规范；`created_by` / `updated_by`
    填写具体模型名。
+   **metadata 必须如实**：`created_by`/`updated_by` 写实际创建/修改本文件的
+   AI 的 `<provider>/<model-id>`（如 `deepseek/deepseek-v4-flash`），
+   `created_at`/`updated_at` 写真实时间——禁止从模板或其他技能复制、编造
+   模型名或把时间写成占位值（如 `00:00:00`）。audit 对占位时间告警、
+   对未来时间与占位模型名报错。
    不要新增 `metadata.json`；公开仓使用 `SKILL.md` + 可选 `agents/openai.yaml`。
 
 5. **路径参数化**：
