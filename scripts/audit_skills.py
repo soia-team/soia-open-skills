@@ -8,7 +8,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import yaml
@@ -248,11 +248,18 @@ def is_midnight_placeholder(value: str) -> bool:
 
 
 def is_future_timestamp(value: str) -> bool:
+    """True when a datetime is clearly in the future.
+
+    Frontmatter timestamps are timezone-naive local times; CI runners run in
+    UTC, so the author's local time can legitimately look up to ~12h "ahead"
+    of datetime.now() on the runner. A 12-hour tolerance absorbs that without
+    letting fabricated future dates (tomorrow and beyond) pass.
+    """
     try:
         ts = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
     except ValueError:
         return False
-    return ts > datetime.now()
+    return ts > datetime.now() + timedelta(hours=12)
 
 
 def grandfather_warning(path: str, message: str) -> Finding:
