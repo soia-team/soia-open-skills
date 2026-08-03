@@ -76,7 +76,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-pkm-vault-skills.git",
-        "ref": "00e7504cf78d6f967bd0acf238287544ef98779a"
+        "ref": "9dfb0d8f67807d2abed1085b6fd8a38e4bdafc20"
       },
       "interface": {
         "displayName": "知识库技能库",
@@ -98,7 +98,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-media-content-skills.git",
-        "ref": "6c07650641ffc521854f81a71f5967fc8c05f0aa"
+        "ref": "100fb1feef85fb3aa1f2e754a4324a53e44f8a87"
       },
       "interface": {
         "displayName": "新媒体内容技能库",
