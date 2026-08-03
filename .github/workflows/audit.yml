@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0  # 技能版本守卫要比对基线分支，浅克隆取不到
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.11"
@@ -23,6 +25,11 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Audit skills
         run: python3 scripts/audit_skills.py --strict
+      - name: Check skill versions were bumped
+        run: |
+          BASE="origin/${{ github.base_ref || 'main' }}"
+          git fetch origin "${{ github.base_ref || 'main' }}" --quiet || true
+          python3 scripts/check_skill_versions.py --base "$BASE"
       - name: Check skill catalog freshness
         run: python3 scripts/generate_skill_catalog.py --check
       - name: Check top-level README skill coverage

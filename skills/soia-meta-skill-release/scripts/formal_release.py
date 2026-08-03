@@ -5,8 +5,8 @@
 重开版本列车 PR(→dev)；pin 刷新与客户端更新仍走 skill-release 既有流程。
 
 每份 plugin manifest（claude/codex/codebuddy）独立版本轨道：定稿 = 摘掉各自
-的 -SNAPSHOT；重开列车 = 各自 next-minor + -SNAPSHOT。发布版本号取
-.claude-plugin/plugin.json 为准。
+的 -SNAPSHOT；重开列车 = 各自 +patch + -SNAPSHOT（下一版若够得上 minor/major，
+发版前手工把 dev 版本提上去）。发布版本号取 .claude-plugin/plugin.json 为准。
 
 --dry-run 只打印计划，不执行任何写操作。
 """
@@ -47,8 +47,15 @@ def strip_snapshot(version: str) -> str:
 
 
 def next_snapshot(release_version: str) -> str:
-    x, y, _z = release_version.split(".")
-    return f"{x}.{int(y) + 1}.0-SNAPSHOT"
+    """重开列车默认只 +patch。
+
+    刚发完版时还不知道下一版是修 bug 还是加技能，默认 +minor 等于预判「下一版
+    必然有新功能」——实证会虚高：v1.11.0 实际只修了一个显示缺陷，按语义应是
+    1.10.1。与 Maven release 插件同惯例：默认递增末位，发版前若内容够得上
+    minor/major 再手工把 dev 版本提上去。
+    """
+    x, y, z = release_version.split(".")
+    return f"{x}.{y}.{int(z) + 1}-SNAPSHOT"
 
 
 CHANGELOG_HEADER = (
