@@ -15,7 +15,8 @@
 ### 这个技能可以做什么
 
 Audit and upgrade AI/developer CLIs (codex, claude, Antigravity/agy,
-Gemini's supported non-consumer lanes, kimi, qwen, opencode, cursor, etc.)
+Gemini's supported non-consumer lanes, kimi, qwen, opencode, cursor,
+deepcode, pi, etc.)
 with dry-run reports and logs.
 
 进阶维护工具：面向已装多套 AI CLI 的用户，与本仓其他面向小白的单工具安装技能定位不同。
