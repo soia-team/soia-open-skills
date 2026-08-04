@@ -43,6 +43,8 @@ def write_skill(
     omit: frozenset[str] = frozenset(),
     created_at: str = "2026-07-22 12:00:00",
     updated_at: str = "2026-07-22 12:00:00",
+    created_by: str = "test-model",
+    updated_by: str = "test-model",
     include_private_section: bool = True,
 ) -> Path:
     values = {
@@ -51,8 +53,8 @@ def write_skill(
         "version": "1.0.0",
         "created_at": created_at,
         "updated_at": updated_at,
-        "created_by": "test-model",
-        "updated_by": "test-model",
+        "created_by": created_by,
+        "updated_by": updated_by,
     }
     frontmatter = "\n".join(f"{key}: {value}" for key, value in values.items() if key not in omit)
     body = CUSTOMER_BODY
@@ -126,6 +128,60 @@ class FrontmatterDatetimeTests(unittest.TestCase):
             hit = next(f for f in findings if "grandfathered frontmatter created_at" in f.message)
             self.assertEqual(hit.severity, "WARN")
             self.assertFalse(hit.strict_blocking)
+
+
+class FrontmatterAuthenticityTests(unittest.TestCase):
+    """2026-08-03 metadata gate: no fabricated timestamps or placeholder creators."""
+
+    def test_midnight_placeholder_time_is_warn(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            name = "soia-dev-test-midnight"
+            write_skill(root, name, created_at="2026-07-22 00:00:00")
+            findings = findings_for(root, name)
+            self.assertTrue(
+                any(
+                    f.severity == "WARN" and "00:00:00" in f.message
+                    for f in findings
+                )
+            )
+
+    def test_future_timestamp_is_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            name = "soia-dev-test-future"
+            write_skill(root, name, updated_at="2099-01-01 12:00:00")
+            findings = findings_for(root, name)
+            self.assertTrue(
+                any(
+                    f.severity == "ERROR" and "in the future" in f.message
+                    for f in findings
+                )
+            )
+
+    def test_template_placeholder_creator_is_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            name = "soia-dev-test-placeholder"
+            write_skill(root, name, created_by="<model-name>", updated_by="<model-name>")
+            findings = findings_for(root, name)
+            hits = [f for f in findings if "must name a concrete model" in f.message]
+            self.assertEqual(len(hits), 2)
+            self.assertTrue(all(f.severity == "ERROR" for f in hits))
+
+    def test_concrete_creator_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            name = "soia-dev-test-concrete"
+            write_skill(
+                root,
+                name,
+                created_by="deepseek/deepseek-v4-flash",
+                updated_by="deepseek/deepseek-v4-flash",
+            )
+            findings = findings_for(root, name)
+            self.assertFalse(any("must name a concrete model" in f.message for f in findings))
+            self.assertFalse(any("in the future" in f.message for f in findings))
 
 
 class DescriptionLengthTests(unittest.TestCase):

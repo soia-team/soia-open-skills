@@ -64,6 +64,19 @@ npx skills add soia-team/soia-open-skills -g --all
   pin 刷新。
 - `dev` 上 plugin.json 版本带 `-SNAPSHOT` 声明下个目标，feature PR 不改版本号。
 
+## 正式发版需用户逐次授权（硬门禁）
+
+**正式发版是对外动作，必须用户当次点头才能执行，不得顺手做、不得推断授权。**
+
+- 需授权：`formal_release.py`（或等效的手工步骤）、`gh release create`、打 tag、
+  发版 PR（dev→main）合并、市场 pin 刷新——这些都会改变外部用户收到的内容。
+- 不需授权：feature/fix PR 进 `dev`、本地验证、`--dry-run` 预演、体检脚本。
+- 「用户让我修某个 bug」**不等于**「用户让我发版」。改动合进 `dev` 即算交付完成；
+  要不要发、什么时候发、发什么版本号，由用户决定。做完改动后报告「已进 dev，
+  待你决定是否发版」，然后停下。
+- 多 AI 并行时尤其重要：另一个 agent 可能正在改同一批仓，未经协调的发版会把
+  它未完成的工作一起送出去。2026-08-03 实际发生过一次未授权发版。
+
 ## Open Items (current state)
 
 - **Formal release plan P3/P4** (see the 2026-08-01 release plan, owned at the v7 workspace level): SkillHub onboarding (env / media-content / pkm-vault first), WorkBuddy sharecode trial, Red Skill uploads, first Xiaohongshu notes — blocked on the user's market report; decisions D5-D8 still open.

@@ -46,6 +46,11 @@
    `created_at`、`updated_at`、`created_by`、`updated_by`，并遵循
    [SKILL_SPEC.md](./SKILL_SPEC.md) 的字段规范；`created_by` / `updated_by`
    填写具体模型名。
+   **metadata 必须如实**：`created_by`/`updated_by` 写实际创建/修改本文件的
+   AI 的 `<provider>/<model-id>`（如 `deepseek/deepseek-v4-flash`），
+   `created_at`/`updated_at` 写真实时间——禁止从模板或其他技能复制、编造
+   模型名或把时间写成占位值（如 `00:00:00`）。audit 对占位时间告警、
+   对未来时间与占位模型名报错。
    不要新增 `metadata.json`；公开仓使用 `SKILL.md` + 可选 `agents/openai.yaml`。
 
 5. **路径参数化**：
@@ -156,6 +161,19 @@ the actual target is an explicitly confirmed SOIA product workspace.
 - `agents/openai.yaml` is a platform-facing contract and must retain its required
   YAML shape. It is not a general-purpose skill configuration file.
 
+## 正式发版需用户逐次授权（硬门禁）
+
+**正式发版是对外动作，必须由用户在当次对话中明确同意才能执行。**
+
+| 动作 | 是否需要授权 |
+|---|---|
+| feature/fix PR 进 `dev`、本地验证、`--dry-run`、体检脚本 | 否 |
+| `formal_release.py`、打 tag、`gh release create`、发版 PR 合并、市场 pin 刷新 | **是，逐次** |
+
+「用户让我修某个 bug」**不等于**「用户让我发版」。改动合进 `dev` 即算交付完成；
+何时发、发什么版本号由用户决定。做完改动后报告「已进 dev，待你决定是否发版」
+并停下。多 AI 并行时尤其重要——未经协调的发版会把别人未完成的工作一并送出。
+
 ## Git Workflow
 
 - Use short-lived branches with `feat/`, `fix/`, or `chore/` prefixes. In
@@ -170,6 +188,17 @@ the actual target is an explicitly confirmed SOIA product workspace.
   individual dev states are identified by commit SHA, not version bumps.
   `-SNAPSHOT` never reaches the marketplace: the pin generator refuses to pin a
   commit whose plugin manifest carries the suffix.
+- **Release PRs (`dev` → `main`) must be merged with a merge commit, never
+  squashed.** A squash creates a commit with no ancestry link to `dev`, freezing
+  the merge base; both branches then evolve the same files independently and the
+  next release PR is guaranteed to conflict, recoverable only by a manual
+  main→dev sync. Feature PRs into `dev` stay squash-merged as usual.
+- Two invariants decay silently and only surface at the next release. Verify
+  them — do not just read version numbers — with
+  `python3 scripts/check_version_trains.py --repos-root <parent-of-repos>`:
+  (a) `dev` carries `-SNAPSHOT` and `main` does not; (b) `dev` → `main` still
+  merges cleanly. Both were breached on 2026-08-03 across two repos before any
+  check existed.
 - This portal repository also uses `dev`, but **its default branch stays
   `main`** — unlike domain repos. Reason: the portal is both the marketplace and
   a plugin (`soia-meta`, whose marketplace `source` is `"./"` with no sha pin),
