@@ -140,6 +140,24 @@ def wait_checks(repo: str, pr_number: str, timeout_s: int = 900) -> None:
     raise ReleaseError(f"PR #{pr_number} checks timed out after {timeout_s}s")
 
 
+def wait_commit_audit(repo: str, sha: str, timeout_s: int = 900) -> None:
+    """等某个提交上的 audit 出结论；未注册（none）按进行中处理，继续等。"""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        conclusion = subprocess.run(
+            ["gh", "api", f"repos/{repo}/commits/{sha}/check-runs",
+             "--jq", '[.check_runs[] | select(.name=="audit") | .conclusion] | first // "none"'],
+            capture_output=True, text=True).stdout.strip().strip('"')
+        if conclusion == "success":
+            return
+        if conclusion not in ("none", "", "null"):
+            raise ReleaseError(
+                f"提交 {sha[:7]} 的 audit 结论是 {conclusion}，不是 success；"
+                f"快进发布要求该提交本身已通过检查。")
+        time.sleep(15)
+    raise ReleaseError(f"等待提交 {sha[:7]} 的 audit 超时（{timeout_s}s）")
+
+
 def pr_flow(
     repo: str,
     repo_dir: pathlib.Path,
@@ -253,15 +271,9 @@ def main(argv: list[str] | None = None) -> int:
         run(["git", "fetch", "origin",
              "+refs/heads/dev:refs/remotes/origin/dev"], cwd=repo_dir)
         dev_sha = run(["git", "rev-parse", "origin/dev"], cwd=repo_dir)
-        conclusion = run(
-            ["gh", "api",
-             f"repos/{args.repo}/commits/{dev_sha}/check-runs",
-             "--jq", '[.check_runs[] | select(.name=="audit") | .conclusion] | first // "none"'])
-        if conclusion.strip().strip('"') != "success":
-            raise ReleaseError(
-                f"dev HEAD ({dev_sha[:7]}) 的 audit 结论是 {conclusion.strip()}，"
-                f"不是 success；快进发布要求该提交本身已通过检查。"
-            )
+        # 定稿 PR 刚合并时，dev HEAD 的 audit 往往尚未注册（conclusion=none）——
+        # 必须轮询等待，只查一次会把「还没开始」误判成「没通过」。2026-08-04 实测踩到。
+        wait_commit_audit(args.repo, dev_sha)
         run(["git", "push", "origin", f"{dev_sha}:refs/heads/main"], cwd=repo_dir)
 
         # 3+4. tag + Release（打在同一提交上）
