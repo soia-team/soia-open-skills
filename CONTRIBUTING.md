@@ -161,6 +161,19 @@ the actual target is an explicitly confirmed SOIA product workspace.
 - `agents/openai.yaml` is a platform-facing contract and must retain its required
   YAML shape. It is not a general-purpose skill configuration file.
 
+## 正式发版需用户逐次授权（硬门禁）
+
+**正式发版是对外动作，必须由用户在当次对话中明确同意才能执行。**
+
+| 动作 | 是否需要授权 |
+|---|---|
+| feature/fix PR 进 `dev`、本地验证、`--dry-run`、体检脚本 | 否 |
+| `formal_release.py`、打 tag、`gh release create`、发版 PR 合并、市场 pin 刷新 | **是，逐次** |
+
+「用户让我修某个 bug」**不等于**「用户让我发版」。改动合进 `dev` 即算交付完成；
+何时发、发什么版本号由用户决定。做完改动后报告「已进 dev，待你决定是否发版」
+并停下。多 AI 并行时尤其重要——未经协调的发版会把别人未完成的工作一并送出。
+
 ## Git Workflow
 
 - Use short-lived branches with `feat/`, `fix/`, or `chore/` prefixes. In

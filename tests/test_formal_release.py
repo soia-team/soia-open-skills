@@ -195,5 +195,32 @@ class MergeConflictDetectionTests(unittest.TestCase):
         self.assertEqual(self.mod.conflicted_paths(result.stdout), [])
 
 
+class SkillVersionGuardTests(unittest.TestCase):
+    """生成物落在技能目录里，刷新它不该被当成技能改动。
+
+    回归 2026-08-03：路由索引 skill-directory.json 位于 soia-meta-find-skill/
+    references/ 下，重生成后守卫误报「技能内容变了但版本没 bump」，CI 直接挂。
+    """
+
+    def setUp(self) -> None:
+        self.mod = load_script("check_skill_versions")
+
+    def test_generated_index_is_not_a_skill_change(self) -> None:
+        self.assertIn(
+            "skills/soia-meta-find-skill/references/skill-directory.json",
+            self.mod.GENERATED_PATHS)
+
+    def test_changed_skills_skips_generated_paths(self) -> None:
+        from unittest.mock import patch
+
+        listing = (
+            "skills/soia-meta-find-skill/references/skill-directory.json\n"
+            "skills/soia-meta-skill-release/SKILL.md\n"
+        )
+        with patch.object(self.mod, "git", return_value=(0, listing)):
+            changed = self.mod.changed_skills(Path("."), "origin/dev")
+        self.assertEqual(changed, ["soia-meta-skill-release"])
+
+
 if __name__ == "__main__":
     unittest.main()
