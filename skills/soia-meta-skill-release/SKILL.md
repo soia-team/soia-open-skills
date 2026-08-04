@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」
-version: 4.3.0
+version: 5.0.0
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-08-04 13:30:00
+updated_at: 2026-08-04 15:00:00
 created_by: gpt-5.6-terra
 updated_by: claude fable 5
 dependencies:
@@ -126,9 +126,9 @@ python3 skills/soia-meta-skill-release/scripts/formal_release.py \
 1. 定稿 PR → dev：各 manifest（claude/codex/codebuddy 独立轨道）摘掉 `-SNAPSHOT`，
    并把 Release Notes **前插 `CHANGELOG.md`**——发版即更新、与 GitHub Release 同源，
    CHANGELOG 跟着插件缓存走，装了插件的用户离线可读
-2. 发版 PR dev → main：正文为同一份 Release Notes 草稿（`generate_release_notes.py`
-   按 conventional 前缀归类上个 tag 以来的提交）
-3. `v<X.Y.Z>` tag 打在 main HEAD 并推送
+2. **快进推送 dev → main**：`git push origin <dev-sha>:refs/heads/main`，
+   main 与 dev 指向同一提交
+3. `v<X.Y.Z>` tag 打在该提交并推送
 4. `gh release create`（标题 `<插件名> v<X.Y.Z>`）
 5. 重开列车 PR → dev：各 manifest **+patch** 进入 `-SNAPSHOT`
 
@@ -151,9 +151,16 @@ CI 的 `check_skill_versions.py` 会拦（2026-08-03 漏过一次：改了 skill
 
 ### 三条不可回退的发版约束（都由事故推导，勿改）
 
-1. **发版 PR（dev→main）必须 merge commit，不能 squash**。squash 造出与 dev 无
-   祖先关系的新提交，merge base 停在旧点，两边对同一批文件各自演进，下次发版 PR
-   必然 CONFLICTING，只能靠人工 sync PR 补救。
+1. **dev→main 用快进推送，不走 PR 合并**。PR 的三种合并方式都会在 main 上造出
+   dev 没有的提交——squash 连祖先关系都断（下次发版必冲突，2026-08-03 pkm/media
+   实际发生）、merge 留个 merge 提交、rebase 重写 SHA。只有快进能让 **main 与 dev
+   指向同一提交**，分叉在结构上不可能发生。
+   - 前提一：`main` 必须是 `dev` 的祖先。脚本发版前校验，不满足即中止并要求先
+     sync main→dev（有人绕过流程直接改 main、或历史上走过 merge/squash 时会不满足）。
+   - 前提二：dev HEAD 的 `audit` 结论必须是 success。脚本显式查 check-runs——
+     **快进不是跳过检查**，推上去的就是那个已通过检查的提交。
+   - 仓库设置：`main` 的 `enforce_admins` 需关闭，否则受保护分支拒绝直接推送。
+     其余保护（PR 要求、`audit` 必过）对普通改动照常生效。
 2. **定稿与重开列车之间是不变量破窗期**：第 1 步摘掉 dev 的 `-SNAPSHOT` 后，直到
    第 5 步重开前，dev 都处于违规状态。中断在此区间会静默留下「dev 停在正式版本
    号」。脚本收尾有断言兜底，但**人工介入或中断后必须自查**。

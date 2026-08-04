@@ -193,23 +193,26 @@ def main(argv: list[str] | None = None) -> int:
         dev_versions = read_manifest_versions(repo_dir, "origin/dev")
         release_version = strip_snapshot(dev_versions[".claude-plugin/plugin.json"])
 
-        # 前置校验：发版 PR 必须能用 merge commit（见下方约束 1）。仓库若关掉了
-        # merge commit，走到第 2 步才会以 GraphQL 报错中断，此时 dev 已被定稿 PR
-        # 摘掉 -SNAPSHOT，正好落进不变量破窗期。2026-08-03 元仓实测踩到。
-        allows_merge = run(
-            ["gh", "api", f"repos/{args.repo}", "--jq", ".allow_merge_commit"])
-        if allows_merge.strip() != "true":
+        # 前置校验：main 必须是 dev 的祖先，否则快进推送不成立。
+        # main 若有 dev 缺的提交，说明有人绕过流程直接改了 main，或上次发版走了
+        # merge/squash——先 sync main→dev 恢复不变量再发。
+        ff_ok = subprocess.run(
+            ["git", "-C", str(repo_dir), "merge-base", "--is-ancestor",
+             "origin/main", "origin/dev"], capture_output=True)
+        if ff_ok.returncode != 0:
+            behind = run(["git", "rev-list", "--count", "origin/dev..origin/main"],
+                         cwd=repo_dir)
             raise ReleaseError(
-                f"{args.repo} 未开启 merge commit，发版 PR 无法按规定合并。"
-                f"先执行：gh api -X PATCH repos/{args.repo} -f allow_merge_commit=true"
+                f"main 有 {behind} 个 dev 缺的提交，无法快进发布。"
+                f"先提 sync PR 把 main 合回 dev，再重新发版。"
             )
 
         plan = [
             f"1. 定稿 PR → dev：各 manifest 摘掉 -SNAPSHOT（发布版 {release_version}）",
-            "2. 发版 PR：dev → main（正文 = Release Notes 草稿）",
-            f"3. tag v{release_version} 于 main HEAD 并推送",
+            "2. 快进推送 dev → main（main 与 dev 同一提交，结构上不可能分叉）",
+            f"3. tag v{release_version} 于该提交并推送",
             f"4. gh release create v{release_version}",
-            "5. 重开列车 PR → dev：各 manifest 进入 next-minor -SNAPSHOT",
+            "5. 重开列车 PR → dev：各 manifest +patch 进入 -SNAPSHOT",
             "6. 提醒：元仓刷 pin（发布门禁会验证 main 无 -SNAPSHOT）",
         ]
         print(f"== {args.repo} 正式发版 v{release_version} ==")
@@ -239,25 +242,34 @@ def main(argv: list[str] | None = None) -> int:
             edit=finalize_edit,
         )
 
-        # 2. 发版 PR dev → main
+        # 2. 快进推送 dev → main。
+        #
+        # 不走 PR 合并：PR 的三种合并方式都会在 main 上造出 dev 没有的提交——
+        # squash 连祖先关系都断（下次发版必冲突）、merge 留个 merge 提交、rebase
+        # 重写 SHA。只有快进能让 main 与 dev 指向同一提交，分叉在结构上不可能发生。
+        #
+        # 这不是跳过检查：推上去的就是 dev 的 HEAD，audit 已在该提交上跑过（dev
+        # 同样要求 audit 必过）。下面显式确认这一点后再推。
         run(["git", "fetch", "origin",
              "+refs/heads/dev:refs/remotes/origin/dev"], cwd=repo_dir)
-        pr_url = run(
-            ["gh", "pr", "create", "--repo", args.repo, "--base", "main",
-             "--head", "dev", "--title", f"release: {plugin_name} v{release_version}",
-             "--body", notes]
-        )
-        pr_number = pr_url.rstrip("/").rsplit("/", 1)[-1]
-        wait_checks(args.repo, pr_number)
-        # 发版 PR 必须用 merge commit，不能 squash：squash 会造出与 dev 无祖先关系的
-        # 新提交，merge base 就此停在旧点，dev 与 main 对同一批文件各自演进 → 下次
-        # 发版 PR 必然 CONFLICTING，只能靠人工 sync PR 补救（2026-08-03 pkm/media
-        # 两个仓实际发生）。merge commit 让 dev 的提交成为 main 的祖先，分叉不再累积。
-        run(["gh", "pr", "merge", pr_number, "--repo", args.repo, "--merge"])
+        dev_sha = run(["git", "rev-parse", "origin/dev"], cwd=repo_dir)
+        conclusion = run(
+            ["gh", "api",
+             f"repos/{args.repo}/commits/{dev_sha}/check-runs",
+             "--jq", '[.check_runs[] | select(.name=="audit") | .conclusion] | first // "none"'])
+        if conclusion.strip().strip('"') != "success":
+            raise ReleaseError(
+                f"dev HEAD ({dev_sha[:7]}) 的 audit 结论是 {conclusion.strip()}，"
+                f"不是 success；快进发布要求该提交本身已通过检查。"
+            )
+        run(["git", "push", "origin", f"{dev_sha}:refs/heads/main"], cwd=repo_dir)
 
-        # 3+4. tag + Release
+        # 3+4. tag + Release（打在同一提交上）
         run(["git", "fetch", "origin", "main"], cwd=repo_dir)
         main_sha = run(["git", "rev-parse", "origin/main"], cwd=repo_dir)
+        if main_sha != dev_sha:
+            raise ReleaseError(
+                f"快进后 main({main_sha[:7]}) 与 dev({dev_sha[:7]}) 不一致，中止")
         run(["git", "tag", f"v{release_version}", main_sha], cwd=repo_dir)
         run(["git", "push", "origin", f"v{release_version}"], cwd=repo_dir)
         notes_file = repo_dir / ".git" / f"release-notes-v{release_version}.md"
