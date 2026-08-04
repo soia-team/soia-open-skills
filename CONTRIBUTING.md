@@ -176,13 +176,17 @@ the actual target is an explicitly confirmed SOIA product workspace.
 
 ## Git Workflow
 
-- Use short-lived branches with `feat/`, `fix/`, or `chore/` prefixes. In
-  domain repositories the integration branch is `dev` (the default branch):
-  open PRs against `dev`, require the `audit` check to pass, then merge.
-  `main` always equals the latest formal release and only accepts release PRs
-  from `dev` (dropping the `-SNAPSHOT` version suffix), driven by
-  `soia-meta-skill-release`. Do not create long-lived feature branches or push
-  directly to `main` or `dev`.
+- **Branch off `main`, merge into `dev`.** Create short-lived branches with
+  `feat/`, `fix/`, or `chore/` prefixes from `origin/main` — the latest formal
+  release — then open the PR against `dev`, require the `audit` check to pass,
+  and merge. Starting from the released state keeps work off unreleased,
+  possibly-unstable changes; `main` is always an ancestor of `dev`, so such a
+  branch always merges into `dev` cleanly. If your change genuinely builds on
+  unreleased work already in `dev`, branch off `dev` instead and say so in the
+  PR body.
+- `main` never receives PRs. It moves only by fast-forward from `dev` during a
+  formal release (see `soia-meta-skill-release`). Do not create long-lived
+  feature branches, and never push directly to `main` or `dev`.
 - On `dev` the plugin version carries a `-SNAPSHOT` suffix naming the next
   release target (e.g. `1.9.0-SNAPSHOT`); it stays unchanged between releases —
   individual dev states are identified by commit SHA, not version bumps.
