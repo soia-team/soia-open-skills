@@ -24,6 +24,12 @@ import sys
 
 VERSION_RE = re.compile(r"^version:\s*(.+?)\s*$", re.MULTILINE)
 
+# 落在技能目录内、但由生成器产出的文件：刷新它们不代表技能本身变了，
+# 不该要求 bump 技能版本（否则每次重生成路由索引都被误拦）。
+GENERATED_PATHS = {
+    "skills/soia-meta-find-skill/references/skill-directory.json",
+}
+
 
 def git(repo_dir: pathlib.Path, *args: str) -> tuple[int, str]:
     result = subprocess.run(["git", "-C", str(repo_dir), *args],
@@ -42,6 +48,8 @@ def changed_skills(repo_dir: pathlib.Path, base: str) -> list[str]:
         return []
     names = []
     for line in out.splitlines():
+        if line in GENERATED_PATHS:
+            continue
         parts = line.split("/")
         if len(parts) >= 2 and parts[0] == "skills" and parts[1] not in names:
             names.append(parts[1])
