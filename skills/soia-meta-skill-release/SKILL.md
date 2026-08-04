@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」
-version: 4.2.2
+version: 4.3.0
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-08-03 18:15:44
+updated_at: 2026-08-04 13:30:00
 created_by: gpt-5.6-terra
 updated_by: claude fable 5
 dependencies:
@@ -106,6 +106,12 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 
 
 ## 正式发版（dev 分支制）
+
+> **执行前置：必须有客户当次的明确授权。** 正式发版是对外动作——tag、Release、
+> 发版 PR、市场 pin 刷新都会改变外部用户收到的内容。客户要求修 bug 或加功能
+> **不等于**要求发版：改动合进 `dev` 即算交付完成，报告「已进 dev，待你决定
+> 是否发版」并停下。多 AI 并行时未经协调的发版会把他人未完成的工作一并送出
+> （2026-08-03 实际发生过）。仅 `--dry-run` 预演无需授权。
 
 域仓采用双通道：`dev` 承接日常合并（版本带 `-SNAPSHOT` 声明下个目标，期间不变，
 状态身份用 commit SHA）；`main` 永远等于最新正式版。客户说**「正式发版 X」**时执行：

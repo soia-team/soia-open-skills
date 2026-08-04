@@ -210,6 +210,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-env-pi-cli-install",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-pi-cli-install",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-env-python-install",
     "repo": "soia-open-env-skills",
     "skillPath": "skills/soia-env-python-install",
