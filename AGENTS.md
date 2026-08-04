@@ -59,9 +59,11 @@ npx skills add soia-team/soia-open-skills -g --all
   又是插件（`soia-meta` 的 marketplace `source` 为 `"./"`，无 sha pin），
   客户端克隆市场时取的是**默认分支**。把默认分支指向 `dev` 会让 `-SNAPSHOT`
   直达所有客户端，且发布门禁拦不住（没有 pin 提交可检查）。
-- 因此：提 PR 必须**显式 `--base dev`**，不要依赖默认分支；`main` 只接收
-  由 `soia-meta-skill-release` 驱动的发版 PR，以及作为发布动作一部分的市场
-  pin 刷新。
+- 因此：提 PR 必须**显式 `--base dev`**，不要依赖默认分支。
+- **新分支从 `main` 开**（最新正式版），PR 目标仍是 `dev`：`main` 始终是
+  `dev` 的祖先，这样开出来的分支必定能干净并入。确实要基于 dev 上尚未发布的
+  工作时才从 `dev` 开，并在 PR 正文说明。
+- `main` 不接收任何 PR：它只在正式发版时由 `dev` 快进推进。
 - `dev` 上 plugin.json 版本带 `-SNAPSHOT` 声明下个目标，feature PR 不改版本号。
 
 ## 正式发版需用户逐次授权（硬门禁）
