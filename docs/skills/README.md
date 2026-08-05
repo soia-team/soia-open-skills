@@ -68,7 +68,7 @@
 
 | 技能 | 一句话职责 |
 |---|---|
-| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据 |
+| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 外部 AI CLI 调度与模型路由，支持受控派活与用量回执 |
 | [`soia-dev-agent-md-advisor`](soia-dev-agent-md-advisor.md) | AI 项目指令与配置设计顾问，提供诊断、起草和改写建议 |
 | [`soia-dev-coding-protocol`](soia-dev-coding-protocol.md) | 为普通工程代码改动建立最小范围、验证前置、anti-fake-fix 与写后复核契约；适用于修复、重构、实现和评审 |
 | [`soia-dev-doc-sync`](soia-dev-doc-sync.md) | 审计并修复任意代码仓的 docs、README、CHANGELOG、VERSION 与明确真源之间的事实漂移；先建立真源优先级与证据，再按依赖顺序同步派生文档 |
@@ -78,7 +78,7 @@
 | [`soia-dev-release-plan-checklist`](soia-dev-release-plan-checklist.md) | 为互联网软件发版生成发布清单、预检门、灰度验证与发布后核对；适用于上线、部署、回滚规划 |
 | [`soia-dev-review-panel`](soia-dev-review-panel.md) | 从多视角对代码 diff 或技能包进行对抗式复核，只读且不编辑、合并或发布 |
 | [`soia-dev-task-execute`](soia-dev-task-execute.md) | 执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务 |
-| [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；杀进程前用日志、CPU、网络多信号交叉判断，并走 TERM→复查→KILL 门 |
+| [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；在终止进程前用日志、CPU、网络等多信号交叉判断，并执行 TERM→复查→KILL 确认门 |
 | [`soia-dev-test-draft-doc`](soia-dev-test-draft-doc.md) | 从需求、PRD 或变更说明生成测试计划、测试用例与验收对照；适用于测试设计、回归清单和质量评审 |
 
 ## `soia-dev-design`　6 个技能

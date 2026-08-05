@@ -1,14 +1,8 @@
 # soia-dev-terminal-ops
 
-> 管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；杀进程前用日志、CPU、网络多信号交叉判断，并走 TERM→复查→KILL 门
+> 管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；在终止进程前用日志、CPU、网络等多信号交叉判断，并执行 TERM→复查→KILL 确认门
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-terminal-ops) · [← 全部技能](README.md)
-
-## 怎么触发
-
-装好后用自然语言说话即可，Agent 按下列意图命中本技能：
-
-「进程卡住了」「后台跑这个」「安全杀进程」
 
 ## 能力与用法
 
