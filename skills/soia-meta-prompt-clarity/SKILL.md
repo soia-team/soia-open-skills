@@ -1,11 +1,11 @@
 ---
 name: soia-meta-prompt-clarity
 description: 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界。触发：「写提示词 / write a prompt」「优化 prompt / improve this prompt」「扩展成可验证规格」
-version: 2.0.1
+version: 2.0.2
 created_at: 2026-07-09 19:52:22
-updated_at: 2026-07-23 07:19:34
+updated_at: 2026-08-05 13:00:00
 created_by: claude opus 4.6
-updated_by: gpt-5.6-luna
+updated_by: claude-opus-5
 ---
 
 # soia-meta-prompt-clarity
