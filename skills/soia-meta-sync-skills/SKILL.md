@@ -1,9 +1,9 @@
 ---
 name: soia-meta-sync-skills
 description: 将一个共享技能源以软链接同步到用户明确选择的 AI 工具目录；支持预览、单项同步、硬依赖闭包和受限清理。
-version: 2.2.2
+version: 2.2.3
 created_at: 2026-07-07 14:44:10
-updated_at: 2026-08-05 13:00:00
+updated_at: 2026-08-05 15:00:00
 created_by: claude opus 4.6
 updated_by: claude-opus-5
 ---
