@@ -4,6 +4,12 @@
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-project-scaffold) · [← 全部技能](README.md)
 
+## 怎么触发
+
+装好后用自然语言说话即可，Agent 按下列意图命中本技能：
+
+「新项目初始化」「搭 AI 协作基线」「生成文档骨架」
+
 ## 能力与用法
 
 ### 这个技能可以做什么

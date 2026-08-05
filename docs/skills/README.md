@@ -1,6 +1,6 @@
 # 技能详情页
 
-全生态 81 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 82 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
@@ -68,7 +68,7 @@
 
 | 技能 | 一句话职责 |
 |---|---|
-| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 外部 AI CLI 调度与模型路由，支持受控派活与用量回执 |
+| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据 |
 | [`soia-dev-agent-md-advisor`](soia-dev-agent-md-advisor.md) | AI 项目指令与配置设计顾问，提供诊断、起草和改写建议 |
 | [`soia-dev-coding-protocol`](soia-dev-coding-protocol.md) | 为普通工程代码改动建立最小范围、验证前置、anti-fake-fix 与写后复核契约；适用于修复、重构、实现和评审 |
 | [`soia-dev-doc-sync`](soia-dev-doc-sync.md) | 审计并修复任意代码仓的 docs、README、CHANGELOG、VERSION 与明确真源之间的事实漂移；先建立真源优先级与证据，再按依赖顺序同步派生文档 |
@@ -78,7 +78,7 @@
 | [`soia-dev-release-plan-checklist`](soia-dev-release-plan-checklist.md) | 为互联网软件发版生成发布清单、预检门、灰度验证与发布后核对；适用于上线、部署、回滚规划 |
 | [`soia-dev-review-panel`](soia-dev-review-panel.md) | 从多视角对代码 diff 或技能包进行对抗式复核，只读且不编辑、合并或发布 |
 | [`soia-dev-task-execute`](soia-dev-task-execute.md) | 执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务 |
-| [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；在终止进程前用日志、CPU、网络等多信号交叉判断，并执行 TERM→复查→KILL 确认门 |
+| [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；杀进程前用日志、CPU、网络多信号交叉判断，并走 TERM→复查→KILL 门 |
 | [`soia-dev-test-draft-doc`](soia-dev-test-draft-doc.md) | 从需求、PRD 或变更说明生成测试计划、测试用例与验收对照；适用于测试设计、回归清单和质量评审 |
 
 ## `soia-dev-design`　6 个技能
@@ -103,12 +103,13 @@
 | [`soia-media-publish-x-article`](soia-media-publish-x-article.md) | 将 Markdown 成文上传到 X Articles 草稿箱并校验格式，只保存草稿 |
 | [`soia-media-publish-x-thread`](soia-media-publish-x-thread.md) | 将成文草稿改写为带编号、符合字数限制的 X thread，并可按授权存草稿 |
 
-## `soia-meta`　4 个技能
+## `soia-meta`　5 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
 | [`soia-meta-find-skill`](soia-meta-find-skill.md) | 按需检索 SOIA 全生态技能并加载——剪藏网盘/知识提炼/新媒发布/编码审查与终端操作/设计图表/产品PRD/软件测试/软件发版/办公协作/教育课程/环境安装/生态管理。说出需求即可检索、定位并按需读入对应技能 |
 | [`soia-meta-prompt-clarity`](soia-meta-prompt-clarity.md) | 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界 |
+| [`soia-meta-publish-market`](soia-meta-publish-market.md) | 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交 |
 | [`soia-meta-skill-release`](soia-meta-skill-release.md) | 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装 |
 | [`soia-meta-sync-skills`](soia-meta-sync-skills.md) | 将一个共享技能源以软链接同步到用户明确选择的 AI 工具目录；支持预览、单项同步、硬依赖闭包和受限清理 |
 
