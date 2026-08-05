@@ -62,34 +62,58 @@ def install_section(text: str) -> str | None:
     return match.group(0) if match else None
 
 
-def audit_skill(path: pathlib.Path) -> dict[str, object]:
+def audit_skill(path: pathlib.Path, repo_dir: pathlib.Path) -> dict[str, object]:
     text = path.read_text(encoding="utf-8", errors="replace")
+    # 子仓目录（workspace/skills、harness/skills）里的技能要能一眼看出位置
+    rel = path.parent.relative_to(repo_dir)
+    label = path.parent.name if rel.parts[0] == "skills" else str(rel)
     section = install_section(text)
     if section is None:
-        return {"skill": path.parent.name, "section": False, "missing": ["无安装章节"]}
-    missing = [label for label, pattern in CHECKS if not pattern.search(section)]
-    return {"skill": path.parent.name, "section": True, "missing": missing}
+        return {"skill": label, "section": False, "missing": ["无安装章节"]}
+    missing = [name for name, pattern in CHECKS if not pattern.search(section)]
+    return {"skill": label, "section": True, "missing": missing}
+
+
+def find_skills(repo_dir: pathlib.Path) -> list[pathlib.Path]:
+    """技能以 <某目录>/skills/<名>/SKILL.md 的形式存在。
+
+    private-skills 除 skills/ 外还有 workspace/skills/ 与 harness/skills/，
+    第一版只扫 skills/ 漏掉了它们。docs/skills/ 放的是派生文档（<名>.md，
+    没有 SKILL.md），glob 天然不会命中。
+    """
+    found = {p for p in repo_dir.glob("skills/*/SKILL.md")}
+    found |= {p for p in repo_dir.glob("*/skills/*/SKILL.md")}
+    return sorted(found)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="检查技能安装章节的宿主覆盖")
-    parser.add_argument("--repos-root", required=True, help="包含各域仓工作副本的目录")
+    parser.add_argument("--repos-root", help="包含各域仓工作副本的目录（跨仓模式）")
+    parser.add_argument("--self", dest="self_only", action="store_true",
+                        help="只检查当前仓，供 CI 使用（CI 环境没有其它仓的工作副本）")
     parser.add_argument("--repo", help="只查某一个仓")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
-    root = pathlib.Path(args.repos_root).expanduser().resolve()
-    targets = [args.repo] if args.repo else REPOS
+    if args.self_only:
+        # CI 里只 checkout 了自己这一个仓；跨仓全量检查放在发版前置里做
+        here = pathlib.Path(__file__).resolve().parent.parent
+        root, targets = here.parent, [here.name]
+    elif args.repos_root:
+        root = pathlib.Path(args.repos_root).expanduser().resolve()
+        targets = [args.repo] if args.repo else REPOS
+    else:
+        parser.error("需要 --repos-root（跨仓）或 --self（本仓）")
     report: dict[str, list[dict[str, object]]] = {}
     total = bad = 0
 
     for repo in targets:
-        skills_dir = root / repo / "skills"
-        if not skills_dir.is_dir():
+        repo_dir = root / repo
+        if not repo_dir.is_dir():
             continue
         rows = []
-        for skill_md in sorted(skills_dir.glob("*/SKILL.md")):
-            row = audit_skill(skill_md)
+        for skill_md in find_skills(repo_dir):
+            row = audit_skill(skill_md, repo_dir)
             total += 1
             if row["missing"]:
                 bad += 1
