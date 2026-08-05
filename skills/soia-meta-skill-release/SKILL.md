@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」
-version: 5.1.1
+version: 5.1.2
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-08-05 13:00:00
+updated_at: 2026-08-05 16:30:00
 created_by: gpt-5.6-terra
 updated_by: claude-opus-5
 dependencies:
@@ -383,3 +383,18 @@ codex plugin list
 - 只做 merge 后的本机收尾；发布前 merge 由调用方完成。
 - `--dry-run` 不执行任何命令或文件写入，只输出计划回执。
 - 前向测试应在临时 HOME 中 mock `subprocess`，覆盖命令顺序、失败即停、五处旧名清理、Codex 补链、lock 分支与 dry-run。
+
+### 发版前置：跨仓安装章节体检
+
+各域仓的 `audit_skills.py` 互不相同，`private-skills` 甚至没有该脚本，因此
+「安装章节覆盖三个一等宿主」这条**无法在各仓 CI 内统一校验**。门户仓 CI 只用
+`--self` 检查自己那几个技能。
+
+发版前在本机跑一次全量（需要各域仓的工作副本在同一父目录下）：
+
+```bash
+python3 <soia-open-skills>/scripts/check_install_sections.py --repos-root <各仓的父目录>
+```
+
+它扫 `<repo>/skills/*` 与 `<repo>/*/skills/*`（覆盖 private-skills 的
+`workspace/` 与 `harness/` 子仓目录），非零退出即有技能缺一等宿主。
