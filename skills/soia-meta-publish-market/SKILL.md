@@ -1,9 +1,9 @@
 ---
 name: soia-meta-publish-market
 description: 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交。触发：「上架 SkillHub」「发到 Red Skill」「上架技能市场」
-version: 1.1.0
+version: 1.2.0
 created_at: 2026-08-04 20:00:00
-updated_at: 2026-08-05 10:00:00
+updated_at: 2026-08-05 12:00:00
 created_by: claude fable 5
 updated_by: claude fable 5
 ---
@@ -37,10 +37,15 @@ updated_by: claude fable 5
 # 1. 看这个仓哪些技能可以上架
 python3 scripts/stage_for_market.py --repo-dir <域仓路径> --list-eligible
 
-# 2. 打包某一个（不会上传）
+# 2. 打包某一个（不会上传；按渠道过滤文件）
 python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
-  --skill <技能名> --out <暂存目录> --display-name "<中文展示名>"
+  --skill <技能名> --out <暂存目录> --channel skillhub|redskill \
+  --display-name "<中文展示名>"
 ```
+
+**打包内容直接从 `origin/main` 导出**，不读工作副本——本地检出在哪个分支都不影响
+结果，也就不会因为有人切走分支而误打包未发布内容（多 AI 共用检出时这是常态）。
+`main` 上没有该技能、或 main 版本带 `-SNAPSHOT`，一律拒绝打包。
 
 打包后由**客户本人**执行投递命令——见下方两个渠道。
 
@@ -63,7 +68,20 @@ python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
 直接拒绝打包并说明原因。`optional` 依赖不阻断，但应在简介里写一句「配合
 某某技能效果更好」。
 
-### 2. slug 用仓内技能名，展示名用中文
+### 2. 只有正式版能上市场（硬门禁）
+
+市场拿到的是最终用户直接使用的东西，必须是已发版内容。脚本**直接从
+`origin/main` 导出**，而不是校验工作副本——后者依赖检出在哪个分支，不可靠。
+
+| 情况 | 结果 |
+|---|---|
+| main 上有该技能且版本无 `-SNAPSHOT` | 导出并打包 |
+| main 上没有该技能 | 拒绝：「尚未发版，不能上架」 |
+| main 版本带 `-SNAPSHOT` | 拒绝：「不是正式版」 |
+
+`--allow-unreleased` 仅供本地演练，**不得用于真实上架**。
+
+### 3. slug 用仓内技能名，展示名用中文
 
 `slug` 必须全网唯一，我们的技能名已带 `soia-` 前缀，天然满足，且与仓内名
 一一对应、便于追溯；`displayName` 另给中文可读名，面向普通用户。
@@ -161,6 +179,25 @@ cp "$(npm root -g)/@xhs/skillhub-upload/skill/SKILL.md" \
 
 要点：**Skill ID 是平台主键、跨版本不可改名**，dry-run 阶段若提示无法自动派生，
 需慎重确认后用 `--identifier` 指定。
+
+#### 实测要点（2026-08-05 跑通全链得到）
+
+**Red Skill 有文件类型白名单，SkillHub 没有。** 同一份技能目录，SkillHub
+`--dry-run` 直接通过，Red Skill 却报
+`目录中包含不支持上传的文件：agents/openai.yaml，请移除后重试`——它只收
+`.md/.txt/.html/.css/.js/.py/.json/.xml`，我们的 `agents/openai.yaml`（Codex
+界面元数据）不在其中。因此打包必须带 `--channel redskill` 做剔除；剔除后
+dry-run 通过，payload 里 `version` 正是 main 的正式版号。
+
+**CLI 输出是 `RESULT_JSON:` 结构化行。** 实测 PATH 上的 `skillhub-upload`
+shim 在某些环境下吞掉输出（命令静默、退出码 0），直接调
+`node "$(npm root -g)/@xhs/skillhub-upload/cli/index.mjs" <子命令>` 才能看到。
+排障时先用这条确认，别把静默当成功。
+
+**`--dry-run` 不需要授权**，只有真提交才需要；所以预检可以随时跑。
+
+**标签是实时拉取的**，不要硬编码——实测当前为效率工具 / 内容创作 / 学习成长 /
+职场办公 / 编程开发 / 生活决策 / 金融理财 / 其它，但以拉到的为准。
 
 ### 路径 B：网页上传
 

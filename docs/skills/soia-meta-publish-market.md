@@ -27,10 +27,15 @@
 # 1. 看这个仓哪些技能可以上架
 python3 scripts/stage_for_market.py --repo-dir <域仓路径> --list-eligible
 
-# 2. 打包某一个（不会上传）
+# 2. 打包某一个（不会上传；按渠道过滤文件）
 python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
-  --skill <技能名> --out <暂存目录> --display-name "<中文展示名>"
+  --skill <技能名> --out <暂存目录> --channel skillhub|redskill \
+  --display-name "<中文展示名>"
 ```
+
+**打包内容直接从 `origin/main` 导出**，不读工作副本——本地检出在哪个分支都不影响
+结果，也就不会因为有人切走分支而误打包未发布内容（多 AI 共用检出时这是常态）。
+`main` 上没有该技能、或 main 版本带 `-SNAPSHOT`，一律拒绝打包。
 
 打包后由**客户本人**执行投递命令——见下方两个渠道。
 
