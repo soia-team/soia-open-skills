@@ -6,7 +6,7 @@
 
 **技能越来越多，最麻烦的不是「不会用」，而是不知道该叫谁**
 
-74 个公开技能，8 个领域，一个入口；描述目标即可，不必先背完目录
+81 个公开技能，8 个领域，一个入口；描述目标即可，不必先背完目录
 
 [English](README.en.md) · 中文
 
@@ -40,8 +40,8 @@ flowchart TB
 
 | 领域插件 | 做什么 | 技能 | 常驻 |
 |---|---|---:|---:|
-| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | 知识库：采集、整理、提炼、转换 | 26 | ~2.8k |
-| [`soia-env`](https://github.com/soia-team/soia-open-env-skills) | 环境：AI CLI 安装、网络诊断、空间治理 | 15 | ~1.5k |
+| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | 知识库：采集、整理、提炼、转换 | 31 | ~3.6k |
+| [`soia-env`](https://github.com/soia-team/soia-open-env-skills) | 环境：AI CLI 安装、网络诊断、空间治理 | 17 | ~1.9k |
 | [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | 开发：改动闭环、测试、发版、仓库运维 | 12 | ~971 |
 | [`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) | 内容：成文、配图、多平台改写 | 6 | ~728 |
 | [`soia-dev-design`](https://github.com/soia-team/soia-open-dev-design-skills) | 设计：PRD、原型、架构图、Office | 6 | ~548 |
@@ -106,7 +106,7 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
 | 文档 | 说明 |
 |---|---|
 | [docs/learning-guide.md](docs/learning-guide.md) | **先读这份**：整套生态怎么运转、为什么这么设计、常见疑问 |
-| [docs/skills/](docs/skills/README.md) | **74 个技能逐个详情页**：触发词、产物、用法示例与安装 |
+| [docs/skills/](docs/skills/README.md) | **81 个技能逐个详情页**：触发词、产物、用法示例与安装 |
 | [docs/install/](docs/install/README.md) | 60+ AI 宿主的安装指南 |
 | [docs/install-profiles.md](docs/install-profiles.md) | 按机器用途组织的安装组合 |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | 技能结构、命名、frontmatter 与验证要求 |

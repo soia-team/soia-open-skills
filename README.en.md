@@ -6,7 +6,7 @@
 
 **The hard part isn't learning a skill — it's remembering which one to call**
 
-74 public skills, 8 domains, one entry point. Describe the goal; you don't have to memorize the catalog
+81 public skills, 8 domains, one entry point. Describe the goal; you don't have to memorize the catalog
 
 [中文](README.md) · English
 
@@ -40,8 +40,8 @@ Install a domain and get every skill in it. **Always-on** is the context the ski
 
 | Domain plugin | What it does | Skills | Always-on |
 |---|---|---:|---:|
-| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Vault: capture, organize, distill, transform | 26 | ~2.8k |
-| [`soia-env`](https://github.com/soia-team/soia-open-env-skills) | Environment: AI CLI installs, network diagnosis, disk hygiene | 15 | ~1.5k |
+| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Vault: capture, organize, distill, transform | 31 | ~3.6k |
+| [`soia-env`](https://github.com/soia-team/soia-open-env-skills) | Environment: AI CLI installs, network diagnosis, disk hygiene | 17 | ~1.9k |
 | [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | Development: change loop, testing, release, repo ops | 12 | ~971 |
 | [`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) | Content: drafting, imagery, per-platform adaptation | 6 | ~728 |
 | [`soia-dev-design`](https://github.com/soia-team/soia-open-dev-design-skills) | Design: PRDs, prototypes, diagrams, Office | 6 | ~548 |
@@ -106,7 +106,7 @@ A domain repo is simultaneously a plugin for all three — skills are never copi
 | Document | Covers |
 |---|---|
 | [docs/learning-guide.en.md](docs/learning-guide.en.md) | **Start here**: how the ecosystem works, why it is designed this way, FAQs |
-| [docs/skills/](docs/skills/README.md) | **Per-skill pages for all 74 skills**: triggers, outputs, usage examples, install |
+| [docs/skills/](docs/skills/README.md) | **Per-skill pages for all 81 skills**: triggers, outputs, usage examples, install |
 | [docs/install/](docs/install/README.en.md) | Install guides for 60+ AI hosts |
 | [docs/install-profiles.md](docs/install-profiles.md) | Setups organized by machine purpose |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | Skill structure, naming, frontmatter, validation |
