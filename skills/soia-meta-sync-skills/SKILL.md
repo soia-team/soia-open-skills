@@ -52,6 +52,8 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-sync-skills -y
 SOIA_META_SYNC_SKILLS_CONFIG_FILE=<custom-config-path>
 ```
 
+**WorkBuddy** 的装载单位是角色化专家而不是插件，`npx skills add -a '*'` 覆盖不到它，需要单独安装，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
+
 ### 私密信息与中间数据
 
 - 配置只保存客户选择的 source/targets 和 per-target excludes，不保存 API key、cookie、session 或其他凭据。

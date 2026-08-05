@@ -151,6 +151,8 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-prompt-clarity 
 - 模式 C：[references/mode-c-disambiguation.md](references/mode-c-disambiguation.md)
 - 模式 D：[references/mode-d-specification.md](references/mode-d-specification.md) 与 [references/mode-d-quality-gate.md](references/mode-d-quality-gate.md)
 
+**WorkBuddy** 的装载单位是角色化专家而不是插件，`npx skills add -a '*'` 覆盖不到它，需要单独安装，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
+
 ### 私密信息与中间数据
 
 - 默认仅处理客户在对话中提供的文本，不读取账号、vault 或本机文件，也不创建配置、缓存或日志文件。

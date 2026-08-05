@@ -54,6 +54,8 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-find-skill -y
 
 目录中未安装的候选会自带对应仓库的 `npx skills add` 命令。安装会改变本机状态；先把命令展示给客户并取得授权，安装后重新检索。
 
+**WorkBuddy** 的装载单位是角色化专家而不是插件，`npx skills add -a '*'` 覆盖不到它，需要单独安装，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
+
 ### 私密信息与中间数据
 
 - 本机扫描范围仅为 `~/.agents/skills/*/SKILL.md`；不读取技能私有配置、凭据或客户文件。
