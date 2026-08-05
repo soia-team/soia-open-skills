@@ -11,6 +11,7 @@
   "skills": [
     "./skills/soia-meta-find-skill",
     "./skills/soia-meta-prompt-clarity",
+    "./skills/soia-meta-publish-market",
     "./skills/soia-meta-skill-release",
     "./skills/soia-meta-sync-skills"
   ],

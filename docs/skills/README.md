@@ -1,6 +1,6 @@
 # 技能详情页
 
-全生态 81 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 82 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
@@ -103,12 +103,13 @@
 | [`soia-media-publish-x-article`](soia-media-publish-x-article.md) | 将 Markdown 成文上传到 X Articles 草稿箱并校验格式，只保存草稿 |
 | [`soia-media-publish-x-thread`](soia-media-publish-x-thread.md) | 将成文草稿改写为带编号、符合字数限制的 X thread，并可按授权存草稿 |
 
-## `soia-meta`　4 个技能
+## `soia-meta`　5 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
 | [`soia-meta-find-skill`](soia-meta-find-skill.md) | 按需检索 SOIA 全生态技能并加载——剪藏网盘/知识提炼/新媒发布/编码审查与终端操作/设计图表/产品PRD/软件测试/软件发版/办公协作/教育课程/环境安装/生态管理。说出需求即可检索、定位并按需读入对应技能 |
 | [`soia-meta-prompt-clarity`](soia-meta-prompt-clarity.md) | 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界 |
+| [`soia-meta-publish-market`](soia-meta-publish-market.md) | 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交 |
 | [`soia-meta-skill-release`](soia-meta-skill-release.md) | 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装 |
 | [`soia-meta-sync-skills`](soia-meta-sync-skills.md) | 将一个共享技能源以软链接同步到用户明确选择的 AI 工具目录；支持预览、单项同步、硬依赖闭包和受限清理 |
 

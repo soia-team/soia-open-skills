@@ -282,6 +282,12 @@
     "install_cmd": "npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-prompt-clarity -y"
   },
   {
+    "name": "soia-meta-publish-market",
+    "repo": "soia-open-skills",
+    "description": "把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交。触发：「上架 SkillHub」「发到 Red Skill」「上架技能市场」",
+    "install_cmd": "npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-publish-market -y"
+  },
+  {
     "name": "soia-meta-skill-release",
     "repo": "soia-open-skills",
     "description": "域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」",
