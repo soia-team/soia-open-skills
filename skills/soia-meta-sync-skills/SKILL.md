@@ -1,11 +1,11 @@
 ---
 name: soia-meta-sync-skills
 description: 将一个共享技能源以软链接同步到用户明确选择的 AI 工具目录；支持预览、单项同步、硬依赖闭包和受限清理。
-version: 2.2.1
+version: 2.2.2
 created_at: 2026-07-07 14:44:10
-updated_at: 2026-07-23 13:49:14
+updated_at: 2026-08-05 13:00:00
 created_by: claude opus 4.6
-updated_by: gpt-5.6-luna
+updated_by: claude-opus-5
 ---
 
 # soia-meta-sync-skills
@@ -51,6 +51,8 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-sync-skills -y
 ~/.config/soia-skills/soia-meta-sync-skills/config.yml
 SOIA_META_SYNC_SKILLS_CONFIG_FILE=<custom-config-path>
 ```
+
+**WorkBuddy** 的装载单位是角色化专家而不是插件，`npx skills add -a '*'` 覆盖不到它，需要单独安装，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
 
 ### 私密信息与中间数据
 

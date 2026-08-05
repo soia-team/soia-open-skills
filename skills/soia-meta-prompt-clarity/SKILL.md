@@ -1,11 +1,11 @@
 ---
 name: soia-meta-prompt-clarity
 description: 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界。触发：「写提示词 / write a prompt」「优化 prompt / improve this prompt」「扩展成可验证规格」
-version: 2.0.1
+version: 2.0.2
 created_at: 2026-07-09 19:52:22
-updated_at: 2026-07-23 07:19:34
+updated_at: 2026-08-05 13:00:00
 created_by: claude opus 4.6
-updated_by: gpt-5.6-luna
+updated_by: claude-opus-5
 ---
 
 # soia-meta-prompt-clarity
@@ -150,6 +150,8 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-prompt-clarity 
 - 领域框架：[references/prompt-framework-patterns.md](references/prompt-framework-patterns.md)
 - 模式 C：[references/mode-c-disambiguation.md](references/mode-c-disambiguation.md)
 - 模式 D：[references/mode-d-specification.md](references/mode-d-specification.md) 与 [references/mode-d-quality-gate.md](references/mode-d-quality-gate.md)
+
+**WorkBuddy** 的装载单位是角色化专家而不是插件，`npx skills add -a '*'` 覆盖不到它，需要单独安装，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
 
 ### 私密信息与中间数据
 
