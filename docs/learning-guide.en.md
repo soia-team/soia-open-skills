@@ -27,7 +27,7 @@ The whole ecosystem has only five concepts. Confusing them is the source of most
 ## 2. The whole ecosystem in one diagram
 
 ```text
-Source of truth: 8 Git repos, 74 skills
+Source of truth: 8 Git repos, 81 skills
         │
         │   routing/routing-manifest.json (machine-readable index, generated)
         ▼
@@ -46,7 +46,7 @@ You say "archive this page into my vault" → the agent matches soia-pkm-clip-we
 Three rules run through the whole picture:
 
 1. **One source, many derived faces.** All three marketplace manifests are generated from repo content; CI runs `--check` and turns red on hand edits. This is what keeps the manifests from drifting apart.
-2. **Domain repo = domain plugin = unit of on/off.** `plugin disable soia-pkm-vault@soia` removes 26 vault skills from the index at zero context cost; `enable` brings them back on a writing day.
+2. **Domain repo = domain plugin = unit of on/off.** `plugin disable soia-pkm-vault@soia` removes 31 vault skills from the index at zero context cost; `enable` brings them back on a writing day.
 3. **Pin the sha on release channels.** Marketplace entries lock a commit so an upstream ref cannot be moved to different content. This is a supply-chain baseline, not fussiness.
 
 ---
