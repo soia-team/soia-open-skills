@@ -3,7 +3,7 @@ name: soia-meta-publish-market
 description: 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交。触发：「上架 SkillHub」「发到 Red Skill」「上架技能市场」
 version: 1.2.0
 created_at: 2026-08-04 20:00:00
-updated_at: 2026-08-05 12:00:00
+updated_at: 2026-08-05 16:50:00
 created_by: claude fable 5
 updated_by: claude fable 5
 ---
@@ -60,6 +60,21 @@ python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
 | 浏览器登录态 | Red Skill 渠道（路径 B） | 客户在小红书创作服务平台自行操作 |
 
 ## 两条硬规则（决定了本技能怎么筛选和改写）
+
+装整个域（Claude Code 与 Codex 共用同一份域插件）：
+
+```bash
+claude plugin marketplace add soia-team/soia-open-skills
+claude plugin install soia-meta@soia
+```
+
+只装这一个技能：
+
+```bash
+npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-publish-market -y
+```
+
+**WorkBuddy** 的装载单位是角色化专家而不是插件，`npx skills add -a '*'` 覆盖不到它，需要单独安装，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
 
 ### 1. 只上架零 hard 依赖的技能
 
