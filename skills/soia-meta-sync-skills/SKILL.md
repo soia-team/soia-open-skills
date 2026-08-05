@@ -1,9 +1,9 @@
 ---
 name: soia-meta-sync-skills
 description: 将一个共享技能源以软链接同步到用户明确选择的 AI 工具目录；支持预览、单项同步、硬依赖闭包和受限清理。
-version: 2.2.2
+version: 2.2.3
 created_at: 2026-07-07 14:44:10
-updated_at: 2026-08-05 13:00:00
+updated_at: 2026-08-05 15:00:00
 created_by: claude opus 4.6
 updated_by: claude-opus-5
 ---
@@ -45,7 +45,7 @@ claude plugin install soia-meta@soia
 npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-sync-skills -y
 ```
 
-依赖 Python 3 标准库和一个包含 `SKILL.md` 子目录的源目录。可选配置示例在 `config.example.yml`：它记录用户自己的默认 source/targets 和按 target 隔离的 excludes，命令行参数优先。脚本每次同步（包括默认全量同步）都会读取并遵守持久排除。配置文件放在：
+依赖 Python 3 标准库和一个包含 `SKILL.md` 子目录的源目录。可选配置示例在 `assets/config.example.yml`：它记录用户自己的默认 source/targets 和按 target 隔离的 excludes，命令行参数优先。脚本每次同步（包括默认全量同步）都会读取并遵守持久排除。配置文件放在：
 
 ```text
 ~/.config/soia-skills/soia-meta-sync-skills/config.yml
