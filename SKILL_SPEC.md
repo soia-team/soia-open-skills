@@ -89,11 +89,42 @@ Required customer-facing markers:
 - `客户可读说明` or an equivalent customer-visible introduction.
 - `这个技能可以做什么` / `能做什么`.
 - `客户如何使用` / `如何使用` / `如何运行`.
-- `依赖与安装` / `首次安装与配置` / explicit dependency section.
+- `依赖与安装` / `首次安装与配置` / explicit dependency section. This section must
+  cover **two distinct things**: (a) dependencies *between skills*, and (b) how
+  **this skill itself** reaches the customer's host. See "Install section: host
+  coverage" below — writing only (a) is the most common omission.
 - `日志与完成回执` / `客户可见日志与总结` / completion receipt.
 
 Required workflow instructions must still live in `SKILL.md`; do not hide them in
 `agents/openai.yaml`, README files, or private notes.
+
+### Install section: host coverage
+
+`依赖与安装` must state how **this skill** is installed, not only what it depends
+on. Three first-class hosts, and their loading units differ:
+
+| Host | Loading unit | What to write |
+| --- | --- | --- |
+| Claude Code | domain plugin | `claude plugin marketplace add` + `claude plugin install <domain>@soia` |
+| Codex | domain plugin | same pair (marketplace-level enable) |
+| **WorkBuddy** | **role-based expert** | one line pointing at `docs/install/workbuddy.md` |
+
+Plus the single-skill route, which covers most CLI agents:
+
+```bash
+npx skills add soia-team/<domain-repo> -g -a '*' -s <skill-name> -y
+```
+
+**`npx skills add -a '*'` does not reach WorkBuddy.** WorkBuddy only loads experts
+from the hardcoded `~/.workbuddy/plugins/marketplaces/my-experts/plugins/<expert>/`,
+and **symlinks do not work** — the official validator calls `resolve()` and then
+rejects the real path as outside the expert directory. A skill that lists only the
+npx command has silently dropped one of the three first-class hosts.
+
+Do not copy WorkBuddy's clone-and-register steps into each skill: they are long and
+they change. Link to `docs/install/workbuddy.md`, consistent with the
+"One source of truth" principle above. Same for other hosts — link to
+`docs/install/`, never inline.
 
 ### Machine-readable dependencies (frontmatter)
 
@@ -383,6 +414,10 @@ Before commit, verify:
 - [ ] `SKILL.md` has `name` and a `description` of at most 150 characters: one
       core-responsibility sentence plus `触发：` and 2–3 distinct triggers.
 - [ ] `SKILL.md` has a customer-readable intro covering capabilities, usage, dependencies/install, config, logs, and completion receipt.
+- [ ] `依赖与安装` covers **all three first-class hosts**: the domain-plugin pair
+      (Claude Code / Codex), the `npx skills add` single-skill route, and a link to
+      `docs/install/workbuddy.md`. Verify with
+      `python3 scripts/check_install_sections.py`.
 - [ ] No `metadata.json`; public skills use `SKILL.md` and optional `agents/openai.yaml`.
 - [ ] No maintainer-specific paths or vault directory names.
 - [ ] No real secrets, cookies, tokens, sessions, private `config.yml`, or `.env` files.

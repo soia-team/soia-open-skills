@@ -63,6 +63,36 @@ SOIA_<TYPE>_<SHORT>_CONFIG_FILE=<custom-config-path>
 - API key、cookie、session、provider home、本机路径只放私有 `config.yml`、进程环境或 provider 自己的登录态里。
 - 如果依赖第三方 skill，记录上游来源和安装方式，不直接修改第三方 skill 文件。
 
+#### 本技能怎么装（三个一等宿主都要写）
+
+上面那张表讲的是**技能之间**的依赖；这一节讲**本技能自己**怎么进到客户的宿主里。
+两件事不同，不要只写其中一个。
+
+**装整个域（推荐）**——Claude Code 与 Codex 共用同一份域插件：
+
+```bash
+claude plugin marketplace add soia-team/soia-open-skills
+claude plugin install <域插件名>@soia
+```
+
+**只装这一个技能**——覆盖多数 CLI agent：
+
+```bash
+npx skills add soia-team/<域仓名> -g -a '*' -s <技能名> -y
+```
+
+**WorkBuddy 必须单独写一句。** 它的装载单位是**角色化专家**而不是插件，只认硬编码目录
+`~/.workbuddy/plugins/marketplaces/my-experts/plugins/<专家名>/`，且**软链无效**
+（官方校验器 `resolve()` 会穿透到真实路径后判定不在专家目录下）。
+也就是说 **`npx skills add -a '*'` 覆盖不到 WorkBuddy**，只写 npx 那条命令等于漏了一个一等宿主。
+步骤较长且会变，不要在技能里复制，指过去即可：
+
+> WorkBuddy 用角色化专家装载，机制与插件不同，见
+> [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
+
+其它宿主（Cursor、OpenCode、Gemini CLI、Qwen Code、Zed 等）见
+[docs/install/](https://github.com/soia-team/soia-open-skills/tree/main/docs/install)，同样只指路、不复制。
+
 ### 私密信息与中间数据
 
 - 凭据只写入用户自有的私有配置、进程环境或 provider 登录态，不进入 skill、日志或交付物。
