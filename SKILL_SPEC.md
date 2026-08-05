@@ -33,6 +33,37 @@ Do not rename this directory to `open-skill-template`. The repository name
 already scopes the public/private difference, while a shared template path keeps
 agent instructions and contributor commands consistent.
 
+### What goes in each directory
+
+**The deciding question is where the file ends up, not what format it is.**
+Two YAML files can belong in different directories: one the customer copies away,
+one the agent reads in place.
+
+| Directory | Holds | Deciding question |
+| --- | --- | --- |
+| `assets/` | Files the **customer takes away or uses directly**: config templates, boilerplate, sample data | "Does this leave the skill directory to do its job?" |
+| `references/` | Material the **agent reads while working**: long lists, mapping tables, provider differences, error catalogs, machine-readable lookups | "Does the agent open this during a run?" |
+| `scripts/` | Executable code the skill runs | "Is this run, not read?" |
+| `agents/` | Host-platform metadata only (`openai.yaml`) | — |
+
+Worked example from `soia-cwork-feishu-cli`, all three are YAML:
+
+- `assets/config.example.yml` — header says `# Copy to: ~/.config/soia-skills/<skill>/config.yml`.
+  It is inert until the customer copies it out. → **assets**
+- `references/errors.yml` — `kind: feishu_cli_error_catalog`, machine-readable
+  diagnosis hints the agent looks up when a command fails. → **references**
+- `references/permissions.yml` — permission mapping table, same reason. → **references**
+
+Fixed rules:
+
+- **The config template is always `assets/config.example.yml`.** Not the skill
+  root, not `references/`. Scripts and tests that locate it must use that path.
+- Do not put a file in `assets/` just because it is data — a lookup table the
+  agent consults is `references/`, even in YAML or JSON.
+- Empty directories are not created preemptively. Add one when it gets its first file.
+- Never add per-skill `README`, `INSTALL`, `CHANGELOG`, `QUICK_REFERENCE` or
+  `ARCHITECTURE` — durable supporting material goes in `references/`.
+
 ### 0.5 Common skill design principles
 
 The public and private repositories share the same authoring principles. Only
