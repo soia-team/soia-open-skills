@@ -165,6 +165,19 @@ params:
 
 Delete unused resource bullets. Do not add README / INSTALL / CHANGELOG inside a skill.
 
+放哪个目录看**文件最终去哪**，不看格式——两个 YAML 可能分属不同目录：
+
+| 目录 | 放什么 | 判定 |
+|---|---|---|
+| `assets/` | 客户**拿走或直接使用**的：配置模板、样板、示例数据 | 它要离开技能目录才起作用吗？ |
+| `references/` | agent **执行时读取**的：长清单、映射表、供应商差异、错误码目录 | agent 会在运行中打开它吗？ |
+| `scripts/` | 技能运行的可执行代码 | 是被执行而不是被读的吗？ |
+| `agents/` | 仅宿主平台元数据（`openai.yaml`） | — |
+
+**配置模板固定是 `assets/config.example.yml`**——不放技能根目录，也不放 `references/`；
+脚本和测试查找它时必须用这个路径。查表类数据即使是 YAML/JSON 也归 `references/`。
+完整规则见 `SKILL_SPEC.md`「What goes in each directory」。
+
 ## Agent Metadata
 
 `agents/openai.yaml` is optional UI/catalog metadata only. Keep required capabilities, dependencies, setup, workflow steps, log expectations, and completion summary rules in this `SKILL.md` so Claude Code, Codex, SOIA, and other skills.sh-compatible agents all receive the same instructions.
