@@ -1,11 +1,11 @@
 ---
 name: soia-meta-skill-release
 description: 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」
-version: 5.1.0
+version: 5.1.1
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-08-04 19:00:00
+updated_at: 2026-08-05 13:00:00
 created_by: gpt-5.6-terra
-updated_by: claude fable 5
+updated_by: claude-opus-5
 dependencies:
   optional: [soia-meta-sync-skills]
 ---

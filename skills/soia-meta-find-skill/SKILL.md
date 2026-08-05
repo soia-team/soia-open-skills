@@ -1,11 +1,11 @@
 ---
 name: soia-meta-find-skill
 description: 按需检索 SOIA 全生态技能并加载——剪藏网盘/知识提炼/新媒发布/编码审查与终端操作/设计图表/产品PRD/软件测试/软件发版/办公协作/教育课程/环境安装/生态管理。说出需求即可检索、定位并按需读入对应技能
-version: 1.0.1
+version: 1.0.2
 created_at: 2026-07-23 10:23:03
-updated_at: 2026-07-23 13:49:14
+updated_at: 2026-08-05 13:00:00
 created_by: gpt-5.6-luna
-updated_by: gpt-5.6-luna
+updated_by: claude-opus-5
 ---
 
 # soia-meta-find-skill
@@ -53,6 +53,8 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-find-skill -y
 ```
 
 目录中未安装的候选会自带对应仓库的 `npx skills add` 命令。安装会改变本机状态；先把命令展示给客户并取得授权，安装后重新检索。
+
+**WorkBuddy** 的装载单位是角色化专家而不是插件，`npx skills add -a '*'` 覆盖不到它，需要单独安装，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
 
 ### 私密信息与中间数据
 
