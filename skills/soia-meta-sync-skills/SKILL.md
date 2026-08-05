@@ -45,7 +45,7 @@ claude plugin install soia-meta@soia
 npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-sync-skills -y
 ```
 
-依赖 Python 3 标准库和一个包含 `SKILL.md` 子目录的源目录。可选配置示例在 `config.example.yml`：它记录用户自己的默认 source/targets 和按 target 隔离的 excludes，命令行参数优先。脚本每次同步（包括默认全量同步）都会读取并遵守持久排除。配置文件放在：
+依赖 Python 3 标准库和一个包含 `SKILL.md` 子目录的源目录。可选配置示例在 `assets/config.example.yml`：它记录用户自己的默认 source/targets 和按 target 隔离的 excludes，命令行参数优先。脚本每次同步（包括默认全量同步）都会读取并遵守持久排除。配置文件放在：
 
 ```text
 ~/.config/soia-skills/soia-meta-sync-skills/config.yml
