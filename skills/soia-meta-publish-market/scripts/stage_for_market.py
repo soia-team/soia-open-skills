@@ -28,6 +28,28 @@ import sys
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 LICENSE_DEFAULT = "MIT"
 
+# Red Skill 的文件白名单（网页上传提示 + CLI 本地校验实测一致）。
+# 实测 2026-08-05：带 agents/openai.yaml 直接被拒
+# 「目录中包含不支持上传的文件：agents/openai.yaml，请移除后重试」。
+# SkillHub 无此限制（同一份目录 dry-run 通过），所以过滤按渠道区分。
+REDSKILL_ALLOWED_SUFFIXES = {
+    ".md", ".txt", ".html", ".css", ".js", ".py", ".json", ".xml",
+}
+CHANNELS = ("skillhub", "redskill")
+
+
+def strip_unsupported(target: pathlib.Path) -> list[str]:
+    """删掉目标渠道不接受的文件，返回被删清单。"""
+    removed = []
+    for path in sorted(target.rglob("*")):
+        if path.is_file() and path.suffix.lower() not in REDSKILL_ALLOWED_SUFFIXES:
+            removed.append(str(path.relative_to(target)))
+            path.unlink()
+    for path in sorted(target.rglob("*"), reverse=True):
+        if path.is_dir() and not any(path.iterdir()):
+            path.rmdir()
+    return removed
+
 
 def read_frontmatter(skill_md: pathlib.Path) -> tuple[str, str]:
     """返回 (frontmatter 文本, 正文)；缺少 frontmatter 时抛错。"""
@@ -47,6 +69,51 @@ def has_hard_dependency(frontmatter: str) -> bool:
     """技能是否声明了 hard 依赖（上架后会断链）。"""
     match = re.search(r"^\s*hard:\s*\[(.*?)\]", frontmatter, re.M)
     return bool(match and match.group(1).strip())
+
+
+def export_from_main(repo_dir: pathlib.Path, skill_name: str,
+                     dest: pathlib.Path) -> str:
+    """把 `origin/main` 上的技能导出到 dest，返回该仓 main 的插件版本号。
+
+    **只从 main 取，不读工作树**（2026-08-05 用户定的硬规矩：只有正式版能上市场）。
+    直接导出比「校验工作树是否等于 main」更强：本地检出在哪个分支都不影响结果，
+    也就不会因为有人切走分支而误打包未发布内容——多 AI 共用检出时这是常态。
+    """
+    import subprocess
+    import tarfile
+    import io
+    import json as _json
+
+    def git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["git", "-C", str(repo_dir), *args],
+                              capture_output=True)
+
+    if git("fetch", "origin", "+refs/heads/main:refs/remotes/origin/main").returncode != 0:
+        raise ValueError(f"{repo_dir} 取不到 origin/main，无法确认正式版内容")
+
+    manifest = git("show", "origin/main:.claude-plugin/plugin.json")
+    if manifest.returncode != 0:
+        raise ValueError(f"{repo_dir} 的 main 上读不到 .claude-plugin/plugin.json")
+    version = _json.loads(manifest.stdout.decode("utf-8")).get("version", "")
+    if "-SNAPSHOT" in version:
+        raise ValueError(
+            f"{repo_dir.name} 的 main 版本是 {version}，带 -SNAPSHOT 不是正式版")
+
+    archive = git("archive", "origin/main", f"skills/{skill_name}")
+    if archive.returncode != 0:
+        raise ValueError(
+            f"origin/main 上没有 skills/{skill_name}——该技能尚未发版，不能上架")
+
+    dest.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(fileobj=io.BytesIO(archive.stdout)) as tar:
+        for member in tar.getmembers():
+            prefix = f"skills/{skill_name}/"
+            if not member.name.startswith(prefix):
+                continue
+            member.name = member.name[len(prefix):]
+            if member.name:
+                tar.extract(member, dest, filter="data")
+    return version
 
 
 def eligible_skills(repo_dir: pathlib.Path) -> list[tuple[str, bool, str]]:
@@ -72,22 +139,29 @@ def eligible_skills(repo_dir: pathlib.Path) -> list[tuple[str, bool, str]]:
 
 def stage(repo_dir: pathlib.Path, skill_name: str, out_dir: pathlib.Path,
           display_name: str | None = None, summary: str | None = None,
-          license_id: str = LICENSE_DEFAULT) -> pathlib.Path:
+          license_id: str = LICENSE_DEFAULT,
+          allow_unreleased: bool = False,
+          channel: str = "skillhub") -> pathlib.Path:
     """把一个技能复制到暂存目录并叠加平台 frontmatter。"""
-    src = repo_dir / "skills" / skill_name
-    if not (src / "SKILL.md").is_file():
-        raise ValueError(f"找不到技能：{src}")
-
-    frontmatter, body = read_frontmatter(src / "SKILL.md")
-    if has_hard_dependency(frontmatter):
-        raise ValueError(
-            f"{skill_name} 声明了 hard 依赖，上架后会断链；"
-            f"先去掉依赖或改为 optional 再上架")
-
     target = out_dir / skill_name
     if target.exists():
         shutil.rmtree(target)
-    shutil.copytree(src, target)
+
+    if allow_unreleased:
+        src = repo_dir / "skills" / skill_name
+        if not (src / "SKILL.md").is_file():
+            raise ValueError(f"找不到技能：{src}")
+        shutil.copytree(src, target)
+        released_version = "(未发版，仅本地演练)"
+    else:
+        released_version = export_from_main(repo_dir, skill_name, target)
+
+    frontmatter, body = read_frontmatter(target / "SKILL.md")
+    if has_hard_dependency(frontmatter):
+        shutil.rmtree(target, ignore_errors=True)
+        raise ValueError(
+            f"{skill_name} 声明了 hard 依赖，上架后会断链；"
+            f"先去掉依赖或改为 optional 再上架")
 
     overlay = [
         f"slug: {skill_name}",
@@ -98,6 +172,11 @@ def stage(repo_dir: pathlib.Path, skill_name: str, out_dir: pathlib.Path,
     (target / "SKILL.md").write_text(
         "---\n" + "\n".join(overlay) + "\n" + frontmatter + "\n---\n" + body,
         encoding="utf-8")
+
+    if channel == "redskill":
+        removed = strip_unsupported(target)
+        if removed:
+            print(f"  已剔除 Red Skill 不支持的文件：{', '.join(removed)}")
     return target
 
 
@@ -109,6 +188,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--display-name", help="对外中文展示名")
     parser.add_argument("--summary", help="对外简介；缺省用 description")
     parser.add_argument("--license", default=LICENSE_DEFAULT)
+    parser.add_argument("--channel", choices=CHANNELS, default="skillhub",
+                        help="目标渠道；redskill 会剔除其不支持的文件类型")
+    parser.add_argument("--allow-unreleased", action="store_true",
+                        help="跳过「必须是正式版」校验；仅用于本地演练，不得用于真实上架")
     parser.add_argument("--list-eligible", action="store_true",
                         help="只列出哪些技能可上架，不打包")
     args = parser.parse_args(argv)
@@ -124,13 +207,18 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         target = stage(args.repo_dir.resolve(), args.skill, args.out.resolve(),
-                       args.display_name, args.summary, args.license)
+                       args.display_name, args.summary, args.license,
+                       args.allow_unreleased, args.channel)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     print(f"已暂存：{target}")
+    print(f"来源：{args.repo_dir.name} main 正式版")
     print("下一步（不会自动执行）：")
-    print(f"  skillhub publish {target} --dry-run")
+    if args.channel == "skillhub":
+        print(f"  skillhub publish {target} --dry-run")
+    else:
+        print(f"  交给官方 uploader：把 {target} 上传到小红书 SkillHub")
     return 0
 
 
