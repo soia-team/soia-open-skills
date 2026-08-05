@@ -1,13 +1,13 @@
 ---
 name: soia-meta-skill-release
 description: 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」
-version: 5.0.2
+version: 5.1.1
 created_at: 2026-07-22 21:26:01
 updated_at: 2026-08-05 13:00:00
 created_by: gpt-5.6-terra
 updated_by: claude-opus-5
 dependencies:
-  hard: [soia-meta-sync-skills]
+  optional: [soia-meta-sync-skills]
 ---
 
 # soia-meta-skill-release
@@ -64,7 +64,7 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 | 依赖 | 类型 | 用途 | 缺失时怎么处理 |
 | --- | --- | --- | --- |
 | `npx skills` | 强依赖 | 安装、移除、更新并维护 lock | 停止并报告失败步骤 |
-| `soia-meta-sync-skills` | 强依赖 | 同步 SOIA 与 WorkBuddy 软链 | 先安装该技能再重试 |
+| `soia-meta-sync-skills` | 可选依赖 | 仅 `npx` 模式第 5 步用它同步 SOIA 与 WorkBuddy 软链；默认的 `plugin` 模式不调用 | 走 `npx` 模式时先安装该技能再重试；`plugin` 模式无影响 |
 | Python 3 | 强依赖 | 执行发布脚本 | 安装 Python 3 后重试 |
 | PyYAML | 可选依赖 | 读取私有 `config.yml` | 传 `--repo-dir` 或使用当前进程环境变量 |
 
