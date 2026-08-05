@@ -96,7 +96,9 @@ npx skills add soia-team/<域仓名> -g -a '*' -s <技能名> -y
 ### 私密信息与中间数据
 
 - 凭据只写入用户自有的私有配置、进程环境或 provider 登录态，不进入 skill、日志或交付物。
-- 中间产物按 [DATA_STORAGE_SPEC.md](../../DATA_STORAGE_SPEC.md) 约定落盘，并说明位置、保留期与脱敏要求。
+- 中间产物按本仓 `DATA_STORAGE_SPEC.md` 约定落盘，并说明位置、保留期与脱敏要求。
+  （**用反引号引用，不要写成 `[..](../../DATA_STORAGE_SPEC.md)` 相对链接**——
+  audit 会报 `relative link escapes skill directory`。）
 
 ### 日志与完成回执
 
