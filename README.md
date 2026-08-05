@@ -80,9 +80,10 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
 | [`soia-meta-find-skill`](https://github.com/soia-team/soia-open-skills/blob/main/docs/skills/soia-meta-find-skill.md) | 按需求检索全生态技能并加载，不必预先知道技能名 | ✅ |
 | [`soia-meta-sync-skills`](https://github.com/soia-team/soia-open-skills/blob/main/docs/skills/soia-meta-sync-skills.md) | 把技能源软链同步到你明确选择的 AI 工具目录 | ✅ |
 | [`soia-meta-skill-release`](https://github.com/soia-team/soia-open-skills/blob/main/docs/skills/soia-meta-skill-release.md) | 改动合并后完成市场发布、客户端更新、WorkBuddy 专家安装与缓存回收 | ✅ |
+| [`soia-meta-publish-market`](https://github.com/soia-team/soia-open-skills/blob/main/docs/skills/soia-meta-publish-market.md) | 把已发版技能上架到腾讯 SkillHub 与小红书 Red Skill：筛选、打包、预检 | ✅ |
 | [`soia-meta-prompt-clarity`](https://github.com/soia-team/soia-open-skills/blob/main/docs/skills/soia-meta-prompt-clarity.md) | 起草、诊断并规格化中英文提示词，保留原意与安全边界 | ✅ |
 
-✅ 四个技能装完即用
+✅ 五个技能装完即用
 
 ## 三个宿主，同一套技能
 

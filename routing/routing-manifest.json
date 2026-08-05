@@ -282,6 +282,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-meta-publish-market",
+    "repo": "soia-open-skills",
+    "skillPath": "skills/soia-meta-publish-market",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-meta-skill-release",
     "repo": "soia-open-skills",
     "skillPath": "skills/soia-meta-skill-release",

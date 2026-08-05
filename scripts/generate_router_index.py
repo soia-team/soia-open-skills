@@ -7,6 +7,7 @@ import argparse
 import ast
 import json
 import re
+import pathlib
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -15,6 +16,24 @@ from typing import Callable, Mapping, Sequence
 
 
 OWNER = "soia-team"
+
+# 元仓自己的技能读本地工作树，不走 GitHub main。
+#
+# 原因：新增元仓技能时 routing 已登记、但 main 上还没有（要等下次发版才上去），
+# 从 main 抓必然 404，形成自举死锁。同仓的 catalog / expert manifest / README
+# 覆盖检查本来就读本地——统一到同一个源才自洽。域仓仍读 main：它们的内容由
+# 各自发版决定，本地检出可能停在 dev。
+PORTAL_REPOSITORY = "soia-open-skills"
+PORTAL_ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def portal_skill_md(skill_path: str) -> str:
+    path = PORTAL_ROOT / skill_path / "SKILL.md"
+    if not path.is_file():
+        raise RuntimeError(f"portal skill not found: {path}")
+    return path.read_text(encoding="utf-8")
+
+
 DEFAULT_MANIFEST = Path("routing/routing-manifest.json")
 DEFAULT_OUTPUT = Path("skills/soia-meta-find-skill/references/skill-directory.json")
 SKILL_NAME_PATTERN = re.compile(r"^soia-[a-z0-9]+(?:-[a-z0-9]+)+$")
@@ -89,6 +108,8 @@ def load_manifest(path: Path) -> list[dict[str, str]]:
 
 
 def fetch_skill_md(repo: str, skill_path: str) -> str:
+    if repo == PORTAL_REPOSITORY:
+        return portal_skill_md(skill_path)
     command = [
         "gh",
         "api",
