@@ -3,6 +3,30 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v1.12.0 — 2026-08-06
+
+publish-market 上架技能与 R1-R5 就绪门禁、SKILL_SPEC 目录职责与一等宿主安装规范、CI 安装章节体检
+
+## 新增
+- feat(market): 上架就绪门禁——打包阶段机器检查评测缺口（R1–R5） (#253)
+- feat(market): export from main only, filter per channel (#251)
+- feat(ci): 安装章节检查支持子目录并接入 CI (#250)
+- feat(market): add soia-meta-publish-market (SkillHub + Red Skill) (#249)
+
+## 修复
+- fix(market): Red Skill 投递必须显式带展示名与平台主键 (#252)
+- fix(template): DATA_STORAGE_SPEC 改用反引号引用，相对链接会触发 audit ERROR (#244)
+
+## 维护
+- chore(release): feat 在列,版本列车提为 next-minor
+- docs(spec): 定义四个目录各放什么，判定标准是「文件最终去哪」 (#248)
+- chore(skills): config.example.yml 归位到 assets/ (#247)
+- docs(skills): 安装章节补齐三个一等宿主 (#245)
+- chore(deps): demote sync-skills to an optional dependency (#246)
+- docs(spec): 规定安装章节必须覆盖三个一等宿主，并加跨仓检查 (#243)
+- docs: 刷新域仓技能计数，与各域仓 main 对齐 (#242)
+- chore(release): open train 1.11.3-SNAPSHOT; wait for commit audit (#241)
+
 ## v1.11.2 — 2026-08-04
 
 发版模型改为 dev 快进覆盖 main：main 与 dev 指向同一提交，分叉在结构上不可能发生；分支一律从 main 开、PR 进 dev。
