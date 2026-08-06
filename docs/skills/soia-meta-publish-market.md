@@ -37,6 +37,9 @@ python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
 结果，也就不会因为有人切走分支而误打包未发布内容（多 AI 共用检出时这是常态）。
 `main` 上没有该技能、或 main 版本带 `-SNAPSHOT`，一律拒绝打包。
 
+`--channel redskill` 时 **`--display-name` 是必填**，缺省直接拒跑，原因见
+[展示名与平台主键](#展示名与平台主键必填)。
+
 打包后由**客户本人**执行投递命令——见下方两个渠道。
 
 ## 安装
