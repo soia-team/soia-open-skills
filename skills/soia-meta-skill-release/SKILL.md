@@ -182,7 +182,7 @@ CI 的 `check_skill_versions.py` 会拦（2026-08-03 漏过一次：改了 skill
    （实测连撞两次 CI）。正确做法：在定稿分支上补跑 `generate_marketplaces.py`、
    `generate_router_index.py`、`generate_skill_pages.py`，且 push 前把 audit 的
    全部检查步骤在本地预跑一遍绿了再推。
-2. **域仓默认分支必须是 main**。soia-private-corp 曾默认指 dev，codex
+2. **域仓默认分支必须是 main**。曾有域仓默认分支指向 dev，codex
    `marketplace add` 按默认分支拉清单，装出 `-SNAPSHOT`。用
    `gh repo edit <repo> --default-branch main` 修正后重装即恢复正式版。
 3. **WorkBuddy 正式安装前，所有域仓本地 checkout 必须切到 main**。
