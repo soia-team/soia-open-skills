@@ -136,6 +136,23 @@ if __name__ == "__main__":
     unittest.main()
 """
 
+# 跨技能共享测试：一个文件引用多个技能的名字（真实域仓里常见，
+# 如遍历所有技能的状态表检查）。它不是 demo-gate 的专属测试，归仓级 CI 管，
+# 按「专属 = 只引用本技能」判定不应进包（进包布局里必然跑不起来）。
+CROSS_SKILL_TEST = """import unittest
+
+SKILLS = ["demo-gate", "demo-other"]
+
+
+class CrossSkillSharedTest(unittest.TestCase):
+    def test_mentions_both_skills(self) -> None:
+        self.assertEqual(len(SKILLS), 2)
+
+
+if __name__ == "__main__":
+    unittest.main()
+"""
+
 
 class StagingTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -247,6 +264,11 @@ class ReadinessGateTests(unittest.TestCase):
         d = self.repo / "skills" / "demo-gate"
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text(GATE_BASE, encoding="utf-8")
+        other = self.repo / "skills" / "demo-other"
+        other.mkdir(parents=True)
+        (other / "SKILL.md").write_text(
+            "---\nname: demo-other\ndescription: 迷你仓的第二技能\n"
+            "version: 1.0.0\n---\n\n# demo-other\n", encoding="utf-8")
         tests = self.repo / "tests"
         tests.mkdir()
         (tests / "test_demo_gate.py").write_text(
@@ -315,7 +337,7 @@ class ReadinessGateTests(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             self.stage()
         self.assertIn("R4", str(ctx.exception))
-        self.assertIn("无专属测试", str(ctx.exception))
+        self.assertIn("无专属自包含测试", str(ctx.exception))
 
     def test_r4_self_contained_test_copied_and_passes(self) -> None:
         target, _ = self.stage()
@@ -338,6 +360,35 @@ class ReadinessGateTests(unittest.TestCase):
             self.stage()
         self.assertIn("R4", str(ctx.exception))
         self.assertIn("仓布局耦合", str(ctx.exception))
+        self.assertFalse((self.out / "demo-gate").exists())
+
+    def test_r4_cross_skill_shared_test_excluded(self) -> None:
+        """过配回归：跨技能共享测试不进包，专属测试仍随包并通过。
+
+        真实域仓里存在一个文件引用许多技能名字的共享测试（如遍历所有技能的状态
+        表检查）；它们被拷进包后在包布局里必然跑不起来（去找别的技能的文件），
+        把 R4 打成假硬缺口。按「专属 = 只引用本技能」判定后应跳过并在报告提示。
+        """
+        shared = self.repo / "tests" / "test_shared_demo_skills.py"
+        shared.write_text(CROSS_SKILL_TEST, encoding="utf-8")
+        target, output = self.stage()
+        self.assertTrue((target / "tests" / "test_demo_gate.py").is_file(),
+                        "专属测试仍应随包作为证据")
+        self.assertFalse((target / "tests" / "test_shared_demo_skills.py").exists(),
+                         "跨技能共享测试不进包")
+        self.assertIn("跳过", output)
+        self.assertIn("跨技能", output)
+        self.assertIn("test_shared_demo_skills.py", output)
+
+    def test_r4_only_cross_skill_test_rejected(self) -> None:
+        """只有跨技能共享测试、没有专属测试 → R4 硬缺口。"""
+        (self.repo / "tests" / "test_demo_gate.py").unlink()
+        shared = self.repo / "tests" / "test_shared_demo_skills.py"
+        shared.write_text(CROSS_SKILL_TEST, encoding="utf-8")
+        with self.assertRaises(ValueError) as ctx:
+            self.stage()
+        self.assertIn("R4", str(ctx.exception))
+        self.assertIn("无专属自包含测试", str(ctx.exception))
         self.assertFalse((self.out / "demo-gate").exists())
 
     def test_r5_foreign_only_urls_warn_without_blocking(self) -> None:

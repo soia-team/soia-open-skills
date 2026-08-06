@@ -259,35 +259,68 @@ def _has_real_sample_section(text: str) -> bool:
     return False
 
 
+def _skill_names(repo_dir: pathlib.Path) -> set[str]:
+    """仓内全部技能名：skills/ 下的一级目录名。"""
+    skills_dir = repo_dir / "skills"
+    if not skills_dir.is_dir():
+        return set()
+    return {p.name for p in skills_dir.iterdir() if p.is_dir()}
+
+
 def _r4_test_evidence(target: pathlib.Path, repo_dir: pathlib.Path,
-                      skill_name: str) -> tuple[str, str, str] | None:
-    """专属测试的检查与随包证据。
+                      skill_name: str) -> tuple[tuple[str, str, str] | None,
+                                                str | None]:
+    """专属测试的检查与随包证据。返回 (硬缺口, 跨技能跳过提示)。
 
-    在 repo_dir/tests/ 下找源码含技能名（skill_name 子串）的测试文件，找到就
-    拷贝进暂存包并在包布局实跑：跑不过说明测试耦合了仓布局——进包后跑不起来，
-    比没有更糟，记硬缺口；一个都没找到同样记硬缺口（评测会记缺测试保障）。
+    匹配策略分三层演进，每层都对应一次真实事故：
 
-    匹配用技能名本身而非 `skills/<技能名>/` 路径字面串：真实测试文件常把路径
-    分段拼接（如 `ROOT / "skills" / "soia-env-network-diagnose" / "scripts"`），
-    路径字面串不存在，永远匹配不到。技能名带域前缀全局唯一，误匹配（同一测试
-    文件里引用别的技能）概率可接受。
+    1. **路径字面串**（`skills/<技能名>/`）匹配——漏配：真实测试常把路径分段
+       拼接（`ROOT / "skills" / "<技能名>" / "scripts"`），字面串不存在，
+       永远匹配不到。
+    2. **技能名子串**匹配——过配：域仓里存在跨技能共享测试（一个文件引用许多
+       技能的名字，如遍历所有技能的状态表检查），它们也被匹配、拷进包，在包
+       布局里必然跑不起来（去找别的技能的文件），把 R4 打成假硬缺口。
+    3. **专属判定**（本层）：先取仓内全部技能名，候选里不含任何「其他」技能名
+       的才是本技能专属测试；只拷专属测试进包并实跑，跨技能候选不拷（归仓级
+       CI 管），只在报告里提示跳过。
+
+    专属测试为空 → 硬缺口；专属测试在包布局跑挂 → 硬缺口（布局耦合），比没有
+    更糟。
     """
-    marker = skill_name
     tests_dir = repo_dir / "tests"
-    matched: list[pathlib.Path] = []
+    candidates: list[pathlib.Path] = []
     if tests_dir.is_dir():
         for path in sorted(tests_dir.rglob("*.py")):
             try:
                 source = path.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
-            if marker in source:
-                matched.append(path)
-    if not matched:
-        return ("硬缺口", "R4", "无专属测试，评测将记缺测试保障")
+            if skill_name in source:
+                candidates.append(path)
+    no_exclusive_gap = ("硬缺口", "R4",
+                        "无专属自包含测试（只引用本技能与标准库的测试），"
+                        "评测将记缺测试保障")
+    if not candidates:
+        return no_exclusive_gap, None
+
+    others = _skill_names(repo_dir) - {skill_name}
+    exclusive: list[pathlib.Path] = []
+    cross_skill: list[pathlib.Path] = []
+    for path in candidates:
+        source = path.read_text(encoding="utf-8", errors="replace")
+        if any(name in source for name in others):
+            cross_skill.append(path)
+        else:
+            exclusive.append(path)
+    notice = None
+    if cross_skill:
+        names = ", ".join(str(p.relative_to(tests_dir)) for p in cross_skill)
+        notice = f"跳过 {len(cross_skill)} 个跨技能共享测试：{names}"
+    if not exclusive:
+        return no_exclusive_gap, notice
 
     staged_tests = target / "tests"
-    for src in matched:
+    for src in exclusive:
         rel = src.relative_to(tests_dir)
         dst = staged_tests / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
@@ -300,8 +333,8 @@ def _r4_test_evidence(target: pathlib.Path, repo_dir: pathlib.Path,
         tail = "\n".join((run.stdout + run.stderr).strip().splitlines()[-8:])
         return ("硬缺口", "R4",
                 f"测试有仓布局耦合，进包后跑不起来，比没有更糟\n"
-                f"    实跑输出（尾部）：{tail}")
-    return None
+                f"    实跑输出（尾部）：{tail}"), notice
+    return None, notice
 
 
 def _r5_foreign_sources(target: pathlib.Path) -> tuple[str, str, str] | None:
@@ -354,9 +387,9 @@ def readiness_gaps(target: pathlib.Path, repo_dir: pathlib.Path,
                      "评测点名过缺真实输出样例，占位符模板不算"))
 
     # R4 测试证据。
-    r4 = _r4_test_evidence(target, repo_dir, skill_name)
-    if r4 is not None:
-        gaps.append(r4)
+    r4_gap, r4_notice = _r4_test_evidence(target, repo_dir, skill_name)
+    if r4_gap is not None:
+        gaps.append(r4_gap)
 
     # R5 境外源提示。
     r5 = _r5_foreign_sources(target)
@@ -364,8 +397,14 @@ def readiness_gaps(target: pathlib.Path, repo_dir: pathlib.Path,
         gaps.append(r5)
 
     print(f"[就绪门禁] {skill_name} 逐项结果：")
+    notice_printed = False
     for level, code, note in gaps:
         print(f"  {code} [{level}] {note}")
+        if code == "R4" and r4_notice is not None:
+            print(f"  R4 提示：{r4_notice}")
+            notice_printed = True
+    if r4_notice is not None and not notice_printed:
+        print(f"  R4 提示：{r4_notice}")
     if not gaps:
         print("  R1-R5 全部通过")
     print(f"  {DISCLAIMER}")
