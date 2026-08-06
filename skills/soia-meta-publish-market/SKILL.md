@@ -1,9 +1,9 @@
 ---
 name: soia-meta-publish-market
 description: 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交。触发：「上架 SkillHub」「发到 Red Skill」「上架技能市场」
-version: 1.4.1
+version: 1.4.2
 created_at: 2026-08-04 20:00:00
-updated_at: 2026-08-06 16:20:00
+updated_at: 2026-08-06 17:00:00
 created_by: claude fable 5
 updated_by: claude fable 5
 ---
@@ -258,6 +258,16 @@ shim 在某些环境下吞掉输出（命令静默、退出码 0），直接调
 排障时先用这条确认，别把静默当成功。
 
 **`--dry-run` 不需要授权**，只有真提交才需要；所以预检可以随时跑。
+
+**CLI 只支持首发，更新版本走网页。** 实测 2026-08-06：技能 1.2.0 审核通过、
+生效中后，用 CLI 对同一 Skill ID 提交 1.3.1 被拒
+`SUBMIT_REJECTED: Skill ID 已被占用`（首发响应里的 `first_version: true` 也是
+旁证）。已上架技能的版本更新走创作平台 Builder hub → 该技能 → **更新版本** →
+上传本技能打好的文件夹/zip；打包仍由本技能完成，上传由客户本人执行。
+
+**`login` 会用 refresh token 自动续期，`publish` 不会。** access token 过期后
+`publish` 直接报 `NEED_LOGIN`；此时先跑一次 `login --agent`——有未过期的
+refresh token 时它静默续期返回 `loggedIn: true`，无需重新扫码授权。
 
 **标签是实时拉取的**，不要硬编码——实测当前为效率工具 / 内容创作 / 学习成长 /
 职场办公 / 编程开发 / 生活决策 / 金融理财 / 其它，但以拉到的为准。
