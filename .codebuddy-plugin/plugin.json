@@ -1,6 +1,6 @@
 {
   "name": "soia-meta",
-  "version": "1.4.1-SNAPSHOT",
+  "version": "1.4.1",
   "description": "Skill ecosystem manager: searches the whole SOIA catalog by need and loads the right skill, syncs skills into the AI tools you choose, drives marketplace release after a merge, and drafts or diagnoses prompts.",
   "author": {
     "name": "soia-team"
