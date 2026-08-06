@@ -3,6 +3,18 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v1.12.2 — 2026-08-06
+
+skill-release 5.2.0 批量发版实测约束与 npx 广播停用;sync-skills 2.3.0 实体安装边界
+
+## 修复
+- fix(meta): 泛化文档中的私有仓名,修复防泄漏测试
+
+## 维护
+- docs(market): 补两条 Red Skill 实测——CLI 只能首发、login 自动续期 (#259)
+- docs(meta): 沉淀 2026-08-06 全生态发版与技能空间治理的经验教训
+- chore(release): open next train after v1.12.1 (#258)
+
 ## v1.12.1 — 2026-08-06
 
 publish-market 1.4.1：就绪门禁清除运行字节码，Red Skill 白名单兼容
