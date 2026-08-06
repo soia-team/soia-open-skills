@@ -1,9 +1,9 @@
 ---
 name: soia-meta-publish-market
 description: 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交。触发：「上架 SkillHub」「发到 Red Skill」「上架技能市场」
-version: 1.4.2
+version: 1.4.3
 created_at: 2026-08-04 20:00:00
-updated_at: 2026-08-06 17:00:00
+updated_at: 2026-08-06 18:35:00
 created_by: claude fable 5
 updated_by: claude fable 5
 ---
@@ -259,11 +259,19 @@ shim 在某些环境下吞掉输出（命令静默、退出码 0），直接调
 
 **`--dry-run` 不需要授权**，只有真提交才需要；所以预检可以随时跑。
 
-**CLI 只支持首发，更新版本走网页。** 实测 2026-08-06：技能 1.2.0 审核通过、
-生效中后，用 CLI 对同一 Skill ID 提交 1.3.1 被拒
-`SUBMIT_REJECTED: Skill ID 已被占用`（首发响应里的 `first_version: true` 也是
-旁证）。已上架技能的版本更新走创作平台 Builder hub → 该技能 → **更新版本** →
-上传本技能打好的文件夹/zip；打包仍由本技能完成，上传由客户本人执行。
+**CLI 只支持首发，更新版本走网页——新旧两版 CLI 都实测过。**
+实测 2026-08-06：技能 1.2.0 审核通过、生效中后，对同一 Skill ID 提交 1.3.1，
+旧版 `@xhs/skillhub-upload` 0.1.1 与最新 `redskillhub-upload` 1.0.2 均被拒
+`SUBMIT_REJECTED: Skill ID 已被占用`——1.0.2 是包上传到 100% 后才在最终提交
+被拒，说明是提交端点不接受既有 ID，不是打包问题。已上架技能的版本更新走
+创作平台 Builder hub → 该技能 → **更新版本** → 上传本技能打好的文件夹/zip；
+打包仍由本技能完成，上传由客户本人执行。
+
+**uploader 已迁移到 npm 公共包 `redskillhub-upload`（1.0.x 版本线）。**
+网页「通过对话上传」的口令会自举安装它（`ensure-cli.mjs` 锁 1.0.x 取最新）；
+CDN tgz 装的 `@xhs/skillhub-upload` 0.1.1 是旧版。新版 `publish` 在进程内
+自动复用/刷新登录态并自产二维码（`prompt.qrCodePath`），凭据仍在
+`~/.skillhub-upload` 共享。
 
 **`login` 会用 refresh token 自动续期，`publish` 不会。** access token 过期后
 `publish` 直接报 `NEED_LOGIN`；此时先跑一次 `login --agent`——有未过期的
