@@ -1,9 +1,9 @@
 ---
 name: soia-meta-publish-market
 description: 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交。触发：「上架 SkillHub」「发到 Red Skill」「上架技能市场」
-version: 1.4.3
+version: 1.4.4
 created_at: 2026-08-04 20:00:00
-updated_at: 2026-08-06 18:35:00
+updated_at: 2026-08-06 18:55:00
 created_by: claude fable 5
 updated_by: claude fable 5
 ---
@@ -266,6 +266,14 @@ shim 在某些环境下吞掉输出（命令静默、退出码 0），直接调
 被拒，说明是提交端点不接受既有 ID，不是打包问题。已上架技能的版本更新走
 创作平台 Builder hub → 该技能 → **更新版本** → 上传本技能打好的文件夹/zip；
 打包仍由本技能完成，上传由客户本人执行。
+
+**两家平台的版本号来源不同——SkillHub 读包、Red Skill 网页自增。**
+实测 2026-08-06：同一份 1.3.1 的包，SkillHub 技能页正确显示 v1.3.1（读
+frontmatter `version`）；Red Skill 网页「更新版本」不读包内版本，直接拿线上
+版本 +patch（1.2.0 → 平台标 V1.2.1，内容实为 1.3.1）。CLI 路径倒是读
+frontmatter（dry-run 载荷 version=1.3.1），但 CLI 不能更新已生效技能（见上条）。
+后果：Red Skill 的展示版本会与仓内版本错位且逐次累积。回执里两个号都要写；
+若更新表单有版本输入框，应手填对齐仓内版本。
 
 **uploader 已迁移到 npm 公共包 `redskillhub-upload`（1.0.x 版本线）。**
 网页「通过对话上传」的口令会自举安装它（`ensure-cli.mjs` 锁 1.0.x 取最新）；
