@@ -20,6 +20,7 @@
 | 上架某个技能到 SkillHub | 打包 → 叠加平台字段 → `--dry-run` 预检 → 交客户提交 | 暂存路径、预检结果、待执行命令 |
 | 发到小红书 Red Skill | 打包并给出上传指引 | 暂存路径与上传入口说明 |
 | 更新已上架的技能 | 保持 slug 不变重新打包，提示填写变更说明 | 版本对比与 changelog 建议 |
+| 上架前检查技能是否就绪 | 打包并对暂存产物跑 R1-R5 就绪门禁 | 逐项通过/警告/硬缺口报告，硬缺口拒绝打包 |
 
 ### 客户如何使用
 
@@ -31,6 +32,10 @@ python3 scripts/stage_for_market.py --repo-dir <域仓路径> --list-eligible
 python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
   --skill <技能名> --out <暂存目录> --channel skillhub|redskill \
   --display-name "<中文展示名>"
+
+# 3. 发版前咨询：对工作树跑一遍就绪门禁，不留产物（见「上架就绪门禁」）
+python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
+  --skill <技能名> --out <暂存目录> --allow-unreleased --check-only
 ```
 
 **打包内容直接从 `origin/main` 导出**，不读工作副本——本地检出在哪个分支都不影响
