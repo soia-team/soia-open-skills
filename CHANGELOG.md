@@ -3,6 +3,16 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v1.12.1 — 2026-08-06
+
+publish-market 1.4.1：就绪门禁清除运行字节码，Red Skill 白名单兼容
+
+## 修复
+- fix(market): 门禁实跑测试后清除 __pycache__，防止字节码进市场包 (#256)
+
+## 维护
+- chore(release): open next train after release
+
 ## v1.12.0 — 2026-08-06
 
 publish-market 上架技能与 R1-R5 就绪门禁、SKILL_SPEC 目录职责与一等宿主安装规范、CI 安装章节体检
