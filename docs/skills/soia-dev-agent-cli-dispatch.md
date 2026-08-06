@@ -1,6 +1,6 @@
 # soia-dev-agent-cli-dispatch
 
-> 外部 AI CLI 调度与模型路由，支持受控派活与用量回执
+> 受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-agent-cli-dispatch) · [← 全部技能](README.md)
 
@@ -8,24 +8,53 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「派活给外部 AI」「调用 agy」「多 CLI 派发」
+「派活给外部 AI」「调用 DeepCode/Pi/agy」「多 CLI 派发」
 
 ## 能力与用法
 
 ### 这个技能可以做什么
 
-调度外部 AI 模型/CLI（codex/claude/agy/gemini/kimi/opencode/qwen/pi，非宿主内置子代理，`qodercli` 也有命令模板但未纳入下方精简清单）进行受控派发，覆盖编码、审查、分析、研究、文档和内容任务：任务边界拆分、独立 workdir、防注入 prompt 写法、模型分级矩阵、Worktree 审批门、Anti-Fake-Fix 三步验证。在此之上，可显式指定执行器 + 模型 + 推理深度，或只给执行器家族由任务难度自动选型（见「自动路由」）；每次调用后输出 Token/费用汇总（见「调用总结回执」）、模型完整性检测（见「Model Integrity Gate」）、额度预检（见「额度预检」）与断点续跑（见「可恢复执行」）。各执行器详细命令模板在 `references/` 子目录下按需加载。
-
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
-| 完成本技能覆盖的工作 | 读取用户请求、必要上下文和本技能正文流程，执行最小可靠步骤 | 客户会看到执行计划、命令输出摘要、代码/文档变更、验证结果和风险说明。 |
-| 缺少依赖、权限、配置或 key | 停止需要外部状态的动作，明确指出缺什么 | 安装命令、申请地址、配置路径或需要客户确认的问题 |
-| 执行完成 | 汇总成功、跳过、失败、文件变更和验证结果 | 一段可复制进工单/日志的完成回执 |
+| 派一个任务给指定 AI CLI | 检查 CLI、认证、工作目录和权限，按该执行器规范启动 | 执行器、请求/实际模型、状态与验证结果 |
+| 让系统自动选择模型档位 | 只从已有验证证据的候选中选择；无候选时阻断 | 选择理由、推理档、价格区间与证据状态 |
+| 批量或断点执行 | 串行运行 case，逐项原子更新脱敏 manifest | 成功、失败、降级、超时、剩余任务与恢复状态 |
+| 查看支持哪些 AI Agent | 读取 `references/supported-agents.yml` | 支持状态、使用方式、自动路由范围和对应规范 |
+
+本技能不会把“进程退出码为 0”直接当成模型或任务质量已验证，也不会在没有证据时开放新的自动路由。
 
 ### 客户如何使用
 
-1. 用自然语言说明目标，并提供必要输入：文件、URL、repo、workspace、proposal、vault 或平台账号状态。
-2. 能 dry-run 或预览的动作先给预览；涉及删除、覆盖、发送、发布、写远端状态时先征求客户确认。
+客户至少说明：
+
+1. 要完成的任务和验收标准；
+2. 目标项目或工作目录；
+3. 指定执行器/模型/推理档，或允许自动选择；
+4. 是否允许修改文件、联网、创建 worktree、提交或执行其他高影响动作。
+
+示例请求：
+
+```text
+把这个小范围修复派给 Pi，允许改当前项目，不允许提交；运行相关测试并回报实际模型和 Token。
+```
+
+### 配置文件
+
+本技能目录中有两类 YAML，职责不同：
+
+| 文件 | 性质 | 用途 |
+|---|---|---|
+| `references/supported-agents.yml` | 随技能发布的公共配置 | 支持哪些 AI Agent、适合什么工作、如何调用、验证到什么程度 |
+| `assets/config.example.yml` | 私有配置模板 | 配置 host 标识及 state/temp 根目录；复制后由客户持有 |
+
+可选私有配置位置与覆盖变量：
+
+```text
+~/.config/soia-skills/soia-dev-agent-cli-dispatch/config.yml
+SOIA_DEV_AGENT_CLI_DISPATCH_CONFIG_FILE=<custom-config-path>
+```
+
+配置优先级：本次 CLI 参数 → 进程环境 → 私有 `config.yml` → 跨平台默认值。API key、cookie、token、session 不得写进该配置；它们留在 provider 登录态或系统凭据库。
 
 ## 安装
 
