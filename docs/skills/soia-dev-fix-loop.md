@@ -4,6 +4,12 @@
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-fix-loop) · [← 全部技能](README.md)
 
+## 怎么触发
+
+装好后用自然语言说话即可，Agent 按下列意图命中本技能：
+
+「按评审意见改」「测试挂了怎么修」「能不能收口」
+
 ## 能力与用法
 
 ### 这个技能可以做什么
