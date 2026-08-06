@@ -263,11 +263,16 @@ def _r4_test_evidence(target: pathlib.Path, repo_dir: pathlib.Path,
                       skill_name: str) -> tuple[str, str, str] | None:
     """专属测试的检查与随包证据。
 
-    在 repo_dir/tests/ 下找源码引用 `skills/<skill_name>/` 的测试文件，找到就
+    在 repo_dir/tests/ 下找源码含技能名（skill_name 子串）的测试文件，找到就
     拷贝进暂存包并在包布局实跑：跑不过说明测试耦合了仓布局——进包后跑不起来，
     比没有更糟，记硬缺口；一个都没找到同样记硬缺口（评测会记缺测试保障）。
+
+    匹配用技能名本身而非 `skills/<技能名>/` 路径字面串：真实测试文件常把路径
+    分段拼接（如 `ROOT / "skills" / "soia-env-network-diagnose" / "scripts"`），
+    路径字面串不存在，永远匹配不到。技能名带域前缀全局唯一，误匹配（同一测试
+    文件里引用别的技能）概率可接受。
     """
-    marker = f"skills/{skill_name}/"
+    marker = skill_name
     tests_dir = repo_dir / "tests"
     matched: list[pathlib.Path] = []
     if tests_dir.is_dir():

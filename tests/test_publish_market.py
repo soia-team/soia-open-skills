@@ -114,6 +114,28 @@ if __name__ == "__main__":
     unittest.main()
 """
 
+# 分段拼路径引用技能的测试：源码里只出现技能名，不出现 `skills/<技能名>/`
+# 路径字面串（真实测试常写成 `ROOT / "skills" / "<技能名>" / ...`）。
+# 旧规则按路径字面串匹配会永远找不到它；按技能名子串匹配（R4）才能命中，
+# 是本缺陷的回归夹具。测试自身不依赖仓布局，进包后能跑通。
+SEGMENTED_PATH_TEST = """import unittest
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SKILL_DIR = REPO_ROOT / "skills" / "demo-gate"
+SCRIPTS = SKILL_DIR / "scripts"
+
+
+class SegmentedPathTest(unittest.TestCase):
+    def test_skill_scripts_path_shape(self) -> None:
+        self.assertTrue(SKILL_DIR.name == "demo-gate")
+        self.assertTrue(SCRIPTS.name == "scripts")
+
+
+if __name__ == "__main__":
+    unittest.main()
+"""
+
 
 class StagingTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -236,9 +258,18 @@ class ReadinessGateTests(unittest.TestCase):
         (self.repo / "skills" / "demo-gate" / "SKILL.md").write_text(
             text, encoding="utf-8")
 
-    def stage(self) -> Path:
-        return STAGE.stage(self.repo, "demo-gate", self.out,
-                           allow_unreleased=True)
+    def stage(self) -> tuple[Path, str]:
+        """跑 stage 并捕获门禁报告，返回 (目标目录, 捕获的报告文本)。
+
+        门禁的逐项报告直印 stdout，失败尾部可能含子测试的
+        `FAILED (failures=1)`——绿跑日志里出现 FAILED 字样会误导读日志的人，
+        所以在测试里捕获；生产脚本的 print 行为不变。
+        """
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            target = STAGE.stage(self.repo, "demo-gate", self.out,
+                                 allow_unreleased=True)
+        return target, buffer.getvalue()
 
     def test_r1_missing_boundary_section_rejected(self) -> None:
         self.write_skill(GATE_BASE.replace(
@@ -250,7 +281,7 @@ class ReadinessGateTests(unittest.TestCase):
                          "被拒后不应留下暂存产物")
 
     def test_r1_boundary_section_added_passes(self) -> None:
-        target = self.stage()
+        target, _ = self.stage()
         self.assertTrue((target / "SKILL.md").exists(), "R1 补齐后不再失败")
 
     def test_r2_description_without_trigger_rejected(self) -> None:
@@ -262,7 +293,7 @@ class ReadinessGateTests(unittest.TestCase):
     def test_r2_description_with_trigger_passes(self) -> None:
         self.write_skill(GATE_BASE.replace(
             "触发：「上架演示」", "触发：「上架演示」「发到市场」"))
-        target = self.stage()
+        target, _ = self.stage()
         self.assertTrue((target / "SKILL.md").exists())
 
     def test_r3_placeholder_only_table_rejected(self) -> None:
@@ -276,7 +307,7 @@ class ReadinessGateTests(unittest.TestCase):
         self.assertFalse((self.out / "demo-gate").exists())
 
     def test_r3_real_sample_row_passes(self) -> None:
-        target = self.stage()
+        target, _ = self.stage()
         self.assertTrue((target / "SKILL.md").exists())
 
     def test_r4_no_matching_test_rejected(self) -> None:
@@ -287,10 +318,18 @@ class ReadinessGateTests(unittest.TestCase):
         self.assertIn("无专属测试", str(ctx.exception))
 
     def test_r4_self_contained_test_copied_and_passes(self) -> None:
-        target = self.stage()
+        target, _ = self.stage()
         self.assertTrue((target / "tests").is_dir(),
                         "专属测试应随包作为证据")
         self.assertTrue((target / "tests" / "test_demo_gate.py").is_file())
+
+    def test_r4_segmented_path_test_copied_and_passes(self) -> None:
+        """回归：路径分段拼接的测试（无 `skills/<技能名>/` 字面串）也能被 R4 找到。"""
+        (self.repo / "tests" / "test_demo_gate.py").write_text(
+            SEGMENTED_PATH_TEST, encoding="utf-8")
+        target, _ = self.stage()
+        self.assertTrue((target / "tests" / "test_demo_gate.py").is_file(),
+                        "按技能名匹配，分段拼路径的测试也应被找到并随包")
 
     def test_r4_repo_layout_coupled_test_rejected(self) -> None:
         (self.repo / "tests" / "test_demo_gate.py").write_text(
@@ -303,22 +342,17 @@ class ReadinessGateTests(unittest.TestCase):
 
     def test_r5_foreign_only_urls_warn_without_blocking(self) -> None:
         self.write_skill(GATE_BASE + "参考：https://example.com/tool\n")
-        buffer = io.StringIO()
-        with contextlib.redirect_stdout(buffer):
-            target = self.stage()
-        output = buffer.getvalue()
+        target, output = self.stage()
         self.assertTrue((target / "SKILL.md").exists(), "警告不阻断打包")
         self.assertIn("R5", output)
         self.assertIn("警告", output)
 
     def test_r5_domestic_url_has_no_warning(self) -> None:
         self.write_skill(GATE_BASE + "镜像：https://registry.npmmirror.com/pkg\n")
-        buffer = io.StringIO()
-        with contextlib.redirect_stdout(buffer):
-            target = self.stage()
+        target, output = self.stage()
         self.assertTrue((target / "SKILL.md").exists())
-        self.assertNotIn("R5 [警告]", buffer.getvalue())
-        self.assertNotIn("境外", buffer.getvalue())
+        self.assertNotIn("R5 [警告]", output)
+        self.assertNotIn("境外", output)
 
     def test_check_only_leaves_no_staging(self) -> None:
         rc = STAGE.main(["--repo-dir", str(self.repo), "--skill", "demo-gate",
