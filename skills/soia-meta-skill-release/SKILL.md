@@ -1,11 +1,11 @@
 ---
 name: soia-meta-skill-release
 description: 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」
-version: 5.1.2
+version: 5.2.0
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-08-05 16:30:00
+updated_at: 2026-08-06 17:30:00
 created_by: gpt-5.6-terra
-updated_by: claude-opus-5
+updated_by: claude-fable-5
 dependencies:
   optional: [soia-meta-sync-skills]
 ---
@@ -96,11 +96,19 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 
 ### `npx` 模式（`--install-mode npx`，显式 opt-in）
 
-1. 逐项执行 `npx skills add <repo> -g -a <agents> -s <skill> -y`；`--agents` 支持任意 `npx skills -a` agent id，如 `claude-code`、`codex`、`pi`（Pi 安装到 `~/.pi/agent/skills`）。
+> ⚠️ **2026-08-06 规范定稿后的边界**：各 agent 技能空间一律**实体安装**且必须
+> **可再现**（lock 登记来源）。由此：本模式只允许逐技能窄命令
+> `npx skills add <repo> -g -a <agent> --copy -s <skill> -y`（多技能用重复 `-s`，
+> 逗号列表会被当成单个名字；qwen 的 id 是 `qwen-code`）；**第 3 步的全量
+> `npx skills update -g -y` 已禁用**——它对 lock 内全部技能向所有 agent 目录
+> 广播重装，等效被禁的 `-a '*'`；第 4/5 步的软链同步与实体规范冲突，一并停用。
+> `release_skills.py` 尚未按此改造，改造完成前不要使用其批量步骤。
+
+1. 逐项执行 `npx skills add <repo> -g -a <agents> --copy -s <skill> -y`；`--agents` 支持任意 `npx skills -a` agent id，如 `claude-code`、`codex`、`pi`（Pi 安装到 `~/.pi/agent/skills`）、`qwen-code`。
 2. 有 `--removed` 时执行同参 `npx skills remove`，并清理五处残留。
-3. 执行 `npx skills update -g -y`，覆盖交叉引用的连带更新。
-4. 遍历 `~/.agents/skills`：对有 `SKILL.md` 且 Codex 侧缺失的技能，创建相对软链；历史实证目录没有 `SKILL.md`，不进入 Codex。
-5. 调用已安装的 `soia-meta-sync-skills`，目标为 `soia,workbuddy`。
+3. ~~执行 `npx skills update -g -y`~~（已禁用，见上方警告；更新改为对目标技能重跑第 1 步）。
+4. ~~软链补齐 Codex~~（已停用；Codex 走插件市场）。
+5. ~~调用 `soia-meta-sync-skills` 同步 soia,workbuddy~~（已停用；WorkBuddy 走 `install_workbuddy_experts.py`）。
 6. 对账 `~/.agents/.skill-lock.json`：所有新技能必须来自 `--repo`，旧名必须零残留。
 7. 按 `--repo-dir` → 进程环境 → 私有 v2 config → 只读 v1 config 回退 → 旧版兼容目录的顺序解析 checkout，并对比每项 `SKILL.md` version 与装机 version。
 
@@ -166,6 +174,29 @@ CI 的 `check_skill_versions.py` 会拦（2026-08-03 漏过一次：改了 skill
    号」。脚本收尾有断言兜底，但**人工介入或中断后必须自查**。
 3. **发布门禁**：元仓 `generate_marketplaces.py` 读取待 pin 提交的 manifest，含
    `-SNAPSHOT` 直接拒绝生成清单——SNAPSHOT 结构上到不了任何客户端。
+
+### 全生态批量发版实测补充（2026-08-06，10 仓一次发齐踩出来的）
+
+1. **元仓自己发版时，定稿 PR 必须同步带上派生物刷新**。域仓 main 先发、元仓后发，
+   元仓定稿 PR 的 `audit` 会依次撞 marketplace freshness 与 skill-pages freshness
+   （实测连撞两次 CI）。正确做法：在定稿分支上补跑 `generate_marketplaces.py`、
+   `generate_router_index.py`、`generate_skill_pages.py`，且 push 前把 audit 的
+   全部检查步骤在本地预跑一遍绿了再推。
+2. **域仓默认分支必须是 main**。soia-private-corp 曾默认指 dev，codex
+   `marketplace add` 按默认分支拉清单，装出 `-SNAPSHOT`。用
+   `gh repo edit <repo> --default-branch main` 修正后重装即恢复正式版。
+3. **WorkBuddy 正式安装前，所有域仓本地 checkout 必须切到 main**。
+   `install_workbuddy_experts.py` 复制的是 checkout 当前分支；发版后 dev 已开
+   下一班列车（SNAPSHOT），停在 dev 会把 SNAPSHOT 装成专家。
+4. **发版后重建 dev（客户要求「删 dev 从 main 重拉」时）**：开源仓 dev 保护
+   禁删也禁强推，流程是 GET 保护配置存档 → PUT `allow_force_pushes=true` →
+   强推 main+新列车 → 立即 PUT 关回 → 验证远程 sha 一致且保护恢复。免费版
+   私有仓无 classic protection API（GET 返回 403），说明本就无保护，直接删/推。
+5. **zsh 手动推 refspec 的坑**：`"$sha:refs/heads/main"` 里的 `:r` 会被 zsh
+   当作修饰符吞掉，产生损坏的 refspec；必须写 `"${sha}:refs/heads/main"`。
+6. **含 feat 的仓发版前把列车提为 next-minor**（本节上文已有规则）：批量场景
+   先按 `git log main..origin/dev` 统计各仓 feat 提交数分组，一次脚本完成
+   6 仓 minor bump 再逐仓跑 `formal_release.py`，比逐仓临时判断稳。
 
 ### 体检：随时可跑，盘点必跑
 

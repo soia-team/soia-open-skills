@@ -1,14 +1,20 @@
 ---
 name: soia-meta-sync-skills
 description: 将一个共享技能源以软链接同步到用户明确选择的 AI 工具目录；支持预览、单项同步、硬依赖闭包和受限清理。
-version: 2.2.3
+version: 2.3.0
 created_at: 2026-07-07 14:44:10
-updated_at: 2026-08-05 15:00:00
+updated_at: 2026-08-06 17:30:00
 created_by: claude opus 4.6
-updated_by: claude-opus-5
+updated_by: claude-fable-5
 ---
 
 # soia-meta-sync-skills
+
+> ⚠️ **适用边界（2026-08-06 定稿）**：各 agent 常驻技能空间（`~/.pi/agent/skills`、
+> `~/.qwen/skills`、`~/.claude/skills`、`~/.soia/skills`）已定为**实体安装**规范——
+> 软链会产生无来源记录、换机不可再现的安装，当日已全量转为
+> `npx skills add --copy` 实体并登记 lock。**本技能不得再用于上述常驻空间**；
+> 仅在临时验证、一次性试装等明确不追求可再现性的场景使用，用完即清。
 
 ## 客户可读说明
 
