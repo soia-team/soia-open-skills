@@ -1,11 +1,11 @@
 ---
 name: soia-meta-publish-market
 description: 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交。触发：「上架 SkillHub」「发到 Red Skill」「上架技能市场」
-version: 1.2.0
+version: 1.3.0
 created_at: 2026-08-04 20:00:00
-updated_at: 2026-08-05 16:50:00
+updated_at: 2026-08-06 10:40:00
 created_by: claude fable 5
-updated_by: claude fable 5
+updated_by: claude opus 5
 ---
 
 # soia-meta-publish-market
@@ -46,6 +46,9 @@ python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
 **打包内容直接从 `origin/main` 导出**，不读工作副本——本地检出在哪个分支都不影响
 结果，也就不会因为有人切走分支而误打包未发布内容（多 AI 共用检出时这是常态）。
 `main` 上没有该技能、或 main 版本带 `-SNAPSHOT`，一律拒绝打包。
+
+`--channel redskill` 时 **`--display-name` 是必填**，缺省直接拒跑，原因见
+[展示名与平台主键](#展示名与平台主键必填)。
 
 打包后由**客户本人**执行投递命令——见下方两个渠道。
 
@@ -214,6 +217,28 @@ shim 在某些环境下吞掉输出（命令静默、退出码 0），直接调
 **标签是实时拉取的**，不要硬编码——实测当前为效率工具 / 内容创作 / 学习成长 /
 职场办公 / 编程开发 / 生活决策 / 金融理财 / 其它，但以拉到的为准。
 
+#### 展示名与平台主键（必填）
+
+**`name` 不能落到仓内技能名上。** 2026-08-06 首次真提交被拒：
+`SUBMIT_REJECTED: 名称长度不符合要求`——载荷的 `name` 取自 frontmatter 的
+`soia-env-network-diagnose`（25 字符），超了平台限制；改成「网络诊断助手」后通过。
+官方 uploader 的取值优先级是 `flags.name || metadata.name || identifier`
+（`submit.mjs`），所以正确做法是投递时传 `--name`，**不动仓内 frontmatter**——
+改 frontmatter 会连带影响 identifier 派生与仓内技能身份。
+
+平台的长度上限未公开，我们只知道 25 被拒、6 通过。因此不猜阈值，改用一条确定性
+约束：**`--channel redskill` 必须给 `--display-name`，缺省直接拒跑**。长英文技能名
+对市场读者本来也没有意义。
+
+**`--identifier` 要显式钉住。** Skill ID 是平台主键、跨版本不可改名。不显式指定时
+它由 frontmatter 的 `name` 派生，将来一旦改名就会在平台上**另建一个新技能**，而不是
+更新原有的。所以投递命令固定带 `--identifier <仓内技能名>`。
+
+**`--yes` 不覆盖最后一道确认门。** `confirmBeforeSubmit` 是无条件的：从 stdin 读一行，
+必须是字面量 `submit`，空输入按取消处理。这是平台设计的人工闸门，必须客户明确说提交
+后才应答；`edit` 后跟 `key=value` 行可在确认阶段改 `name`/`identifier`/`version`/
+`description`/`detail`/`tag`。
+
 ### 路径 B：网页上传
 
 创作服务平台 → Builder hub → Red Skill → 上传 Skill → **上传文件**。两步：
@@ -264,3 +289,5 @@ shim 在某些环境下吞掉输出（命令静默、退出码 0），直接调
 - 对有 hard 依赖的技能执行打包时报错并说明原因，不产出暂存目录
 - 打包后 frontmatter 同时含平台字段与原字段，正文一字不改
 - `--display-name` 缺省时回落到原 `name`，`--summary` 缺省时回落到 `description`
+- `--channel redskill` 缺 `--display-name` 时退出码非零，且不产出暂存目录
+- redskill 的投递命令同时带 `--name` 与 `--identifier`，且给出的是 `--dry-run` 形态

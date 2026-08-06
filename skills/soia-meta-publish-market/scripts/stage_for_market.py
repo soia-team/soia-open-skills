@@ -37,6 +37,18 @@ REDSKILL_ALLOWED_SUFFIXES = {
 }
 CHANNELS = ("skillhub", "redskill")
 
+# Red Skill 的展示名不能落到仓内技能名上。
+# 实测 2026-08-06：`name` 取 frontmatter 的 `soia-env-network-diagnose`（25 字符）
+# 被平台以 `SUBMIT_REJECTED: 名称长度不符合要求` 拒收；改成「网络诊断助手」后通过。
+# 官方 uploader 的取值优先级是 `flags.name || metadata.name || identifier`
+# （submit.mjs），所以正确做法是投递时传 `--name`，**不动仓内 frontmatter**——
+# 改 frontmatter 会连带影响 identifier 派生和仓内技能身份。
+# 平台的具体长度上限未公开，我们只知道 25 被拒、6 通过；因此不猜阈值，
+# 改为「redskill 渠道必须显式给出 --display-name」这条确定性约束。
+REDSKILL_UPLOADER = (
+    'node "$(npm root -g)/@xhs/skillhub-upload/cli/index.mjs" publish'
+)
+
 
 def strip_unsupported(target: pathlib.Path) -> list[str]:
     """删掉目标渠道不接受的文件，返回被删清单。"""
@@ -180,6 +192,22 @@ def stage(repo_dir: pathlib.Path, skill_name: str, out_dir: pathlib.Path,
     return target
 
 
+def redskill_publish_command(target: pathlib.Path, skill_name: str,
+                             display_name: str) -> str:
+    """Red Skill 的投递命令；必须带 --name 与 --identifier。
+
+    `--name` 覆盖 frontmatter 里的长技能名（否则被平台拒收）；
+    `--identifier` 把平台主键钉死在仓内技能名上——Skill ID 跨版本不可改名，
+    不显式钉住的话，将来改了 frontmatter 的 `name` 会在平台上另建一个新技能。
+    """
+    return (
+        f'{REDSKILL_UPLOADER} {target} \\\n'
+        f'  --agent --name "{display_name}" --identifier "{skill_name}" \\\n'
+        f'  --source <original|repost> --tag "<中文标签，逗号分隔>" \\\n'
+        f'  --dry-run --yes'
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-dir", type=pathlib.Path, required=True)
@@ -205,6 +233,12 @@ def main(argv: list[str] | None = None) -> int:
         print("error: 打包需要同时给出 --skill 与 --out", file=sys.stderr)
         return 1
 
+    if args.channel == "redskill" and not args.display_name:
+        print("error: redskill 渠道必须给 --display-name（中文短名）。"
+              "缺省会回落到仓内技能名，实测会被平台以「名称长度不符合要求」拒收，"
+              "且长英文名对市场读者也没有意义。", file=sys.stderr)
+        return 1
+
     try:
         target = stage(args.repo_dir.resolve(), args.skill, args.out.resolve(),
                        args.display_name, args.summary, args.license,
@@ -218,7 +252,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.channel == "skillhub":
         print(f"  skillhub publish {target} --dry-run")
     else:
-        print(f"  交给官方 uploader：把 {target} 上传到小红书 SkillHub")
+        print(redskill_publish_command(target, args.skill, args.display_name))
+        print("  预检通过后去掉 --dry-run 重跑；最后一道确认门读 stdin，"
+              "需要客户明确说提交后回答字面量 submit。")
     return 0
 
 
