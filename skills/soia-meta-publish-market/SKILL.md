@@ -1,11 +1,11 @@
 ---
 name: soia-meta-publish-market
 description: 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交。触发：「上架 SkillHub」「发到 Red Skill」「上架技能市场」
-version: 1.3.0
+version: 1.4.0
 created_at: 2026-08-04 20:00:00
-updated_at: 2026-08-06 10:40:00
+updated_at: 2026-08-06 11:40:00
 created_by: claude fable 5
-updated_by: claude opus 5
+updated_by: pi deepseek-v4-flash
 ---
 
 # soia-meta-publish-market
@@ -30,6 +30,7 @@ updated_by: claude opus 5
 | 上架某个技能到 SkillHub | 打包 → 叠加平台字段 → `--dry-run` 预检 → 交客户提交 | 暂存路径、预检结果、待执行命令 |
 | 发到小红书 Red Skill | 打包并给出上传指引 | 暂存路径与上传入口说明 |
 | 更新已上架的技能 | 保持 slug 不变重新打包，提示填写变更说明 | 版本对比与 changelog 建议 |
+| 上架前检查技能是否就绪 | 打包并对暂存产物跑 R1-R5 就绪门禁 | 逐项通过/警告/硬缺口报告，硬缺口拒绝打包 |
 
 ### 客户如何使用
 
@@ -41,6 +42,10 @@ python3 scripts/stage_for_market.py --repo-dir <域仓路径> --list-eligible
 python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
   --skill <技能名> --out <暂存目录> --channel skillhub|redskill \
   --display-name "<中文展示名>"
+
+# 3. 发版前咨询：对工作树跑一遍就绪门禁，不留产物（见「上架就绪门禁」）
+python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
+  --skill <技能名> --out <暂存目录> --allow-unreleased --check-only
 ```
 
 **打包内容直接从 `origin/main` 导出**，不读工作副本——本地检出在哪个分支都不影响
@@ -98,6 +103,45 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-publish-market 
 | main 版本带 `-SNAPSHOT` | 拒绝：「不是正式版」 |
 
 `--allow-unreleased` 仅供本地演练，**不得用于真实上架**。
+
+### 4. 上架就绪门禁（打包后机器检查）
+
+外部市场会用 AI 评测上架的技能，历史评语点名过的缺口类型在打包阶段就要被机器
+查出来——有硬缺口直接拒绝打包，不让它流到市场上去挨评。门禁细节见下方
+[上架就绪门禁](#上架就绪门禁)。
+
+## 上架就绪门禁
+
+外部市场（腾讯 SkillHub 等）会用 AI 评测上架的技能。历史评语点名过几类缺口——
+没有能力边界、没有触发词、没有真实输出样例、没有测试保障、依赖源全境外——这些
+**在打包阶段就被机器检查出来**，有硬缺口直接拒绝打包，不让它流到市场上去挨评。
+
+`stage_for_market.py` 打包后对**暂存产物**（不是仓库）跑五道检查：
+
+| 编号 | 检查 | 等级 | 判据 | 修复指引 |
+|---|---|---|---|---|
+| R1 | 能力边界 | 硬缺口 | SKILL.md 没有含「不负责」/「能力边界」的标题节 | 补一节「不负责什么」，用两三行说清不做什么 |
+| R2 | 触发词 | 硬缺口 | frontmatter `description` 不含「触发」/「Triggers」 | 在 description 里写明触发场景，例如「触发：…」 |
+| R3 | 输出样例 | 硬缺口 | 没有含真实数据的「样例/示例」小节；全是 `<占位符>` 的表格不算 | 给出一节真实输入→输出的样例表格 |
+| R4 | 测试证据 | 硬缺口 | `tests/` 里没有引用 `skills/<技能名>/` 的专属测试；或有但进包后跑不起来 | 给技能写一个自包含的最小测试，不依赖仓布局 |
+| R5 | 境外源提示 | 警告 | 包内只有境外 URL（无 `.cn`/npmmirror 等境内源） | 优先替换为国内可访问的安装源或镜像 |
+
+门禁行为：逐项打印通过/警告/硬缺口；存在**硬缺口** → 删除暂存目录并拒绝打包
+（退出码 1）；只有警告 → 照常产出。R4 找到的专属测试会**拷贝进包**作为证据，
+且在包的布局里实跑——跑不过说明测试耦合了仓布局，比没有更糟。
+
+本门禁不预测评测分数，只消除历史评语点名过的缺口类型。
+
+### 咨询用法：--check-only
+
+```bash
+# 对工作树做就绪检查（不导出 main、不留暂存产物，只出报告）
+python3 scripts/stage_for_market.py --repo-dir <域仓路径> \
+  --skill <技能名> --out <暂存目录> --allow-unreleased --check-only
+```
+
+`--check-only` 走完整个打包+门禁流程后删除暂存产物，只留报告——适合在 PR 阶段
+先跑一遍咨询，不必等发版。与 `--allow-unreleased` 组合即「对工作树做咨询检查」。
 
 ### 3. slug 用仓内技能名，展示名用中文
 
@@ -291,3 +335,7 @@ shim 在某些环境下吞掉输出（命令静默、退出码 0），直接调
 - `--display-name` 缺省时回落到原 `name`，`--summary` 缺省时回落到 `description`
 - `--channel redskill` 缺 `--display-name` 时退出码非零，且不产出暂存目录
 - redskill 的投递命令同时带 `--name` 与 `--identifier`，且给出的是 `--dry-run` 形态
+- 就绪门禁 R1-R5 各项都有**一正一反**的用例：缺边界节/触发词/真实样例/专属测试
+  被拒，补齐后放行；全境外 URL 记警告不阻断，含 npmmirror 等境内源则无警告
+- R4 会把专属测试拷贝进包并在包布局实跑；布局耦合的测试会被抓出来拒包
+- `--check-only` 跑完整个流程后不留暂存产物

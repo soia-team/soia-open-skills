@@ -12,9 +12,17 @@
 命名策略（2026-08-04 用户裁决）：`slug` 直接用仓内技能名（已带 `soia-` 前缀，
 天然全网唯一，且与仓内一一对应便于追溯）；`displayName` 用中文可读名。
 
+**上架就绪门禁**：外部市场（腾讯 SkillHub 等）会用 AI 评测上架的技能，所以
+打包后对暂存产物跑 R1-R5 机器检查（能力边界、触发词、输出样例、测试证据、
+境外源提示），有硬缺口直接拒绝打包；`--check-only` 走完全流程后删除暂存
+产物、只留报告，与 `--allow-unreleased` 组合即对工作树做咨询检查。
+本门禁不预测评测分数，只消除历史评语点名过的缺口类型。
+
 用法：
     python3 stage_for_market.py --repo-dir <域仓> --skill <技能名> --out <暂存目录>
     python3 stage_for_market.py --repo-dir <域仓> --list-eligible
+    python3 stage_for_market.py --repo-dir <域仓> --skill <技能名> --out <暂存目录> \
+        --allow-unreleased --check-only   # 对工作树做就绪咨询，不留产物
 """
 
 from __future__ import annotations
@@ -23,6 +31,7 @@ import argparse
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
 
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n", re.S)
@@ -47,6 +56,19 @@ CHANNELS = ("skillhub", "redskill")
 # 改为「redskill 渠道必须显式给出 --display-name」这条确定性约束。
 REDSKILL_UPLOADER = (
     'node "$(npm root -g)/@xhs/skillhub-upload/cli/index.mjs" publish'
+)
+
+DISCLAIMER = "本门禁不预测评测分数，只消除历史评语点名过的缺口类型"
+
+URL_RE = re.compile(r"https?://[^\s'\"<>()]+")
+# 境内域名启发式清单：host 以 .cn 结尾，或命中这些已知境内镜像/云厂商域名。
+DOMESTIC_HOST_MARKERS = (
+    "npmmirror.com",
+    "tencent.com",
+    "aliyun.com",
+    "tsinghua.edu.cn",
+    "ustc.edu.cn",
+    "huaweicloud.com",
 )
 
 
@@ -189,7 +211,160 @@ def stage(repo_dir: pathlib.Path, skill_name: str, out_dir: pathlib.Path,
         removed = strip_unsupported(target)
         if removed:
             print(f"  已剔除 Red Skill 不支持的文件：{', '.join(removed)}")
+
+    gaps = readiness_gaps(target, repo_dir, skill_name)
+    if any(level == "硬缺口" for level, _, _ in gaps):
+        shutil.rmtree(target, ignore_errors=True)
+        blocked = "\n".join(
+            f"  {code} {note}" for level, code, note in gaps
+            if level == "硬缺口")
+        raise ValueError(
+            f"{skill_name} 存在上架就绪硬缺口，拒绝打包：\n{blocked}")
     return target
+
+
+def _url_host(url: str) -> str:
+    match = re.match(r"https?://([^/?#\s]+)", url)
+    return match.group(1).lower() if match else ""
+
+
+def _is_domestic_url(url: str) -> bool:
+    """按境内域名启发式清单判定 URL 是否境内可达。"""
+    host = _url_host(url)
+    if not host:
+        return False
+    if host.endswith(".cn"):
+        return True
+    return any(host == marker or host.endswith("." + marker)
+               for marker in DOMESTIC_HOST_MARKERS)
+
+
+def _has_real_sample_section(text: str) -> bool:
+    """存在标题含「样例/示例」的小节，且小节内有真实表格数据行。
+
+    「真实」指以 `|` 开头的行不含 `<`——占位符模板（`| <path> |`）不算。
+    """
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        heading = re.match(r"^(#{1,6})\s+(.*)$", line)
+        if not heading or not re.search(r"样例|示例", heading.group(2)):
+            continue
+        level = len(heading.group(1))
+        for row in lines[index + 1:]:
+            next_heading = re.match(r"^(#{1,6})\s+", row)
+            if next_heading and len(next_heading.group(1)) <= level:
+                break
+            if row.startswith("|") and "<" not in row:
+                return True
+    return False
+
+
+def _r4_test_evidence(target: pathlib.Path, repo_dir: pathlib.Path,
+                      skill_name: str) -> tuple[str, str, str] | None:
+    """专属测试的检查与随包证据。
+
+    在 repo_dir/tests/ 下找源码引用 `skills/<skill_name>/` 的测试文件，找到就
+    拷贝进暂存包并在包布局实跑：跑不过说明测试耦合了仓布局——进包后跑不起来，
+    比没有更糟，记硬缺口；一个都没找到同样记硬缺口（评测会记缺测试保障）。
+    """
+    marker = f"skills/{skill_name}/"
+    tests_dir = repo_dir / "tests"
+    matched: list[pathlib.Path] = []
+    if tests_dir.is_dir():
+        for path in sorted(tests_dir.rglob("*.py")):
+            try:
+                source = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if marker in source:
+                matched.append(path)
+    if not matched:
+        return ("硬缺口", "R4", "无专属测试，评测将记缺测试保障")
+
+    staged_tests = target / "tests"
+    for src in matched:
+        rel = src.relative_to(tests_dir)
+        dst = staged_tests / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+    run = subprocess.run(
+        [sys.executable, "-m", "unittest", "discover", "-s",
+         str(staged_tests), "-q"],
+        capture_output=True, text=True)
+    if run.returncode != 0:
+        tail = "\n".join((run.stdout + run.stderr).strip().splitlines()[-8:])
+        return ("硬缺口", "R4",
+                f"测试有仓布局耦合，进包后跑不起来，比没有更糟\n"
+                f"    实跑输出（尾部）：{tail}")
+    return None
+
+
+def _r5_foreign_sources(target: pathlib.Path) -> tuple[str, str, str] | None:
+    """包内所有 .md 里的 http(s) URL 若全境外，记警告（不阻断）。"""
+    urls: list[str] = []
+    for path in sorted(target.rglob("*.md")):
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        urls.extend(URL_RE.findall(text))
+    if not urls:
+        return None
+    if any(_is_domestic_url(url) for url in urls):
+        return None
+    return ("警告", "R5",
+            "探测/依赖源疑似全境外，国内环境可用性会被评测扣分")
+
+
+def readiness_gaps(target: pathlib.Path, repo_dir: pathlib.Path,
+                   skill_name: str) -> list[tuple[str, str, str]]:
+    """对暂存目录里的最终产物做上架就绪门禁，返回 (等级, 编号, 说明)。
+
+    等级取「硬缺口」或「警告」。检查对象是暂存目录里叠加了 frontmatter、做完
+    渠道过滤之后的产物，不是仓库。逐项结果打印到 stdout。
+    """
+    skill_md = target / "SKILL.md"
+    text = skill_md.read_text(encoding="utf-8")
+    gaps: list[tuple[str, str, str]] = []
+
+    # R1 边界表达：市场用户拿到的是孤立技能，必须自述能力边界。
+    if not any(re.match(r"^#{1,6}\s+.*(不负责|能力边界)", line)
+               for line in text.splitlines()):
+        gaps.append(("硬缺口", "R1",
+                     "SKILL.md 没有含「不负责/能力边界」的标题节；"
+                     "市场用户拿到的是孤立技能，必须自述能力边界"))
+
+    # R2 触发词：评测按触发词判断技能何时该被调起。
+    frontmatter, _ = read_frontmatter(skill_md)
+    description = field(frontmatter, "description") or ""
+    if not re.search(r"触发|Triggers", description):
+        gaps.append(("硬缺口", "R2",
+                     "frontmatter 的 description 没有触发词"
+                     "（「触发」或「Triggers」）；评测靠触发词判断何时调起技能"))
+
+    # R3 输出样例：评测点名过缺真实输出样例，占位符模板不算。
+    if not _has_real_sample_section(text):
+        gaps.append(("硬缺口", "R3",
+                     "没有含真实数据的「样例/示例」小节；"
+                     "评测点名过缺真实输出样例，占位符模板不算"))
+
+    # R4 测试证据。
+    r4 = _r4_test_evidence(target, repo_dir, skill_name)
+    if r4 is not None:
+        gaps.append(r4)
+
+    # R5 境外源提示。
+    r5 = _r5_foreign_sources(target)
+    if r5 is not None:
+        gaps.append(r5)
+
+    print(f"[就绪门禁] {skill_name} 逐项结果：")
+    for level, code, note in gaps:
+        print(f"  {code} [{level}] {note}")
+    if not gaps:
+        print("  R1-R5 全部通过")
+    print(f"  {DISCLAIMER}")
+    return gaps
 
 
 def redskill_publish_command(target: pathlib.Path, skill_name: str,
@@ -220,6 +395,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="目标渠道；redskill 会剔除其不支持的文件类型")
     parser.add_argument("--allow-unreleased", action="store_true",
                         help="跳过「必须是正式版」校验；仅用于本地演练，不得用于真实上架")
+    parser.add_argument("--check-only", action="store_true",
+                        help="走完打包+就绪门禁后删除暂存产物，只留报告；"
+                             "与 --allow-unreleased 组合即对工作树做咨询检查")
     parser.add_argument("--list-eligible", action="store_true",
                         help="只列出哪些技能可上架，不打包")
     args = parser.parse_args(argv)
@@ -246,6 +424,10 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+    if args.check_only:
+        shutil.rmtree(target, ignore_errors=True)
+        print(f"{args.skill}：打包与就绪门禁完成（--check-only，暂存产物已删除）")
+        return 0
     print(f"已暂存：{target}")
     print(f"来源：{args.repo_dir.name} main 正式版")
     print("下一步（不会自动执行）：")
