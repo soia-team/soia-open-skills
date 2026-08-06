@@ -1,11 +1,11 @@
 ---
 name: soia-meta-publish-market
 description: 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交。触发：「上架 SkillHub」「发到 Red Skill」「上架技能市场」
-version: 1.4.0
+version: 1.4.1
 created_at: 2026-08-04 20:00:00
-updated_at: 2026-08-06 11:54:00
+updated_at: 2026-08-06 16:20:00
 created_by: claude fable 5
-updated_by: pi deepseek-v4-flash
+updated_by: claude fable 5
 ---
 
 # soia-meta-publish-market

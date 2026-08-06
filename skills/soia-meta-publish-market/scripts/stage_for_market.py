@@ -213,6 +213,10 @@ def stage(repo_dir: pathlib.Path, skill_name: str, out_dir: pathlib.Path,
             print(f"  已剔除 Red Skill 不支持的文件：{', '.join(removed)}")
 
     gaps = readiness_gaps(target, repo_dir, skill_name)
+    # R4 在包内实跑过测试；清掉运行残留（__pycache__/*.pyc 不在 Red Skill
+    # 白名单，且渠道过滤发生在门禁之前，不清会把字节码发进市场包）。
+    for cache in sorted(target.rglob("__pycache__"), reverse=True):
+        shutil.rmtree(cache, ignore_errors=True)
     if any(level == "硬缺口" for level, _, _ in gaps):
         shutil.rmtree(target, ignore_errors=True)
         blocked = "\n".join(
@@ -326,7 +330,7 @@ def _r4_test_evidence(target: pathlib.Path, repo_dir: pathlib.Path,
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
     run = subprocess.run(
-        [sys.executable, "-m", "unittest", "discover", "-s",
+        [sys.executable, "-B", "-m", "unittest", "discover", "-s",
          str(staged_tests), "-q"],
         capture_output=True, text=True)
     if run.returncode != 0:

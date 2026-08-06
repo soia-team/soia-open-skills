@@ -345,6 +345,18 @@ class ReadinessGateTests(unittest.TestCase):
                         "专属测试应随包作为证据")
         self.assertTrue((target / "tests" / "test_demo_gate.py").is_file())
 
+    def test_stage_leaves_no_pycache(self) -> None:
+        """回归：R4 包内实跑测试不得把 __pycache__/*.pyc 留在市场包里。
+
+        实测 2026-08-06：Red Skill 本地校验拒收
+        `scripts/__pycache__/probe_endpoints.cpython-314.pyc`——渠道过滤发生在
+        门禁之前，门禁运行产生的字节码若不清理会直接进包。
+        """
+        target, _ = self.stage()
+        leftovers = [str(p) for p in target.rglob("__pycache__")]
+        leftovers += [str(p) for p in target.rglob("*.pyc")]
+        self.assertEqual(leftovers, [], "包内不得残留运行生成物")
+
     def test_r4_segmented_path_test_copied_and_passes(self) -> None:
         """回归：路径分段拼接的测试（无 `skills/<技能名>/` 字面串）也能被 R4 找到。"""
         (self.repo / "tests" / "test_demo_gate.py").write_text(
