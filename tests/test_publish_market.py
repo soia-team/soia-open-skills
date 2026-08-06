@@ -84,6 +84,22 @@ class StagingTests(unittest.TestCase):
         text = (target / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("displayName: demo-plain", text)
 
+    def test_redskill_channel_requires_display_name(self) -> None:
+        """缺 --display-name 时必须拒跑：回落到长技能名会被平台拒收。"""
+        rc = STAGE.main(["--repo-dir", str(self.repo), "--skill", "demo-plain",
+                         "--out", str(self.out), "--channel", "redskill",
+                         "--allow-unreleased"])
+        self.assertEqual(rc, 1)
+        self.assertFalse((self.out / "demo-plain").exists(), "被拒时不应打包")
+
+    def test_redskill_command_carries_name_and_identifier(self) -> None:
+        """投递命令必须同时钉住展示名与平台主键。"""
+        cmd = STAGE.redskill_publish_command(
+            self.out / "demo-plain", "demo-plain", "演示技能")
+        self.assertIn('--name "演示技能"', cmd)
+        self.assertIn('--identifier "demo-plain"', cmd)
+        self.assertIn("--dry-run", cmd, "给出的命令必须是预检，不能直接真投")
+
     def test_staging_a_hard_dependency_skill_raises(self) -> None:
         with self.assertRaises(ValueError) as ctx:
             STAGE.stage(self.repo, "demo-hard", self.out, allow_unreleased=True)
