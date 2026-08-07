@@ -98,7 +98,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-media-content-skills.git",
-        "ref": "561f3ef807f9f1e3961e42cb9e44356a18970329"
+        "ref": "0ef55e4078a3e0e3ddfe7626db07c6d7f73377f0"
       },
       "interface": {
         "displayName": "新媒体内容技能库",

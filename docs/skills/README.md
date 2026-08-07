@@ -98,7 +98,7 @@
 |---|---|
 | [`soia-media-compose-article-draft`](soia-media-compose-article-draft.md) | 把 distill 提炼出的观点写成成文草稿。以用户观点为骨、vault 摘抄为料，生成可继续交给 publish 的文章。可指定公众号/知乎/随笔风格 |
 | [`soia-media-generate-article-image`](soia-media-generate-article-image.md) | 将文章、开源项目、品牌 Logo 或公开 X Prompt Deck 编译为可验收的图片与矢量资产，按组合轴生成 Prompt 并完成事实、文字和视觉验收 |
-| [`soia-media-publish-rednote-card`](soia-media-publish-rednote-card.md) | 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议。只产出文本并由客户人工发布，不接平台 API |
+| [`soia-media-publish-rednote-card`](soia-media-publish-rednote-card.md) | 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议；获客户当次授权时可代其在创作服务平台网页端完成发布。不接平台 API、不用第三方逆向包 |
 | [`soia-media-publish-wechat-draft`](soia-media-publish-wechat-draft.md) | 把成文草稿排版成符合微信公众号限制的内联样式 HTML，机械校验通过后推入微信公众号草稿箱；只建草稿，绝不自动群发 |
 | [`soia-media-publish-x-article`](soia-media-publish-x-article.md) | 将 Markdown 成文上传到 X Articles 草稿箱并校验格式，只保存草稿 |
 | [`soia-media-publish-x-thread`](soia-media-publish-x-thread.md) | 将成文草稿改写为带编号、符合字数限制的 X thread，并可按授权存草稿 |
