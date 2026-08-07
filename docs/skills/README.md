@@ -54,7 +54,7 @@
 | [`soia-env-deepcode-cli-install`](soia-env-deepcode-cli-install.md) | 为小白安装、配置与授权更新开源 Deep Code Agent CLI（lessweb/deepcode-cli） |
 | [`soia-env-environment-setup`](soia-env-environment-setup.md) | 从零规划并验证面向新手的开发环境，协调所需安装技能 |
 | [`soia-env-kimi-cli-install`](soia-env-kimi-cli-install.md) | 面向小白检查、安装、登录和按明确授权更新 Moonshot AI Kimi Code CLI；识别官方独立安装与 npm 来源，默认只报告版本和产品自动更新状态 |
-| [`soia-env-network-diagnose`](soia-env-network-diagnose.md) | 只读诊断小白安装工具时的网络问题：检查 DNS、HTTPS、代理、证书、官方源和超时，区分故障来源，并用固定七列列表汇报网络状态与处理结果 |
+| [`soia-env-network-diagnose`](soia-env-network-diagnose.md) | 只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报 |
 | [`soia-env-node-install`](soia-env-node-install.md) | 为新手安装、验证或按授权更新 Node.js 与 npm |
 | [`soia-env-open-skills-install`](soia-env-open-skills-install.md) | 在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，支持全部/单插件/单技能粒度与指定宿主 |
 | [`soia-env-opencode-cli-install`](soia-env-opencode-cli-install.md) | 为新手安装、登录、配置或按授权更新 OpenCode CLI |
