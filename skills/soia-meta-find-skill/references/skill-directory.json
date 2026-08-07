@@ -254,7 +254,7 @@
   {
     "name": "soia-media-publish-rednote-card",
     "repo": "soia-open-media-content-skills",
-    "description": "把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议。只产出文本并由客户人工发布，不接平台 API。Triggers：「发成小红书」「小红书笔记」「改成 rednote」「rednote 这篇」",
+    "description": "把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议；获客户当次授权时可代其在创作服务平台网页端完成发布。不接平台 API、不用第三方逆向包。Triggers：「发成小红书」「小红书笔记」「改成 rednote」「rednote 这篇」「帮我发到小红书」",
     "install_cmd": "npx skills add soia-team/soia-open-media-content-skills -g -a '*' -s soia-media-publish-rednote-card -y"
   },
   {
