@@ -1,6 +1,6 @@
 # soia-media-publish-rednote-card
 
-> 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议。只产出文本并由客户人工发布，不接平台 API
+> 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议；获客户当次授权时可代其在创作服务平台网页端完成发布。不接平台 API、不用第三方逆向包
 
 所属：[`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) · [技能源码](https://github.com/soia-team/soia-open-media-content-skills/tree/main/skills/soia-media-publish-rednote-card) · [← 全部技能](README.md)
 
@@ -8,7 +8,7 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「发成小红书」「小红书笔记」「改成 rednote」「rednote 这篇」
+「发成小红书」「小红书笔记」「改成 rednote」「rednote 这篇」「帮我发到小红书」
 
 ## 能力与用法
 
@@ -20,7 +20,8 @@
 |---|---|---|
 | 把文章发成小红书笔记 | 提炼角度、重写标题和短段落、补充标签 | 一份可复制的 rednote Markdown 文案 |
 | 需要视觉素材方向 | 给出封面/配图的主体、构图、文字和比例建议 | 可执行的配图建议；需要时可衔接 `soia-media-generate-article-image` |
-| 发布到 rednote | 只生成发布文本 | “产出文本、人工发布”；不会调用 API 或发布内容 |
+| 自己发布 | 只生成文本与配图建议 | 可直接复制的文案，发布动作由客户完成 |
+| **代为发布**（需当次授权） | 在客户已登录的浏览器里传图、填文、加话题、挂 Red Skill 组件，停在发布前请客户确认 | 每步截图与最终状态；客户说「发布」后才点，发布后回执带笔记管理页核实结果 |
 
 ### 客户如何使用
 
