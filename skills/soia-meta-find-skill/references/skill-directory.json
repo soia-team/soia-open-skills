@@ -188,7 +188,7 @@
   {
     "name": "soia-env-network-diagnose",
     "repo": "soia-open-env-skills",
-    "description": "只读诊断小白安装工具时的网络问题：检查 DNS、HTTPS、代理、证书、官方源和超时，区分故障来源，并用固定七列列表汇报网络状态与处理结果。触发：「网络不通」「下载失败」「npm/pip 超时」「证书错误」「安装卡住」。",
+    "description": "只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报。触发：「网络不通」「下载失败」「npm/pip 超时」「证书错误」「安装卡住」「装之前先检查环境」「这台机器能装什么」「有没有装 node」。",
     "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-network-diagnose -y"
   },
   {
