@@ -32,7 +32,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-design-skills.git",
-        "ref": "1f54ea90591b3ceadfba2132be28104b9ce10f2f"
+        "ref": "dcac3f66cae7993cd51a4ca40508a5e92836f84b"
       },
       "interface": {
         "displayName": "设计与文档技能库",
@@ -98,7 +98,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-media-content-skills.git",
-        "ref": "561f3ef807f9f1e3961e42cb9e44356a18970329"
+        "ref": "0ef55e4078a3e0e3ddfe7626db07c6d7f73377f0"
       },
       "interface": {
         "displayName": "新媒体内容技能库",
@@ -142,7 +142,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-env-skills.git",
-        "ref": "f847c799f2f489bc6f938afc729a72b763b118f5"
+        "ref": "734c7d3759976e32f9560f6f05acb57687cd2567"
       },
       "interface": {
         "displayName": "环境运维技能库",
