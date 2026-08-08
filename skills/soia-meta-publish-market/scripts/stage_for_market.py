@@ -13,7 +13,7 @@
 天然全网唯一，且与仓内一一对应便于追溯）；`displayName` 用中文可读名。
 
 **上架就绪门禁**：外部市场（腾讯 SkillHub 等）会用 AI 评测上架的技能，所以
-打包后对暂存产物跑 R1-R5 机器检查（能力边界、触发词、输出样例、测试证据、
+打包后对暂存产物跑 R1-R6 机器检查（能力边界、触发词、输出样例、测试证据、
 境外源提示），有硬缺口直接拒绝打包；`--check-only` 走完全流程后删除暂存
 产物、只留报告，与 `--allow-unreleased` 组合即对工作树做咨询检查。
 本门禁不预测评测分数，只消除历史评语点名过的缺口类型。
@@ -358,6 +358,47 @@ def _r5_foreign_sources(target: pathlib.Path) -> tuple[str, str, str] | None:
             "探测/依赖源疑似全境外，国内环境可用性会被评测扣分")
 
 
+# R6 安全预检：预演外部市场安全扫描（腾讯云鼎）点名过的模式。
+# 2026-08-08 实报：ai-cli-upgrade 2.2.0 健康度 47/可疑——①包内 `curl … | sh`
+# 建议串被记「远程脚本下载执行」②`npm_prefix` 等标识符撞 npm token 前缀模式
+# 被记「疑似硬编码凭据」。在打包阶段拦下，不让它流到市场上去挨扫。
+SECRET_TOKEN_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?:npm_[A-Za-z0-9]{16,}|ghp_[A-Za-z0-9]{20,}|"
+    r"gho_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|"
+    r"skh_[A-Za-z0-9]{16,}|sk-[A-Za-z0-9]{24,}|AKID[A-Za-z0-9]{13,})")
+SECRET_PREFIX_IDENT_RE = re.compile(r"(?<!\w)npm_[a-z]\w*")
+PIPE_TO_SHELL_RE = re.compile(r"(?:curl|wget)[^\n|]{0,200}\|\s*(?:ba|z)?sh\b")
+_R6_TEXT_SUFFIXES = {".md", ".txt", ".py", ".js", ".json", ".yml", ".yaml",
+                     ".sh", ".html", ".css", ".xml"}
+
+
+def _r6_security_findings(target: pathlib.Path) -> list[tuple[str, str, str]]:
+    """对暂存产物做安全模式预检，命中即硬缺口（每文件每类至多报一条）。"""
+    findings: list[tuple[str, str, str]] = []
+    for path in sorted(target.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in _R6_TEXT_SUFFIXES:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        rel = path.relative_to(target)
+        if SECRET_TOKEN_RE.search(text):
+            findings.append(("硬缺口", "R6",
+                             f"{rel} 含疑似凭据样式字符串（npm_/ghp_/xox 等前缀+长随机段）；"
+                             "真凭据必须移除，占位符须替换为明显假值并注释"))
+        if SECRET_PREFIX_IDENT_RE.search(text):
+            findings.append(("硬缺口", "R6",
+                             f"{rel} 含以 npm_ 开头的标识符/字符串——安全扫描按密钥前缀"
+                             "模式会误报为 npm Token（云鼎 2026-08-08 实报），请更名避开"))
+        if PIPE_TO_SHELL_RE.search(text):
+            findings.append(("硬缺口", "R6",
+                             f"{rel} 含 pipe-to-shell 命令字样（curl/wget … | sh）——"
+                             "安全扫描记「远程脚本下载执行」可疑；"
+                             "改为「下载→审阅→本地执行」表述"))
+    return findings
+
+
 def readiness_gaps(target: pathlib.Path, repo_dir: pathlib.Path,
                    skill_name: str) -> list[tuple[str, str, str]]:
     """对暂存目录里的最终产物做上架就绪门禁，返回 (等级, 编号, 说明)。
@@ -400,6 +441,9 @@ def readiness_gaps(target: pathlib.Path, repo_dir: pathlib.Path,
     if r5 is not None:
         gaps.append(r5)
 
+    # R6 安全预检。
+    gaps.extend(_r6_security_findings(target))
+
     print(f"[就绪门禁] {skill_name} 逐项结果：")
     notice_printed = False
     for level, code, note in gaps:
@@ -410,7 +454,7 @@ def readiness_gaps(target: pathlib.Path, repo_dir: pathlib.Path,
     if r4_notice is not None and not notice_printed:
         print(f"  R4 提示：{r4_notice}")
     if not gaps:
-        print("  R1-R5 全部通过")
+        print("  R1-R6 全部通过")
     print(f"  {DISCLAIMER}")
     return gaps
 

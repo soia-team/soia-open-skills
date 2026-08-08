@@ -1,6 +1,6 @@
 # soia-env-network-diagnose
 
-> 只读诊断小白安装工具时的网络问题：检查 DNS、HTTPS、代理、证书、官方源和超时，区分故障来源，并用固定七列列表汇报网络状态与处理结果
+> 只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报
 
 所属：[`soia-env`](https://github.com/soia-team/soia-open-env-skills) · [技能源码](https://github.com/soia-team/soia-open-env-skills/tree/main/skills/soia-env-network-diagnose) · [← 全部技能](README.md)
 
@@ -8,7 +8,7 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「网络不通」「下载失败」「npm/pip 超时」「证书错误」「安装卡住」。
+「网络不通」「下载失败」「npm/pip 超时」「证书错误」「安装卡住」「装之前先检查环境」「这台机器能装什么」「有没有装 node」。
 
 ## 能力与用法
 
@@ -19,6 +19,8 @@
 | 安装下载失败 | 探测官方 HTTPS、DNS、证书和延迟 | 可达/不可达、错误类别和下一步 |
 | npm/pip 超时 | 区分网络、代理、包源和命令参数 | 不泄露 token 的诊断摘要 |
 | 不知道是否能联网 | 执行最小只读检查 | 检查过的源数量和结论 |
+| 装之前先体检 | 按类别盘点本机运行时 | Node/Python/Rust/Go/包管理器/Shell 的可用性与版本 |
+| 这台机器能装什么 AI CLI | 用运行时结果对照各安装技能的渠道依赖 | 可安装 / 待复核 / 被阻塞，以及具体缺口 |
 
 ### 客户如何使用
 

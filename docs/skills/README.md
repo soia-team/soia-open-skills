@@ -54,7 +54,7 @@
 | [`soia-env-deepcode-cli-install`](soia-env-deepcode-cli-install.md) | 为小白安装、配置与授权更新开源 Deep Code Agent CLI（lessweb/deepcode-cli） |
 | [`soia-env-environment-setup`](soia-env-environment-setup.md) | 从零规划并验证面向新手的开发环境，协调所需安装技能 |
 | [`soia-env-kimi-cli-install`](soia-env-kimi-cli-install.md) | 面向小白检查、安装、登录和按明确授权更新 Moonshot AI Kimi Code CLI；识别官方独立安装与 npm 来源，默认只报告版本和产品自动更新状态 |
-| [`soia-env-network-diagnose`](soia-env-network-diagnose.md) | 只读诊断小白安装工具时的网络问题：检查 DNS、HTTPS、代理、证书、官方源和超时，区分故障来源，并用固定七列列表汇报网络状态与处理结果 |
+| [`soia-env-network-diagnose`](soia-env-network-diagnose.md) | 只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报 |
 | [`soia-env-node-install`](soia-env-node-install.md) | 为新手安装、验证或按授权更新 Node.js 与 npm |
 | [`soia-env-open-skills-install`](soia-env-open-skills-install.md) | 在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，支持全部/单插件/单技能粒度与指定宿主 |
 | [`soia-env-opencode-cli-install`](soia-env-opencode-cli-install.md) | 为新手安装、登录、配置或按授权更新 OpenCode CLI |
@@ -98,7 +98,7 @@
 |---|---|
 | [`soia-media-compose-article-draft`](soia-media-compose-article-draft.md) | 把 distill 提炼出的观点写成成文草稿。以用户观点为骨、vault 摘抄为料，生成可继续交给 publish 的文章。可指定公众号/知乎/随笔风格 |
 | [`soia-media-generate-article-image`](soia-media-generate-article-image.md) | 将文章、开源项目、品牌 Logo 或公开 X Prompt Deck 编译为可验收的图片与矢量资产，按组合轴生成 Prompt 并完成事实、文字和视觉验收 |
-| [`soia-media-publish-rednote-card`](soia-media-publish-rednote-card.md) | 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议。只产出文本并由客户人工发布，不接平台 API |
+| [`soia-media-publish-rednote-card`](soia-media-publish-rednote-card.md) | 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议；获客户当次授权时可代其在创作服务平台网页端完成发布。不接平台 API、不用第三方逆向包 |
 | [`soia-media-publish-wechat-draft`](soia-media-publish-wechat-draft.md) | 把成文草稿排版成符合微信公众号限制的内联样式 HTML，机械校验通过后推入微信公众号草稿箱；只建草稿，绝不自动群发 |
 | [`soia-media-publish-x-article`](soia-media-publish-x-article.md) | 将 Markdown 成文上传到 X Articles 草稿箱并校验格式，只保存草稿 |
 | [`soia-media-publish-x-thread`](soia-media-publish-x-thread.md) | 将成文草稿改写为带编号、符合字数限制的 X thread，并可按授权存草稿 |
