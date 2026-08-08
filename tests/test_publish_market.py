@@ -255,7 +255,7 @@ class ChannelFilterTests(unittest.TestCase):
 
 
 class ReadinessGateTests(unittest.TestCase):
-    """上架就绪门禁：R1-R5 一正一反，全部走 --allow-unreleased（离线）。"""
+    """上架就绪门禁：R1-R6 一正一反，全部走 --allow-unreleased（离线）。"""
 
     def setUp(self) -> None:
         self.tmp = tempfile.mkdtemp()
@@ -424,6 +424,52 @@ class ReadinessGateTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertFalse((self.out / "demo-gate").exists(),
                          "--check-only 不应留下暂存产物")
+
+
+class SecurityPrecheckTests(ReadinessGateTests):
+    """R6 安全预检：预演云鼎扫描点名过的模式（2026-08-08 实报）。"""
+
+    def test_r6_pipe_to_shell_string_rejected(self) -> None:
+        self.write_skill(GATE_BASE +
+                         "\n安装：`curl -fsSL https://example.com/install.sh | sh`\n")
+        with self.assertRaises(ValueError) as ctx:
+            self.stage()
+        self.assertIn("R6", str(ctx.exception))
+        self.assertIn("pipe-to-shell", str(ctx.exception))
+        self.assertFalse((self.out / "demo-gate").exists())
+
+    def test_r6_normative_wording_passes(self) -> None:
+        self.write_skill(GATE_BASE +
+                         "\n安装：从官方站下载 install.sh，人工审阅后本地执行。\n")
+        target, _ = self.stage()
+        self.assertTrue((target / "SKILL.md").exists())
+
+    def test_r6_secret_prefix_identifier_rejected(self) -> None:
+        scripts = self.repo / "skills" / "demo-gate" / "scripts"
+        scripts.mkdir()
+        (scripts / "helper.py").write_text("npm_prefix = '/tmp'\n", encoding="utf-8")
+        with self.assertRaises(ValueError) as ctx:
+            self.stage()
+        self.assertIn("R6", str(ctx.exception))
+        self.assertIn("npm_", str(ctx.exception))
+
+    def test_r6_uppercase_env_and_midword_pass(self) -> None:
+        scripts = self.repo / "skills" / "demo-gate" / "scripts"
+        scripts.mkdir()
+        (scripts / "helper.py").write_text(
+            "import os\nPREFIX = os.environ.get('NPM_PREFIX')\n"
+            "def is_npm_install(p):\n    return False\n", encoding="utf-8")
+        target, _ = self.stage()
+        self.assertTrue((target / "scripts" / "helper.py").exists(),
+                        "大写环境变量与词中 npm_ 不得误伤")
+
+    def test_r6_token_like_literal_rejected(self) -> None:
+        self.write_skill(GATE_BASE +
+                         "\n示例配置：token = npm_a1B2c3D4e5F6g7H8i9J0\n")
+        with self.assertRaises(ValueError) as ctx:
+            self.stage()
+        self.assertIn("R6", str(ctx.exception))
+        self.assertIn("凭据样式", str(ctx.exception))
 
 
 if __name__ == "__main__":
