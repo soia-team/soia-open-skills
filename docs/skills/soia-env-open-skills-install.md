@@ -24,35 +24,9 @@
 
 > **粒度说明**：SOIA 以「域插件」为最小交付单元（如 `soia-dev@soia` 含 9 个技能）。「更新单个技能」在插件模式下等价于更新整个域插件，但技能会说明是哪个技能触发了更新。若需要真正按技能粒度安装（不安装同域其他技能），必须改用 `npx skills add` 路线——技能会提示该路线与插件路线互斥，让客户选择。
 
-### 客户如何使用（自然语言示例）
+### 客户如何使用
 
-| 客户说 | 技能的理解 | 执行范围 |
-|---|---|---|
-| 「帮我装好所有 SOIA 技能」 | 全量安装，全宿主 | 8 域 × 3 宿主 |
-| 「帮我装好所有 SOIA 插件」 | 全量安装，全宿主 | 8 域 × 3 宿主 |
-| 「帮我在 Codex 下装好所有 SOIA 技能」 | 全量安装，Codex 宿主 | 8 域 × Codex |
-| 「帮我在 Codex 下装好所有 SOIA 插件」 | 全量安装，Codex 宿主 | 8 域 × Codex |
-| 「帮我在 Claude Code 下装好所有 SOIA 技能」 | 全量安装，Claude Code 宿主 | 8 域 × Claude Code |
-| 「帮我更新 Claude Code 下所有 SOIA 插件」 | 全量更新，Claude Code 宿主 | 8 域 × Claude Code |
-| 「帮我更新 Claude Code 下 soia-dev 插件」 | 单域更新，Claude Code 宿主 | soia-dev × Claude Code |
-| 「帮我更新 Claude Code 下 soia-dev 里的 soia-dev-coding-agent 技能」 | 单技能触发，更新整个插件 | soia-dev × Claude Code |
-| 「帮我在 WorkBuddy 里装好所有 SOIA 专家」 | 全量安装，WorkBuddy 宿主 | 8 域 × WorkBuddy |
-| 「只查看当前状态，不安装」 | 只读检查 | 3 宿主全查，不改动 |
-
-执行任何安装/更新前都展示计划并等客户确认；没有得到明确同意前不改动机器。
-
-### 8 个开源域插件
-
-| 插件名 | 域仓 | 技能数 | 常驻成本 |
-|---|---|---|---|
-| `soia-meta` | soia-open-skills | 4 | ~428 tok |
-| `soia-dev` | soia-open-dev-skills | 9 | — |
-| `soia-dev-design` | soia-open-dev-design-skills | 5 | — |
-| `soia-pkm-vault` | soia-open-pkm-vault-skills | 15 | — |
-| `soia-media-content` | soia-open-media-content-skills | 6 | ~728 tok |
-| `soia-cwork-office` | soia-open-cwork-office-skills | 3 | — |
-| `soia-env` | soia-open-env-skills | 15 | — |
-| `soia-edu-course` | soia-open-edu-course-skills | — | — |
+完整自然语言示例表（10 条：全量/单域/单技能 × 三宿主，含「只查看当前状态」）见 [user-phrases.md](references/user-phrases.md)。执行任何安装/更新前都展示计划并等客户确认；没有得到明确同意前不改动机器。
 
 ## 安装
 

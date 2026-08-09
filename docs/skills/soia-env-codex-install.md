@@ -24,20 +24,11 @@
 
 ### 客户如何使用
 
-其他可识别说法包括「更新 Codex 到最新」「配置 Codex」「Codex 登录」；桌面版打不开、性能或磁盘问题交给 `soia-env-codex-setup-support`。
-
-1. 说“安装 Codex”并说明操作系统；Agent 先检查系统、网络和已有 CLI 来源。
-2. 官方独立安装不要求 Node.js；只有选择或沿用 npm 渠道时，缺 Node.js/npm 才调用 `soia-env-node-install`。
-3. “安装 Codex”只授权安装缺失的独立 CLI，不授权更新已经存在的 CLI；“检查更新”或模糊的“更新 Codex”只做版本审计并询问是否更新到最新。
-4. 只有客户明确说“更新 Codex 到最新”“升级到最新版”或同等指令，才调用升级执行；管理员权限、切换来源或修改 PATH 仍需单独确认。
-5. 安装/更新过程中 Agent 持续展示阶段状态并写入私有进度记录；客户只在官方登录页面点击授权。
+“安装 Codex”只授权安装缺失的独立 CLI，不授权更新已装版本；“检查更新”或模糊的“更新 Codex”只做版本审计并询问是否更新到最新。只有客户明确说“更新 Codex 到最新”“升级到最新版”或同等指令才调用升级执行；管理员权限、切换来源或修改 PATH 仍需单独确认。
 
 ### 首次登录与真实配置验证
 
-- `配置文件目录`只显示 `CODEX_HOME` 或默认候选路径；技能必须同时检查 `config_status`，不能把 `~/.codex` 直接当成已登录。
-- 如果独立 CLI 未登录，Agent 使用同一绝对路径执行 `codex --login`；客户点击官方页面的 “Sign in with ChatGPT” 完成授权，不需要客户申请或粘贴 API key。该流程会在本地保存凭据。
-- 如果客户明确选择传统 API key 方式，客户在 [OpenAI API Keys](https://platform.openai.com/api-keys) 创建并通过客户自己的安全环境注入；Agent 不读取、不接收、不回显密钥。
-- 登录后再次运行 `login status`、`--version`、`--help`，并复查 `config_status`；没有完成授权时处理结果写“等待首次登录”，不能只写“已安装”。ChatGPT.app 的登录状态仍与 CLI 分开。
+`配置文件目录`只显示 `CODEX_HOME` 或默认候选路径，必须同时检查 `config_status`，不能把 `~/.codex` 直接当成已登录；未登录时用独立 CLI 同一绝对路径执行 `codex --login`，客户在官方页面完成授权，登录后复核 `login status`/`--version`/`--help`/`config_status`。细则见 [operations.md](references/operations.md)。
 
 ## 安装
 
