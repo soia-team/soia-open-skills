@@ -1,6 +1,6 @@
 # 技能详情页
 
-全生态 82 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 83 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
@@ -20,7 +20,7 @@
 | [`soia-pkm-clip-drive`](soia-pkm-clip-drive.md) | 把云盘/本地的存量资料（PDF/Word/表格/演示文稿/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理；图片正文需显式 OCR |
 | [`soia-pkm-clip-github-repo`](soia-pkm-clip-github-repo.md) | 将 GitHub 开源仓库归档为 Obsidian vault 的项目卡和调研笔记 |
 | [`soia-pkm-clip-rednote`](soia-pkm-clip-rednote.md) | 将单篇小红书图文或视频笔记归档到 Obsidian vault |
-| [`soia-pkm-clip-web`](soia-pkm-clip-web.md) | 归档网页或博客文章到 Obsidian vault，并按统一规范落地 |
+| [`soia-pkm-clip-web`](soia-pkm-clip-web.md) | 归档网页、博客文章或公开播客节目到 Obsidian vault；可同时保留 shownotes 与本地音频 |
 | [`soia-pkm-clip-wechat-account`](soia-pkm-clip-wechat-account.md) | 批量归档用户自己管理的微信公众号已发文章到 Obsidian vault。支持官方 API、公众号后台接口、登录态 Cookie 三条路线，并按 url 去重 |
 | [`soia-pkm-clip-wechat-article`](soia-pkm-clip-wechat-article.md) | 归档单篇微信公众号文章到 Obsidian vault：抓取静态 HTML，提取标题、作者、正文、发布时间和配图，按 clip 家族规范落地；需要 PDF 时优先用 Obsidian 导出 |
 | [`soia-pkm-clip-x`](soia-pkm-clip-x.md) | 将单条 X/Twitter 推文、thread 或 Article 归档到 Obsidian vault |
@@ -42,7 +42,7 @@
 | [`soia-pkm-transform-obsidian-pdf`](soia-pkm-transform-obsidian-pdf.md) | 用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint |
 | [`soia-pkm-translate-article-zh`](soia-pkm-translate-article-zh.md) | 将外文文章按 quick、normal 或 refined 模式翻译成独立中文稿，保持术语一致且不覆盖原文 |
 
-## `soia-env`　17 个技能
+## `soia-env`　18 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
@@ -54,6 +54,7 @@
 | [`soia-env-deepcode-cli-install`](soia-env-deepcode-cli-install.md) | 为小白安装、配置与授权更新开源 Deep Code Agent CLI（lessweb/deepcode-cli） |
 | [`soia-env-environment-setup`](soia-env-environment-setup.md) | 从零规划并验证面向新手的开发环境，协调所需安装技能 |
 | [`soia-env-kimi-cli-install`](soia-env-kimi-cli-install.md) | 面向小白检查、安装、登录和按明确授权更新 Moonshot AI Kimi Code CLI；识别官方独立安装与 npm 来源，默认只报告版本和产品自动更新状态 |
+| [`soia-env-local-model-bench`](soia-env-local-model-bench.md) | 在 Apple Silicon 上评测本地 LLM：先环境检查与引擎选型（mlx-lm/llama.cpp 等），确认后才下载部署；跑题库判定、吞吐 TTFT 与硬件采样，产出可横比的口径化报告 |
 | [`soia-env-network-diagnose`](soia-env-network-diagnose.md) | 只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报 |
 | [`soia-env-node-install`](soia-env-node-install.md) | 为新手安装、验证或按授权更新 Node.js 与 npm |
 | [`soia-env-open-skills-install`](soia-env-open-skills-install.md) | 在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，支持全部/单插件/单技能粒度与指定宿主 |

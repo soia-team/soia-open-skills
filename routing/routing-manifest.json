@@ -186,6 +186,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-env-local-model-bench",
+    "repo": "soia-open-env-skills",
+    "skillPath": "skills/soia-env-local-model-bench",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-env-network-diagnose",
     "repo": "soia-open-env-skills",
     "skillPath": "skills/soia-env-network-diagnose",
