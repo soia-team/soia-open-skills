@@ -76,7 +76,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-pkm-vault-skills.git",
-        "ref": "0252623ef685634381aeee115f3c853c5f14397c"
+        "ref": "20aedb714c8054be466e8f9c7d5cc7bec1fee439"
       },
       "interface": {
         "displayName": "知识库技能库",

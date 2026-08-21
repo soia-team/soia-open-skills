@@ -186,6 +186,12 @@
     "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-kimi-cli-install -y"
   },
   {
+    "name": "soia-env-local-model-bench",
+    "repo": "soia-open-env-skills",
+    "description": "在 Apple Silicon 上评测本地 LLM：先环境检查与引擎选型（mlx-lm/llama.cpp 等），确认后才下载部署；跑题库判定、吞吐 TTFT 与硬件采样，产出可横比的口径化报告。触发：「评测本地模型」「本地模型跑分」「装个本地模型」「mlx 测速」。",
+    "install_cmd": "npx skills add soia-team/soia-open-env-skills -g -a '*' -s soia-env-local-model-bench -y"
+  },
+  {
     "name": "soia-env-network-diagnose",
     "repo": "soia-open-env-skills",
     "description": "只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报。触发：「网络不通」「下载失败」「npm/pip 超时」「证书错误」「安装卡住」「装之前先检查环境」「这台机器能装什么」「有没有装 node」。",
@@ -362,7 +368,7 @@
   {
     "name": "soia-pkm-clip-web",
     "repo": "soia-open-pkm-vault-skills",
-    "description": "归档网页或博客文章到 Obsidian vault，并按统一规范落地。触发：「归档这个网页」「clip 这个链接」「存这篇博客」",
+    "description": "归档网页、博客文章或公开播客节目到 Obsidian vault；可同时保留 shownotes 与本地音频。触发：「归档这个网页」「clip 这个链接」「存这篇博客或播客」",
     "install_cmd": "npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-web -y"
   },
   {
