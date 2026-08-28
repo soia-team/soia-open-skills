@@ -14,23 +14,23 @@
 
 ### 这个技能可以做什么
 
-Audit and upgrade AI/developer CLIs (codex, claude, Antigravity/agy,
-Gemini's supported non-consumer lanes, kimi, qwen, opencode, cursor,
-deepcode, pi, etc.)
-with dry-run reports and logs.
-
-进阶维护工具：面向已装多套 AI CLI 的用户，与本仓其他面向小白的单工具安装技能定位不同。
+进阶维护工具：面向已装多套 AI CLI 的用户，与本仓面向小白的单工具安装技能定位不同。
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
-| 完成本技能覆盖的工作 | 读取用户请求、必要上下文和本技能正文流程，执行最小可靠步骤 | 客户会看到执行计划、命令输出摘要、代码/文档变更、验证结果和风险说明。 |
-| 缺少依赖、权限、配置或 key | 停止需要外部状态的动作，明确指出缺什么 | 安装命令、申请地址、配置路径或需要客户确认的问题 |
-| 执行完成 | 汇总成功、跳过、失败、文件变更和验证结果 | 一段可复制进工单/日志的完成回执 |
+| 盘点本机 AI CLI 版本 | `DRY_RUN=1` 只读审计，不动任何东西 | 七列状态表 + 日志路径 |
+| 升级全部或指定工具 | 明确授权后按检测到的安装通道升级 | 每款工具旧/新版本与结果 |
+| 安装通道不合官方推荐 | 不代迁移，`NOTE` 列给出建议 | 「下载 → 审阅 → 本地执行」三段式迁移指引 |
+
+覆盖 codex、claude、agy、gemini（非消费者通道，显式 opt-in）、qwen、kimi、mmx、
+opencode、qodercli、deepcode、pi、cursor（仅审计）。各工具安装通道与默认升级方式
+见 [tools-covered.md](references/tools-covered.md)。
 
 ### 客户如何使用
 
-1. 用自然语言说明目标，并提供必要输入：文件、URL、repo、workspace、proposal、vault 或平台账号状态。
-2. 能 dry-run 或预览的动作先给预览；涉及删除、覆盖、发送、发布、写远端状态时先征求客户确认。
+1. 说人话即可：「升级 AI CLI」「检查 CLI 版本」「我的 codex 该更新吗」。默认先
+   dry-run 只读盘点，客户圈定后才真升级。
+2. 涉及换安装通道、安装缺失工具等动作，先展示计划并单独征求确认。
 
 ## 安装
 

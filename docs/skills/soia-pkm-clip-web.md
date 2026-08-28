@@ -1,6 +1,6 @@
 # soia-pkm-clip-web
 
-> 归档网页或博客文章到 Obsidian vault，并按统一规范落地
+> 归档网页、博客文章或公开播客节目到 Obsidian vault；可同时保留 shownotes 与本地音频
 
 所属：[`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) · [技能源码](https://github.com/soia-team/soia-open-pkm-vault-skills/tree/main/skills/soia-pkm-clip-web) · [← 全部技能](README.md)
 
@@ -8,13 +8,13 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「归档这个网页」「clip 这个链接」「存这篇博客」
+「归档这个网页」「clip 这个链接」「存这篇博客或播客」
 
 ## 能力与用法
 
 ### 这个技能可以做什么
 
-把任意网页/博客文章一键归档到 Obsidian vault。用正文抽取（readability/trafilatura）提取标题/正文/作者，按 clip 家族统一规范落地。当用户说「归档并转 PDF」「归档并导出 PDF」「archive and export PDF」时，归档后在 Obsidian vault 内优先调用 Obsidian 自带 PDF...
+把网页/博客文章归档到 Obsidian vault；网页公开 `PodcastEpisode` 元数据时，也能同时保存 shownotes 与本地音频。文章继续用 readability/trafilatura 抽正文，播客用 JSON-LD 解析，二者都按 clip 家族统一规范落地。当用户说「归档并转 PDF」时，归档后在 Obsidian vault 内优先调用 Obsidian 自带 PDF。
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|

@@ -26,15 +26,14 @@
 1. 客户直接说“帮我安装 Claude Code CLI”；不要求客户复制终端命令。
 2. Agent 先执行只读检查并展示计划。客户的安装请求只授权安装缺失的 CLI，不授权更新已有版本。
 3. 只说“更新 Claude”时先显示两个版本并询问是否更新到最新；只有“更新到最新版本”等明确表述才调用更新器。
-4. 需要登录时 Agent 启动流程，客户只在 Anthropic 官方页面点击授权；不得让客户把授权码、API key 或密码发到聊天中。
+4. 需要登录时 Agent 启动流程，客户只在官方页面授权；授权码、API key、密码一律不进聊天。
 5. 安装、更新和登录后分别验证独立 CLI 的版本、帮助命令、诊断结果和登录状态。
 
 ### 首次登录与真实配置验证
 
-- `配置文件目录`只显示候选目录；技能必须同时读取 `config_status` 和 `config_file_status`，不能把默认路径当成“已配置”。
-- 如果 `~/.claude` 或 `settings.json` 尚未创建，Agent 在客户选定的项目中启动 `claude`，由 Claude Code 展示官方登录选项；客户只在 Anthropic 官方页面或 Claude 官方应用完成授权。
-- 如果客户选择 Anthropic API 方式，客户自行在 Anthropic Console 创建并保管 API key；Agent 只检查“存在/可认证”的结果，不接收、不回显密钥。
-- 登录完成后重新运行 `claude doctor` 和技能检查脚本；没有完成浏览器授权时，处理结果必须写“等待首次登录”，不能写“运行正常”。
+配置状态以 `config_status`/`config_file_status` 实测为准，未创建时引导客户在官方
+页面完成首次登录，结果只能写「等待首次登录」；完整细则（API key 方式、复验要求）
+见 [operations.md](references/operations.md)。
 
 ## 安装
 
