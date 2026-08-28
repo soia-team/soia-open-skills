@@ -3,6 +3,34 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v1.12.3 — 2026-08-28
+
+Refresh marketplace pin to soia-dev v1.9.3.
+
+## 新增
+- feat(publish-market): 就绪门禁新增 R6 安全预检 (#271)
+
+## 维护
+- chore(marketplace): pin soia-dev v1.9.3 (#281)
+- chore(marketplace): refresh sha pins (env v1.17.0, dev v1.9.2) (#280)
+- chore(marketplace): pin env v1.16.0 (#279)
+- chore(marketplace): pin pkm vault v1.11.1 (#278)
+- chore(marketplace): pin pkm vault v1.11.0 (#277)
+- chore(marketplace): refresh sha pins (soia-env v1.15.0, soia-dev v1.9.1) (#276)
+- chore(marketplace): refresh sha pins (env v1.14.0, dev v1.9.0) (#275)
+- chore(marketplace): refresh sha pins（soia-env v1.13.0：新增 local-model-bench + dsh 支持 + providers 拆分） (#274)
+- chore(marketplace): refresh sha pins（env v1.12.3） (#273)
+- chore(marketplace): refresh env pin to v1.12.0 (#270)
+- chore(marketplace): refresh env pin to v1.11.0 (#269)
+- chore(marketplace): refresh env pin to v1.10.2 (#268)
+- chore(marketplace): refresh sha pins (env v1.10.1) (#267)
+- chore(marketplace): refresh sha pins (env v1.10.0) (#266)
+- chore(marketplace): refresh sha pin for dev-design v1.8.1 (#265)
+- chore(marketplace): refresh sha pins (media-content v1.12.0) (#264)
+- docs(market): 记录两平台版本号语义差异——SkillHub 读包、Red Skill 网页自增 (#263)
+- docs(market): Red Skill 更新版本必须走网页——最新 CLI 1.0.2 实测确认 (#262)
+- chore(release): open next train after v1.12.2 (#261)
+
 ## v1.12.2 — 2026-08-06
 
 skill-release 5.2.0 批量发版实测约束与 npx 广播停用;sync-skills 2.3.0 实体安装边界
