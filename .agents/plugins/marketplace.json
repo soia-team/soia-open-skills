@@ -10,7 +10,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-skills.git",
-        "ref": "434576c6bad035b67c847d19b96c410baab45030"
+        "ref": "cd59ba0bfee800169b3c3f754d37113b23addb8c"
       },
       "interface": {
         "displayName": "开发编码技能库",
@@ -76,7 +76,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-pkm-vault-skills.git",
-        "ref": "f5b53629124b85570c1e79cd72d414d59429af8f"
+        "ref": "75d490d44189e4fa39fb5f4144cfb603c4666966"
       },
       "interface": {
         "displayName": "知识库技能库",
