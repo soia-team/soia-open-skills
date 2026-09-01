@@ -1,6 +1,6 @@
 {
   "name": "soia-meta",
-  "version": "1.12.4-SNAPSHOT",
+  "version": "1.12.4",
   "description": "SOIA 生态管理技能：技能检索、多 AI 同步、发布收尾、提示词起草",
   "author": {
     "name": "soia-team"

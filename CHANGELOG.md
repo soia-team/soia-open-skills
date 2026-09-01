@@ -3,6 +3,17 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v1.12.4 — 2026-09-01
+
+刷新 marketplace pin 至 soia-pkm-vault v1.12.1，并同步技能详情页
+
+## 维护
+- chore(sync): merge main into dev before v1.12.4 release (#288)
+- chore(marketplace): refresh pkm-vault pin to v1.12.1 (#287)
+- chore(marketplace): refresh sha pins (#286)
+- chore(marketplace): refresh sha pins for soia-dev v1.10.0 (#285)
+- chore(release): open next train after v1.12.3 (#284)
+
 ## v1.12.3 — 2026-08-28
 
 Refresh marketplace pin to soia-dev v1.9.3.
