@@ -17,7 +17,7 @@
 | [`soia-pkm-bootstrap-vault-ima`](soia-pkm-bootstrap-vault-ima.md) | 把已有本地 Markdown vault 接入腾讯 ima 知识库消费端：安装客户端、建立目录映射、用 ima 官方 Skills 配置本地文件夹监控同步并验证检索 |
 | [`soia-pkm-bootstrap-vault-obsidian`](soia-pkm-bootstrap-vault-obsidian.md) | 以 dry-run 和保留未知配置的结构化合并方式，把已有 Markdown vault 配置为 Obsidian 消费端，启用 Bases 与可选宽页 CSS |
 | [`soia-pkm-clip-douyin`](soia-pkm-clip-douyin.md) | 归档单条抖音视频到 Obsidian vault，并保留本地媒体索引 |
-| [`soia-pkm-clip-drive`](soia-pkm-clip-drive.md) | 把云盘/本地的存量资料（PDF/Word/表格/演示文稿/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理；图片正文需显式 OCR |
+| [`soia-pkm-clip-drive`](soia-pkm-clip-drive.md) | 把云盘/本地文件或受控 PDF URL 批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理；图片正文需显式 OCR |
 | [`soia-pkm-clip-github-repo`](soia-pkm-clip-github-repo.md) | 将 GitHub 开源仓库归档为 Obsidian vault 的项目卡和调研笔记 |
 | [`soia-pkm-clip-rednote`](soia-pkm-clip-rednote.md) | 将单篇小红书图文或视频笔记归档到 Obsidian vault |
 | [`soia-pkm-clip-web`](soia-pkm-clip-web.md) | 归档网页、博客文章或公开播客节目到 Obsidian vault；可同时保留 shownotes 与本地音频 |
