@@ -1,20 +1,18 @@
 ---
 name: soia-meta-sync-skills
-description: 将一个共享技能源以软链接同步到用户明确选择的 AI 工具目录；支持预览、单项同步、硬依赖闭包和受限清理。
-version: 2.3.0
+description: 按明确项目或全局范围同步 SOIA 技能，并先输出可审计划。触发：项目安装、技能同步、同步预览
+version: 2.4.0
 created_at: 2026-07-07 14:44:10
-updated_at: 2026-08-06 17:30:00
+updated_at: 2026-09-04 17:19:21
 created_by: claude opus 4.6
-updated_by: claude-fable-5
+updated_by: gpt-5.6-sol
 ---
 
 # soia-meta-sync-skills
 
-> ⚠️ **适用边界（2026-08-06 定稿）**：各 agent 常驻技能空间（`~/.pi/agent/skills`、
-> `~/.qwen/skills`、`~/.claude/skills`、`~/.soia/skills`）已定为**实体安装**规范——
-> 软链会产生无来源记录、换机不可再现的安装，当日已全量转为
-> `npx skills add --copy` 实体并登记 lock。**本技能不得再用于上述常驻空间**；
-> 仅在临时验证、一次性试装等明确不追求可再现性的场景使用，用完即清。
+> 范围先行：默认不会选择全局、全宿主或全量。项目模式只写
+> `<project>/.agents/skills`；全局宿主目录仅在客户显式给出 `--scope global`
+> 和 `--targets` 后处理。
 
 ## 客户可读说明
 
@@ -24,16 +22,17 @@ updated_by: claude-fable-5
 
 ### 客户如何使用
 
-提供源目录、目标 id 或路径，以及可选的单项技能名。目标由 `--targets` 显式提供；没有适合的内置 id 时使用绝对路径。
+提供源目录、`--scope`、目标粒度和技能范围。没有 `--scope`、`--target-kind` 或项目 Agent 选择时，脚本只返回 `selection_required`，不写入。
 
 ```bash
 python3 skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
   --source-dir <shared-skill-dir> \
-  --targets codex,claude \
+  --scope project --project-dir <project> --agents codex \
+  --target-kind skill --skills <skill-name> \
   --dry-run
 ```
 
-确认计划后移除 `--dry-run`。使用 `--skills <name>` 只同步指定技能，默认会把其 frontmatter 中的 `dependencies.hard` 一并纳入；`--no-deps` 可关闭该行为。使用 `--exclude-skills a,b` 可在本次运行中对每个选中 target 跳过并摘除这些技能的既有软链。
+`skill`、`domain`、`all` 都支持；默认不全量。`--skills '*'` 和 `--targets '*'` 必须显式选择 `all`，先 dry-run；全宿主写入还需 `--confirm-all-targets`。使用 `--exclude-skills a,b` 可在本次运行中对每个选中 target 跳过并摘除这些技能的既有软链。
 
 ### 依赖与安装
 
@@ -48,17 +47,17 @@ claude plugin install soia-meta@soia
 只要这一个技能时，可用 npx 路线。注意技能会落进共享真源 `~/.agents/skills`；若同时装了插件，同一技能会出现两份索引且各自漂移，建议二选一：
 
 ```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-sync-skills -y
+npx skills add soia-team/soia-open-skills -a <explicit-agent> -s soia-meta-sync-skills -y
 ```
 
-依赖 Python 3 标准库和一个包含 `SKILL.md` 子目录的源目录。可选配置示例在 `assets/config.example.yml`：它记录用户自己的默认 source/targets 和按 target 隔离的 excludes，命令行参数优先。脚本每次同步（包括默认全量同步）都会读取并遵守持久排除。配置文件放在：
+依赖 Python 3 标准库和一个包含 `SKILL.md` 子目录的源目录。可选配置示例记录用户自己的 source/targets 和按 target 隔离的 excludes，命令行参数优先；它不替代本轮范围选择。配置文件放在：
 
 ```text
 ~/.config/soia-skills/soia-meta-sync-skills/config.yml
 SOIA_META_SYNC_SKILLS_CONFIG_FILE=<custom-config-path>
 ```
 
-**WorkBuddy** 的装载单位是角色化专家而不是插件，`npx skills add -a '*'` 覆盖不到它，需要单独安装，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
+**WorkBuddy** 的装载单位是角色化专家而不是插件；全宿主选择也不覆盖它，需要单独安装，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
 
 ### 私密信息与中间数据
 
@@ -103,16 +102,19 @@ python3 skills/soia-meta-sync-skills/scripts/sync_soia_skills.py --source-dir <s
 
 # 同步一个技能并包含其 hard dependencies
 python3 skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
-  --source-dir <shared-skill-dir> --targets <target-id-or-path> --skills <skill-name> --dry-run
+  --source-dir <shared-skill-dir> --scope project --project-dir <project> --agents <agent> \
+  --target-kind skill --skills <skill-name> --dry-run
 
 # 本次排除并摘除既有软链（不持久化）
 python3 skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
-  --source-dir <shared-skill-dir> --targets codex,claude \
+  --source-dir <shared-skill-dir> --scope global --targets codex,claude \
+  --target-kind skill --skills <skill-name> \
   --exclude-skills <skill-a>,<skill-b> --dry-run
 
-# 确认后持久化到各 target；后续默认全量同步仍会尊重这些排除
+# 确认后持久化到各 target；后续显式范围同步仍会尊重这些排除
 python3 skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
-  --source-dir <shared-skill-dir> --targets codex,claude \
+  --source-dir <shared-skill-dir> --scope global --targets codex,claude \
+  --target-kind skill --skills <skill-name> \
   --exclude-skills <skill-a>,<skill-b> --save-excludes
 ```
 
@@ -145,4 +147,4 @@ python3 skills/soia-meta-sync-skills/scripts/sync_soia_skills.py --list-targets
 python3 -m py_compile skills/soia-meta-sync-skills/scripts/sync_soia_skills.py
 ```
 
-在临时目录创建一个只含 `SKILL.md` 的测试技能，并对另一个临时目标运行 `--dry-run`；验收输出包含预期的 create/link 计划且目标目录未被写入。再在明确授权的测试目录运行一次非 dry-run，并用 `readlink` 验证链接指向源目录。最后为一个 target 保存 exclude 并执行默认全量同步，验收该 target 的软链保持摘除、其他 target 的同名软链不受影响。
+在临时目录创建一个只含 `SKILL.md` 的测试技能，并对另一个临时项目运行 `--scope project --target-kind skill --dry-run`；验收输出包含预期的 create/link 计划且目标目录未被写入。再在明确授权的测试目录运行一次非 dry-run，并用 `readlink` 验证链接指向源目录。最后显式选择 `global + all` 做 dry-run，确认没有 `--confirm-all-targets` 时实际写入会被拒绝。

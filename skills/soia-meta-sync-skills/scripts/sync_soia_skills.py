@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from install_selection import SCOPES, TARGET_KINDS, select as select_installation, tokens as selection_tokens
+
 
 OPTIONAL_SKILLS: list[str] = []
 
@@ -308,7 +310,12 @@ def default_targets() -> list[Target]:
 
 
 def selected_targets(tokens: list[str]) -> list[Target]:
-    targets = default_targets() if not tokens else [target_from_token(token) for token in tokens]
+    if not tokens:
+        return []
+    if tokens == ["*"]:
+        targets = [target_from_token(target_id) for target_id in TARGETS]
+    else:
+        targets = [target_from_token(token) for token in tokens]
     deduped: list[Target] = []
     seen: set[Path] = set()
     for target in targets:
@@ -622,6 +629,8 @@ def sync(
         f"symlinked_skill_entries={linked} "
         f"excluded_symlinks_removed={excluded_unlinked}"
     )
+    if dry_run:
+        return 0
     log_dir.mkdir(parents=True, exist_ok=True)
     # Microseconds prevent a dry-run followed immediately by write mode from
     # silently overwriting the first audit record in the same second.
@@ -648,13 +657,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--targets",
         action="append",
-        help="Comma-separated target ids or custom paths. Defaults to 'soia' plus existing known target dirs.",
+        help="Comma-separated global target ids or custom paths; '*' requires --dry-run then --confirm-all-targets.",
     )
     parser.add_argument(
         "--skills",
         action="append",
-        help="Comma-separated managed skill names to sync. Omit for the full discovered set.",
+        help="Comma-separated managed skill names; '*' requires --target-kind all.",
     )
+    parser.add_argument("--scope", choices=SCOPES, help="Required install scope: project or global.")
+    parser.add_argument("--project-dir", type=Path, help="Required with --scope project; only <project>/.agents/skills is written.")
+    parser.add_argument("--agents", action="append", help="Repeatable customer-selected agents; project scope records intent but does not map host paths.")
+    parser.add_argument("--target-kind", choices=TARGET_KINDS, help="Required selection granularity: skill, domain, or all.")
+    parser.add_argument("--domain", action="append", help="Repeatable SOIA domain name used with --target-kind domain.")
+    parser.add_argument("--confirm-all-targets", action="store_true", help="Acknowledge a reviewed all-target dry-run before a '*' write.")
+    parser.add_argument("--legacy-default-all", action="store_true", help="Deprecated: preserve pre-scope default global full sync for old automation.")
     parser.add_argument(
         "--exclude-skills",
         action="append",
@@ -731,6 +747,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     discovered_skills = discover_skills(source_dir, args.optional)
+    if args.list_skills:
+        for skill in discovered_skills:
+            print(skill)
+        return 0
     requested_skill_tokens = parse_target_tokens(args.skills)
     cli_excludes = parse_target_tokens(args.exclude_skills)
     invalid_excludes = [name for name in cli_excludes if not is_managed_soia_skill(name)]
@@ -746,11 +766,28 @@ def main(argv: list[str] | None = None) -> int:
     if args.save_excludes and args.dry_run:
         print("error: --save-excludes cannot be combined with --dry-run", file=sys.stderr)
         return 2
+    scope = args.scope
+    target_kind = args.target_kind
+    if args.legacy_default_all:
+        print("warning: --legacy-default-all is deprecated; pass --scope global --target-kind all explicitly", file=sys.stderr)
+        scope = scope or "global"
+        target_kind = target_kind or ("skill" if requested_skill_tokens else "all")
     try:
-        skills = select_skills(discovered_skills, requested_skill_tokens)
+        selection = select_installation(
+            scope=scope,
+            agents=args.agents,
+            target_kind=target_kind,
+            requested_skills=args.skills,
+            requested_domains=args.domain,
+            discovered=discovered_skills,
+        )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    if selection.selection_required:
+        print(json.dumps({"selection_required": True, "pending": list(selection.pending), "scope": scope, "target_kind": target_kind}, ensure_ascii=False))
+        return 0
+    skills = list(selection.skills)
     if not skills:
         print(f"error: no SOIA skills found in source-dir: {source_dir}", file=sys.stderr)
         return 2
@@ -770,20 +807,35 @@ def main(argv: list[str] | None = None) -> int:
     for dep, requirer in missing_deps:
         print(
             f"warning: hard dependency not in source-dir: {dep} (required by {requirer}). "
-            f"Install it first, e.g. `npx skills add soia-team/<repo> -g -a '*' -s {dep} -y` "
-            "using whichever repository publishes it, then re-run this sync.",
+            "Use soia-meta-find-skill and the installation owner to choose project/global scope, "
+            "explicit agents, and a narrow target before re-running this sync.",
             file=sys.stderr,
         )
 
-    if args.list_skills:
-        for skill in skills:
-            print(skill)
-        return 0
-
     cli_target_tokens = parse_target_tokens(args.targets)
-    tokens = cli_target_tokens or config.targets
+    if scope == "global" and not cli_target_tokens and not args.legacy_default_all:
+        print(json.dumps({"selection_required": True, "pending": ["targets"], "scope": scope, "target_kind": target_kind}, ensure_ascii=False))
+        return 0
+    if scope == "project":
+        if not args.project_dir:
+            print(json.dumps({"selection_required": True, "pending": ["project_dir"], "scope": scope, "target_kind": target_kind}, ensure_ascii=False))
+            return 0
+        project = args.project_dir.expanduser().resolve()
+        if not project.is_dir() or project in {Path.home().resolve(), Path(project.anchor)} or project == source_dir.resolve():
+            print("error: --project-dir must be an existing, non-home, non-root project distinct from source-dir", file=sys.stderr)
+            return 2
+        targets = [Target("project", "Project .agents skills", project / ".agents" / "skills")]
+    else:
+        tokens = cli_target_tokens or config.targets
+        try:
+            targets = default_targets() if args.legacy_default_all and not tokens else selected_targets(tokens)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+    if target_kind == "all" and not args.dry_run and not args.confirm_all_targets:
+        print("error: --target-kind all requires a reviewed --dry-run and --confirm-all-targets before writing", file=sys.stderr)
+        return 2
     try:
-        targets = selected_targets(tokens)
         ensure_not_source_target(source_dir, targets)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)

@@ -15,6 +15,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Mapping
 
+SYNC_SCRIPT_DIR = Path(__file__).resolve().parents[2] / "soia-meta-sync-skills" / "scripts"
+if str(SYNC_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SYNC_SCRIPT_DIR))
+from install_selection import SCOPES, TARGET_KINDS, select as select_installation, tokens as selection_tokens
+
 
 INSTALL_ROOTS = (".agents/skills", ".claude/skills", ".soia/skills", ".workbuddy/skills", ".codex/skills", ".pi/agent/skills")
 RECEIPT_LINK_ROOTS = (".agents/skills", ".claude/skills", ".codex/skills")
@@ -319,8 +324,8 @@ def print_plugin_publish_steps(repo: str, skills: list[str]) -> None:
     print(f"  3. 客户端更新：claude plugin update {plugin}@soia / codex plugin add {plugin}@soia")
     print(f"  4. 验证：claude plugin details {plugin} 应列出 {', '.join(skills)}")
     print()
-    print("如确实要走 npx 路线装进共享真源，显式传 --install-mode npx；")
-    print("注意这会与插件副本并存，同一技能出现两份索引且各自漂移。")
+    print("如需本机安装，先确认 project/global、Agent 与 skill/domain/all，")
+    print("再显式传 --install-mode selected-install；范围不清时保持 remote-only。")
     print()
 
 
@@ -341,67 +346,90 @@ def release(args: argparse.Namespace, *, home: Path | None = None) -> int:
             os.environ,
             config_env,
         )
+        install_mode = {"plugin": "remote-only", "npx": "selected-install"}.get(args.install_mode, args.install_mode)
         if args.dry_run:
+            if install_mode == "selected-install":
+                try:
+                    selection = select_installation(
+                        scope=args.install_scope,
+                        agents=selection_tokens([agents]),
+                        target_kind=args.target_kind,
+                        requested_skills=[args.install_skills] if args.install_skills else skills,
+                        requested_domains=args.domain,
+                        discovered=skills,
+                    )
+                except ValueError as exc:
+                    raise ReleaseError(str(exc)) from exc
+                pending = list(selection.pending)
+                if selection.scope == "project" and not args.project_dir:
+                    pending.append("project_dir")
+                if selection.scope == "global" and not args.install_targets:
+                    pending.append("install_targets")
+                if not args.source_dir:
+                    pending.append("source_dir")
+                print(json.dumps({"install_plan": {
+                    "scope": selection.scope,
+                    "agents": list(selection.agents),
+                    "target_kind": selection.target_kind,
+                    "skills": list(selection.skills),
+                    "domains": list(selection.domains),
+                    "targets": args.install_targets or args.project_dir,
+                    "source_dir": args.source_dir,
+                    "selection_required": bool(pending),
+                    "pending": list(dict.fromkeys(pending)),
+                }}, ensure_ascii=False))
             for row in rows:
                 row.result = "planned"
             print("dry-run: no command or filesystem write was executed")
             print_receipt(rows)
             return 0
 
-        agent_flags = [flag for a in agents.split(",") for flag in ("-a", a.strip()) if a.strip()]
-        install_mode = getattr(args, "install_mode", "plugin")
-        npx_install = install_mode == "npx"
         if install_mode == "ask":
             if not sys.stdin.isatty():
                 raise ReleaseError(
                     "--install-mode ask requires an interactive terminal; pass "
-                    "--install-mode plugin (publish only) or npx (install locally) explicitly"
+                    "--install-mode remote-only or selected-install explicitly"
                 )
             print("\n[ask] 发布收尾：是否安装到本地 AI 目录？")
-            print("  默认：仅发布到插件市场（plugin），不装本地副本，避免与插件双份漂移。")
+            print("  默认：仅发布，不装本地副本；选择安装前须已提供 scope、Agent 与粒度。")
             try:
                 response = input("  要安装到本地吗？[y/N] ").strip().lower()
             except EOFError:
                 response = "n"
-            npx_install = response in ("y", "yes")
-            if npx_install:
-                try:
-                    edit = input(f"  安装到哪些 agents？当前: {agents} [回车确认 / 逗号分隔覆盖]: ").strip()
-                except EOFError:
-                    edit = ""
-                if edit:
-                    agents = edit
-                    agent_flags = [flag for a in agents.split(",") for flag in ("-a", a.strip()) if a.strip()]
+            install_mode = "selected-install" if response in ("y", "yes") else "remote-only"
 
-        # 1. Install into the shared source only when the caller opts into route A.
-        #    Default delivery is the plugin marketplace; installing here as well would
-        #    put a second copy in ~/.agents/skills that drifts from the plugin version.
-        if npx_install:
-            skill_flags = [flag for name in skills for flag in ("-s", name)]
-            run_command(["npx", "skills", "add", args.repo, "-g", *agent_flags, *skill_flags, "-y"])
-
-        # 2. Remove renamed/deleted skills in both skills.sh and all managed homes.
-        #    This runs in every mode: a stale global copy of a renamed skill outlives
-        #    the plugin update and keeps answering under the old name.
-        if removed:
-            removed_flags = [flag for name in removed for flag in ("-s", name)]
-            if npx_install:
-                run_command(["npx", "skills", "remove", args.repo, "-g", *agent_flags, *removed_flags, "-y"])
-            remove_old_skills(user_home, removed, dry_run=False)
-
-        if npx_install:
-            # 3. Update cross-referenced skills.
-            run_command(["npx", "skills", "update", "-g", "-y"])
-
-            # 4. Fill the Codex discovery directory from the installed canonical source.
-            fill_codex_links(user_home, dry_run=False)
-
-            # 5. Keep SOIA and WorkBuddy consumer links in sync.
-            sync_script = installed_skill_dir(user_home, "soia-meta-sync-skills") / "scripts/sync_soia_skills.py"
-            run_command([sys.executable, str(sync_script), "--targets", "soia,workbuddy"])
-
-            # 6. Verify the installer lock only after all installer-mutating commands.
-            verify_lock(user_home, args.repo, skills, removed)
+        if install_mode == "selected-install":
+            selection = select_installation(
+                scope=args.install_scope,
+                agents=selection_tokens([agents]),
+                target_kind=args.target_kind,
+                requested_skills=[args.install_skills] if args.install_skills else skills,
+                requested_domains=args.domain,
+                discovered=skills,
+            )
+            if selection.selection_required:
+                raise ReleaseError("selected-install requires: " + ", ".join(selection.pending))
+            if selection.scope == "global" and not args.install_targets:
+                raise ReleaseError("selected-install global scope requires --install-targets")
+            if selection.target_kind == "all" and not args.dry_run and not args.confirm_all_targets:
+                raise ReleaseError("selected-install all requires a reviewed dry-run and --confirm-all-targets")
+            if not args.source_dir:
+                raise ReleaseError("selected-install delegates to sync and requires --source-dir")
+            command = [sys.executable, str(SYNC_SCRIPT_DIR / "sync_soia_skills.py"), "--source-dir", args.source_dir,
+                       "--scope", selection.scope, "--target-kind", selection.target_kind]
+            for agent in selection.agents:
+                command.extend(["--agents", agent])
+            for name in selection.skills:
+                command.extend(["--skills", name])
+            for domain in selection.domains:
+                command.extend(["--domain", domain])
+            if selection.scope == "project":
+                if not args.project_dir:
+                    raise ReleaseError("selected-install project scope requires --project-dir")
+                command.extend(["--project-dir", args.project_dir])
+            else:
+                command.extend(["--targets", args.install_targets])
+            run_command(command)
         else:
             print_plugin_publish_steps(args.repo, skills)
 
@@ -414,16 +442,14 @@ def release(args: argparse.Namespace, *, home: Path | None = None) -> int:
                 row.result = "removed"
                 continue
             row.repository_version = version_from_skill(repo_dir / "skills" / row.name / "SKILL.md")
-            if not npx_install:
+            if install_mode != "selected-install":
                 row.installed_version = "-"
                 row.links = "plugin"
                 row.result = "published"
                 continue
-            row.installed_version = version_from_skill(installed_skill_dir(user_home, row.name) / "SKILL.md")
-            row.links = link_status(user_home, row.name)
-            if row.repository_version != row.installed_version:
-                raise ReleaseError(f"version mismatch for {row.name}: {row.repository_version} != {row.installed_version}")
-            row.result = "ok"
+            row.installed_version = "delegated"
+            row.links = "selected"
+            row.result = "selected-install"
     except ReleaseError as exc:
         print(f"release stopped: {exc}", file=sys.stderr)
         print_receipt(rows)
@@ -438,7 +464,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--repo", required=True, help="skills.sh source, for example owner/name")
     parser.add_argument("--skills", required=True, help="comma-separated installed skill names")
     parser.add_argument("--removed", help="comma-separated legacy skill names to remove")
-    parser.add_argument("--agents", default="claude-code,codex", help="skills.sh agent list, e.g. claude-code,codex,pi (supports any npx skills -a agent id)")
+    parser.add_argument("--agents", default="", help="Explicit selected agents; required for project selected-install.")
     parser.add_argument("--repo-dir", help="local checkout used for version verification")
     parser.add_argument(
         "--config",
@@ -447,16 +473,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true", help="print the plan without commands or writes")
     parser.add_argument(
         "--install-mode",
-        choices=["plugin", "npx", "ask"],
-        default="plugin",
+        choices=["remote-only", "selected-install", "ask", "plugin", "npx"],
+        default="remote-only",
         help=(
-            "plugin (default): skills are delivered through the plugin marketplace; "
-            "this run only cleans up renamed/deleted skills and prints the publish steps. "
-            "npx: legacy route A — installs into the shared source ~/.agents/skills, "
-            "which creates a second copy that drifts from the plugin version. "
-            "ask: interactive — prompts whether/how to install locally (requires a terminal)"
+            "remote-only (default): publish guidance only, no local writes. selected-install: "
+            "delegate an explicit scope/agent/target selection to sync. ask: interactive choice. "
+            "plugin and npx are deprecated compatibility aliases."
         ),
     )
+    parser.add_argument("--install-scope", choices=SCOPES)
+    parser.add_argument("--install-targets", help="Explicit global sync target ids or paths")
+    parser.add_argument("--project-dir", help="Explicit project root for project scope")
+    parser.add_argument("--target-kind", choices=TARGET_KINDS)
+    parser.add_argument("--install-skills", help="Optional comma-separated selected skills; defaults to --skills")
+    parser.add_argument("--domain", action="append")
+    parser.add_argument("--source-dir", help="Pre-existing source for sync owner; release never installs it")
+    parser.add_argument("--confirm-all-targets", action="store_true")
     return parser.parse_args(argv)
 
 

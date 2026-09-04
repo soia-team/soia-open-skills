@@ -1,8 +1,14 @@
 # soia-meta-sync-skills
 
-> 将一个共享技能源以软链接同步到用户明确选择的 AI 工具目录；支持预览、单项同步、硬依赖闭包和受限清理
+> 按明确项目或全局范围同步 SOIA 技能，并先输出可审计划
 
 所属：[`soia-meta`](https://github.com/soia-team/soia-open-skills) · [技能源码](https://github.com/soia-team/soia-open-skills/tree/main/skills/soia-meta-sync-skills) · [← 全部技能](README.md)
+
+## 怎么触发
+
+装好后用自然语言说话即可，Agent 按下列意图命中本技能：
+
+项目安装、技能同步、同步预览
 
 ## 能力与用法
 
@@ -12,16 +18,17 @@
 
 ### 客户如何使用
 
-提供源目录、目标 id 或路径，以及可选的单项技能名。目标由 `--targets` 显式提供；没有适合的内置 id 时使用绝对路径。
+提供源目录、`--scope`、目标粒度和技能范围。没有 `--scope`、`--target-kind` 或项目 Agent 选择时，脚本只返回 `selection_required`，不写入。
 
 ```bash
 python3 skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
   --source-dir <shared-skill-dir> \
-  --targets codex,claude \
+  --scope project --project-dir <project> --agents codex \
+  --target-kind skill --skills <skill-name> \
   --dry-run
 ```
 
-确认计划后移除 `--dry-run`。使用 `--skills <name>` 只同步指定技能，默认会把其 frontmatter 中的 `dependencies.hard` 一并纳入；`--no-deps` 可关闭该行为。使用 `--exclude-skills a,b` 可在本次运行中对每个选中 target 跳过并摘除这些技能的既有软链。
+`skill`、`domain`、`all` 都支持；默认不全量。`--skills '*'` 和 `--targets '*'` 必须显式选择 `all`，先 dry-run；全宿主写入还需 `--confirm-all-targets`。使用 `--exclude-skills a,b` 可在本次运行中对每个选中 target 跳过并摘除这些技能的既有软链。
 
 ## 安装
 

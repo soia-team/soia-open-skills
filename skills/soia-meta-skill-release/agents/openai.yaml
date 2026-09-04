@@ -1,4 +1,4 @@
 interface:
   display_name: "Meta Skill Release"
-  short_description: "完成 merge 后技能的本机安装、软链、lock 与版本发布收尾。"
-  default_prompt: "Use $soia-meta-skill-release to finish local release cleanup for merged skill names from an owner/name repository."
+  short_description: "完成正式发布收尾；默认只发布，按客户选择转交定向安装。"
+  default_prompt: "Use $soia-meta-skill-release for remote-only release by default; ask before delegating any local install selection."

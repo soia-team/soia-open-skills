@@ -108,20 +108,32 @@ class MetaSkillReleaseTests(unittest.TestCase):
             home / "owen/code/gitrepo/jiuan/server/v7/legacy-repo",
         )
 
-    def test_steps_run_in_order_and_stop_on_failure(self) -> None:
+    def test_selected_install_requires_explicit_selection(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             home, repo = self.prepare_versions(Path(temp))
-            args = self.args("--repo-dir", str(repo), "--install-mode", "npx")
-            calls: list[list[str]] = []
-
-            def fake_run(command):
-                calls.append(command)
-                if command[:3] == ["npx", "skills", "update"]:
-                    raise release_skills.ReleaseError("update failed")
-
-            with patch.object(release_skills, "run_command", side_effect=fake_run):
+            args = self.args("--repo-dir", str(repo), "--install-mode", "selected-install")
+            with patch.object(release_skills, "run_command") as run:
                 self.assertEqual(release_skills.release(args, home=home), 1)
-            self.assertEqual([call[:3] for call in calls], [["npx", "skills", "add"], ["npx", "skills", "update"]])
+            run.assert_not_called()
+
+    def test_selected_install_delegates_project_selection_to_sync_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            home, repo = self.prepare_versions(root)
+            source = root / "source"
+            self.skill(source, "soia-new")
+            args = self.args(
+                "--repo-dir", str(repo), "--install-mode", "selected-install",
+                "--install-scope", "project", "--project-dir", str(root / "project"),
+                "--target-kind", "skill", "--source-dir", str(source), "--agents", "codex",
+            )
+            calls: list[list[str]] = []
+            with patch.object(release_skills, "run_command", side_effect=lambda command: calls.append(command)):
+                self.assertEqual(release_skills.release(args, home=home), 0)
+            self.assertEqual(calls[0][1], str(release_skills.SYNC_SCRIPT_DIR / "sync_soia_skills.py"))
+            self.assertIn("--scope", calls[0])
+            self.assertIn("project", calls[0])
+            self.assertIn("--agents", calls[0])
 
     def test_default_mode_never_installs_into_the_shared_source(self) -> None:
         """默认必须是插件模式：一条 npx 命令都不许发出。
@@ -132,15 +144,14 @@ class MetaSkillReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             home, repo = self.prepare_versions(Path(temp))
             args = self.args("--repo-dir", str(repo))
-            self.assertEqual(args.install_mode, "plugin")
+            self.assertEqual(args.install_mode, "remote-only")
             calls: list[list[str]] = []
 
             with patch.object(release_skills, "run_command", side_effect=lambda c: calls.append(c)):
                 self.assertEqual(release_skills.release(args, home=home), 0)
             self.assertEqual(calls, [])
 
-    def test_plugin_mode_still_cleans_renamed_skills_from_managed_homes(self) -> None:
-        """改名清理在两种模式下都得跑——残留的旧名副本会盖过插件更新继续应答。"""
+    def test_remote_only_does_not_clean_or_broadcast_local_homes(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             home, repo = self.prepare_versions(Path(temp))
             for root in release_skills.INSTALL_ROOTS:
@@ -150,7 +161,7 @@ class MetaSkillReleaseTests(unittest.TestCase):
             with patch.object(release_skills, "run_command", side_effect=lambda c: None):
                 self.assertEqual(release_skills.release(args, home=home), 0)
             for root in release_skills.INSTALL_ROOTS:
-                self.assertFalse((home / root / "soia-old").exists())
+                self.assertTrue((home / root / "soia-old").exists())
 
     def test_removed_names_are_cleaned_from_all_managed_homes(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
