@@ -1,6 +1,6 @@
 # 技能详情页
 
-全生态 83 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 84 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
@@ -65,7 +65,7 @@
 | [`soia-env-storage-cleanup`](soia-env-storage-cleanup.md) | 面向小白统计 SOIA 受管配置、状态、缓存和临时目录的空间占用，生成可清理清单并提醒删除风险；只有客户看过最新清单并明确授权后才执行删除，随后复核实际释放空间 |
 | [`soia-env-workbuddy-install`](soia-env-workbuddy-install.md) | 为新手安装、验证或按授权更新 WorkBuddy 桌面客户端 |
 
-## `soia-dev`　12 个技能
+## `soia-dev`　13 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
@@ -78,6 +78,7 @@
 | [`soia-dev-project-scaffold`](soia-dev-project-scaffold.md) | 为任意新 Git 项目生成最小 AI 协作基线：可编辑的 AGENTS.md 和 docs 导航目录；在写入前确认目标路径 |
 | [`soia-dev-release-plan-checklist`](soia-dev-release-plan-checklist.md) | 为互联网软件发版生成发布清单、预检门、灰度验证与发布后核对；适用于上线、部署、回滚规划 |
 | [`soia-dev-review-panel`](soia-dev-review-panel.md) | 从多视角对代码 diff 或技能包进行对抗式复核，只读且不编辑、合并或发布 |
+| [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 将开发进度与 AI 代码变更转成最小可用视图：简单关系直接画，阶段状态用紧凑看板，复杂调用链与数据流生成离线 HTML |
 | [`soia-dev-task-execute`](soia-dev-task-execute.md) | 执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务 |
 | [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；杀进程前用日志、CPU、网络多信号交叉判断，并走 TERM→复查→KILL 门 |
 | [`soia-dev-test-draft-doc`](soia-dev-test-draft-doc.md) | 从需求、PRD 或变更说明生成测试计划、测试用例与验收对照；适用于测试设计、回归清单和质量评审 |
@@ -108,7 +109,7 @@
 
 | 技能 | 一句话职责 |
 |---|---|
-| [`soia-meta-find-skill`](soia-meta-find-skill.md) | 按需检索 SOIA 全生态技能并加载——剪藏网盘/知识提炼/新媒发布/编码审查与终端操作/设计图表/产品PRD/软件测试/软件发版/办公协作/教育课程/环境安装/生态管理。说出需求即可检索、定位并按需读入对应技能 |
+| [`soia-meta-find-skill`](soia-meta-find-skill.md) | 按需发现 SOIA 技能并收集安全安装选择 |
 | [`soia-meta-prompt-clarity`](soia-meta-prompt-clarity.md) | 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界 |
 | [`soia-meta-publish-market`](soia-meta-publish-market.md) | 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交 |
 | [`soia-meta-skill-release`](soia-meta-skill-release.md) | 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装 |

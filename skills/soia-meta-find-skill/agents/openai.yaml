@@ -1,4 +1,4 @@
 interface:
   display_name: "Meta Find Skill"
-  short_description: "按自然语言需求检索、定位并加载 SOIA 全生态技能。"
-  default_prompt: "Use $soia-meta-find-skill to find and load the best SOIA skill for my request."
+  short_description: "按自然语言发现 SOIA 技能，并收集项目、Agent 与安装范围选择。"
+  default_prompt: "Use $soia-meta-find-skill to find the best SOIA skill, then ask me for project/global scope and target agents before any installation."

@@ -101,6 +101,13 @@ class ContentTests(unittest.TestCase):
                 self.assertIn("codex plugin add", text)
                 self.assertIn("装到 WorkBuddy", text)
 
+    def test_single_skill_install_defaults_to_project_and_one_agent(self) -> None:
+        for name, text in self.pages.items():
+            with self.subTest(page=name):
+                self.assertIn("范围不清先询问", text)
+                self.assertIn(f"-a <agent> -s {name}", text)
+                self.assertNotIn("-g -a '*'", text)
+
     def test_pages_declare_they_are_generated(self) -> None:
         """避免有人手改页面——改动会在下次重生成时被覆盖。"""
         for name, text in self.pages.items():

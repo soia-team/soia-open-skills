@@ -15,7 +15,7 @@
 
 | Skill | Description | Default Prompt |
 |---|---|---|
-| [`soia-meta-find-skill`](./soia-meta-find-skill/) | 按自然语言需求检索、定位并加载 SOIA 全生态技能。 | Use $soia-meta-find-skill to find and load the best SOIA skill for my request. |
+| [`soia-meta-find-skill`](./soia-meta-find-skill/) | 按自然语言发现 SOIA 技能，并收集项目、Agent 与安装范围选择。 | Use $soia-meta-find-skill to find the best SOIA skill, then ask me for project/global scope and target agents before any installation. |
 | [`soia-meta-prompt-clarity`](./soia-meta-prompt-clarity/) | 中英文提示词编写、诊断、防误伤改写与可验证规格化 | Use $soia-meta-prompt-clarity to turn my request into a clear, directly usable prompt; preserve my chosen prompt and explanation languages, and use a named framework only when it materially improves the result. |
 | [`soia-meta-publish-market`](./soia-meta-publish-market/) | 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交 |  |
 | [`soia-meta-skill-release`](./soia-meta-skill-release/) | 完成 merge 后技能的本机安装、软链、lock 与版本发布收尾。 | Use $soia-meta-skill-release to finish local release cleanup for merged skill names from an owner/name repository. |
