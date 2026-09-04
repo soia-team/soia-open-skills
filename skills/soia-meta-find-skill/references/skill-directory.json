@@ -246,7 +246,7 @@
   },
   {
     "name": "soia-env-open-skills-install",
-    "description": "在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，支持全部/单插件/单技能粒度与指定宿主。触发：「装好所有 SOIA 插件」「在 Codex 下装 SOIA」「更新 soia-dev 插件」。",
+    "description": "在 Claude Code、Codex、WorkBuddy 上按确认范围安装或更新 SOIA 开源技能；默认项目级单技能，支持全局、整域和全量。触发：「安装 SOIA 技能」「在 Codex 下装」「更新 soia-dev」",
     "source": {
       "repository": "soia-open-env-skills"
     }
