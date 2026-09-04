@@ -3,6 +3,19 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v1.13.0 — 2026-09-04
+
+升级项目感知技能检索与安全安装范围选择
+
+## 新增
+- feat(meta): make skill discovery project-aware (#296)
+
+## 维护
+- chore(marketplace): refresh soia-dev v1.12.1 pin (#294)
+- chore(marketplace): refresh soia-dev v1.12.0 pin (#293)
+- chore(marketplace): refresh sha pins (soia-dev v1.11.0) (#292)
+- chore(release): open next train after v1.12.4 (#291)
+
 ## v1.12.4 — 2026-09-01
 
 刷新 marketplace pin 至 soia-pkm-vault v1.12.1，并同步技能详情页
