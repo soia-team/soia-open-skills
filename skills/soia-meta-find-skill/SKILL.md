@@ -1,113 +1,123 @@
 ---
 name: soia-meta-find-skill
-description: 按需检索 SOIA 全生态技能并加载——剪藏网盘/知识提炼/新媒发布/编码审查与终端操作/设计图表/产品PRD/软件测试/软件发版/办公协作/教育课程/环境安装/生态管理。说出需求即可检索、定位并按需读入对应技能
-version: 1.0.2
+description: 按需发现 SOIA 技能并收集安全安装选择。触发：技能检索、代码审查、环境安装
+version: 1.1.0
 created_at: 2026-07-23 10:23:03
-updated_at: 2026-08-05 13:00:00
+updated_at: 2026-09-04 16:54:39
 created_by: gpt-5.6-luna
-updated_by: claude-opus-5
+updated_by: gpt-5.6-terra
 ---
 
 # soia-meta-find-skill
 
-按自然语言关键词在已安装技能与全生态目录之间做两级检索，定位最匹配的技能，并指引宿主只在需要时把该技能的 `SKILL.md` 读入上下文。
+按自然语言需求发现最匹配的 SOIA 技能，优先识别当前项目已安装的技能；未安装时只收集安装选择，不安装、不同步、不发布。
 
 ## 客户可读说明
 
 ### 这个技能可以做什么
 
-- 优先查找本机已经安装、可以立即加载的 SOIA 技能。
-- 本机没有匹配项时，从随技能发布的全生态目录定位未安装技能并给出精确安装命令。
-- 候选超过一个时列出相关性最高的 3 个，由当前模型结合客户原始需求选择。
+- 在项目 `.agents/skills`、用户全局真源或公开生态目录中发现候选技能。
+- 识别代码审查、架构评审、调用链、数据流、模块边界等中文意图。
+- 返回“项目/全局、目标 Agent、单技能/整域/全量”选择意图，交给安装或同步技能执行。
 
 ### 客户如何使用
 
-客户只需说明目标，例如“剪藏一篇网页”“起草 PRD”或“检查发版清单”。Agent 提取一个高区分度关键词和可选领域后运行：
+先从当前项目查找；若当前目录不能确定项目，脚本不会暗自扫描全局目录，而会让 Agent 向客户确认范围。
 
 ```bash
-python3 scripts/find_skill.py --query <关键词> [--domain <领域>]
+python3 scripts/find_skill.py --query <关键词> [--project <项目路径>] [--scope auto|project|global|both] [--agent <Agent>]
 ```
 
-如果从仓库源码调用，使用：
+从仓库源码调用：
 
 ```bash
-python3 skills/soia-meta-find-skill/scripts/find_skill.py --query <关键词> [--domain <领域>]
+python3 skills/soia-meta-find-skill/scripts/find_skill.py --query <关键词> --project <项目路径> --agent claude --agent codex
 ```
+
+`--agent` 可重复，仅保留客户的目标 Agent 选择，不猜测任何宿主目录。`--scope auto` 仅扫描可确定的当前项目；`project`、`global`、`both` 是显式范围。`--skills-dir` 与 `--directory` 保留给旧离线调用和测试。
 
 ### 依赖与安装
 
-运行时只依赖 Python 3 标准库。安装本路由技能：
+运行时只依赖 Python 3 标准库。本路由技能可随 `soia-meta` 领域插件提供给 Claude Code 或 Codex：
 
 ```bash
-claude plugin marketplace add soia-team/soia-open-skills
+claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-meta@soia
 ```
 
 ```bash
-claude plugin install soia-meta@soia
+codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia-meta@soia
 ```
 
-只要这一个技能时，可用 npx 路线。注意技能会落进共享真源 `~/.agents/skills`；若同时装了插件，同一技能会出现两份索引且各自漂移，建议二选一：
+WorkBuddy 以角色化专家装载，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
 
-```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-find-skill -y
-```
+本技能不会默认生成 `-g -a '*'` 命令。未安装候选必须先让客户确认：安装到项目还是全局、哪些 Agent、单技能/整域/全量；默认是单技能，绝不默认全量。确认后把结构化选择交给安装或同步技能；发布流程也不得顺带安装，除非客户另行选择。
 
-目录中未安装的候选会自带对应仓库的 `npx skills add` 命令。安装会改变本机状态；先把命令展示给客户并取得授权，安装后重新检索。
+`npx skills add` 仍是单技能安装路线，但它的具体参数只能由安装 owner 在客户确认选择后生成；本 finder 不构造或执行该命令。
 
-**WorkBuddy** 的装载单位是角色化专家而不是插件，`npx skills add -a '*'` 覆盖不到它，需要单独安装，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
+仅为旧消费者提供 `--legacy-install-cmd`：它会额外输出标为 deprecated 的旧全局全 Agent 命令，不能用于新流程。
 
 ### 私密信息与中间数据
 
-- 本机扫描范围仅为 `~/.agents/skills/*/SKILL.md`；不读取技能私有配置、凭据或客户文件。
-- 查询与结果只输出到终端，不写缓存或日志。结果中的本机路径仅用于宿主读取，不复制到公开交付物。
-- 全生态目录是仓库内的公开生成产物，不包含账号、token、私有技能或本机路径。
+- 只读取候选 `SKILL.md` 的 frontmatter 与随技能发布的公开目录、同义词参考；不读私有配置、凭据或客户文件。
+- 查询结果只输出 stdout，不写缓存、日志或运行时状态。
+- 路径仅用于当前宿主读取 `SKILL.md`；回执不复制私有路径。
 
 ### 日志与完成回执
 
-回执必须说明查询词、是否命中本机、展示的候选数、最终选择及依据。未命中时明确返回空列表，不猜造技能名。
+回执说明查询词、扫描范围、项目/全局命中、候选数、选择依据，以及是否仍需客户选择安装范围。没有候选时明确返回空列表，不猜造技能名。
 
 ```markdown
 完成：已为“<需求>”定位 <技能名>。
-日志摘要：本机/全生态目录命中 <数量> 个候选；选择依据为 <关键词或领域>。
-下一步：已读取 <SKILL.md 路径> / 等待授权执行 <安装命令> / 未找到匹配项。
+日志摘要：项目/全局/生态目录命中 <数量> 个；选择依据为 <关键词或领域>。
+下一步：已读取 <SKILL.md 路径> / 等待客户确认 <project|global>、<agents>、<skill|domain|all>。
 ```
 
 ## 检索与加载契约
 
-1. 从客户需求中提取 1–3 个高区分度词；领域已明确时追加 `--domain`，不要把整段自然语言原样作为一个关键词。
-2. 运行 `scripts/find_skill.py`。脚本先扫描 `~/.agents/skills/*/SKILL.md` 的 frontmatter `name` 与 `description`。
-3. 若本机有匹配项，只返回已安装候选；若没有，查询 `references/skill-directory.json`，返回未安装候选及精确 `install_cmd`。
-4. 最多向模型展示排名前 3 的候选。结合原始需求、技能边界和 description 自主选择一个；不能区分时再向客户问一个短问题。
-5. 已安装候选包含 `path`。调用宿主的文件读取能力完整读取该路径的 `SKILL.md`；只有实际读入内容才算加载，不能只引用路径或凭记忆执行。
-6. 未安装候选包含 `install_cmd`。展示命令并等待客户授权；安装成功后重新运行检索，再读取返回的 `path`。
-7. 读取选中技能后，以该技能的依赖、安全边界、工作流和验证契约继续处理原始需求。本路由技能不替代目标技能。
+1. 从客户需求提取 1–3 个高区分度词；可直接使用中文短语。词组与同义词由 [references/query-hints.json](references/query-hints.json) 维护。
+2. `auto` 范围下，若 `--project` 或当前工作目录可确定项目，扫描 `<project>/.agents/skills`；否则只检索公开目录，并标记 `selection_required`。
+3. `global` 或 `both` 只在显式请求时扫描用户全局真源。项目与全局同时命中同一技能时按 realpath + skill name 去重，项目优先。
+4. 本地与公开目录候选一起排序；本地匹配不再短路隐藏其他高相关候选。
+5. 只对已安装候选返回优先 `path`；以 `installed_scopes`、`source_scope` 表示来源。实际读取该 `SKILL.md` 后才算加载。
+6. 未安装候选返回 `source` 和 `install_selection`。如果 `scope` 或 `agents` 未选，Agent 必须问客户；不能执行安装、同步或发布。
+7. `install_selection.target.kind` 默认 `skill`，同时声明客户可选的 `domain` 和 `all`。全量仅在客户明确选择后交给对应 owner 处理。
 
 ## 输出契约
 
-脚本向 stdout 输出 JSON 数组，最多 3 项：
+stdout 为最多 3 项的 JSON 数组。默认不包含可执行安装命令：
 
 ```json
 [
   {
     "name": "soia-example-skill",
     "description": "示例描述",
-    "installed": true,
-    "path": "<home>/.agents/skills/soia-example-skill/SKILL.md"
+    "installed": false,
+    "installed_scopes": [],
+    "source_scope": "directory",
+    "requested_agents": ["claude", "codex"],
+    "source": {"repository": "soia-open-example-skills"},
+    "install_selection": {
+      "scope": "project",
+      "agents": ["claude", "codex"],
+      "target": {"kind": "skill", "name": "soia-example-skill"},
+      "available_target_kinds": ["skill", "domain", "all"],
+      "selection_required": false,
+      "pending": []
+    }
   }
 ]
 ```
 
-未安装项以 `install_cmd` 替代 `path`。不要把目录内的 `repo` 等维护字段扩散为运行时契约。
-
 ## 目录维护边界
 
-`references/skill-directory.json` 由元仓根目录的 `scripts/generate_router_index.py` 从只读 `routing/routing-manifest.json` 生成。普通客户运行路由时不刷新目录；维护者仅在公开技能描述或路由清单变化时生成并提交产物。
+`references/skill-directory.json` 由元仓根目录的 `scripts/generate_router_index.py` 从只读 `routing/routing-manifest.json` 生成。它只保存技能的公开来源标识，不保存默认安装命令。普通客户运行路由时不刷新目录。
 
 ## 验证
 
 ```bash
-python3 skills/soia-meta-find-skill/scripts/find_skill.py --query 剪藏
+python3 -m unittest tests.test_find_skill_router tests.test_generate_router_index
 python3 scripts/generate_router_index.py --check
+python3 scripts/generate_skill_pages.py --check
 ```
 
-真实输出验收：第一条命令必须返回合法 JSON；每项必须恰含公共字段、`installed` 布尔值，以及 `path` 或 `install_cmd` 之一。第二条命令必须确认提交的全生态目录与远端公开 `SKILL.md` 描述一致。
+真实输出验收：测试夹具分别覆盖项目优先、项目/全局合并与 realpath 去重、未选范围时的 `selection_required`、多 Agent 意图、中文审查短语，以及显式 legacy 命令；每项断言 JSON 字段和值，不只检查退出码。

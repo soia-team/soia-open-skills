@@ -129,9 +129,8 @@ def directory_entry(entry: Mapping[str, str], skill_md: str) -> dict[str, str]:
     repo = entry["repo"]
     return {
         "name": name,
-        "repo": repo,
         "description": frontmatter_description(skill_md),
-        "install_cmd": f"npx skills add {OWNER}/{repo} -g -a '*' -s {name} -y",
+        "source": {"repository": repo},
     }
 
 
@@ -154,7 +153,7 @@ def build_directory(
                 raise RuntimeError(
                     f"cannot build directory entry for {entry['skill_name']}: {exc}"
                 ) from exc
-    results.sort(key=lambda item: (item["name"], item["repo"]))
+    results.sort(key=lambda item: (item["name"], item["source"]["repository"]))
     return results
 
 

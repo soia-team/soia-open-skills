@@ -26,7 +26,7 @@ bash skills/soia-dev-project-scaffold/shells/init-project-baseline.sh <project-p
 
 ## 安装
 
-本技能随 `soia-dev` 领域插件一起安装：
+客户明确选择安装整个 `soia-dev` 领域插件时：
 
 ```bash
 claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-dev@soia
@@ -36,13 +36,15 @@ claude plugin marketplace add soia-team/soia-open-skills && claude plugin instal
 codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia-dev@soia
 ```
 
-WorkBuddy 由技能代劳——对 AI 说「装到 WorkBuddy」即可。
+客户选择 WorkBuddy 时由技能代劳——对 AI 说「装到 WorkBuddy」即可。
 
-只想要这一个技能：
+安装前先确认项目/全局、目标 Agent 与单技能/整域/全量；范围不清先询问。默认是当前项目、明确 Agent、单个技能：
 
 ```bash
-npx skills add soia-team/soia-open-dev-skills -g -a '*' -s soia-dev-project-scaffold -y
+npx skills add soia-team/soia-open-dev-skills -a <agent> -s soia-dev-project-scaffold -y
 ```
+
+客户明确选择全局时再加 `-g`；明确选择全部 Agent 时才把 `<agent>` 换成 `'*'`。
 
 ---
 

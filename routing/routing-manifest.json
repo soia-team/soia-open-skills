@@ -108,6 +108,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-dev-show-task-html",
+    "repo": "soia-open-dev-skills",
+    "skillPath": "skills/soia-dev-show-task-html",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-dev-task-execute",
     "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-task-execute",

@@ -30,10 +30,8 @@ class GenerateRouterIndexTests(unittest.TestCase):
         result = MODULE.build_directory(manifest, fetcher=fetcher, workers=2)
         self.assertEqual([item["name"] for item in result], ["soia-meta-a-skill", "soia-meta-z-skill"])
         self.assertEqual(result[0]["description"], "repo-a description")
-        self.assertEqual(
-            result[0]["install_cmd"],
-            "npx skills add soia-team/repo-a -g -a '*' -s soia-meta-a-skill -y",
-        )
+        self.assertEqual(result[0]["source"], {"repository": "repo-a"})
+        self.assertNotIn("install_cmd", result[0])
 
     def test_check_mode_comparison_does_not_overwrite_stale_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix="router-index-") as temp:

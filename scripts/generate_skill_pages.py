@@ -119,6 +119,14 @@ def parse(text: str) -> dict[str, str]:
 
 def render(name: str, repo: str, skill: dict[str, str]) -> str:
     plugin = REPO_TO_PLUGIN[repo]
+    install_guidance = [
+        "安装前先确认项目/全局、目标 Agent 与单技能/整域/全量；范围不清先询问。"
+        "默认是当前项目、明确 Agent、单个技能：\n",
+        "```bash\n"
+        f"npx skills add {OWNER}/{repo} -a <agent> -s {name} -y\n"
+        "```\n",
+        "客户明确选择全局时再加 `-g`；明确选择全部 Agent 时才把 `<agent>` 换成 `'*'`。\n",
+    ]
     out = [
         f"# {name}\n",
         f"> {skill['duty']}\n",
@@ -137,18 +145,15 @@ def render(name: str, repo: str, skill: dict[str, str]) -> str:
         out.append(skill["customer"] + "\n")
     out += [
         "## 安装\n",
-        f"本技能随 `{plugin}` 领域插件一起安装：\n",
+        f"客户明确选择安装整个 `{plugin}` 领域插件时：\n",
         "```bash\n"
         f"claude plugin marketplace add {OWNER}/soia-open-skills && claude plugin install {plugin}@soia\n"
         "```\n",
         "```bash\n"
         f"codex plugin marketplace add {OWNER}/soia-open-skills && codex plugin add {plugin}@soia\n"
         "```\n",
-        "WorkBuddy 由技能代劳——对 AI 说「装到 WorkBuddy」即可。\n",
-        "只想要这一个技能：\n",
-        "```bash\n"
-        f"npx skills add {OWNER}/{repo} -g -a '*' -s {name} -y\n"
-        "```\n",
+        "客户选择 WorkBuddy 时由技能代劳——对 AI 说「装到 WorkBuddy」即可。\n",
+        *install_guidance,
         "---\n",
         "本页由 `scripts/generate_skill_pages.py` 从该技能的 `SKILL.md` 派生，"
         "请勿手改——改 `SKILL.md` 后重跑生成器。\n",
