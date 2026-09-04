@@ -38,14 +38,14 @@ class MetaSyncTargetTests(unittest.TestCase):
         }
         self.assertTrue(expected.issubset(retired), expected - retired)
 
-    def run_script(self, home: Path, *args: str, path: str | None = None) -> subprocess.CompletedProcess[str]:
+    def run_script(self, home: Path, *args: str, path: str | None = None, legacy: bool = True) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env["HOME"] = str(home)
         env["XDG_STATE_HOME"] = str(home / "state")
         if path is not None:
             env["PATH"] = path
         return subprocess.run(
-            [sys.executable, str(SCRIPT), *args],
+            [sys.executable, str(SCRIPT), *args, *( ["--legacy-default-all", "--confirm-all-targets"] if legacy else [])],
             check=False,
             capture_output=True,
             text=True,
@@ -250,9 +250,9 @@ class MetaSyncTargetTests(unittest.TestCase):
             self.assertEqual(first.returncode, 0, first.stderr)
             self.assertEqual(second.returncode, 0, second.stderr)
             logs = sorted((home / "state/soia-meta-sync-skills").glob("sync-*.log"))
-            self.assertEqual(len(logs), 2)
+            self.assertEqual(len(logs), 1)
             modes = {line for log in logs for line in log.read_text().splitlines() if line.startswith("mode:")}
-            self.assertEqual(modes, {"mode: dry-run", "mode: write"})
+            self.assertEqual(modes, {"mode: write"})
 
     def add_skill_with_deps(self, source: Path, name: str, hard: list[str], flow: bool = True) -> None:
         skill = source / name
@@ -354,7 +354,7 @@ class MetaSyncTargetTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("hard dependency not in source-dir: soia-pkm-alipan", result.stderr)
-            self.assertIn("npx skills add", result.stderr)
+            self.assertIn("soia-meta-find-skill", result.stderr)
             self.assertTrue(
                 (root / "home/.soia/skills/soia-pkm-alipan-curator").is_symlink()
             )
@@ -437,6 +437,48 @@ class MetaSyncTargetTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse((home / ".codex/skills/soia-test-skill").is_symlink())
             self.assertTrue((home / ".claude/skills/soia-test-skill").is_symlink())
+
+    def test_new_contract_requires_scope_and_target_kind_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sync-targets-") as temp:
+            root = Path(temp)
+            source = self.make_source(root)
+            result = self.run_script(root / "home", "--source-dir", str(source), legacy=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('"selection_required": true', result.stdout)
+            self.assertFalse((root / "home").exists())
+
+    def test_project_scope_only_plans_the_project_agents_layer(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sync-targets-") as temp:
+            root = Path(temp)
+            source = self.make_source(root)
+            project = root / "project"
+            project.mkdir()
+            result = self.run_script(
+                root / "home", "--source-dir", str(source), "--scope", "project",
+                "--project-dir", str(project), "--agents", "codex", "--target-kind", "skill",
+                "--skills", "soia-test-skill", "--dry-run", legacy=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Project .agents skills", result.stdout)
+            self.assertFalse((project / ".agents/skills").exists())
+            self.assertFalse((root / "home/.codex/skills").exists())
+
+    def test_all_targets_requires_dry_run_before_write(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sync-targets-") as temp:
+            root = Path(temp)
+            source = self.make_source(root)
+            blocked = self.run_script(
+                root / "home", "--source-dir", str(source), "--scope", "global",
+                "--target-kind", "all", "--targets", "*", legacy=False,
+            )
+            self.assertEqual(blocked.returncode, 2)
+            self.assertIn("requires a reviewed --dry-run", blocked.stderr)
+            planned = self.run_script(
+                root / "home", "--source-dir", str(source), "--scope", "global",
+                "--target-kind", "all", "--targets", "*", "--dry-run", legacy=False,
+            )
+            self.assertEqual(planned.returncode, 0, planned.stderr)
+            self.assertIn("Mode: DRY-RUN", planned.stdout)
 
 
 if __name__ == "__main__":

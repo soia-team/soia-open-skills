@@ -1,6 +1,6 @@
 # soia-meta-skill-release
 
-> 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装
+> 正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装
 
 所属：[`soia-meta`](https://github.com/soia-team/soia-open-skills) · [技能源码](https://github.com/soia-team/soia-open-skills/tree/main/skills/soia-meta-skill-release) · [← 全部技能](README.md)
 
@@ -8,7 +8,7 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」
+正式发版、发布技能、发布后安装
 
 ## 能力与用法
 
@@ -16,12 +16,12 @@
 
 | 客户想要 | 技能会做 | 客户能看到 |
 | --- | --- | --- |
-| 发布 merge 后的一个或多个技能 | 安装、更新、软链同步并核对 lock/版本 | 六列发布回执 |
-| 重命名或删除旧技能 | 移除旧安装与全部受管目录残留 | 已清理数量与零残留验证 |
+| 发布 merge 后的一个或多个技能 | 远端正式版与市场 pin 收尾 | 发布回执与客户端更新指引 |
+| 发布后按客户选择安装 | 转交 sync owner 的明确计划 | project/global、Agent、粒度与 dry-run |
 
 ### 客户如何使用
 
-先确认目标技能已 merge 到远端仓库；本技能不执行 git、PR、merge、push 或发布远端状态。再提供仓库、技能名单和可选旧名：
+正式远端发版使用本文后半的 `formal_release.py`；下列 `release_skills.py` 只负责发布后的本机收口选择。先提供仓库、技能名单和可选旧名：
 
 ```bash
 python3 skills/soia-meta-skill-release/scripts/release_skills.py \
@@ -31,7 +31,7 @@ python3 skills/soia-meta-skill-release/scripts/release_skills.py \
   --dry-run
 ```
 
-复核 dry-run 后，移除 `--dry-run` 执行。默认面向 `claude-code,codex`，可用 `--agents` 覆盖。版本核对按以下顺序解析本地 checkout：
+复核 dry-run 后，移除 `--dry-run` 执行。默认 `remote-only`，不选择任何 Agent；要安装时必须明确 scope、Agent、skill/domain/all 与目标。版本核对按以下顺序解析本地 checkout：
 
 1. `--repo-dir <repo-path>` 显式路径；
 2. 当前进程的 `SOIA_SKILL_REPOS_ROOT/<repo-name>`；

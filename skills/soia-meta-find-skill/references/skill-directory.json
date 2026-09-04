@@ -351,14 +351,14 @@
   },
   {
     "name": "soia-meta-skill-release",
-    "description": "域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」",
+    "description": "正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装。触发：正式发版、发布技能、发布后安装",
     "source": {
       "repository": "soia-open-skills"
     }
   },
   {
     "name": "soia-meta-sync-skills",
-    "description": "将一个共享技能源以软链接同步到用户明确选择的 AI 工具目录；支持预览、单项同步、硬依赖闭包和受限清理。",
+    "description": "按明确项目或全局范围同步 SOIA 技能，并先输出可审计划。触发：项目安装、技能同步、同步预览",
     "source": {
       "repository": "soia-open-skills"
     }

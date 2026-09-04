@@ -1,18 +1,18 @@
 ---
 name: soia-meta-skill-release
-description: 域仓正式发版（dev→main、tag、Release、notes、CHANGELOG）与发布收尾：市场 pin 刷新、客户端更新、旧名清理、WorkBuddy 专家安装、dev 快照试装。触发：「正式发版」「发布技能」「更新插件」「技能发布收尾」「装到 WorkBuddy」「试装 dev」
-version: 5.2.0
+description: 正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装。触发：正式发版、发布技能、发布后安装
+version: 5.3.0
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-08-06 17:30:00
+updated_at: 2026-09-04 17:19:21
 created_by: gpt-5.6-terra
-updated_by: claude-fable-5
+updated_by: gpt-5.6-sol
 dependencies:
   optional: [soia-meta-sync-skills]
 ---
 
 # soia-meta-skill-release
 
-在技能 PR 已 merge 后完成本机发布收尾：安装或更新变更技能、清理旧名、补全 Codex 链接、同步消费者目录，并用 lock 与版本进行独立对账。触发词：**「发布技能」**、**「发布 X」**、**「技能发布收尾」**、**「release skill」**。
+完成正式远端发版与市场 pin 收尾；默认只发布，不修改本机。客户明确选择项目/全局、Agent 与 skill/domain/all 后，才把安装交给 sync owner。
 
 ## 客户可读说明
 
@@ -20,12 +20,12 @@ dependencies:
 
 | 客户想要 | 技能会做 | 客户能看到 |
 | --- | --- | --- |
-| 发布 merge 后的一个或多个技能 | 安装、更新、软链同步并核对 lock/版本 | 六列发布回执 |
-| 重命名或删除旧技能 | 移除旧安装与全部受管目录残留 | 已清理数量与零残留验证 |
+| 发布 merge 后的一个或多个技能 | 远端正式版与市场 pin 收尾 | 发布回执与客户端更新指引 |
+| 发布后按客户选择安装 | 转交 sync owner 的明确计划 | project/global、Agent、粒度与 dry-run |
 
 ### 客户如何使用
 
-先确认目标技能已 merge 到远端仓库；本技能不执行 git、PR、merge、push 或发布远端状态。再提供仓库、技能名单和可选旧名：
+正式远端发版使用本文后半的 `formal_release.py`；下列 `release_skills.py` 只负责发布后的本机收口选择。先提供仓库、技能名单和可选旧名：
 
 ```bash
 python3 skills/soia-meta-skill-release/scripts/release_skills.py \
@@ -35,7 +35,7 @@ python3 skills/soia-meta-skill-release/scripts/release_skills.py \
   --dry-run
 ```
 
-复核 dry-run 后，移除 `--dry-run` 执行。默认面向 `claude-code,codex`，可用 `--agents` 覆盖。版本核对按以下顺序解析本地 checkout：
+复核 dry-run 后，移除 `--dry-run` 执行。默认 `remote-only`，不选择任何 Agent；要安装时必须明确 scope、Agent、skill/domain/all 与目标。版本核对按以下顺序解析本地 checkout：
 
 1. `--repo-dir <repo-path>` 显式路径；
 2. 当前进程的 `SOIA_SKILL_REPOS_ROOT/<repo-name>`；
@@ -55,16 +55,18 @@ claude plugin marketplace add soia-team/soia-open-skills
 claude plugin install soia-meta@soia
 ```
 
-只要这一个技能时，可用 npx 路线。注意技能会落进共享真源 `~/.agents/skills`；若同时装了插件，同一技能会出现两份索引且各自漂移，建议二选一：
+需要本机安装时，先让客户明确 project/global、Agent 与 skill/domain/all；默认只发布，不生成安装命令。
 
 ```bash
-npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -y
+npx skills add soia-team/soia-open-skills -a <explicit-agent> -s soia-meta-skill-release -y
 ```
+
+客户明确选择 WorkBuddy 时，先按本文“WorkBuddy 专家”段运行专用脚本的 dry-run；当前只支持用户级专家目录，不把它冒充项目级安装。
 
 | 依赖 | 类型 | 用途 | 缺失时怎么处理 |
 | --- | --- | --- | --- |
 | `npx skills` | 强依赖 | 安装、移除、更新并维护 lock | 停止并报告失败步骤 |
-| `soia-meta-sync-skills` | 可选依赖 | 仅 `npx` 模式第 5 步用它同步 SOIA 与 WorkBuddy 软链；默认的 `plugin` 模式不调用 | 走 `npx` 模式时先安装该技能再重试；`plugin` 模式无影响 |
+| `soia-meta-sync-skills` | 定向安装时依赖 | 接收已确认的 scope、Agent 与粒度并执行同步 | 只发布不受影响；选择安装时先补齐该技能 |
 | Python 3 | 强依赖 | 执行发布脚本 | 安装 Python 3 后重试 |
 | PyYAML | 可选依赖 | 读取私有 `config.yml` | 传 `--repo-dir` 或使用当前进程环境变量 |
 
@@ -82,35 +84,26 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s soia-meta-skill-release -
 
 ## 工作流
 
-交付走插件市场，`--install-mode` 默认 `plugin`。**默认不会向 `~/.agents/skills` 安装任何技能**——那样会与插件副本并存，同一技能出现两份索引且各自漂移。
+`--install-mode` 默认 `remote-only`。**默认不修改任何本机技能目录**；项目/全局、单/多 Agent、skill/domain/all 都保留，但必须由客户明确选择。
 
-### `plugin` 模式（默认）
+### `remote-only` 模式（默认）
 
-1. 有 `--removed` 时清理 `.agents`、`.claude`、`.soia`、`.workbuddy`、`.codex`、`.pi/agent` 六处同名残留。改名清理在两种模式下都执行：残留的旧名副本会盖过插件更新继续应答。
-2. 读取仓库版本填入回执；装机版本记 `-`，软链记 `plugin`，结果记 `published`。
-3. 打印用户实际收到改动还需要的步骤：bump 双份 `plugin.json` 的 version → 元仓重生成市场清单并提 PR 合并 → 客户端 `plugin update` → `plugin details` 验证。
+读取仓库版本并输出发布/市场/客户端更新指引；不安装、不删除旧名、不清理缓存，也不广播任何 Agent。客户只说“发布”时走这条。
 
 ### `ask` 模式（`--install-mode ask`，交互式选择）
 
-需要交互终端。执行时询问客户是否安装到本地：输入 `y` 则按 `--agents` 指定的目标走 npx 安装（可现场覆盖 agents 列表，如 `claude-code,pi`）；输入 `n`/回车则等同 `plugin` 模式，只发布不安装。非交互环境（agent 执行脚本）下使用 `ask` 会报错并提示改用 `plugin`/`npx`。
+需要交互终端，只确认“发布后是否继续安装”。若选安装，调用 Agent 必须已收齐 `--install-scope`、`--agents`、`--target-kind`、项目或全局目标与 `--source-dir`；缺项即停止并列出缺口，不代选。非交互环境改用 `remote-only` 或参数齐全的 `selected-install`。
 
-### `npx` 模式（`--install-mode npx`，显式 opt-in）
+### `selected-install` 模式（显式 opt-in）
 
-> ⚠️ **2026-08-06 规范定稿后的边界**：各 agent 技能空间一律**实体安装**且必须
-> **可再现**（lock 登记来源）。由此：本模式只允许逐技能窄命令
-> `npx skills add <repo> -g -a <agent> --copy -s <skill> -y`（多技能用重复 `-s`，
-> 逗号列表会被当成单个名字；qwen 的 id 是 `qwen-code`）；**第 3 步的全量
-> `npx skills update -g -y` 已禁用**——它对 lock 内全部技能向所有 agent 目录
-> 广播重装，等效被禁的 `-a '*'`；第 4/5 步的软链同步与实体规范冲突，一并停用。
-> `release_skills.py` 尚未按此改造，改造完成前不要使用其批量步骤。
+本模式把明确选择转交 `soia-meta-sync-skills`，自身不维护第二套目录映射。先 dry-run；`all` 或全部宿主的实际写入还需 `--confirm-all-targets`。`plugin`/`npx` 只作为旧调用的兼容别名，分别映射到 `remote-only`/`selected-install`。
 
-1. 逐项执行 `npx skills add <repo> -g -a <agents> --copy -s <skill> -y`；`--agents` 支持任意 `npx skills -a` agent id，如 `claude-code`、`codex`、`pi`（Pi 安装到 `~/.pi/agent/skills`）、`qwen-code`。
-2. 有 `--removed` 时执行同参 `npx skills remove`，并清理五处残留。
-3. ~~执行 `npx skills update -g -y`~~（已禁用，见上方警告；更新改为对目标技能重跑第 1 步）。
-4. ~~软链补齐 Codex~~（已停用；Codex 走插件市场）。
-5. ~~调用 `soia-meta-sync-skills` 同步 soia,workbuddy~~（已停用；WorkBuddy 走 `install_workbuddy_experts.py`）。
-6. 对账 `~/.agents/.skill-lock.json`：所有新技能必须来自 `--repo`，旧名必须零残留。
-7. 按 `--repo-dir` → 进程环境 → 私有 v2 config → 只读 v1 config 回退 → 旧版兼容目录的顺序解析 checkout，并对比每项 `SKILL.md` version 与装机 version。
+```bash
+python3 skills/soia-meta-skill-release/scripts/release_skills.py \
+  --repo <owner/name> --skills <skill> --install-mode selected-install \
+  --install-scope project --project-dir <project> --agents <agent> \
+  --target-kind skill --source-dir <shared-skill-dir> --dry-run
+```
 
 
 ## 正式发版（dev 分支制）
