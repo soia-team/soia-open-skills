@@ -1,6 +1,6 @@
 # soia-env-open-skills-install
 
-> 在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，支持全部/单插件/单技能粒度与指定宿主
+> 在 Claude Code、Codex、WorkBuddy 上按确认范围安装或更新 SOIA 开源技能；默认项目级单技能，支持全局、整域和全量
 
 所属：[`soia-env`](https://github.com/soia-team/soia-open-env-skills) · [技能源码](https://github.com/soia-team/soia-open-env-skills/tree/main/skills/soia-env-open-skills-install) · [← 全部技能](README.md)
 
@@ -8,25 +8,19 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「装好所有 SOIA 插件」「在 Codex 下装 SOIA」「更新 soia-dev 插件」。
+「安装 SOIA 技能」「在 Codex 下装」「更新 soia-dev」
 
 ## 能力与用法
 
 ### 这个技能可以做什么
 
-| 客户想要 | 技能会做 | 客户能看到 |
-|---|---|---|
-| 全量装好所有 SOIA 技能 / 插件 | 接入市场 → 安装全部 8 个域插件 → 三宿主 | 每宿主安装计划与域级回执 |
-| 在指定宿主装全部 SOIA 技能 | 只操作目标宿主，跳过其余 | 单宿主域级回执 |
-| 装或更新某个域插件（如 soia-dev） | `plugin install / plugin update` 该域 | 该域在各宿主的前后版本对比 |
-| 更新某个域插件下的单个技能 | 更新整个插件（技能以插件为交付单元）+ 说明哪个技能已更新 | 插件级更新 + 技能变更说明 |
-| 检查当前安装状态，不改动机器 | 列出各宿主市场状态与已安装插件版本 | 三宿主三列状态表 |
-
-> **粒度说明**：SOIA 以「域插件」为最小交付单元（如 `soia-dev@soia` 含 9 个技能）。「更新单个技能」在插件模式下等价于更新整个域插件，但技能会说明是哪个技能触发了更新。若需要真正按技能粒度安装（不安装同域其他技能），必须改用 `npx skills add` 路线——技能会提示该路线与插件路线互斥，让客户选择。
+- 只读检查 Claude Code、Codex、WorkBuddy 的可用性、市场状态和当前安装。
+- 生成机器可读的选择计划与 Agent × 范围 × 粒度矩阵。
+- 在确认后按当前 CLI/官方脚本安装或更新单技能、整域或全量，并验证实际结果。
 
 ### 客户如何使用
 
-完整自然语言示例表（10 条：全量/单域/单技能 × 三宿主，含「只查看当前状态」）见 [user-phrases.md](references/user-phrases.md)。执行任何安装/更新前都展示计划并等客户确认；没有得到明确同意前不改动机器。
+请明确说明安装范围、宿主和粒度，例如“在这个项目给 Codex 装单个技能”“全局给 Claude Code 更新 `soia-dev`”。范围、宿主或粒度任一缺失时只检查并返回 `selection_required`，先询问，不检测全部后默认全域执行。要扩大到全局、整域、多宿主或 `*` 全量，必须明确选择；先展示 dry-run/安装矩阵，再等待确认。
 
 ## 安装
 
