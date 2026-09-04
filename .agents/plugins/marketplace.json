@@ -10,7 +10,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-skills.git",
-        "ref": "b1b07d28534d793e938e84804cf42df9fa4ddcc8"
+        "ref": "6f77aa1169954475ff09018141bb1df6f4584990"
       },
       "interface": {
         "displayName": "开发编码技能库",
