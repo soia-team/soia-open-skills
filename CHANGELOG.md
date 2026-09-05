@@ -3,6 +3,17 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v1.14.2 — 2026-09-05
+
+Repair installation-reference auditing and publish Env v1.19.0 marketplace pin
+
+## 修复
+- fix(audit): recognize explicit local installation references (#308)
+
+## 维护
+- chore(marketplace): pin Env v1.19.0 (#309)
+- chore(release): open next train after v1.14.1 (#307)
+
 ## v1.14.1 — 2026-09-05
 
 Clarify approval reuse and release completion; pin Dev 1.13.0 and Env 1.18.1
