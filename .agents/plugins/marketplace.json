@@ -142,7 +142,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-env-skills.git",
-        "ref": "73c83fb34a5e29ca4c26a3b02accd9e0faad8f14"
+        "ref": "98c8dab618a9d7680d6dc87954daf4833c8c9a90"
       },
       "interface": {
         "displayName": "环境运维技能库",
