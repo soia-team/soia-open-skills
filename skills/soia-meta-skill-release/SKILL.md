@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装。触发：正式发版、发布技能、发布后安装
-version: 5.3.0
+version: 5.3.1
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-09-04 17:19:21
+updated_at: 2026-09-05 09:07:18
 created_by: gpt-5.6-terra
 updated_by: gpt-5.6-sol
 dependencies:

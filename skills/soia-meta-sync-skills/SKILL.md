@@ -1,9 +1,9 @@
 ---
 name: soia-meta-sync-skills
 description: 按明确项目或全局范围同步 SOIA 技能，并先输出可审计划。触发：项目安装、技能同步、同步预览
-version: 2.4.0
+version: 2.4.1
 created_at: 2026-07-07 14:44:10
-updated_at: 2026-09-04 17:19:21
+updated_at: 2026-09-05 09:07:18
 created_by: claude opus 4.6
 updated_by: gpt-5.6-sol
 ---
