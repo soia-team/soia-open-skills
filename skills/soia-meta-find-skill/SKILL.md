@@ -1,9 +1,9 @@
 ---
 name: soia-meta-find-skill
 description: 按需发现 SOIA 技能并收集安全安装选择。触发：技能检索、代码审查、环境安装
-version: 1.1.0
+version: 1.1.1
 created_at: 2026-07-23 10:23:03
-updated_at: 2026-09-04 16:54:39
+updated_at: 2026-09-05 09:07:18
 created_by: gpt-5.6-luna
 updated_by: gpt-5.6-terra
 ---
@@ -50,7 +50,7 @@ codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia
 
 WorkBuddy 以角色化专家装载，见 [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。
 
-本技能不会默认生成 `-g -a '*'` 命令。未安装候选必须先让客户确认：安装到项目还是全局、哪些 Agent、单技能/整域/全量；默认是单技能，绝不默认全量。确认后把结构化选择交给安装或同步技能；发布流程也不得顺带安装，除非客户另行选择。
+本技能不会默认生成 `-g -a '*'` 命令。未安装候选必须先让客户确认：安装到项目还是全局、哪些 Agent、单技能/整域/全量；默认是单技能，绝不默认全量。确认后把结构化选择交给安装或同步技能；发布流程也不得顺带安装，除非客户另行选择。仅选择字段齐全不等于写入批准；只有已展示影响并获客户明确批准、且包含 source、具体 target、action 以及删除/替换影响的完整计划，才可由下游复用而不重复询问。计划字段变化时重新确认受影响部分。
 
 `npx skills add` 仍是单技能安装路线，但它的具体参数只能由安装 owner 在客户确认选择后生成；本 finder 不构造或执行该命令。
 
@@ -79,7 +79,7 @@ WorkBuddy 以角色化专家装载，见 [docs/install/workbuddy.md](https://git
 3. `global` 或 `both` 只在显式请求时扫描用户全局真源。项目与全局同时命中同一技能时按 realpath + skill name 去重，项目优先。
 4. 本地与公开目录候选一起排序；本地匹配不再短路隐藏其他高相关候选。
 5. 只对已安装候选返回优先 `path`；以 `installed_scopes`、`source_scope` 表示来源。实际读取该 `SKILL.md` 后才算加载。
-6. 未安装候选返回 `source` 和 `install_selection`。如果 `scope` 或 `agents` 未选，Agent 必须问客户；不能执行安装、同步或发布。
+6. 未安装候选返回 `source` 和 `install_selection`。如果 `scope` 或 `agents` 未选，Agent 必须问客户；不能执行安装、同步或发布。只有完整计划已展示影响并获客户明确写入批准，才可传递给下游 owner 而不重复询问；仅有选择信息时仍进入安装确认门。
 7. `install_selection.target.kind` 默认 `skill`，同时声明客户可选的 `domain` 和 `all`。全量仅在客户明确选择后交给对应 owner 处理。
 
 ## 输出契约

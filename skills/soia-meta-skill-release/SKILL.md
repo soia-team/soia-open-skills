@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装。触发：正式发版、发布技能、发布后安装
-version: 5.3.0
+version: 5.3.1
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-09-04 17:19:21
+updated_at: 2026-09-05 09:07:18
 created_by: gpt-5.6-terra
 updated_by: gpt-5.6-sol
 dependencies:
@@ -92,7 +92,7 @@ npx skills add soia-team/soia-open-skills -a <explicit-agent> -s soia-meta-skill
 
 ### `ask` 模式（`--install-mode ask`，交互式选择）
 
-需要交互终端，只确认“发布后是否继续安装”。若选安装，调用 Agent 必须已收齐 `--install-scope`、`--agents`、`--target-kind`、项目或全局目标与 `--source-dir`；缺项即停止并列出缺口，不代选。非交互环境改用 `remote-only` 或参数齐全的 `selected-install`。
+需要交互终端，只确认“发布后是否继续安装”。若选安装，调用 Agent 必须已收齐 `--install-scope`、`--agents`、`--target-kind`、项目或全局目标与 `--source-dir`；缺项即停止并列出缺口，不代选。仅收齐选择字段不等于写入批准；只有已展示影响并获客户明确批准、且包含 source、具体 target、action 以及删除/替换影响的完整计划，才可传给 sync owner 而不重复询问。计划字段变化时重新确认。非交互环境改用 `remote-only` 或参数齐全的 `selected-install`。
 
 ### `selected-install` 模式（显式 opt-in）
 
@@ -404,7 +404,7 @@ codex plugin list
 
 ## 边界与验证
 
-- 只做 merge 后的本机收尾；发布前 merge 由调用方完成。
+- 本技能负责已获当次明确授权的正式发布、tag/Release 和市场 pin 收口。本机安装或更新只有在客户另行选择并满足安装确认门后执行。发布计划、安装计划或转交下游技能不等于实际完成；分别报告 publish、pin、install 状态。
 - `--dry-run` 不执行任何命令或文件写入，只输出计划回执。
 - 前向测试应在临时 HOME 中 mock `subprocess`，覆盖命令顺序、失败即停、五处旧名清理、Codex 补链、lock 分支与 dry-run。
 
