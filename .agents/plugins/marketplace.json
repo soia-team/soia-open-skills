@@ -10,7 +10,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-skills.git",
-        "ref": "6e08408d01858f1ef1a15fc1138877bf1a1e95da"
+        "ref": "f2fe1718b77fdb92293fe1467efe83ee7dc6ed4f"
       },
       "interface": {
         "displayName": "开发编码技能库",
@@ -142,7 +142,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-env-skills.git",
-        "ref": "b036b7c00d107a18ed975baa85d5664835d85706"
+        "ref": "73c83fb34a5e29ca4c26a3b02accd9e0faad8f14"
       },
       "interface": {
         "displayName": "环境运维技能库",
