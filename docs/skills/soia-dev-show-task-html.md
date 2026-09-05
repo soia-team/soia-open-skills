@@ -20,7 +20,7 @@
 
 ### 客户如何使用
 
-先说明范围和重点，例如“展示这个变更集的核心调用链”。复杂 HTML 前，Agent 必须读取当前 scope 的项目规则、架构/设计契约、真实 diff 和相关代码；将事实标为 `observed`、有链路依据的推断标为 `inferred`，无证据标为 `unknown`，并保留准确 `file:line`。脚本不负责这些核实工作。
+先说明范围和重点，例如“展示这个变更集的核心调用链”。复杂 HTML 前，Agent 按要表达的结论类型加载最小证据：`progress` 读取适用项目规则、任务状态和已有证据；只有调用链、数据流、边界或规范符合性结论才读取对应架构/设计契约、真实 diff 和相关代码。将事实标为 `observed`、有链路依据的推断标为 `inferred`，无证据标为 `unknown`，并保留准确 `file:line`。脚本不负责这些核实工作。
 
 输入字段、scope/view 选项和引用格式见 [references/input-schema.md](references/input-schema.md)。审查视角和最小区块选择见 [references/code-review-views.md](references/code-review-views.md)。复杂输入再读取这些 reference，简单对话图不必读取。
 
