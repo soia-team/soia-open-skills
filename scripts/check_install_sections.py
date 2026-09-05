@@ -30,6 +30,7 @@ import json
 import pathlib
 import re
 import sys
+from urllib.parse import unquote, urlsplit
 
 REPOS = [
     "soia-open-skills",
@@ -56,6 +57,29 @@ CHECKS = (
     ("workbuddy", re.compile(r"workbuddy", re.I)),
 )
 
+INSTALL_LINK_RE = re.compile(r"(?<!!)\[([^\]\n]*(?:安装|install)[^\]\n]*)\]\(([^)\s]+)\)", re.I)
+
+
+def referenced_install_text(section: str, skill_dir: pathlib.Path) -> tuple[str, list[str]]:
+    """只读取安装节明确标注的包内 references/*.md；不联网、不递归追链接。"""
+    texts, errors = [], []
+    root = skill_dir.resolve()
+    references = root / "references"
+    for _, target in INSTALL_LINK_RE.findall(section):
+        url = urlsplit(target)
+        if url.scheme or url.netloc:
+            continue  # 远端文档不作离线门禁的通过证据
+        candidate = (root / unquote(url.path)).resolve()
+        if (url.query or url.fragment or candidate.suffix != ".md"
+                or not candidate.is_relative_to(references)):
+            errors.append(f"无效安装引用: {target}")
+            continue
+        try:
+            texts.append(candidate.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError):
+            errors.append(f"无法读取安装引用: {target}")
+    return "\n".join(texts), errors
+
 
 def install_section(text: str) -> str | None:
     match = SECTION_RE.search(text)
@@ -70,7 +94,9 @@ def audit_skill(path: pathlib.Path, repo_dir: pathlib.Path) -> dict[str, object]
     section = install_section(text)
     if section is None:
         return {"skill": label, "section": False, "missing": ["无安装章节"]}
-    missing = [name for name, pattern in CHECKS if not pattern.search(section)]
+    referenced, errors = referenced_install_text(section, path.parent)
+    evidence = section + "\n" + referenced
+    missing = errors + [name for name, pattern in CHECKS if not pattern.search(evidence)]
     return {"skill": label, "section": True, "missing": missing}
 
 
