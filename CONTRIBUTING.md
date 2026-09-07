@@ -81,7 +81,7 @@
      git diff --check
      ```
 
-9. **提 PR**，说明：
+9. **提 PR 到 `dev`**（显式选择 `--base dev`），说明：
    - 这个 skill 解决什么问题
    - 触发词是什么
    - 与其他 skill 的关系
@@ -92,7 +92,7 @@
 
 ## 改 bug / 改进体验
 
-直接提 PR，关联 issue 编号。无需事先沟通。
+直接提 PR 到 `dev`，关联 issue 编号。无需事先沟通。
 
 ## 行为准则
 
@@ -165,44 +165,59 @@ the actual target is an explicitly confirmed SOIA product workspace.
 
 **正式发版是对外动作，必须由用户在当次对话中明确同意才能执行。**
 
-| 动作 | 是否需要授权 |
+| 动作 | 授权边界 |
 |---|---|
-| feature/fix PR 进 `dev`、本地验证、`--dry-run`、体检脚本 | 否 |
-| `formal_release.py`、打 tag、`gh release create`、发版 PR 合并、市场 pin 刷新 | **是，逐次** |
+| 本地验证、`--dry-run`、只读体检脚本 | 不需要发布授权 |
+| feature/fix PR 进 `dev` | 不属于正式发布；远端写入与合并仍须在当前已授权工作流范围内 |
+| `formal_release.py`、定稿 PR、`dev` → `main` 快进、tag、`gh release create`、市场 pin 刷新 | **需要本次发布授权** |
 
-「用户让我修某个 bug」**不等于**「用户让我发版」。改动合进 `dev` 即算交付完成；
-何时发、发什么版本号由用户决定。做完改动后报告「已进 dev，待你决定是否发版」
-并停下。多 AI 并行时尤其重要——未经协调的发版会把别人未完成的工作一并送出。
+「用户让我修某个 bug」**不等于**「用户让我发版」。按本次约定交付到本地修改、
+PR 或 `dev`；发布未授权时在发布边界停止并报告。完整发布计划已批准时，连续完成
+计划内的 CI、快进、tag、Release、重开 SNAPSHOT 与 pin 收口，不逐命令重复确认。
+发现将夹带未批准改动时停下确认。多 AI 并行时尤其重要——未经协调的发版会把
+别人未完成的工作一并送出。
 
 ## Git Workflow
+
+Private repositories retain their own human-review gates: no automatic PR
+merge; wait for Fable 5 / Owner review as required by the target `AGENTS.md`.
+The shared sequence below does not waive those gates.
 
 - **Branch off `main`, merge into `dev`.** Create short-lived branches with
   `feat/`, `fix/`, or `chore/` prefixes from `origin/main` — the latest formal
   release — then open the PR against `dev`, require the `audit` check to pass,
   and merge. Starting from the released state keeps work off unreleased,
-  possibly-unstable changes; `main` is always an ancestor of `dev`, so such a
-  branch always merges into `dev` cleanly. If your change genuinely builds on
+  possibly-unstable changes. Verify that `main` is an ancestor of `dev` and
+  check merge conflicts separately; ancestry does not guarantee a clean merge.
+  If your change genuinely builds on
   unreleased work already in `dev`, branch off `dev` instead and say so in the
   PR body.
 - `main` never receives PRs. It moves only by fast-forward from `dev` during a
   formal release (see `soia-meta-skill-release`). Do not create long-lived
-  feature branches, and never push directly to `main` or `dev`.
+  feature branches. Ordinary changes go through PRs into `dev`; only the
+  authorized formal release flow may push the fast-forward to `main`.
 - On `dev` the plugin version carries a `-SNAPSHOT` suffix naming the next
   release target (e.g. `1.9.0-SNAPSHOT`); it stays unchanged between releases —
   individual dev states are identified by commit SHA, not version bumps.
   `-SNAPSHOT` never reaches the marketplace: the pin generator refuses to pin a
   commit whose plugin manifest carries the suffix.
-- **Release PRs (`dev` → `main`) must be merged with a merge commit, never
-  squashed.** A squash creates a commit with no ancestry link to `dev`, freezing
-  the merge base; both branches then evolve the same files independently and the
-  next release PR is guaranteed to conflict, recoverable only by a manual
-  main→dev sync. Feature PRs into `dev` stay squash-merged as usual.
+- **Finalize through a PR into `dev`, then fast-forward `main` with
+  `--ff-only`.** After the approved release's finalization PR removes
+  `-SNAPSHOT` from the applicable manifests, require CI to pass and verify
+  ancestry before advancing `main`. Create the tag and Release, then reopen
+  the next SNAPSHOT train through a PR into `dev` and complete marketplace
+  pins through the formal release flow. Never use a `dev` → `main` PR,
+  merge commit, or squash for that promotion. Feature PRs into `dev` stay
+  squash-merged as usual.
 - Two invariants decay silently and only surface at the next release. Verify
   them — do not just read version numbers — with
   `python3 scripts/check_version_trains.py --repos-root <parent-of-repos>`:
-  (a) `dev` carries `-SNAPSHOT` and `main` does not; (b) `dev` → `main` still
-  merges cleanly. Both were breached on 2026-08-03 across two repos before any
-  check existed.
+  (a) outside the finalization-to-reopen window, `dev` carries `-SNAPSHOT` and
+  `main` does not; (b) `dev` → `main` still merges cleanly. Both were breached
+  on 2026-08-03 across two repos before any check existed. The checker tests
+  merge conflicts; separately run `git merge-base --is-ancestor origin/main
+  origin/dev` against freshly fetched refs in each release repository to
+  verify that promotion can fast-forward.
 - This portal repository also uses `dev`, but **its default branch stays
   `main`** — unlike domain repos. Reason: the portal is both the marketplace and
   a plugin (`soia-meta`, whose marketplace `source` is `"./"` with no sha pin),
@@ -211,11 +226,15 @@ the actual target is an explicitly confirmed SOIA product workspace.
   the pin gate could not catch it — there is no pinned commit to inspect.
   Therefore: open PRs with an explicit `--base dev`; releases go `dev` → `main`
   through `soia-meta-skill-release`; clients keep receiving `main` only.
-  Marketplace pin refreshes are release actions and target `main` directly.
-- **No worktrees.** Never run `git worktree add` in this repository. Worktrees
-  lock branches and block deletion; they caused real cleanup incidents in this
-  repo. If you need to inspect another ref, use `git show <ref>:<path>` or
-  `git stash` instead.
+  Marketplace pin refreshes are release actions: PR into `dev`, then reach
+  `main` with the authorized portal formal release. Do not bypass release
+  approval or CI.
+- **Worktrees require a defined scope and lifecycle.** Ordinary tasks do not
+  create them by default. Explicitly approved isolation work or the authorized
+  formal release flow may use temporary worktrees. Confirm paths and ownership
+  before creating or removing them; never remove unknown or in-use worktrees
+  or their branches. Inspect other refs with `git show <ref>:<path>` when a
+  read-only lookup suffices.
 
 ## 清理分支：不要相信 `git cherry` 和 `--merged`
 
@@ -228,7 +247,8 @@ the actual target is an explicitly confirmed SOIA product workspace.
   验证 main 上是否存在对应的 squash 提交，再决定去留。
 - 常态卫生标准：每仓只保留 `main`、`dev` 与在途分支。
 
-本仓群全部走 **squash 合并**。squash 把分支的 N 个提交压成一个**全新提交**，
+本仓群普通 feature/fix PR 进 `dev` 走 **squash 合并**；正式发布推进 `main` 只走
+快进，不适用以下 squash 判据。squash 把分支的 N 个提交压成一个**全新提交**，
 与原分支没有任何祖先关系，于是：
 
 | 命令 | 在 squash 流程下的表现 |
@@ -325,7 +345,7 @@ npx skills add /absolute/local/path/to/soia-open-pkm-vault-skills -g -a '*' -s <
 If validating SOIA AI consumption, sync from `~/.agents/skills` into
 `~/.soia/skills` with `soia-dev-sync-skills`; do not copy directories manually.
 
-## New Skill Lifecycle: Branch → Main → Install
+## New Skill Lifecycle: Branch → Dev → Formal Release → Install
 
 When creating new skills, follow this sequence exactly. Do not skip steps or
 shortcut with manual symlinks.
@@ -354,26 +374,30 @@ Do not manually `ln -s` from the git checkout into `~/.agents/skills/` or
 `~/.claude/skills/` — manual symlinks bypass `.skill-lock.json` registration
 and will not be tracked by `npx skills check`.
 
-### 3. Merge to main
+### 3. Merge to dev
 
-Open a PR (if branch protection requires it) or merge directly. The skill
-becomes available from the remote package only after it lands on main.
+Open a PR with an explicit `--base dev`, pass the required CI checks, and
+squash-merge within the authorized workflow. Reaching `dev` does not authorize
+a formal release; the released remote package changes only when the approved
+release advances `main`.
 
 ### 4. Publish through the plugin marketplace
 
 Skills reach users through the SOIA plugin marketplace, not through a global
-`npx skills add -g`. Once the change is on main:
+`npx skills add -g`. After the change reaches `dev` and the release is approved:
 
-1. **Bump `version`** in `.claude-plugin/plugin.json` and
-   `.codex-plugin/plugin.json`. This is mandatory. Claude Code compares the
+1. **Finalize the release version through a PR into `dev`**, updating the
+   applicable manifests and removing `-SNAPSHOT`. Claude Code compares the
    plugin `version` field, not the marketplace sha pin — without a bump,
    `claude plugin update` answers "already at the latest version" and users
-   never receive the change even though the pin moved.
-2. **Refresh the marketplace sha pin** in the meta repo `soia-open-skills`.
-   Its `main` is protected, so the refresh has to go through a PR; CI cannot
-   push it. The `soia-meta-skill-release` skill drives the whole sequence —
-   say 「发布技能」 or 「更新插件」 rather than running the steps by hand.
-3. **Users update** with `claude plugin update soia-pkm-vault@soia` or
+   never receive the change even though the pin moved. After CI and ancestry
+   checks, advance `main` with `--ff-only`, create the tag and Release, and
+   reopen the next SNAPSHOT train through a PR into `dev`.
+2. **Refresh the marketplace sha pin** through a PR into the meta repo
+   `soia-open-skills`'s `dev`, then include it in the authorized portal formal
+   release to `main`. The `soia-meta-skill-release` skill drives this sequence;
+   pin refreshes cannot bypass approval or CI.
+3. **Users update after the release**, with `claude plugin update soia-pkm-vault@soia` or
    `codex plugin add soia-pkm-vault@soia`.
 
 Do not install SOIA skills into your own `~/.agents/skills` with
@@ -555,7 +579,7 @@ primary tool, a 4-segment name is enough.
 
 **Phase 3 — Merge and install**
 
-10. Branch → PR → CI passes → squash merge.
+10. Branch → PR into `dev` → CI passes → authorized squash merge.
 11. Clean up old local installs:
 
 ```bash
@@ -563,11 +587,11 @@ rm -rf ~/.agents/skills/<old-name>
 rm -f  ~/.claude/skills/<old-name>
 ```
 
-12. Publish the rename through the plugin marketplace:
+12. With release approval, publish the rename through the formal release flow
+    above, including the portal pin release; client updates follow publication:
 
 ```bash
-# bump version in .claude-plugin/plugin.json and .codex-plugin/plugin.json first,
-# then let soia-meta-skill-release refresh the pin and guide client updates
+# Run only after the approved formal release and marketplace pin refresh.
 claude plugin update soia-pkm-vault@soia
 ```
 
