@@ -3,6 +3,15 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v1.14.4 — 2026-09-07
+
+Publish the approved Media v1.13.0 marketplace pin and refreshed skill metadata.
+
+### 维护
+- Pin the formal Media release with longform publishing, bitmap upload and clipboard verification guidance, article-image contracts and scoped instruction autonomy.
+- Refresh marketplaces, routing and skill detail pages from formal release sources.
+- No local installation is included in this release.
+
 ## v1.14.3 — 2026-09-07
 
 Align instruction autonomy and release workflow; refresh formal skill pins.
