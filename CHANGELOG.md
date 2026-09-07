@@ -3,6 +3,15 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v1.14.3 — 2026-09-07
+
+Align instruction autonomy and release workflow; refresh formal skill pins.
+
+## 维护
+- Clarify scoped autonomy, approval reuse and the dev → CI → fast-forward main release workflow (#312).
+- Refresh formal pins for Dev, Dev Design, Office, Education, Env and PKM; regenerate routing and skill pages from released sources.
+- Private repositories retain human review; Media retains its previous formal release pending approval of additional unreleased changes.
+
 ## v1.14.2 — 2026-09-05
 
 Repair installation-reference auditing and publish Env v1.19.0 marketplace pin
