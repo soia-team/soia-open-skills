@@ -11,7 +11,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-dev-skills",
-        "sha": "f2fe1718b77fdb92293fe1467efe83ee7dc6ed4f"
+        "sha": "b29bba13db579be12626b093cb3316f3800c154b"
       }
     },
     {
@@ -20,7 +20,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-dev-design-skills",
-        "sha": "9ccbf99ecb1bcea0dd8fb09ee4e99577a81e06ab"
+        "sha": "643b6fbc10419f592de9a9ffdf491670f7307edb"
       }
     },
     {
@@ -29,7 +29,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-cwork-office-skills",
-        "sha": "bc6f6368f6f2385a09ee211983ec568d77212101"
+        "sha": "4cfaed78d8740e36aa0ba8605d2440a04d965d21"
       }
     },
     {
@@ -38,7 +38,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-pkm-vault-skills",
-        "sha": "75d490d44189e4fa39fb5f4144cfb603c4666966"
+        "sha": "4caad22d2dfc0fc407d9714c4e72c4210a31b25d"
       }
     },
     {
@@ -56,7 +56,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-edu-course-skills",
-        "sha": "5cb098421956f491c2538488714bbe764a6e8a03"
+        "sha": "8543e58b4f1d6f4ac3474815600baa369cd63395"
       }
     },
     {
@@ -65,7 +65,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-env-skills",
-        "sha": "98c8dab618a9d7680d6dc87954daf4833c8c9a90"
+        "sha": "cc01909a4f60d555f7636c7c43fe031b402c3ddd"
       }
     },
     {
