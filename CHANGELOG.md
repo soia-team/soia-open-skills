@@ -3,6 +3,17 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.0.0 — 2026-09-08
+
+工程与UI能力归入dev单仓；门户七域统一分发，澄清与技能发现按需精简，旧dev-design停止新安装
+
+## 新增
+- feat(meta): unify engineering skill distribution and simplify routing (#320)
+
+## 维护
+- chore(release): select v2 train for unified engineering catalog (#321)
+- chore(release): open next train after v1.14.5 (#319)
+
 ## v1.14.5 — 2026-09-08
 
 发布 dev v2 正式 pin、精简技能路由与说明；更新目录计数与发现器索引
