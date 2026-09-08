@@ -80,10 +80,11 @@ def load_hints(path: Path) -> tuple[dict[str, tuple[str, ...]], dict[str, tuple[
 
 def query_terms(query: str, hints: Mapping[str, Sequence[str]]) -> list[str]:
     normalized_query = normalized(query)
+    compact_query = "".join(normalized_query.split())
     primary = [normalized(term) for term in re.split(r"[\s,，/；;]+", query) if term.strip()]
     terms: list[str] = list(primary)
     for phrase, expansions in hints.items():
-        if phrase in normalized_query:
+        if "".join(phrase.split()) in compact_query:
             terms.append(phrase)
             terms.extend(expansions)
     return list(dict.fromkeys(term for term in terms if term))
