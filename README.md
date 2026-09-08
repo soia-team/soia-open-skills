@@ -6,13 +6,13 @@
 
 **技能越来越多，最麻烦的不是「不会用」，而是不知道该叫谁**
 
-81 个公开技能，8 个领域，一个入口；描述目标即可，不必先背完目录
+83 个公开技能，8 个领域，一个入口；描述目标即可，不必先背完目录
 
 [English](README.en.md) · 中文
 
 <p align="center">
   <img alt="plugin version" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsoia-team%2Fsoia-open-skills%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=plugin&color=F5A623&prefix=v">
-  <img alt="skills" src="https://img.shields.io/badge/技能-4-brightgreen">
+  <img alt="skills" src="https://img.shields.io/badge/技能-5-brightgreen">
   <img alt="hosts" src="https://img.shields.io/badge/宿主-Claude%20%C2%B7%20Codex%20%C2%B7%20WorkBuddy-8A2BE2">
   <img alt="always-on cost" src="https://img.shields.io/badge/常驻-~428%20tok-lightgrey">
   <img alt="license" src="https://img.shields.io/github/license/soia-team/soia-open-skills?color=blue">
@@ -24,7 +24,7 @@
 
 ## 它解决什么
 
-技能库大了以后，真正的成本不是学会用某个技能，而是**记住有哪些**。本仓是生态门户：规范真源、跨仓导航、市场清单，以及 4 个管理生态自身的 meta 技能。
+技能库大了以后，真正的成本不是学会用某个技能，而是**记住有哪些**。本仓是生态门户：规范真源、跨仓导航、市场清单，以及 5 个管理生态自身的 meta 技能。
 
 ```mermaid
 flowchart TB
@@ -36,16 +36,16 @@ flowchart TB
 
 ## 8 个领域插件
 
-装整个领域，一次拿到该域全部技能。**常驻成本**指技能索引每次会话占用的上下文，正文只在命中时载入。
+装整个领域，一次拿到该域全部技能。默认仍按项目只装所需技能，整域须明确选择。**常驻成本**指技能索引每次会话占用的上下文，正文只在命中时载入；下表成本为历史估算，2026-09-08 仅更新实际技能数量。
 
 | 领域插件 | 做什么 | 技能 | 常驻 |
 |---|---|---:|---:|
 | [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | 知识库：采集、整理、提炼、转换 | 31 | ~3.6k |
-| [`soia-env`](https://github.com/soia-team/soia-open-env-skills) | 环境：AI CLI 安装、网络诊断、空间治理 | 17 | ~1.9k |
+| [`soia-env`](https://github.com/soia-team/soia-open-env-skills) | 环境：AI CLI 安装、网络诊断、空间治理 | 18 | ~1.9k |
 | [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | 开发：改动闭环、测试、发版、仓库运维 | 12 | ~971 |
 | [`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) | 内容：成文、配图、多平台改写 | 6 | ~728 |
 | [`soia-dev-design`](https://github.com/soia-team/soia-open-dev-design-skills) | 设计：PRD、原型、架构图、Office | 6 | ~548 |
-| **`soia-meta`**（本仓） | 生态：检索、同步、发布、提示词 | 4 | ~428 |
+| **`soia-meta`**（本仓） | 生态：检索、同步、发布、提示词 | 5 | ~428 |
 | [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | 协作：飞书与 ProcessOn 资料落本地 | 3 | ~309 |
 | [`soia-edu-course`](https://github.com/soia-team/soia-open-edu-course-skills) | 课程：大纲与教案设计 | 2 | ~140 |
 
@@ -71,7 +71,7 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
 
 不带参数装全部 12 个专家，也可只给要装的插件名。装完重启客户端，在【专家中心 → 我的专家】召唤——本仓对应的是 **Soia · 技能生态管家**。
 
-## 4 个 meta 技能
+## 5 个 meta 技能
 
 ### 01 生态管理　`一句需求 → 找到、装上、同步、发布`
 
@@ -107,7 +107,7 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
 | 文档 | 说明 |
 |---|---|
 | [docs/learning-guide.md](docs/learning-guide.md) | **先读这份**：整套生态怎么运转、为什么这么设计、常见疑问 |
-| [docs/skills/](docs/skills/README.md) | **81 个技能逐个详情页**：触发词、产物、用法示例与安装 |
+| [docs/skills/](docs/skills/README.md) | **83 个技能逐个详情页**：触发词、产物、用法示例与安装 |
 | [docs/install/](docs/install/README.md) | 60+ AI 宿主的安装指南 |
 | [docs/install-profiles.md](docs/install-profiles.md) | 按机器用途组织的安装组合 |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | 技能结构、命名、frontmatter 与验证要求 |

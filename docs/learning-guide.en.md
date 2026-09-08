@@ -156,7 +156,7 @@ Eight baseline rules:
 
 1. Release-channel marketplace entries always pin a `sha`; only dev channels follow a branch.
 2. No `@latest` in MCP registration — pin exact versions.
-3. Full review before publishing a skill (`soia-dev-review-panel`), and diff the descriptions of approved MCP servers across versions to catch rug-pulls.
+3. Run one read-only review before publishing a skill (`soia-dev-review-code`), and diff the descriptions of approved MCP servers across versions to catch rug-pulls.
 4. Least privilege: narrow `allowed-tools` in frontmatter.
 5. Leave third-party marketplace auto-update off (the default).
 6. Sandbox untrusted stdio servers; remote servers over HTTPS + OAuth only.
