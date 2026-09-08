@@ -52,7 +52,15 @@ Install a domain and get every skill in it. The default remains project-scoped i
 
 ## Install
 
-Two commands, then say "**find me a skill**":
+**Default: one project-scoped skill for an explicitly selected host.** Enter the project that will use it and install only what you need. For example, add the discovery entry point for Codex, then say "**find me a skill**":
+
+```bash
+npx skills add soia-team/soia-open-skills -a codex -s soia-meta-find-skill
+```
+
+For Claude Code, replace `codex` with `claude-code`. Omitting `-g` installs into the project; add it only after choosing user-global scope. Multiple hosts, whole domains, and full installs remain supported but require an explicit scope choice. Do not duplicate the same skill through both a directory install and a plugin on one host. Publishing does not automatically install or update local skills.
+
+**If you explicitly want the entire meta domain plugin**, choose the command for your host:
 
 ```bash
 claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-meta@soia
@@ -65,7 +73,7 @@ codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia
 WorkBuddy is a desktop app with no CLI, so a skill does the work — tell your agent "install into WorkBuddy", or run:
 
 ```bash
-python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
+python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py soia-meta
 ```
 
 Pass the selected plugin names. Omitting them installs all current experts discovered in the search scope and requires an explicit full-install choice. The retired design expert is excluded; existing installations are not migrated automatically. Restart the client, then summon under Experts → My Experts — this repo's expert is **Soia · 技能生态管家**.
