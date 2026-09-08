@@ -153,7 +153,7 @@ SOIA 技能的 frontmatter 用七个字段（`name` `description` `version` `cre
 
 1. 市场条目正式通道一律 pin `sha`；开发通道才追分支。
 2. MCP 注册禁 `@latest`，pin 精确版本。
-3. 技能发布前全文评审（`soia-dev-review-panel`），已批准的 MCP server 做描述版本 diff，防 rug-pull。
+3. 技能发布前做一次只读评审（`soia-dev-review-code`），已批准的 MCP server 做描述版本 diff，防 rug-pull。
 4. 最小权限：frontmatter 用 `allowed-tools` 窄集。
 5. 第三方市场自动更新保持默认关闭。
 6. 不受信 stdio server 沙箱运行；远程 server 仅 HTTPS + OAuth。

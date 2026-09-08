@@ -42,13 +42,6 @@
     }
   },
   {
-    "name": "soia-dev-coding-protocol",
-    "description": "为普通工程代码改动建立最小范围、验证前置、anti-fake-fix 与写后复核契约；适用于修复、重构、实现和评审。触发：「改这个 bug」「重构这段」「加个功能」",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
     "name": "soia-dev-design-draft-prd",
     "description": "起草互联网通用 PRD、产品需求文档与用户故事；适用于一句话需求补全、功能范围和验收标准梳理。",
     "source": {
@@ -77,8 +70,8 @@
     }
   },
   {
-    "name": "soia-dev-fix-loop",
-    "description": "用五步闭环处理代码审查或测试发现：复现、决策、修复、回归复核与回执，防止遗漏、假修复和无证据收口。触发：「按评审意见改」「测试挂了怎么修」「能不能收口」",
+    "name": "soia-dev-enforce-coding-protocol",
+    "description": "用短协议约束工程改动的范围、权限与验证，不另起流程。触发：执行编码协议、约束本次改动、检查修复是否有证据",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -86,6 +79,13 @@
   {
     "name": "soia-dev-github-ops",
     "description": "GitHub gh CLI 运维、PR 合规审查与修复。触发：「查 CI 挂了」「发 release」「加协作者权限」",
+    "source": {
+      "repository": "soia-open-dev-skills"
+    }
+  },
+  {
+    "name": "soia-dev-implement-task",
+    "description": "在明确授权内实现需求、诊断修复或处理 findings，合并执行与修复流程。触发：实现这个任务、修复这个 bug、处理审查发现",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -119,22 +119,15 @@
     }
   },
   {
-    "name": "soia-dev-review-panel",
-    "description": "从多视角对代码 diff 或技能包进行对抗式复核，只读且不编辑、合并或发布。触发：「多角度审改动」「对抗式复核」「审技能包」",
+    "name": "soia-dev-review-code",
+    "description": "对固定代码候选或技能包做一次只读审查，区分规格符合性与工程标准，报告可核实问题。触发：审查这次改动、review 代码、检查技能包",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-show-task-html",
-    "description": "将开发进度与 AI 代码变更转成最小可用视图：简单关系直接画，阶段状态用紧凑看板，复杂调用链与数据流生成离线 HTML。触发：「show me」「展示这个任务」「给我画一下」",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-task-execute",
-    "description": "执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务。触发：「把这件事做完」「按闭环执行」「有风险的维护」",
+    "description": "用最小视图帮用户看懂当前话题；简单关系直接画，复杂关系才做聚焦 HTML。触发：show me、展示这个任务、给我画一下",
     "source": {
       "repository": "soia-open-dev-skills"
     }

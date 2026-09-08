@@ -1,11 +1,11 @@
 ---
 name: soia-meta-find-skill
 description: 按需发现 SOIA 技能并收集安全安装选择。触发：技能检索、代码审查、环境安装
-version: 1.1.1
+version: 1.1.2
 created_at: 2026-07-23 10:23:03
-updated_at: 2026-09-05 09:07:18
+updated_at: 2026-09-08 16:53:00
 created_by: gpt-5.6-luna
-updated_by: gpt-5.6-terra
+updated_by: gpt-5
 ---
 
 # soia-meta-find-skill

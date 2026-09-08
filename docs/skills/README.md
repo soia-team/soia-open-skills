@@ -1,6 +1,6 @@
 # 技能详情页
 
-全生态 84 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 83 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
@@ -65,21 +65,20 @@
 | [`soia-env-storage-cleanup`](soia-env-storage-cleanup.md) | 面向小白统计 SOIA 受管配置、状态、缓存和临时目录的空间占用，生成可清理清单并提醒删除风险；只有客户看过最新清单并明确授权后才执行删除，随后复核实际释放空间 |
 | [`soia-env-workbuddy-install`](soia-env-workbuddy-install.md) | 为新手安装、验证或按授权更新 WorkBuddy 桌面客户端 |
 
-## `soia-dev`　13 个技能
+## `soia-dev`　12 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
 | [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据 |
 | [`soia-dev-agent-md-advisor`](soia-dev-agent-md-advisor.md) | AI 项目指令与配置设计顾问，提供诊断、起草和改写建议 |
-| [`soia-dev-coding-protocol`](soia-dev-coding-protocol.md) | 为普通工程代码改动建立最小范围、验证前置、anti-fake-fix 与写后复核契约；适用于修复、重构、实现和评审 |
 | [`soia-dev-doc-sync`](soia-dev-doc-sync.md) | 审计并修复任意代码仓的 docs、README、CHANGELOG、VERSION 与明确真源之间的事实漂移；先建立真源优先级与证据，再按依赖顺序同步派生文档 |
-| [`soia-dev-fix-loop`](soia-dev-fix-loop.md) | 用五步闭环处理代码审查或测试发现：复现、决策、修复、回归复核与回执，防止遗漏、假修复和无证据收口 |
+| [`soia-dev-enforce-coding-protocol`](soia-dev-enforce-coding-protocol.md) | 用短协议约束工程改动的范围、权限与验证，不另起流程 |
 | [`soia-dev-github-ops`](soia-dev-github-ops.md) | GitHub gh CLI 运维、PR 合规审查与修复 |
+| [`soia-dev-implement-task`](soia-dev-implement-task.md) | 在明确授权内实现需求、诊断修复或处理 findings，合并执行与修复流程 |
 | [`soia-dev-project-scaffold`](soia-dev-project-scaffold.md) | 为任意新 Git 项目生成最小 AI 协作基线：可编辑的 AGENTS.md 和 docs 导航目录；在写入前确认目标路径 |
 | [`soia-dev-release-plan-checklist`](soia-dev-release-plan-checklist.md) | 为互联网软件发版生成发布清单、预检门、灰度验证与发布后核对；适用于上线、部署、回滚规划 |
-| [`soia-dev-review-panel`](soia-dev-review-panel.md) | 从多视角对代码 diff 或技能包进行对抗式复核，只读且不编辑、合并或发布 |
-| [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 将开发进度与 AI 代码变更转成最小可用视图：简单关系直接画，阶段状态用紧凑看板，复杂调用链与数据流生成离线 HTML |
-| [`soia-dev-task-execute`](soia-dev-task-execute.md) | 执行任意工程任务的通用闭环：定义边界、实施最小改动、验证、独立复核与回执。适用于代码、配置、文档和维护任务 |
+| [`soia-dev-review-code`](soia-dev-review-code.md) | 对固定代码候选或技能包做一次只读审查，区分规格符合性与工程标准，报告可核实问题 |
+| [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 用最小视图帮用户看懂当前话题；简单关系直接画，复杂关系才做聚焦 HTML |
 | [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；杀进程前用日志、CPU、网络多信号交叉判断，并走 TERM→复查→KILL 门 |
 | [`soia-dev-test-draft-doc`](soia-dev-test-draft-doc.md) | 从需求、PRD 或变更说明生成测试计划、测试用例与验收对照；适用于测试设计、回归清单和质量评审 |
 

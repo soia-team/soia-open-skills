@@ -36,12 +36,6 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-dev-coding-protocol",
-    "repo": "soia-open-dev-skills",
-    "skillPath": "skills/soia-dev-coding-protocol",
-    "visibility": "public"
-  },
-  {
     "skill_name": "soia-dev-design-draft-prd",
     "repo": "soia-open-dev-design-skills",
     "skillPath": "skills/soia-dev-design-draft-prd",
@@ -66,15 +60,21 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-dev-fix-loop",
+    "skill_name": "soia-dev-enforce-coding-protocol",
     "repo": "soia-open-dev-skills",
-    "skillPath": "skills/soia-dev-fix-loop",
+    "skillPath": "skills/soia-dev-enforce-coding-protocol",
     "visibility": "public"
   },
   {
     "skill_name": "soia-dev-github-ops",
     "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-github-ops",
+    "visibility": "public"
+  },
+  {
+    "skill_name": "soia-dev-implement-task",
+    "repo": "soia-open-dev-skills",
+    "skillPath": "skills/soia-dev-implement-task",
     "visibility": "public"
   },
   {
@@ -102,21 +102,15 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-dev-review-panel",
+    "skill_name": "soia-dev-review-code",
     "repo": "soia-open-dev-skills",
-    "skillPath": "skills/soia-dev-review-panel",
+    "skillPath": "skills/soia-dev-review-code",
     "visibility": "public"
   },
   {
     "skill_name": "soia-dev-show-task-html",
     "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-show-task-html",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-dev-task-execute",
-    "repo": "soia-open-dev-skills",
-    "skillPath": "skills/soia-dev-task-execute",
     "visibility": "public"
   },
   {
