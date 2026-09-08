@@ -59,16 +59,9 @@ PLUGIN_DEFINITIONS = (
     PluginDefinition(
         "soia-open-dev-skills",
         "soia-dev",
-        "开发编码技能库",
-        "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
+        "工程与 UI 技能库",
+        "工程与 UI 技能：功能规格、架构、实现审查、UI 设计验收与按需工具",
         "Developer Tools",
-    ),
-    PluginDefinition(
-        "soia-open-dev-design-skills",
-        "soia-dev-design",
-        "设计与文档技能库",
-        "设计与文档产线技能：Open Design、Archify、draw.io/Visio、OfficeCLI",
-        "Creativity",
     ),
     PluginDefinition(
         "soia-open-cwork-office-skills",

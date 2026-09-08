@@ -6,7 +6,7 @@
 
 **The hard part isn't learning a skill — it's remembering which one to call**
 
-83 public skills, 8 domains, one entry point. Describe the goal; you don't have to memorize the catalog
+85 public skills, 7 domains, one entry point. Describe the goal; you don't have to memorize the catalog
 
 [中文](README.md) · English
 
@@ -34,7 +34,7 @@ flowchart TB
     D --> E["Claude Code · Codex · WorkBuddy<br/>all three hosts"]
 ```
 
-## 8 domain plugins
+## 7 domain plugins
 
 Install a domain and get every skill in it. The default remains project-scoped installation of only the skills you need; a whole domain requires an explicit choice. **Always-on** is the context the skill index consumes each session; bodies load only when a skill fires. Costs below are historical estimates; only actual skill counts were refreshed on 2026-09-08.
 
@@ -42,16 +42,15 @@ Install a domain and get every skill in it. The default remains project-scoped i
 |---|---|---:|---:|
 | [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Vault: capture, organize, distill, transform | 31 | ~3.6k |
 | [`soia-env`](https://github.com/soia-team/soia-open-env-skills) | Environment: AI CLI installs, network diagnosis, disk hygiene | 18 | ~1.9k |
-| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | Development: change loop, testing, release, repo ops | 12 | ~971 |
+| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | Engineering and UI: specs, architecture, implementation, reviews, design and tools | 20 | Not measured |
 | [`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) | Content: drafting, imagery, per-platform adaptation | 6 | ~728 |
-| [`soia-dev-design`](https://github.com/soia-team/soia-open-dev-design-skills) | Design: PRDs, prototypes, diagrams, Office | 6 | ~548 |
 | **`soia-meta`** (this repo) | Ecosystem: search, sync, release, prompts | 5 | ~428 |
 | [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | Collaboration: Feishu and ProcessOn material to local files | 3 | ~309 |
 | [`soia-edu-course`](https://github.com/soia-team/soia-open-edu-course-skills) | Courses: outlines and lesson plans | 2 | ~140 |
 
 > `claude plugin disable <plugin>@soia` on a domain you are not using drops it to zero; enable it again any time.
 
-## Start here
+## Install
 
 Two commands, then say "**find me a skill**":
 
@@ -69,7 +68,7 @@ WorkBuddy is a desktop app with no CLI, so a skill does the work — tell your a
 python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
 ```
 
-With no arguments it installs all 12 experts; pass plugin names to pick. Restart the client, then summon under Experts → My Experts — this repo's expert is **Soia · 技能生态管家**.
+Pass the selected plugin names. Omitting them installs all current experts discovered in the search scope and requires an explicit full-install choice. The retired design expert is excluded; existing installations are not migrated automatically. Restart the client, then summon under Experts → My Experts — this repo's expert is **Soia · 技能生态管家**.
 
 ## 5 meta skills
 
@@ -107,7 +106,7 @@ A domain repo is simultaneously a plugin for all three — skills are never copi
 | Document | Covers |
 |---|---|
 | [docs/learning-guide.en.md](docs/learning-guide.en.md) | **Start here**: how the ecosystem works, why it is designed this way, FAQs |
-| [docs/skills/](docs/skills/README.md) | **Per-skill pages for all 83 skills**: triggers, outputs, usage examples, install |
+| [docs/skills/](docs/skills/README.md) | **Per-skill pages for all 85 skills**: triggers, outputs, usage examples, install |
 | [docs/install/](docs/install/README.en.md) | Install guides for 60+ AI hosts |
 | [docs/install-profiles.md](docs/install-profiles.md) | Setups organized by machine purpose |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | Skill structure, naming, frontmatter, validation |

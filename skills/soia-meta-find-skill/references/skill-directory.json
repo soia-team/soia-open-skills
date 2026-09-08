@@ -29,7 +29,7 @@
   },
   {
     "name": "soia-dev-agent-md-advisor",
-    "description": "AI 项目指令与配置设计顾问，提供诊断、起草和改写建议。触发：「审查我的 AGENTS.md」「CLAUDE.md 怎么写」「多个 AI 入口怎么管」",
+    "description": "诊断、起草或精简 AI 项目指令，解决无效规则、重复和入口冲突。触发：精简 AGENTS.md、CLAUDE.md 怎么组织、检查 AI 指令冲突",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -38,26 +38,33 @@
     "name": "soia-dev-archify-diagrams",
     "description": "用 Archify 将架构、数据流和流程说明生成可维护 JSON 图表及 PNG 预览。触发：「用 Archify 画」「Archify 架构图」「Archify 时序图」",
     "source": {
-      "repository": "soia-open-dev-design-skills"
+      "repository": "soia-open-dev-skills"
     }
   },
   {
-    "name": "soia-dev-design-draft-prd",
-    "description": "起草互联网通用 PRD、产品需求文档与用户故事；适用于一句话需求补全、功能范围和验收标准梳理。",
+    "name": "soia-dev-audit-ui",
+    "description": "只读验收界面，将布局、键盘等技术证据与 UX、视觉判断分开报告。触发：验收这个界面、检查键盘和布局、评审视觉与体验",
     "source": {
-      "repository": "soia-open-dev-design-skills"
+      "repository": "soia-open-dev-skills"
     }
   },
   {
-    "name": "soia-dev-design-explorer",
-    "description": "基于 Open Design（经 soia-dev-open-design-ops）做高保真 HTML 原型、设计变体、幻灯片、动画探索与设计评审；要求用户品牌输入、五分类输出落点与可复现验证。",
+    "name": "soia-dev-design-ui",
+    "description": "设计界面的信息结构、交互、视觉与实现交接，保持已批准的品牌和样式边界。触发：设计这个界面、梳理交互流程、做 UI 设计交接",
     "source": {
-      "repository": "soia-open-dev-design-skills"
+      "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-doc-sync",
-    "description": "审计并修复任意代码仓的 docs、README、CHANGELOG、VERSION 与明确真源之间的事实漂移；先建立真源优先级与证据，再按依赖顺序同步派生文档。触发：「文档和代码对不上」「更新 README」「同步 CHANGELOG」",
+    "description": "核对代码、发布事实和有效裁决与文档之间的漂移，按授权同步派生内容。触发：文档和代码对不上、同步发布文档、核对状态文档",
+    "source": {
+      "repository": "soia-open-dev-skills"
+    }
+  },
+  {
+    "name": "soia-dev-draft-feature-spec",
+    "description": "把产品想法或需求材料整理成可验收的功能规格，并按需拆成纵向交付切片。触发：起草功能规格、把需求写成 PRD、拆分可验收功能",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -66,7 +73,7 @@
     "name": "soia-dev-drawio-visio-diagrams",
     "description": "将 Visio VSDX 安全转换、盘点和受控升级为可编辑 draw.io 图表。触发：「VSDX 转 draw.io」「Visio 图表升级」「draw.io 图表盘点」",
     "source": {
-      "repository": "soia-open-dev-design-skills"
+      "repository": "soia-open-dev-skills"
     }
   },
   {
@@ -84,6 +91,13 @@
     }
   },
   {
+    "name": "soia-dev-govern-architecture",
+    "description": "设计架构、审查给定方案或核对长期漂移，明确职责、契约、事实真源与迁移边界。触发：架构方案怎么选、审查架构边界、检查架构漂移",
+    "source": {
+      "repository": "soia-open-dev-skills"
+    }
+  },
+  {
     "name": "soia-dev-implement-task",
     "description": "在明确授权内实现需求、诊断修复或处理 findings，合并执行与修复流程。触发：实现这个任务、修复这个 bug、处理审查发现",
     "source": {
@@ -94,26 +108,26 @@
     "name": "soia-dev-officecli-ops",
     "description": "以 OfficeCLI 安全读取、复制后修改并验证 DOCX、XLSX、PPTX。触发：「OfficeCLI」「OpenXML 验证」「Office 文件原子修改」",
     "source": {
-      "repository": "soia-open-dev-design-skills"
+      "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-open-design-ops",
-    "description": "提供供上层设计流程调用的 Open Design 原子操作与运行保障。触发：「检查 Open Design」「接入 DESIGN.md」「恢复设计会话」",
+    "description": "操作 Open Design 环境、项目与导出，并交付 HTML 原型、deck 和动画。触发：检查 Open Design、制作 HTML deck、继续设计会话",
     "source": {
-      "repository": "soia-open-dev-design-skills"
+      "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-project-scaffold",
-    "description": "为任意新 Git 项目生成最小 AI 协作基线：可编辑的 AGENTS.md 和 docs 导航目录；在写入前确认目标路径。触发：「新项目初始化」「搭 AI 协作基线」「生成文档骨架」",
+    "description": "为 Git 项目补最小 AI 协作入口与文档导航，优先沿用已有约定。触发：补项目协作基线、初始化 AGENTS、生成文档骨架",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-release-plan-checklist",
-    "description": "为互联网软件发版生成发布清单、预检门、灰度验证与发布后核对；适用于上线、部署、回滚规划。触发：「上线前检查什么」「灰度方案」「回滚预案」",
+    "description": "为软件发版设计预检、灰度、停止与回滚清单；只规划，不执行部署。触发：上线前检查什么、设计灰度方案、准备回滚预案",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -134,14 +148,14 @@
   },
   {
     "name": "soia-dev-terminal-ops",
-    "description": "管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；杀进程前用日志、CPU、网络多信号交叉判断，并走 TERM→复查→KILL 门。触发：「进程卡住了」「后台跑这个」「安全杀进程」",
+    "description": "管理长任务与后台日志，诊断停滞并安全停止或恢复明确进程。触发：后台跑这个、进程疑似卡住、安全停止进程",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-test-draft-doc",
-    "description": "从需求、PRD 或变更说明生成测试计划、测试用例与验收对照；适用于测试设计、回归清单和质量评审。触发：「写测试用例」「出测试计划」「验收标准怎么定」",
+    "description": "从需求或变更设计测试计划、用例与验收对照，不冒充测试执行。触发：写测试用例、出测试计划、整理回归清单",
     "source": {
       "repository": "soia-open-dev-skills"
     }

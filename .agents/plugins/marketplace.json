@@ -6,15 +6,15 @@
   "plugins": [
     {
       "name": "soia-dev",
-      "description": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
+      "description": "工程与 UI 技能：功能规格、架构、实现审查、UI 设计验收与按需工具",
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-skills.git",
-        "ref": "a2777aadd3c8f771a97c53cd1f96839d75624553"
+        "ref": "0cb0dbc4fdf5a4b11b2f0e025cc16b821acf3df3"
       },
       "interface": {
-        "displayName": "开发编码技能库",
-        "shortDescription": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
+        "displayName": "工程与 UI 技能库",
+        "shortDescription": "工程与 UI 技能：功能规格、架构、实现审查、UI 设计验收与按需工具",
         "category": "Developer Tools",
         "brandColor": "#FB923C",
         "composerIcon": "./assets/plugins/soia-dev.svg",
@@ -25,28 +25,6 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Developer Tools"
-    },
-    {
-      "name": "soia-dev-design",
-      "description": "设计与文档产线技能：Open Design、Archify、draw.io/Visio、OfficeCLI",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/soia-team/soia-open-dev-design-skills.git",
-        "ref": "643b6fbc10419f592de9a9ffdf491670f7307edb"
-      },
-      "interface": {
-        "displayName": "设计与文档技能库",
-        "shortDescription": "设计与文档产线技能：Open Design、Archify、draw.io/Visio、OfficeCLI",
-        "category": "Creativity",
-        "brandColor": "#FBBF24",
-        "composerIcon": "./assets/plugins/soia-dev-design.svg",
-        "logo": "./assets/plugins/soia-dev-design.png"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Creativity"
     },
     {
       "name": "soia-cwork-office",
@@ -142,7 +120,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-env-skills.git",
-        "ref": "cc01909a4f60d555f7636c7c43fe031b402c3ddd"
+        "ref": "dad187beaeceb14bac7758d5e0e1b3c95b1feca8"
       },
       "interface": {
         "displayName": "环境运维技能库",

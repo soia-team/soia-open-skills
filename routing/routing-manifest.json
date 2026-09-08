@@ -31,20 +31,20 @@
   },
   {
     "skill_name": "soia-dev-archify-diagrams",
-    "repo": "soia-open-dev-design-skills",
+    "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-archify-diagrams",
     "visibility": "public"
   },
   {
-    "skill_name": "soia-dev-design-draft-prd",
-    "repo": "soia-open-dev-design-skills",
-    "skillPath": "skills/soia-dev-design-draft-prd",
+    "skill_name": "soia-dev-audit-ui",
+    "repo": "soia-open-dev-skills",
+    "skillPath": "skills/soia-dev-audit-ui",
     "visibility": "public"
   },
   {
-    "skill_name": "soia-dev-design-explorer",
-    "repo": "soia-open-dev-design-skills",
-    "skillPath": "skills/soia-dev-design-explorer",
+    "skill_name": "soia-dev-design-ui",
+    "repo": "soia-open-dev-skills",
+    "skillPath": "skills/soia-dev-design-ui",
     "visibility": "public"
   },
   {
@@ -54,8 +54,14 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-dev-draft-feature-spec",
+    "repo": "soia-open-dev-skills",
+    "skillPath": "skills/soia-dev-draft-feature-spec",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-dev-drawio-visio-diagrams",
-    "repo": "soia-open-dev-design-skills",
+    "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-drawio-visio-diagrams",
     "visibility": "public"
   },
@@ -72,6 +78,12 @@
     "visibility": "public"
   },
   {
+    "skill_name": "soia-dev-govern-architecture",
+    "repo": "soia-open-dev-skills",
+    "skillPath": "skills/soia-dev-govern-architecture",
+    "visibility": "public"
+  },
+  {
     "skill_name": "soia-dev-implement-task",
     "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-implement-task",
@@ -79,13 +91,13 @@
   },
   {
     "skill_name": "soia-dev-officecli-ops",
-    "repo": "soia-open-dev-design-skills",
+    "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-officecli-ops",
     "visibility": "public"
   },
   {
     "skill_name": "soia-dev-open-design-ops",
-    "repo": "soia-open-dev-design-skills",
+    "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-open-design-ops",
     "visibility": "public"
   },

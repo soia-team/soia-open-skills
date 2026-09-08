@@ -2,7 +2,7 @@
 """SOIA 全生态图形资产的单一真源：一张表 → 三个面。
 
 之前配色与字形表只存在于会话临时目录里，不在任何仓；结果是同一套图标在
-元仓 assets/plugins/、8 个域仓 assets/、以及 WorkBuddy 专家头像里各存一份副本，
+元仓 assets/plugins/、现役域仓 assets/、以及 WorkBuddy 专家头像里各存一份副本，
 共 19 处，没有任何东西保证它们同源。这个脚本把那张表收进仓里，三个面全部由它派生。
 
 两个面（同一字形与配色，只是承载 surface 不同）。
@@ -106,7 +106,6 @@ GLYPHS: dict[str, str] = {
 # 克隆即可，无需在这个公开仓里登记它的名字。用 --palette 传入该仓自己的配色。
 DEPLOY_TARGETS: dict[str, list[tuple[str, str]]] = {
     "soia-open-dev-skills": [(".", "soia-dev")],
-    "soia-open-dev-design-skills": [(".", "soia-dev-design")],
     "soia-open-pkm-vault-skills": [(".", "soia-pkm-vault")],
     "soia-open-media-content-skills": [(".", "soia-media-content")],
     "soia-open-cwork-office-skills": [(".", "soia-cwork-office")],

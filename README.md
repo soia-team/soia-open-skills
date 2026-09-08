@@ -6,7 +6,7 @@
 
 **技能越来越多，最麻烦的不是「不会用」，而是不知道该叫谁**
 
-83 个公开技能，8 个领域，一个入口；描述目标即可，不必先背完目录
+85 个公开技能，7 个领域，一个入口；描述目标即可，不必先背完目录
 
 [English](README.en.md) · 中文
 
@@ -34,7 +34,7 @@ flowchart TB
     D --> E["Claude Code · Codex · WorkBuddy<br/>三个宿主都能装"]
 ```
 
-## 8 个领域插件
+## 7 个领域插件
 
 装整个领域，一次拿到该域全部技能。默认仍按项目只装所需技能，整域须明确选择。**常驻成本**指技能索引每次会话占用的上下文，正文只在命中时载入；下表成本为历史估算，2026-09-08 仅更新实际技能数量。
 
@@ -42,16 +42,15 @@ flowchart TB
 |---|---|---:|---:|
 | [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | 知识库：采集、整理、提炼、转换 | 31 | ~3.6k |
 | [`soia-env`](https://github.com/soia-team/soia-open-env-skills) | 环境：AI CLI 安装、网络诊断、空间治理 | 18 | ~1.9k |
-| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | 开发：改动闭环、测试、发版、仓库运维 | 12 | ~971 |
+| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | 工程与 UI：规格、架构、实现审查、设计验收与按需工具 | 20 | 待测 |
 | [`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) | 内容：成文、配图、多平台改写 | 6 | ~728 |
-| [`soia-dev-design`](https://github.com/soia-team/soia-open-dev-design-skills) | 设计：PRD、原型、架构图、Office | 6 | ~548 |
 | **`soia-meta`**（本仓） | 生态：检索、同步、发布、提示词 | 5 | ~428 |
 | [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | 协作：飞书与 ProcessOn 资料落本地 | 3 | ~309 |
 | [`soia-edu-course`](https://github.com/soia-team/soia-open-edu-course-skills) | 课程：大纲与教案设计 | 2 | ~140 |
 
 > 暂时不用的域 `claude plugin disable <插件名>@soia`，成本归零，随时开回来。
 
-## 从这里开始
+## 安装
 
 两条命令，然后说「**找个技能**」：
 
@@ -69,7 +68,7 @@ WorkBuddy 是桌面端没有 CLI，由技能代劳——对 AI 说「装到 Work
 python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
 ```
 
-不带参数装全部 12 个专家，也可只给要装的插件名。装完重启客户端，在【专家中心 → 我的专家】召唤——本仓对应的是 **Soia · 技能生态管家**。
+明确选择全量后才可不带参数安装搜索范围内的全部当前专家；通常只给要装的插件名。旧 design 专家不再作为新安装目标，不自动迁移已安装副本。装完重启客户端，在【专家中心 → 我的专家】召唤——本仓对应的是 **Soia · 技能生态管家**。
 
 ## 5 个 meta 技能
 
@@ -107,7 +106,7 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
 | 文档 | 说明 |
 |---|---|
 | [docs/learning-guide.md](docs/learning-guide.md) | **先读这份**：整套生态怎么运转、为什么这么设计、常见疑问 |
-| [docs/skills/](docs/skills/README.md) | **83 个技能逐个详情页**：触发词、产物、用法示例与安装 |
+| [docs/skills/](docs/skills/README.md) | **85 个技能逐个详情页**：触发词、产物、用法示例与安装 |
 | [docs/install/](docs/install/README.md) | 60+ AI 宿主的安装指南 |
 | [docs/install-profiles.md](docs/install-profiles.md) | 按机器用途组织的安装组合 |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | 技能结构、命名、frontmatter 与验证要求 |

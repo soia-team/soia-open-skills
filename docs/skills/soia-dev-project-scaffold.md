@@ -1,6 +1,6 @@
 # soia-dev-project-scaffold
 
-> 为任意新 Git 项目生成最小 AI 协作基线：可编辑的 AGENTS.md 和 docs 导航目录；在写入前确认目标路径
+> 为 Git 项目补最小 AI 协作入口与文档导航，优先沿用已有约定
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-project-scaffold) · [← 全部技能](README.md)
 
@@ -8,21 +8,13 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「新项目初始化」「搭 AI 协作基线」「生成文档骨架」
+补项目协作基线、初始化 AGENTS、生成文档骨架
 
 ## 能力与用法
 
-### 这个技能可以做什么
+**能做什么：** 为新/空项目建立最小协作入口，或给已有项目补真正缺少的规则与导航。不是应用框架生成器，不默认创建完整治理目录。
 
-为一个新建或空白的 Git 项目创建一套最小、可编辑的 AI 协作基线：`AGENTS.md`、文档导航、项目概览、变更记录和 AI 工作记录目录。它不生成应用框架、云服务模块或组织内部治理结构。
-
-### 客户如何使用
-
-提供目标项目的绝对路径，并明确允许创建文件。先运行帮助或检查目录；目标已有同名文件时，先展示差异并取得覆盖确认。
-
-```bash
-bash skills/soia-dev-project-scaffold/shells/init-project-baseline.sh <project-path>
-```
+**如何使用：** 给目标目录和希望补的内容。先看最近的 AGENTS/CLAUDE、README、构建/测试入口和已有文档布局；保留有效约定，不重建已有体系。
 
 ## 安装
 

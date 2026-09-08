@@ -2,7 +2,7 @@
 
 [English](README.en.md) · [按使用场景选择安装组合](../install-profiles.md) · [先搞懂它怎么运转](../learning-guide.md)
 
-SOIA 技能分布在 8 个开源仓库（73 个技能）中，可安装到 Claude Code、Codex、Cursor 等 60+ AI 编码工具。
+SOIA 当前由 7 个公开域仓分发，设计能力已并入 dev。安装范围的唯一规范见[根 README 安装节](../../README.md#安装)：默认项目、明确宿主、单技能；下文的全局或整域命令仅供明确选择该范围时使用。
 
 ## 两条安装路线
 
@@ -73,12 +73,11 @@ codex plugin marketplace add soia-team/soia-open-skills
 codex plugin add soia-pkm-vault@soia
 ```
 
-## 8 个领域插件
+## 7 个领域插件
 
 | 插件名 | 来源仓库 | 内容 |
 |---|---|---|
-| `soia-dev` | soia-open-dev-skills | 开发全流程：工程协议、代码审查、缺陷修复、任务执行、终端操作、测试、发版 |
-| `soia-dev-design` | soia-open-dev-design-skills | 设计与文档产线：Open Design、Archify、draw.io/Visio、OfficeCLI、PRD |
+| `soia-dev` | soia-open-dev-skills | 工程与 UI：功能规格、架构、实现审查、UI 设计验收、Open Design、图表和 Office 工具 |
 | `soia-pkm-vault` | soia-open-pkm-vault-skills | 知识库：剪藏（网页/公众号/X/抖音/小红书/GitHub）、网盘、整理、提炼、转换、书库 |
 | `soia-media-content` | soia-open-media-content-skills | 新媒体：文章成文、文章图片、公众号/X/小红书发布 |
 | `soia-cwork-office` | soia-open-cwork-office-skills | 办公协作：飞书知识库与云盘、ProcessOn 图表 |

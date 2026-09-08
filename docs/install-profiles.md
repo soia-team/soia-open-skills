@@ -2,14 +2,14 @@
 
 [完整安装指南](install/README.md) · [English installation guide](install/README.en.md)
 
-按机器的主要用途安装必要仓库，减少所有宿主启动时需要索引的技能描述。以下命令均从远端仓库安装到用户级；`-a '*'` 表示写入所有受支持的 agent 目标，`-y` 跳过交互确认。
+默认按项目只安装所需技能，先明确宿主；完整规范见[根 README](../README.md#安装)。以下是用户明确选择全局/整域后的可选组合，不是默认安装计划；`-a '*'` 涉及全部受支持宿主，执行前须单独确认范围。
 
 ## 安装矩阵
 
 | 场景 | 安装范围 | 适合任务 |
 |---|---|---|
 | 写作机 | PKM vault + media | 收集素材、整理知识库、写作与发布 |
-| 编码机 | meta + dev coding + dev design | 编码闭环、终端操作与设计资产 |
+| 编码机 | meta + dev 精选技能 | 工程与 UI 方法、终端和按需设计工具 |
 | 教育机 | edu + PKM vault 精选子集 | 课程大纲、教案、阅读计划与教学资料整理 |
 | 最小 | 3 个 meta 技能 | 提示词澄清、技能同步与发布收尾 |
 
@@ -25,7 +25,6 @@ npx skills add soia-team/soia-open-media-content-skills -g -a '*' -y
 ```bash
 npx skills add soia-team/soia-open-skills -g -a '*' -y
 npx skills add soia-team/soia-open-dev-skills -g -a '*' -y
-npx skills add soia-team/soia-open-dev-design-skills -g -a '*' -y
 ```
 
 ### 教育机

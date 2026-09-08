@@ -1,6 +1,6 @@
 # soia-meta-find-skill
 
-> 按需发现 SOIA 技能并收集安全安装选择
+> 查找适合任务的 SOIA 技能并收集安全安装选择，不代替已安装技能执行任务
 
 所属：[`soia-meta`](https://github.com/soia-team/soia-open-skills) · [技能源码](https://github.com/soia-team/soia-open-skills/tree/main/skills/soia-meta-find-skill) · [← 全部技能](README.md)
 
@@ -8,7 +8,7 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-技能检索、代码审查、环境安装
+找个技能、有没有技能可以、发现 SOIA 能力
 
 ## 能力与用法
 

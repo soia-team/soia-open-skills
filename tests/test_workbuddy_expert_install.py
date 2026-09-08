@@ -123,6 +123,17 @@ class DiscoveryTests(unittest.TestCase):
         """没权限 clone 的仓不出现即可，不该报错。"""
         self.assertEqual(iwe.discover_plugin_roots([self.tmp / "nope"]), {})
 
+    def test_retired_design_checkout_is_not_a_new_install_candidate(self) -> None:
+        self._make_root(self.tmp / "old-design", "soia-dev-design")
+        self._make_root(self.tmp / "current-dev", "soia-dev")
+        found = iwe.discover_plugin_roots([self.tmp])
+        self.assertEqual(set(found), {"soia-dev"})
+        self.assertTrue((self.tmp / "old-design" / iwe.PLUGIN_MANIFEST).exists())
+
+    def test_explicit_retired_target_is_rejected_without_substitution(self) -> None:
+        self._make_root(self.tmp / "current-dev", "soia-dev")
+        self.assertEqual(iwe.main(["soia-dev-design", "--repos-root", str(self.tmp), "--dry-run"]), 2)
+
     def test_registration_goes_through_the_official_script(self) -> None:
         """官方规范铁律 12：禁止绕过 register_expert.py 直接写 marketplace.json。"""
         source = SCRIPT.read_text(encoding="utf-8")

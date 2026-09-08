@@ -57,7 +57,6 @@ TRIGGER_SPLIT = re.compile(r"触发[词]?[：:]|Triggers?[：:]")
 # 域仓 → 插件名。README 的安装命令要用插件名，不是仓名。
 REPO_TO_PLUGIN = {
     "soia-open-dev-skills": "soia-dev",
-    "soia-open-dev-design-skills": "soia-dev-design",
     "soia-open-pkm-vault-skills": "soia-pkm-vault",
     "soia-open-media-content-skills": "soia-media-content",
     "soia-open-cwork-office-skills": "soia-cwork-office",

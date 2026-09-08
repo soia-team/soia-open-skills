@@ -263,7 +263,7 @@ class FindSkillRouterTests(unittest.TestCase):
                 directory,
                 [
                     {
-                        "name": "soia-dev-review-panel",
+                        "name": "soia-dev-review-code",
                         "description": "review 调用链、数据流和模块边界",
                         "source": {"repository": "soia-open-dev-skills"},
                     }
@@ -273,7 +273,41 @@ class FindSkillRouterTests(unittest.TestCase):
             result = self.run_finder(directory, "请做架构评审，理清调用链和数据流", cwd=root)
 
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(json.loads(result.stdout)[0]["name"], "soia-dev-review-panel")
+            self.assertEqual(json.loads(result.stdout)[0]["name"], "soia-dev-review-code")
+
+    def test_neighboring_methods_route_to_distinct_primary_candidates(self) -> None:
+        descriptions = {
+            "soia-dev-govern-architecture": "设计架构、审查给定方案或核对长期漂移，明确职责、契约与迁移边界。",
+            "soia-dev-archify-diagrams": "用 Archify 将架构、数据流和流程说明生成 JSON 图表及 PNG 预览。",
+            "soia-dev-design-ui": "设计界面的信息结构、交互、视觉与实现交接。",
+            "soia-dev-audit-ui": "只读验收界面，将布局、键盘等技术证据与 UX、视觉判断分开。",
+            "soia-dev-draft-feature-spec": "把产品需求整理成可验收的功能规格和纵向切片。",
+            "soia-meta-prompt-clarity": "起草和优化中英文提示词。",
+        }
+        cases = {
+            "架构评审": "soia-dev-govern-architecture",
+            "检查架构漂移": "soia-dev-govern-architecture",
+            "用 Archify 画图": "soia-dev-archify-diagrams",
+            "UI 设计": "soia-dev-design-ui",
+            "界面设计": "soia-dev-design-ui",
+            "UI 验收": "soia-dev-audit-ui",
+            "界面验收": "soia-dev-audit-ui",
+            "功能规格": "soia-dev-draft-feature-spec",
+            "写成 PRD": "soia-dev-draft-feature-spec",
+        }
+        with tempfile.TemporaryDirectory(prefix="find-skill-") as temp:
+            root = Path(temp)
+            directory = root / "directory.json"
+            self.write_directory(directory, [
+                {"name": name, "description": description,
+                 "source": {"repository": "soia-open-skills" if name.startswith("soia-meta-") else "soia-open-dev-skills"}}
+                for name, description in descriptions.items()
+            ])
+            for query, expected in cases.items():
+                with self.subTest(query=query):
+                    result = self.run_finder(directory, query, cwd=root)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(json.loads(result.stdout)[0]["name"], expected)
 
     def test_legacy_install_command_is_explicit_and_marked_deprecated(self) -> None:
         with tempfile.TemporaryDirectory(prefix="find-skill-") as temp:
