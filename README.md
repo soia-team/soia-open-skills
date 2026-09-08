@@ -52,7 +52,15 @@ flowchart TB
 
 ## 安装
 
-两条命令，然后说「**找个技能**」：
+**默认项目级、明确宿主、单技能**。先进入使用技能的项目，只安装当前需要的能力；例如给 Codex 安装发现入口，然后说「**找个技能**」：
+
+```bash
+npx skills add soia-team/soia-open-skills -a codex -s soia-meta-find-skill
+```
+
+Claude Code 将 `codex` 换成 `claude-code`。不加 `-g` 是项目安装；只有明确选择全局时才加 `-g`。多宿主、整域和全量仍受支持，但须先确认范围；同一宿主不要重复安装同一技能的目录版与插件版。发布不自动安装或更新本机技能。
+
+**明确需要整个 meta 域插件时**，选择对应宿主命令：
 
 ```bash
 claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-meta@soia
@@ -65,7 +73,7 @@ codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia
 WorkBuddy 是桌面端没有 CLI，由技能代劳——对 AI 说「装到 WorkBuddy」，或直接跑：
 
 ```bash
-python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
+python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py soia-meta
 ```
 
 明确选择全量后才可不带参数安装搜索范围内的全部当前专家；通常只给要装的插件名。旧 design 专家不再作为新安装目标，不自动迁移已安装副本。装完重启客户端，在【专家中心 → 我的专家】召唤——本仓对应的是 **Soia · 技能生态管家**。

@@ -10,13 +10,13 @@ SOIA 当前由 7 个公开域仓分发，设计能力已并入 dev。安装范�
 |---|---|---|
 | **适用宿主** | 所有宿主（60+） | Claude Code、Codex、Qwen Code、qodercli |
 | **安装粒度** | 单个技能 | 整个领域（一个仓库 = 一个插件） |
-| **落盘位置** | `~/.agents/skills`（共享真源）+ 链接到各 AI 目录 | 各宿主独立的插件缓存 |
+| **落盘位置** | 默认 `<project>/.agents/skills`；选择 `-g` 才使用 `~/.agents/skills`，宿主按能力复用 | 各宿主独立的插件缓存 |
 | **开关能力** | 无（安装即常驻） | 有（`enable` / `disable` 域级开关） |
 | **适合** | 精确控制安装哪几个技能 | 按领域整体启停、控制常驻上下文 |
 
 ### 机制说明（重要）
 
-**路线 A 的技能本体永远先写入 `~/.agents/skills`。** `-a` 参数只决定"链接到哪些 AI 目录"，无法让技能绕过共享真源目录。`--copy` 只改变目标目录中是软链接还是实体副本，不改变本体先落共享真源这一行为。
+**路线 A 默认项目级，`-g` 才是用户全局。** `-a` 选择宿主，`-s` 选择技能；`--copy` 调整宿主目标使用副本还是链接，不替代范围选择。安装后核对实际落点与当前项目的宿主目录。
 
 **路线 B 的插件安装在各宿主独立的缓存目录**，不进入 `~/.agents/skills`。其中：
 
@@ -28,10 +28,10 @@ SOIA 当前由 7 个公开域仓分发，设计能力已并入 dev。安装范�
 ### 路线 A：安装单个技能
 
 ```bash
-npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-web -y
+npx skills add soia-team/soia-open-pkm-vault-skills -a codex -s soia-pkm-clip-web
 ```
 
-参数：`-g` 用户级安装 · `-a` 目标 AI（`'*'` 为全部，也可指定 `claude-code`、`codex`、`cursor` 等）· `-s` 技能名（`'*'` 为该仓库全部）· `-y` 跳过确认。
+在目标项目中执行。参数：不带 `-g` 为项目级，`-g` 用户级 · `-a` 目标 AI（如 `claude-code`、`codex`）· `-s` 技能名 · `-y` 跳过确认。全局、多个宿主、`'*'` 或 `--all` 仅在明确选择后使用，不是默认值。
 
 其他常用命令：
 
@@ -40,11 +40,11 @@ npx skills ls -a claude-code
 ```
 
 ```bash
-npx skills remove -g -a '*' -s <技能名> -y
+npx skills remove -a codex -s <技能名>
 ```
 
 ```bash
-npx skills update
+npx skills update <技能名> --project
 ```
 
 ```bash
@@ -52,6 +52,8 @@ npx skills find <关键词>
 ```
 
 ### 路线 B：安装整个领域插件
+
+以下是明确选择整域后的命令，不能将宿主用户级插件安装冒充项目级单技能。
 
 Claude Code：
 
@@ -115,10 +117,10 @@ codex plugin add soia-pkm-vault@soia
 
 ## 多 AI 同步工具
 
-`soia-meta-sync-skills` 把共享真源软链接到各 AI 目录：
+以下为已明确选择用户全局和多个宿主时的示例，不是项目默认安装；先由 `soia-meta-sync-skills` 生成计划并确认具体 source/target/skill，再执行。WorkBuddy 走[专家安装](workbuddy.md)，不通过 npx 或普通技能软链代装。
 
 ```bash
-python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py --source-dir ~/.agents/skills --targets claude,codex,cursor,windsurf,kimi,opencode,qwen,workbuddy
+python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py --source-dir ~/.agents/skills --targets claude --skills <技能名> --dry-run
 ```
 
 排除指定技能并持久化（之后的全量同步不会再链回来）：
@@ -129,7 +131,7 @@ python3 ~/.agents/skills/soia-meta-sync-skills/scripts/sync_soia_skills.py --sou
 
 ## 常见问题
 
-**安装后没有生效？** 重开 AI 会话；确认技能出现在目标目录（`ls ~/.claude/skills`）；检查软链接是否有效（`readlink ~/.claude/skills/<技能名>`）。
+**安装后没有生效？** 先在目标项目核对实际宿主技能目录、版本与链接，再用新会话输入真实请求。默认查项目 `.agents/skills` 与对应宿主目录；只有全局安装才查 `~/.agents/skills`。目录存在不等于自然命中或执行成功。
 
 **插件和 npx 可以同时使用吗？** 可以，但同一宿主的同一技能会产生两份索引。建议同一宿主二选一。
 
@@ -147,6 +149,6 @@ SOIA 市场清单在每次技能发布时刷新（由 `soia-meta-skill-release` 
 |---|---|---|
 | Claude Code | 界面 Sync + 齿轮更新；或 `claude plugin marketplace update soia` 后 `claude plugin update <插件>@soia` | 在 `~/.claude/settings.json` 为 soia 市场设 `autoUpdate: true`（[配置方法](claude-code.md#保持更新)） |
 | Codex | `codex plugin marketplace add soia-team/soia-open-skills` 后 `codex plugin add <插件>@soia` | 不支持，需手动 |
-| npx 路线（所有宿主） | `npx skills update -g` | 不支持，需手动 |
+| npx 路线 | 默认项目 `npx skills update <技能名> --project`；已选全局才用 `-g` | 按当前 CLI 能力与明确范围执行 |
 
 团队场景可在项目 `.claude/settings.json` 中统一声明市场与插件并提交版本库，成员无需各自配置，详见 [Claude Code 指南](claude-code.md#团队统一配置)。

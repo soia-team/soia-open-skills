@@ -27,7 +27,7 @@
 ## 二、一张图看懂全生态
 
 ```text
-真源：8 个 Git 仓库，共 81 个技能
+真源：7 个公开域仓，共 85 个技能（2026-09-08 快照）
         │
         │   routing/routing-manifest.json（机器可读索引，生成物）
         ▼
@@ -37,7 +37,7 @@
         ├─→ .agents/plugins/marketplace.json   ← Codex 原生消费
         │
         ▼
-宿主装载：claude plugin install soia-pkm-vault@soia
+宿主装载：默认项目级单技能；明确选择后可装整个域插件
         │
         ▼
 你说「把这个网页存进知识库」→ Agent 按 description 命中 soia-pkm-clip-web
@@ -47,7 +47,9 @@
 
 1. **单一真源，多面派生**。三份市场清单永远由生成器从仓库内容派生，CI 跑 `--check` 校验，手改即红。杜绝多份清单各自漂移。
 2. **域仓 = 域插件 = 开关单位**。`plugin disable soia-pkm-vault@soia` 一次摘掉 31 个知识库技能的索引，上下文降到零成本；写作日再 `enable` 回来。
-3. **正式通道 pin sha**。市场条目锁定 commit，防上游挪 ref 换内容——这是供应链基线，不是洁癖。
+3. **正式通道 pin sha**。跨仓市场条目锁定正式 commit；元仓的自指 `source: "./"` 使用默认 `main` 正式版，不把它误写成有独立 pin。
+
+当前数量以[生成目录](skills/README.md)为准；路由清单有 84 个目标，另加发现入口 `soia-meta-find-skill`。dev-design 的方法与工具已迁入 dev，旧仓仅保留历史。
 
 ---
 
@@ -59,32 +61,32 @@
 
 所以真正的设计约束是：**如何让你只为今天用得上的域付费**。
 
-一个大仓做不到——装了就是全量。切成域仓之后，「今天写文章」只需 `soia-media-content` + `soia-pkm-vault`，编码域整体不在索引里。这就是把 12 个仓收敛到 8 个、但坚决不合并成 1 个的原因：**仓的边界就是开关的粒度**。
+**源码仓边界不等于单技能安装边界。** 同一仓也能用 `npx skills add ... -s <技能名>` 选择单项。当前保留 7 个公开域仓，是为了清晰的维护职责和整域插件分发；dev-design 已并入 dev，不再是第 8 个现役域。默认先按项目选择实际需要的技能；需要整域启停时，才把域插件作为开关单位。
 
 推论：**新技能该放哪个仓，取决于「它和谁一起被打开」**，不取决于代码相似度。
 
 ---
 
-## 四、交付方式的演进（以及已废弃的做法）
+## 四、两种安装粒度与默认选择
 
-这一节比其他章节都重要——生态里的老文档和老命令仍在流传，照着做会踩坑。
+安装范围的唯一规范见[根 README 安装节](../README.md#安装)。公开分发方式与用户选择的本机安装粒度是两件事，不从维护者机器的目录推断所有用户的安装状态。
 
-| 时期 | 交付方式 | 现状 |
+| 选择 | 交付方式 | 适用边界 |
 |---|---|---|
-| 早期 | `npx skills add ... -g` 装进共享真源 `~/.agents/skills`，各宿主软链过去 | **已废弃为反模式** |
-| 现在 | 插件市场，域粒度装载与启停 | 唯一推荐路线 |
+| 默认 | 项目级、指定宿主、单技能 | 只安装当前任务需要的能力 |
+| 按明确选择 | 用户全局、多个宿主、整域插件或全量 | 先确认影响范围，再安装或同步 |
 
-**为什么废弃 `-g` 全局安装**：如果同一技能既被 npx 装进 `~/.agents/skills`、又被插件带进来，宿主会看到**两份索引**，且两份各自更新、逐渐漂移。你无法判断触发的是哪一份。
+**需要避免的是重复索引，不是全局功能本身。** 如果同一技能既经目录安装、又被插件带进同一宿主，两份副本可能独立更新并漂移。安装前先检查已有来源。
 
-因此规则是**二选一**。本机现状可以印证这个迁移已经完成：`~/.agents/skills` 里现在只剩第三方技能（`find-skills`、`weread-skills` 等），**没有任何 SOIA 技能**——SOIA 已 100% 插件化交付。
+对同一宿主的同一技能选择一个有效来源。项目级真身通常在 `<project>/.agents/skills`；全局才使用 `~/.agents/skills`。宿主链接和插件缓存按其实际加载机制核对，不以目录存在冒充已经命中。
 
-`npx` 路线仍然可用，且是**只想要单个技能**时的合理选择，但要清楚它落在哪里：
+例如，在目标项目中给 Codex 安装一个网页归档技能：
 
 ```bash
-npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-web -y
+npx skills add soia-team/soia-open-pkm-vault-skills -a codex -s soia-pkm-clip-web
 ```
 
-用了它，就别再装同一个域插件。
+换宿主时替换 `-a`；只有明确选择全局时才加 `-g`。正式发布、用户安装和真实任务验收分别记录，发布不会自动更新本机。
 
 ---
 
@@ -97,7 +99,7 @@ npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-w
 | 1 常驻核心 | description 瘦身，`audit_skills.py --strict` 限制新技能 ≤150 字符 | ✅ 已生效，CI 强制 |
 | 2 域级开关 | `plugin enable/disable`（Claude/Qwen/agy）；Codex 市场级；WorkBuddy 按专家召唤 | ✅ 已生效 |
 | 3 机器画像 | [install-profiles.md](install-profiles.md) 四场景（写作/编码/教育/最小） | ✅ 已发布 |
-| 4 长尾路由 | `find-skills` 搜公开技能 + `routing-manifest.json` 兜底 | ✅ 已启用 |
+| 4 长尾路由 | `soia-meta-find-skill` 先检索 SOIA；无候选才用 `find-skills` 搜公共生态 | ✅ 已启用 |
 
 第 4 层的代价要讲清楚：**路由牺牲触发词直达**。走路由的技能不在索引里，Agent 不会自动命中，得先查清单再装。所以它只适合低频长尾，高频能力必须留在第 1 层。
 
@@ -112,7 +114,7 @@ npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -s soia-pkm-clip-w
 | 宿主 | 装载机制 | 开关手段 |
 |---|---|---|
 | Claude Code | name+description 索引，正文按需加载 | `plugin enable/disable`，上下文零成本 |
-| Codex | 发现链五层，含 `$HOME/.agents/skills` | 市场级 enable；技能层无开关 |
+| Codex | 从当前目录到 Git 根扫描 `.agents/skills`，另有用户/管理员/系统来源；支持技能软链 | 本地技能可通过 `skills.config` 禁用；插件按宿主提供的粒度管理 |
 | Qwen | 原生消费 Claude 市场格式（自动转换） | extension 级启停 + scope |
 | agy | `plugin import claude` 通道 | plugin enable/disable |
 | WorkBuddy | 专家插件携带自己的技能组合 | 召唤/切换专家 |
@@ -128,7 +130,7 @@ WorkBuddy 是个特例，值得单独说：它的开关单位不是插件而是*
 所以装载方式是在该目录下放一份域仓 checkout——与 Claude/Codex 各自在插件缓存里
 有一份克隆是对等的。见 [WorkBuddy 安装指南](install/workbuddy.md)。
 
-各宿主的具体命令见 [安装指南的分宿主页](install/README.md#按-ai-工具查看)。
+各宿主的具体命令见 [安装指南的分宿主页](install/README.md#按-ai-工具查看)。Codex 的目录边界与开关见[官方技能文档](https://developers.openai.com/codex/skills#where-to-save-skills)；Git 根之外的共享目录不能仅凭父子路径关系推断可见。
 
 ---
 
@@ -138,7 +140,7 @@ SOIA 技能的 frontmatter 用七个字段（`name` `description` `version` `cre
 
 **结论是分层解决，而不是改真源**：
 
-- 生态真源保持七字段不动（零 churn，88+ 技能不用重写）。
+- 生态真源保持七字段，不为单个辅助校验器重写全部技能。
 - 发布管线在产出 Codex 包时，把扩展字段自动折进 `metadata:`——`metadata` 是白名单键且内部形状不检查，OpenAI 官方自己就用 `metadata.short-description`。
 
 实测三层行为：**运行时完全容忍七字段**（连中文 `name` 都能加载），**插件打包 ingestion 容忍未知键**，只有 skill-creator 的校验器会打回。所以冲突面比看上去小得多。
@@ -170,13 +172,13 @@ SOIA 技能的 frontmatter 用七个字段（`name` `description` `version` `cre
 整个插件的技能都进索引（这是常驻成本的来源）；但**触发仍是技能级**——靠 description 自动命中，或 `/插件名:技能名` 手动调用。`disable` 是域级整体摘除，上下文零成本。
 
 **Q：`routing-manifest.json` 是干嘛的？**
-技能→仓→路径的机器可读真源，服务五件事：① `find-skills` 路由查询 ② 全生态重名 CI 检查 ③ 跨仓硬依赖闭包 ④ 市场清单生成器的数据源 ⑤ 安装文档生成。任一仓发布后由 CI 重新生成。
+技能→仓→路径的机器可读索引，服务 `soia-meta-find-skill` 路由查询、全生态重名 CI 检查、跨仓依赖及市场/文档派生。与 `SKILL.md` 和已发布仓内容核对，不把索引命中当成已经安装或验证功能。
 
 **Q：为什么 `plugin.json` 里列 `skills` 数组不能只暴露技能子集？**
 两个宿主都不行，原因不同。**Codex**：官方校验器要求 `skills` 必须是字符串且规范化后等于 `"skills"`，传数组直接判错。**Claude**：官方字段表写明 `skills` 是「**Adds to** the default `skills/` scan」——同表 `commands`/`agents`/`workflows` 都是 "replaces"，唯独 `skills` 是叠加。实测证实数组是 no-op。**只有目录分隔能真正拆分插件内容**——要在一个仓里放多个插件，就得让每个 plugin root 各占一个目录（各自带 `skills/` 与 `.claude-plugin/plugin.json`），而不是靠清单里列子集。
 
 **Q：技能没触发怎么查？**
-按序：① 插件装了吗（`claude plugin list`）② 启用了吗 ③ description 里的触发词和你说的话对得上吗 ④ 是不是同名技能有两份（npx 与插件并存）。第 ④ 项是最隐蔽的，检查 `~/.agents/skills` 里有没有同名目录。
+按序：① 当前项目/宿主的实际技能目录中可见吗（目录安装与插件分别查）② 来源、版本、启用状态和链接目标正确吗 ③ description 与自然请求匹配吗 ④ 项目、用户目录和插件是否重复。最后用目标项目的新会话执行真实输入，分别记录“可见、选中、读取正文、执行结果”；手动读文件或一次成功不能替代自然命中验收。
 
 **Q：`plugin update` 说「已是最新」，但我明明改了代码？**
 Claude Code 比对的是 `plugin.json` 的 `version` 字段，**不是 sha**。改了内容不 bump 版本号，客户端就认为无事发生。发版流程见 [plugin-dev.md](plugin-dev.md)。

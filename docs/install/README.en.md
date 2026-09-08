@@ -4,6 +4,8 @@
 
 This concise guide covers the universal installer, domain plugins, on-demand routing, and host-specific notes. Placeholders such as `<repository>`, `<skill-name>`, and `<domain-plugin>` should be replaced before running a command.
 
+The [root README installation section](../../README.en.md#install) is the canonical scope policy: one project-scoped skill for a selected host by default. Global scope, multiple hosts, whole domains, and full installs require an explicit choice. The current public ecosystem has 7 domains; design capabilities now live in dev.
+
 ## Ecosystem coverage
 
 `~/.agents/skills` is read natively by Zed, Cursor, Copilot, Codex, Gemini, and DeepCode, so those hosts need no synchronization. Other hosts can receive symlinks from the same shared source through `soia-meta-sync-skills`. The SOIA marketplace manifest is reusable by Claude Code, Codex, Qwen Code, and qodercli.
@@ -15,27 +17,26 @@ This concise guide covers the universal installer, domain plugins, on-demand rou
 `npx skills` supports 62+ AI agents and preserves single-skill granularity:
 
 ```bash
-npx skills add soia-team/<repository> -g -a '*' -s <skill-name> -y
+npx skills add soia-team/<repository> -a codex -s <skill-name>
 ```
 
-Use concrete agent ids instead of `'*'` when needed:
+Run this from the target project. For Claude Code, select its agent id:
 
 ```bash
-npx skills add soia-team/<repository> -g \
-  -a claude-code codex cursor -s <skill-name> -y
+npx skills add soia-team/<repository> -a claude-code -s <skill-name>
 ```
 
-Global installs use `~/.agents/skills` as the shared source of truth. Agent directories reuse it through symlinks, while `~/.agents/.skill-lock.json` records source and installation state.
+Project installs normally use `<project>/.agents/skills`. Only add `-g` after choosing user-global scope, whose shared source is `~/.agents/skills`. Verify the installed source and the host's actual catalog; do not infer loading from directory presence.
 
 ```bash
-npx skills list -g
-npx skills update <skill-name> -g
-npx skills remove -g -a '*' -s <skill-name> -y
+npx skills list -a codex
+npx skills update <skill-name> --project
+npx skills remove -a codex -s <skill-name>
 ```
 
 ### Domain plugin marketplaces
 
-One SOIA domain plugin contains all skills from one domain repository and provides a domain-level enable/disable boundary:
+Choose this route only when you explicitly want the whole domain. One SOIA domain plugin contains all skills from one domain repository; a user-level plugin command is not a project-scoped single-skill install:
 
 ```bash
 claude plugin marketplace add soia-team/soia-open-skills
@@ -52,18 +53,17 @@ Prefer either npx or a plugin for the same skills on one host; using both can cr
 
 ### On-demand loading
 
-Install the ecosystem router to keep core skills immediately available while finding and loading long-tail skills only when needed:
+Install the discovery entry point for this project. It finds candidates and collects installation choices; a match does not itself install or execute the target:
 
 ```bash
-npx skills add soia-team/soia-open-skills -g -a '*' \
-  -s soia-meta-find-skill -y
+npx skills add soia-team/soia-open-skills -a codex -s soia-meta-find-skill
 ```
 
 For host-specific trimming, use `soia-meta-sync-skills` with `--exclude-skills` and `--save-excludes`.
 
 ## Full and mixed installation for multi-host users
 
-**Optional full-install strategy, only after an explicit choice.** The default is a project-scoped single skill for selected hosts; see the [canonical installation section](../../README.en.md#install). The following global workflow is not the default. Design capabilities now come from the dev repository.
+**Historical global/mixed workflow, not the default or a current host-compatibility guarantee.** The default is a project-scoped single skill; see the [canonical installation section](../../README.en.md#install). Before reusing any command below, confirm its source, hosts, target skills and current CLI support through `soia-meta-sync-skills`. In particular, older WorkBuddy directory/symlink examples below are superseded by the [expert installation guide](workbuddy.md): do not execute them for WorkBuddy. Design capabilities now come from dev.
 
 ### Step 1: install the complete base
 
@@ -231,7 +231,7 @@ The English host-specific guides are collected in [AI Host Installation Guides](
 
 ## Multi-agent symlink synchronization
 
-Install the helper first:
+For an explicitly selected multi-host/global workflow only, install the helper into the selected scope first. The commands below are global examples, not the project default; WorkBuddy requires its expert installer rather than ordinary skill symlinks.
 
 ```bash
 npx skills add soia-team/soia-open-skills -g -a '*' \
@@ -266,7 +266,7 @@ Use `--list-targets` to see built-in target ids.
 
 ## Troubleshooting
 
-- **Not detected:** start a new host session, then check `~/.agents/skills/<skill-name>/SKILL.md`, `~/.agents/.skill-lock.json`, and `readlink <host-skill-directory>/<skill-name>`.
+- **Not detected:** inspect the actual host catalog for the target project, the installed version and link target, then execute a real input in a new session. Check project `.agents/skills` by default and `~/.agents/skills` only for global installs. Directory presence is not proof of a natural trigger or successful execution.
 - **Plugin plus npx:** choose one method per host for the same skills to avoid duplicate indexing.
 - **Private repositories:** authenticate with `gh auth status`, then run the normal `npx skills add soia-team/<private-repository> ...` command. Never place a token in the command or repository.
 
