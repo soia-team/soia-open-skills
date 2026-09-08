@@ -3,6 +3,16 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.0.1 — 2026-09-08
+
+修正已安装验收中 UI设计/UI验收 无空格查询漏命中；hint匹配忽略空白，保持scope和安装授权边界
+
+## 修复
+- fix(meta): match UI discovery hints regardless of whitespace (#324)
+
+## 维护
+- chore(release): open next train after v2.0.0 (#323)
+
 ## v2.0.0 — 2026-09-08
 
 工程与UI能力归入dev单仓；门户七域统一分发，澄清与技能发现按需精简，旧dev-design停止新安装
