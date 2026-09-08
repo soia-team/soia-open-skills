@@ -3,6 +3,14 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.0.2 — 2026-09-09
+
+对齐中英文学习与安装指南，明确项目级最小安装和技能发现验证边界。
+
+## 维护
+- docs: align learning guides with project-scoped skill installation (#327)
+- chore(release): open next train after v2.0.1 (#326)
+
 ## v2.0.1 — 2026-09-08
 
 修正已安装验收中 UI设计/UI验收 无空格查询漏命中；hint匹配忽略空白，保持scope和安装授权边界
