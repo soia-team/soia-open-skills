@@ -289,8 +289,11 @@ class FindSkillRouterTests(unittest.TestCase):
             "检查架构漂移": "soia-dev-govern-architecture",
             "用 Archify 画图": "soia-dev-archify-diagrams",
             "UI 设计": "soia-dev-design-ui",
+            "UI设计": "soia-dev-design-ui",
+            "ui\t设计": "soia-dev-design-ui",
             "界面设计": "soia-dev-design-ui",
             "UI 验收": "soia-dev-audit-ui",
+            "UI验收": "soia-dev-audit-ui",
             "界面验收": "soia-dev-audit-ui",
             "功能规格": "soia-dev-draft-feature-spec",
             "写成 PRD": "soia-dev-draft-feature-spec",
@@ -307,7 +310,9 @@ class FindSkillRouterTests(unittest.TestCase):
                 with self.subTest(query=query):
                     result = self.run_finder(directory, query, cwd=root)
                     self.assertEqual(result.returncode, 0, result.stderr)
-                    self.assertEqual(json.loads(result.stdout)[0]["name"], expected)
+                    candidates = json.loads(result.stdout)
+                    self.assertTrue(candidates, "自然语言查询应返回匹配技能")
+                    self.assertEqual(candidates[0]["name"], expected)
 
     def test_legacy_install_command_is_explicit_and_marked_deprecated(self) -> None:
         with tempfile.TemporaryDirectory(prefix="find-skill-") as temp:
