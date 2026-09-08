@@ -59,7 +59,7 @@ class MetaPromptClaritySkillTests(unittest.TestCase):
             "不能先写中文再逐句直译",
         ]:
             with self.subTest(marker=marker):
-                self.assertIn(marker, text)
+                self.assertIn(marker, english if marker.endswith("_language") else text)
         for marker in [
             "must",
             "should",
@@ -71,28 +71,17 @@ class MetaPromptClaritySkillTests(unittest.TestCase):
             with self.subTest(marker=marker):
                 self.assertIn(marker, english)
 
-    def test_receipt_requires_language_framework_and_execution_fields(self) -> None:
+    def test_output_no_longer_requires_the_retired_receipt_header(self) -> None:
         text = SKILL.read_text(encoding="utf-8")
-        self.assertIn("最终回答的第一行都必须是下面这条完整回执头", text)
-        self.assertIn("七个字段即使“不适用”也不得省略", text)
-        self.assertLess(text.splitlines().index("## 硬性输出合同"), 40)
-        for marker in [
-            "mode=<A/B/C/D，可含辅助模式>",
-            "input=<语言>",
-            "prompt=<语言>",
-            "explanation=<语言>",
-            "framework=<none 或名称>",
-            "execution=<output-only 或执行器>",
-            "files=<none 或变更摘要>",
-        ]:
-            with self.subTest(marker=marker):
-                self.assertIn(marker, text)
+        self.assertNotIn("回执：mode=<", text)
+        self.assertNotIn("## 硬性输出合同", text)
+        self.assertIn("完整提示词是主要交付", text)
 
     def test_frameworks_are_optional_and_cannot_replace_safety_or_specs(self) -> None:
         text = SKILL.read_text(encoding="utf-8")
         frameworks = read("references/prompt-framework-patterns.md")
         self.assertIn("先选模式，再决定是否需要框架", text)
-        self.assertIn("最多选择一个主框架和一个辅助框架", text)
+        self.assertIn("Choose at most one primary framework and one auxiliary framework", frameworks)
         self.assertIn("Named frameworks are optional organizing aids", frameworks)
         self.assertIn("cannot replace mode C", frameworks)
         self.assertIn("Do not use “Chain of Thought”", frameworks)

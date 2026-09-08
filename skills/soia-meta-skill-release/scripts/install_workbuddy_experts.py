@@ -40,6 +40,7 @@ MY_EXPERTS = "plugins/marketplaces/my-experts"
 #
 # 一个仓可能有多个 plugin root（靠目录分隔），所以要往下多找一层。
 PLUGIN_MANIFEST = ".codebuddy-plugin/plugin.json"
+RETIRED_PLUGINS = {"soia-dev-design"}  # 已并入 dev；旧 checkout 不再参与新安装
 MAX_ROOT_DEPTH = 2  # 仓根本身，以及仓根下一层的子目录
 
 # 复制时排除：本机产物与版本库，不应进专家包
@@ -89,6 +90,8 @@ def discover_plugin_roots(search_roots: list[pathlib.Path]) -> dict[str, pathlib
                     name = json.loads(manifest.read_text(encoding="utf-8"))["name"]
                 except (json.JSONDecodeError, KeyError, OSError):
                     continue
+                if name in RETIRED_PLUGINS:
+                    continue
                 found.setdefault(name, cand)
     return found
 
@@ -132,6 +135,10 @@ def main(argv: list[str] | None = None) -> int:
                         help="存放各仓的目录，可重复；缺省为元仓的上级目录")
     parser.add_argument("--dry-run", action="store_true", help="只打印计划，不写文件")
     args = parser.parse_args(argv)
+
+    if any(name in RETIRED_PLUGINS for name in args.plugins):
+        print("soia-dev-design 已并入 soia-dev；请重新确认需要的技能或专家，不自动替换安装目标。", file=sys.stderr)
+        return 2
 
     search_roots = args.repos_root or [repo_root.parent]
     available = discover_plugin_roots(search_roots)

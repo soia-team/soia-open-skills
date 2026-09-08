@@ -35,7 +35,6 @@ from urllib.parse import unquote, urlsplit
 REPOS = [
     "soia-open-skills",
     "soia-open-dev-skills",
-    "soia-open-dev-design-skills",
     "soia-open-pkm-vault-skills",
     "soia-open-media-content-skills",
     "soia-open-cwork-office-skills",

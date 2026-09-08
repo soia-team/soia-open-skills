@@ -1,6 +1,6 @@
 # 技能详情页
 
-全生态 83 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 85 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
@@ -42,6 +42,31 @@
 | [`soia-pkm-transform-obsidian-pdf`](soia-pkm-transform-obsidian-pdf.md) | 用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint |
 | [`soia-pkm-translate-article-zh`](soia-pkm-translate-article-zh.md) | 将外文文章按 quick、normal 或 refined 模式翻译成独立中文稿，保持术语一致且不覆盖原文 |
 
+## `soia-dev`　20 个技能
+
+| 技能 | 一句话职责 |
+|---|---|
+| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据 |
+| [`soia-dev-agent-md-advisor`](soia-dev-agent-md-advisor.md) | 诊断、起草或精简 AI 项目指令，解决无效规则、重复和入口冲突 |
+| [`soia-dev-archify-diagrams`](soia-dev-archify-diagrams.md) | 用 Archify 将架构、数据流和流程说明生成可维护 JSON 图表及 PNG 预览 |
+| [`soia-dev-audit-ui`](soia-dev-audit-ui.md) | 只读验收界面，将布局、键盘等技术证据与 UX、视觉判断分开报告 |
+| [`soia-dev-design-ui`](soia-dev-design-ui.md) | 设计界面的信息结构、交互、视觉与实现交接，保持已批准的品牌和样式边界 |
+| [`soia-dev-doc-sync`](soia-dev-doc-sync.md) | 核对代码、发布事实和有效裁决与文档之间的漂移，按授权同步派生内容 |
+| [`soia-dev-draft-feature-spec`](soia-dev-draft-feature-spec.md) | 把产品想法或需求材料整理成可验收的功能规格，并按需拆成纵向交付切片 |
+| [`soia-dev-drawio-visio-diagrams`](soia-dev-drawio-visio-diagrams.md) | 将 Visio VSDX 安全转换、盘点和受控升级为可编辑 draw.io 图表 |
+| [`soia-dev-enforce-coding-protocol`](soia-dev-enforce-coding-protocol.md) | 用短协议约束工程改动的范围、权限与验证，不另起流程 |
+| [`soia-dev-github-ops`](soia-dev-github-ops.md) | GitHub gh CLI 运维、PR 合规审查与修复 |
+| [`soia-dev-govern-architecture`](soia-dev-govern-architecture.md) | 设计架构、审查给定方案或核对长期漂移，明确职责、契约、事实真源与迁移边界 |
+| [`soia-dev-implement-task`](soia-dev-implement-task.md) | 在明确授权内实现需求、诊断修复或处理 findings，合并执行与修复流程 |
+| [`soia-dev-officecli-ops`](soia-dev-officecli-ops.md) | 以 OfficeCLI 安全读取、复制后修改并验证 DOCX、XLSX、PPTX |
+| [`soia-dev-open-design-ops`](soia-dev-open-design-ops.md) | 操作 Open Design 环境、项目与导出，并交付 HTML 原型、deck 和动画 |
+| [`soia-dev-project-scaffold`](soia-dev-project-scaffold.md) | 为 Git 项目补最小 AI 协作入口与文档导航，优先沿用已有约定 |
+| [`soia-dev-release-plan-checklist`](soia-dev-release-plan-checklist.md) | 为软件发版设计预检、灰度、停止与回滚清单；只规划，不执行部署 |
+| [`soia-dev-review-code`](soia-dev-review-code.md) | 对固定代码候选或技能包做一次只读审查，区分规格符合性与工程标准，报告可核实问题 |
+| [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 用最小视图帮用户看懂当前话题；简单关系直接画，复杂关系才做聚焦 HTML |
+| [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理长任务与后台日志，诊断停滞并安全停止或恢复明确进程 |
+| [`soia-dev-test-draft-doc`](soia-dev-test-draft-doc.md) | 从需求或变更设计测试计划、用例与验收对照，不冒充测试执行 |
+
 ## `soia-env`　18 个技能
 
 | 技能 | 一句话职责 |
@@ -65,34 +90,6 @@
 | [`soia-env-storage-cleanup`](soia-env-storage-cleanup.md) | 面向小白统计 SOIA 受管配置、状态、缓存和临时目录的空间占用，生成可清理清单并提醒删除风险；只有客户看过最新清单并明确授权后才执行删除，随后复核实际释放空间 |
 | [`soia-env-workbuddy-install`](soia-env-workbuddy-install.md) | 为新手安装、验证或按授权更新 WorkBuddy 桌面客户端 |
 
-## `soia-dev`　12 个技能
-
-| 技能 | 一句话职责 |
-|---|---|
-| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据 |
-| [`soia-dev-agent-md-advisor`](soia-dev-agent-md-advisor.md) | AI 项目指令与配置设计顾问，提供诊断、起草和改写建议 |
-| [`soia-dev-doc-sync`](soia-dev-doc-sync.md) | 审计并修复任意代码仓的 docs、README、CHANGELOG、VERSION 与明确真源之间的事实漂移；先建立真源优先级与证据，再按依赖顺序同步派生文档 |
-| [`soia-dev-enforce-coding-protocol`](soia-dev-enforce-coding-protocol.md) | 用短协议约束工程改动的范围、权限与验证，不另起流程 |
-| [`soia-dev-github-ops`](soia-dev-github-ops.md) | GitHub gh CLI 运维、PR 合规审查与修复 |
-| [`soia-dev-implement-task`](soia-dev-implement-task.md) | 在明确授权内实现需求、诊断修复或处理 findings，合并执行与修复流程 |
-| [`soia-dev-project-scaffold`](soia-dev-project-scaffold.md) | 为任意新 Git 项目生成最小 AI 协作基线：可编辑的 AGENTS.md 和 docs 导航目录；在写入前确认目标路径 |
-| [`soia-dev-release-plan-checklist`](soia-dev-release-plan-checklist.md) | 为互联网软件发版生成发布清单、预检门、灰度验证与发布后核对；适用于上线、部署、回滚规划 |
-| [`soia-dev-review-code`](soia-dev-review-code.md) | 对固定代码候选或技能包做一次只读审查，区分规格符合性与工程标准，报告可核实问题 |
-| [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 用最小视图帮用户看懂当前话题；简单关系直接画，复杂关系才做聚焦 HTML |
-| [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；杀进程前用日志、CPU、网络多信号交叉判断，并走 TERM→复查→KILL 门 |
-| [`soia-dev-test-draft-doc`](soia-dev-test-draft-doc.md) | 从需求、PRD 或变更说明生成测试计划、测试用例与验收对照；适用于测试设计、回归清单和质量评审 |
-
-## `soia-dev-design`　6 个技能
-
-| 技能 | 一句话职责 |
-|---|---|
-| [`soia-dev-archify-diagrams`](soia-dev-archify-diagrams.md) | 用 Archify 将架构、数据流和流程说明生成可维护 JSON 图表及 PNG 预览 |
-| [`soia-dev-design-draft-prd`](soia-dev-design-draft-prd.md) | 起草互联网通用 PRD、产品需求文档与用户故事；适用于一句话需求补全、功能范围和验收标准梳理 |
-| [`soia-dev-design-explorer`](soia-dev-design-explorer.md) | 基于 Open Design（经 soia-dev-open-design-ops）做高保真 HTML 原型、设计变体、幻灯片、动画探索与设计评审；要求用户品牌输入、五分类输出落点与可复现验证 |
-| [`soia-dev-drawio-visio-diagrams`](soia-dev-drawio-visio-diagrams.md) | 将 Visio VSDX 安全转换、盘点和受控升级为可编辑 draw.io 图表 |
-| [`soia-dev-officecli-ops`](soia-dev-officecli-ops.md) | 以 OfficeCLI 安全读取、复制后修改并验证 DOCX、XLSX、PPTX |
-| [`soia-dev-open-design-ops`](soia-dev-open-design-ops.md) | 提供供上层设计流程调用的 Open Design 原子操作与运行保障 |
-
 ## `soia-media-content`　6 个技能
 
 | 技能 | 一句话职责 |
@@ -108,7 +105,7 @@
 
 | 技能 | 一句话职责 |
 |---|---|
-| [`soia-meta-find-skill`](soia-meta-find-skill.md) | 按需发现 SOIA 技能并收集安全安装选择 |
+| [`soia-meta-find-skill`](soia-meta-find-skill.md) | 查找适合任务的 SOIA 技能并收集安全安装选择，不代替已安装技能执行任务 |
 | [`soia-meta-prompt-clarity`](soia-meta-prompt-clarity.md) | 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界 |
 | [`soia-meta-publish-market`](soia-meta-publish-market.md) | 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交 |
 | [`soia-meta-skill-release`](soia-meta-skill-release.md) | 正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装 |

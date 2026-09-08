@@ -62,7 +62,10 @@ class DomainReadmeLinkTests(unittest.TestCase):
         v7 = ROOT.parent
         pages = {p.stem for p in PAGES.glob("*.md") if p.name != "README.md"}
         broken = []
-        for repo in sorted(v7.glob("soia-open-*/")):
+        # 现役分发范围由 manifest 定义；历史归档仓和并行 worktree 不再发布。
+        manifest = json.loads((ROOT / "routing/routing-manifest.json").read_text(encoding="utf-8"))
+        for repo_name in sorted({entry["repo"] for entry in manifest}):
+            repo = v7 / repo_name
             for f in ("README.md", "README.en.md"):
                 readme = repo / f
                 if not readme.exists():

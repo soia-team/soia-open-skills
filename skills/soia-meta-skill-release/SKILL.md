@@ -1,11 +1,11 @@
 ---
 name: soia-meta-skill-release
 description: 正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装。触发：正式发版、发布技能、发布后安装
-version: 5.3.1
+version: 6.0.0
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-09-05 09:07:18
+updated_at: 2026-09-08 18:02:00
 created_by: gpt-5.6-terra
-updated_by: gpt-5.6-sol
+updated_by: gpt-5
 dependencies:
   optional: [soia-meta-sync-skills]
 ---
@@ -311,7 +311,7 @@ codex plugin list | grep '@soia' > /tmp/soia-installed-before.txt && cat /tmp/so
 rm -rf ~/.codex/.tmp/marketplaces/soia
 ```
 
-**插件缓存只删目标那一个**，`soia` 是市场名不是插件名，`rm -rf ~/.codex/plugins/cache/soia` 会把该市场下**全部 8 个插件**一起删掉：
+**插件缓存只删目标那一个**，`soia` 是市场名不是插件名，删除整个市场缓存会影响其中全部已安装插件：
 
 ```bash
 rm -rf ~/.codex/plugins/cache/soia/<域插件名>
@@ -394,7 +394,6 @@ codex plugin list
 | 域仓 | 插件名 |
 |---|---|
 | soia-open-dev-skills | soia-dev |
-| soia-open-dev-design-skills | soia-dev-design |
 | soia-open-pkm-vault-skills | soia-pkm-vault |
 | soia-open-media-content-skills | soia-media-content |
 | soia-open-cwork-office-skills | soia-cwork-office |

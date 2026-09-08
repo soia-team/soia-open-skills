@@ -83,8 +83,8 @@ class MarketplaceGenerationTests(unittest.TestCase):
         self.assertEqual(
             codex_external["interface"],
             {
-                "displayName": "开发编码技能库",
-                "shortDescription": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
+                "displayName": definitions[0].display_name,
+                "shortDescription": definitions[0].description,
                 "category": "Developer Tools",
                 # 断言取自配色真源，写死色号会让这条测试自己变成第二张表——
                 # 上一版就是这样：图标换成紫色系后，测试还在保护琥珀期的 #FB923C。

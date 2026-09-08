@@ -63,11 +63,11 @@ For host-specific trimming, use `soia-meta-sync-skills` with `--exclude-skills` 
 
 ## Full and mixed installation for multi-host users
 
-**Strategy: install a complete base, then trim by host capability.** Install every skill once into the single source of truth at `~/.agents/skills`; let native hosts consume it directly, distribute symlinks once to the remaining hosts, and trim only index-sensitive or frequently used hosts with RouterV1 or domain plugin switches.
+**Optional full-install strategy, only after an explicit choice.** The default is a project-scoped single skill for selected hosts; see the [canonical installation section](../../README.en.md#install). The following global workflow is not the default. Design capabilities now come from the dev repository.
 
 ### Step 1: install the complete base
 
-Install the meta repository first. Repeat the command for each public repository, or use the 8-repository loop below:
+Install the meta repository first. Repeat the command for each public repository, or use the 7-repository loop below:
 
 ```bash
 npx skills add soia-team/soia-open-skills -g -a '*' -s '*' -y
@@ -77,7 +77,6 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s '*' -y
 repos=(
   soia-open-cwork-office-skills
   soia-open-dev-skills
-  soia-open-dev-design-skills
   soia-open-edu-course-skills
   soia-open-env-skills
   soia-open-media-content-skills
@@ -165,7 +164,7 @@ The link should resolve to `~/.agents/skills/<skill-name>`. Use the correspondin
 
 ### Common mixed-install profiles
 
-The following profiles assume the 8-repository base installation from step 1 is complete.
+The following optional profiles assume the 7-repository base installation from step 1 is complete.
 
 **Claude Code + Codex + WorkBuddy for personal development**
 

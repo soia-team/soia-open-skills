@@ -683,7 +683,6 @@ python3 scripts/generate_icons.py --deploy <域仓路径>
 | 域仓 | 插件名 | 技能前缀 |
 |---|---|---|
 | soia-open-dev-skills | soia-dev | `soia-dev-*` |
-| soia-open-dev-design-skills | soia-dev-design | `soia-dev-*` |
 | soia-open-pkm-vault-skills | soia-pkm-vault | `soia-pkm-*` |
 | soia-open-media-content-skills | soia-media-content | `soia-media-*` |
 | soia-open-cwork-office-skills | soia-cwork-office | `soia-cwork-*` |

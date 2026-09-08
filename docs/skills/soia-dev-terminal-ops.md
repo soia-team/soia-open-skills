@@ -1,6 +1,6 @@
 # soia-dev-terminal-ops
 
-> 管理 POSIX/macOS/Linux 上的长任务、tmux 后台会话、日志抓取、停滞诊断与安全恢复；杀进程前用日志、CPU、网络多信号交叉判断，并走 TERM→复查→KILL 门
+> 管理长任务与后台日志，诊断停滞并安全停止或恢复明确进程
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-terminal-ops) · [← 全部技能](README.md)
 
@@ -8,28 +8,13 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「进程卡住了」「后台跑这个」「安全杀进程」
+后台跑这个、进程疑似卡住、安全停止进程
 
 ## 能力与用法
 
-### 这个技能可以做什么
+**能做什么：** 在 POSIX/macOS/Linux 中管理长任务、日志与恢复。普通短命令不用本技能；Windows 原生不在兼容范围，可使用已具备的 WSL/POSIX 环境。
 
-| 客户想要 | 技能会做 | 客户能看到 |
-|---|---|---|
-| 启动或观察长任务 | 用参数化的 session、日志目录和命令启动 tmux/后台任务 | command、workdir、session/PID、日志路径和当前状态 |
-| 判断任务是否停滞 | 在用户指定观察窗口内交叉检查日志、CPU、网络/子进程进展 | 每项信号的证据以及“运行中/疑似停滞/无法判断”结论 |
-| 恢复或终止任务 | 先确认目标与数据风险，再按 TERM→复查→KILL 顺序处理 | 每个信号、确认点、退出状态和后续恢复建议 |
-
-### 客户如何使用
-
-提供以下输入；缺少会改变终止目标或日志落点的输入时，先询问，不猜：
-
-- 要运行或诊断的命令、工作目录；
-- 已有 PID 或 tmux session（如适用）；
-- `session_name`、`log_dir`、`stall_window_seconds`、`term_grace_seconds`；
-- 可选的 `fallback_command`，以及是否预先授权终止目标进程。
-
-只查看短命令输出或文件内容时无需调用本技能。
+**如何使用：** 指定命令/工作目录或已有 PID/session 及目标。先用宿主现有会话与等待能力；确需脱离会话运行时才用 tmux，不因超过固定秒数自动后台化。
 
 ## 安装
 

@@ -7,20 +7,11 @@
   "plugins": [
     {
       "name": "soia-dev",
-      "description": "开发编码技能：工程协议、代码审查、缺陷修复、任务执行、终端操作与 AI 派发",
+      "description": "工程与 UI 技能：功能规格、架构、实现审查、UI 设计验收与按需工具",
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-dev-skills",
-        "sha": "a2777aadd3c8f771a97c53cd1f96839d75624553"
-      }
-    },
-    {
-      "name": "soia-dev-design",
-      "description": "设计与文档产线技能：Open Design、Archify、draw.io/Visio、OfficeCLI",
-      "source": {
-        "source": "github",
-        "repo": "soia-team/soia-open-dev-design-skills",
-        "sha": "643b6fbc10419f592de9a9ffdf491670f7307edb"
+        "sha": "0cb0dbc4fdf5a4b11b2f0e025cc16b821acf3df3"
       }
     },
     {
@@ -65,7 +56,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-env-skills",
-        "sha": "cc01909a4f60d555f7636c7c43fe031b402c3ddd"
+        "sha": "dad187beaeceb14bac7758d5e0e1b3c95b1feca8"
       }
     },
     {
