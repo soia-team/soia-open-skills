@@ -10,7 +10,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-skills.git",
-        "ref": "0cb0dbc4fdf5a4b11b2f0e025cc16b821acf3df3"
+        "ref": "56baac0f49297fccef105e93a03807b5e41a0cdc"
       },
       "interface": {
         "displayName": "工程与 UI 技能库",
