@@ -22,7 +22,7 @@
   },
   {
     "name": "soia-dev-agent-cli-dispatch",
-    "description": "受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据。触发：「派活给外部 AI」「调用 DeepCode/Pi/agy」「多 CLI 派发」",
+    "description": "受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据。触发：「派活给外部 AI」「调用 DeepCode/Pi/agy」「多 CLI 派发」、按任务书派发外部执行器、发起独立评审派发",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -43,14 +43,14 @@
   },
   {
     "name": "soia-dev-audit-ui",
-    "description": "只读验收界面，将布局、键盘等技术证据与 UX、视觉判断分开报告。触发：验收这个界面、检查键盘和布局、评审视觉与体验",
+    "description": "只读验收界面，将布局、键盘等技术证据与 UX、视觉判断分开报告。触发：验收这个界面、检查键盘和布局、评审视觉与体验、界面验收、按验收标准核对界面",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-design-ui",
-    "description": "设计界面的信息结构、交互、视觉与实现交接，保持已批准的品牌和样式边界。触发：设计这个界面、梳理交互流程、做 UI 设计交接",
+    "description": "设计界面的信息结构、交互、视觉与实现交接，保持已批准的品牌和样式边界。触发：设计这个界面、梳理交互流程、做 UI 设计交接、按任务书设计界面、交互状态与实现交接",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -64,7 +64,7 @@
   },
   {
     "name": "soia-dev-draft-feature-spec",
-    "description": "把产品想法或需求材料整理成可验收的功能规格，并按需拆成纵向交付切片。触发：起草功能规格、把需求写成 PRD、拆分可验收功能",
+    "description": "把产品想法或需求材料整理成可验收的功能规格，并按需拆成纵向交付切片。触发：起草功能规格、把需求写成 PRD、拆分可验收功能、按任务书写功能规格、补验收标准",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -78,28 +78,28 @@
   },
   {
     "name": "soia-dev-enforce-coding-protocol",
-    "description": "用短协议约束工程改动的范围、权限与验证，不另起流程。触发：执行编码协议、约束本次改动、检查修复是否有证据",
+    "description": "用短协议约束工程改动的范围、权限与验证，不另起流程。触发：执行编码协议、约束本次改动、检查修复是否有证据、按任务书约束改动范围、核对改动是否越界、检查验证证据",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-github-ops",
-    "description": "GitHub gh CLI 运维、PR 合规审查与修复。触发：「查 CI 挂了」「发 release」「加协作者权限」",
+    "description": "GitHub gh CLI 运维、PR 合规审查与修复。触发：「查 CI 挂了」「发 release」「加协作者权限」、提 PR、查 CI、PR 合规审查",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-govern-architecture",
-    "description": "设计架构、审查给定方案或核对长期漂移，明确职责、契约、事实真源与迁移边界。触发：架构方案怎么选、审查架构边界、检查架构漂移",
+    "description": "设计架构、审查给定方案或核对长期漂移，明确职责、契约、事实真源与迁移边界。触发：架构方案怎么选、审查架构边界、检查架构漂移、按任务书核对架构边界、评估迁移边界",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-implement-task",
-    "description": "在明确授权内实现需求、诊断修复或处理 findings，合并执行与修复流程。触发：实现这个任务、修复这个 bug、处理审查发现",
+    "description": "在明确授权内实现需求、诊断修复或处理 findings，合并执行与修复流程。触发：实现这个任务、修复这个 bug、处理审查发现、按任务书实现、修复缺陷、迁移、处理 findings",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -134,14 +134,14 @@
   },
   {
     "name": "soia-dev-review-code",
-    "description": "对固定代码候选或技能包做一次只读审查，区分规格符合性与工程标准，报告可核实问题。触发：审查这次改动、review 代码、检查技能包",
+    "description": "对固定代码候选或技能包做一次只读审查，区分规格符合性与工程标准，报告可核实问题。触发：审查这次改动、review 代码、检查技能包、独立评审、按验收标准审查交付物",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-show-task-html",
-    "description": "用最小视图帮用户看懂当前话题；简单关系直接画，复杂关系才做聚焦 HTML。触发：show me、展示这个任务、给我画一下",
+    "description": "用最小视图帮用户看懂当前话题；简单关系直接画，复杂关系才做聚焦 HTML。触发：show me、展示这个任务、给我画一下、输出任务视图、把进度画出来",
     "source": {
       "repository": "soia-open-dev-skills"
     }
