@@ -54,10 +54,10 @@
 | [`soia-dev-doc-sync`](soia-dev-doc-sync.md) | 核对代码、发布事实和有效裁决与文档之间的漂移，按授权同步派生内容 |
 | [`soia-dev-draft-feature-spec`](soia-dev-draft-feature-spec.md) | 把产品想法或需求材料整理成可验收的功能规格，并按需拆成纵向交付切片 |
 | [`soia-dev-drawio-visio-diagrams`](soia-dev-drawio-visio-diagrams.md) | 将 Visio VSDX 安全转换、盘点和受控升级为可编辑 draw.io 图表 |
-| [`soia-dev-enforce-coding-protocol`](soia-dev-enforce-coding-protocol.md) | 用短协议约束工程改动的范围、权限与验证，不另起流程 |
-| [`soia-dev-github-ops`](soia-dev-github-ops.md) | GitHub gh CLI 运维、PR 合规审查与修复 |
+| [`soia-dev-enforce-coding-protocol`](soia-dev-enforce-coding-protocol.md) | 为工程任务补充范围、权限与验证底线，不另起流程 |
+| [`soia-dev-github-ops`](soia-dev-github-ops.md) | 查询和操作 GitHub PR、CI、Release 与协作者权限 |
 | [`soia-dev-govern-architecture`](soia-dev-govern-architecture.md) | 设计架构、审查给定方案或核对长期漂移，明确职责、契约、事实真源与迁移边界 |
-| [`soia-dev-implement-task`](soia-dev-implement-task.md) | 在明确授权内实现需求、诊断修复或处理 findings，合并执行与修复流程 |
+| [`soia-dev-implement-task`](soia-dev-implement-task.md) | 实现工程需求、定位修复缺陷或处理已授权 findings |
 | [`soia-dev-officecli-ops`](soia-dev-officecli-ops.md) | 以 OfficeCLI 安全读取、复制后修改并验证 DOCX、XLSX、PPTX |
 | [`soia-dev-open-design-ops`](soia-dev-open-design-ops.md) | 操作 Open Design 环境、项目与导出，并交付 HTML 原型、deck 和动画 |
 | [`soia-dev-project-scaffold`](soia-dev-project-scaffold.md) | 为 Git 项目补最小 AI 协作入口与文档导航，优先沿用已有约定 |
@@ -105,7 +105,7 @@
 
 | 技能 | 一句话职责 |
 |---|---|
-| [`soia-meta-find-skill`](soia-meta-find-skill.md) | 查找适合任务的 SOIA 技能并收集安全安装选择，不代替已安装技能执行任务 |
+| [`soia-meta-find-skill`](soia-meta-find-skill.md) | 查找适合任务的 SOIA 技能；仅请求安装时收集安装选择，不代替已安装技能执行任务 |
 | [`soia-meta-prompt-clarity`](soia-meta-prompt-clarity.md) | 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界 |
 | [`soia-meta-publish-market`](soia-meta-publish-market.md) | 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交 |
 | [`soia-meta-skill-release`](soia-meta-skill-release.md) | 正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装 |

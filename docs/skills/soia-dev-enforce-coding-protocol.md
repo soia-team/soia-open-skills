@@ -1,6 +1,6 @@
 # soia-dev-enforce-coding-protocol
 
-> 用短协议约束工程改动的范围、权限与验证，不另起流程
+> 为工程任务补充范围、权限与验证底线，不另起流程
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-enforce-coding-protocol) · [← 全部技能](README.md)
 
@@ -8,7 +8,7 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-执行编码协议、约束本次改动、检查修复是否有证据、按任务书约束改动范围、核对改动是否越界、检查验证证据
+执行编码协议、按协议约束工程改动、核对工程任务是否越界
 
 ## 能力与用法
 

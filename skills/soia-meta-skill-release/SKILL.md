@@ -1,11 +1,11 @@
 ---
 name: soia-meta-skill-release
 description: 正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装。触发：正式发版、发布技能、发布后安装
-version: 6.0.0
+version: 6.0.1
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-09-08 18:02:00
+updated_at: 2026-09-14 15:02:03
 created_by: gpt-5.6-terra
-updated_by: gpt-5
+updated_by: gpt-6-astra
 dependencies:
   optional: [soia-meta-sync-skills]
 ---
@@ -25,93 +25,36 @@ dependencies:
 
 ### 客户如何使用
 
-正式远端发版使用本文后半的 `formal_release.py`；下列 `release_skills.py` 只负责发布后的本机收口选择。先提供仓库、技能名单和可选旧名：
-
-```bash
-python3 skills/soia-meta-skill-release/scripts/release_skills.py \
-  --repo <owner/name> \
-  --skills <skill-a,skill-b> \
-  --removed <legacy-skill> \
-  --dry-run
-```
-
-复核 dry-run 后，移除 `--dry-run` 执行。默认 `remote-only`，不选择任何 Agent；要安装时必须明确 scope、Agent、skill/domain/all 与目标。版本核对按以下顺序解析本地 checkout：
-
-1. `--repo-dir <repo-path>` 显式路径；
-2. 当前进程的 `SOIA_SKILL_REPOS_ROOT/<repo-name>`；
-3. 私有 YAML：`--config` → `SOIA_META_SKILL_RELEASE_CONFIG_FILE` → `~/.config/soia-skills/soia-meta-skill-release/config.yml` 中的 `env.SOIA_SKILL_REPOS_ROOT`；
-4. v1 私有配置目录只读回退（会向 stderr 输出建议的 `mv` 迁移命令）；
-5. 旧版维护者本地目录约定，仅作弃用中的向后兼容回退。
-
-仓库内部仍须采用 `skills/<skill-name>/SKILL.md` 布局。对未来新增仓库，只要 `--repo` 提供对应的任意 `<owner>/<repo-name>`，无需修改脚本。
+提供仓库、技能范围、发布摘要及本次明确授权。正式发布按下方主流程；`release_skills.py` 只负责本机收口选择，不执行正式远端发布。仅请求安装或试装时才读取[定向安装与客户端更新](references/selected-install.md)。
 
 ### 依赖与安装
 
-```bash
-claude plugin marketplace add soia-team/soia-open-skills
-```
+仅明确选择整域时：Claude Code 使用 `claude plugin install soia-meta@soia`，Codex 使用 `codex plugin add soia-meta@soia`；先按下方官方说明接入市场，命令不构成安装授权。
 
-```bash
-claude plugin install soia-meta@soia
-```
-
-需要本机安装时，先让客户明确 project/global、Agent 与 skill/domain/all；默认只发布，不生成安装命令。
-
-```bash
-npx skills add soia-team/soia-open-skills -a <explicit-agent> -s soia-meta-skill-release -y
-```
-
-客户明确选择 WorkBuddy 时，先按本文“WorkBuddy 专家”段运行专用脚本的 dry-run；当前只支持用户级专家目录，不把它冒充项目级安装。
+默认项目级单技能：`npx skills add soia-team/soia-open-skills -a <explicit-agent> -s soia-meta-skill-release`。Claude Code / Codex 整域插件仅在明确选择后按[官方安装说明](https://github.com/soia-team/soia-open-skills#安装)执行；WorkBuddy 使用[专家安装说明](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)，不能由 npx 代装，也不把用户级专家冒称项目级安装。
 
 | 依赖 | 类型 | 用途 | 缺失时怎么处理 |
 | --- | --- | --- | --- |
-| `npx skills` | 强依赖 | 安装、移除、更新并维护 lock | 停止并报告失败步骤 |
+| `npx skills` | 仅安装分支依赖 | 安装、移除、更新并维护 lock | 停止并报告失败步骤 |
 | `soia-meta-sync-skills` | 定向安装时依赖 | 接收已确认的 scope、Agent 与粒度并执行同步 | 只发布不受影响；选择安装时先补齐该技能 |
+| Git / 已认证 gh CLI | 强依赖 | 仓库与 GitHub 操作 | 报缺失，不自动安装或登录 |
 | Python 3 | 强依赖 | 执行发布脚本 | 安装 Python 3 后重试 |
 | PyYAML | 可选依赖 | 读取私有 `config.yml` | 传 `--repo-dir` 或使用当前进程环境变量 |
 
 ### 私密信息与中间数据
 
-按本仓 `DATA_STORAGE_SPEC.md`，本技能只读写各 AI 技能安装目录及 `~/.agents/.skill-lock.json`；可选读取仅含本地 checkout 根目录的私有 v2 `config.yml`。复制 [路径配置模板](assets/config.example.yml) 后再填写；不要为了这一个设置修改 `.zprofile`，也不读取或保存凭据、缓存或中间文件。终端回执只显示技能名、版本、链接状态和失败步骤。
+正式发布只读写已批准仓库与远端发布对象，不读取本机技能目录。凭据留在官方登录态，回执不输出秘密。可选非秘密路径配置见 [路径配置模板](assets/config.example.yml)，使用 `~/.config/soia-skills/soia-meta-skill-release/config.yml` 或 `SOIA_META_SKILL_RELEASE_CONFIG_FILE`；不为路径设置修改 shell 配置。安装分支可能写技能目录和 lock，按定向安装参考核对明确授权。
 
 ### 日志与完成回执
 
-每一步失败即停止，并输出已到达的步骤和下列六列回执：
-
-| 技能 | 动作 | 仓库版本 | 装机版本 | 软链(三处) | 结果 |
-| --- | --- | --- | --- | --- | --- |
-| `<skill>` | install/update/remove | `<version>` | `<version>` | agents / claude / codex | ok / removed / failed |
-
-## 工作流
-
-`--install-mode` 默认 `remote-only`。**默认不修改任何本机技能目录**；项目/全局、单/多 Agent、skill/domain/all 都保留，但必须由客户明确选择。
-
-### `remote-only` 模式（默认）
-
-读取仓库版本并输出发布/市场/客户端更新指引；不安装、不删除旧名、不清理缓存，也不广播任何 Agent。客户只说“发布”时走这条。
-
-### `ask` 模式（`--install-mode ask`，交互式选择）
-
-需要交互终端，只确认“发布后是否继续安装”。若选安装，调用 Agent 必须已收齐 `--install-scope`、`--agents`、`--target-kind`、项目或全局目标与 `--source-dir`；缺项即停止并列出缺口，不代选。仅收齐选择字段不等于写入批准；只有已展示影响并获客户明确批准、且包含 source、具体 target、action 以及删除/替换影响的完整计划，才可传给 sync owner 而不重复询问。计划字段变化时重新确认。非交互环境改用 `remote-only` 或参数齐全的 `selected-install`。
-
-### `selected-install` 模式（显式 opt-in）
-
-本模式把明确选择转交 `soia-meta-sync-skills`，自身不维护第二套目录映射。先 dry-run；`all` 或全部宿主的实际写入还需 `--confirm-all-targets`。`plugin`/`npx` 只作为旧调用的兼容别名，分别映射到 `remote-only`/`selected-install`。
-
-```bash
-python3 skills/soia-meta-skill-release/scripts/release_skills.py \
-  --repo <owner/name> --skills <skill> --install-mode selected-install \
-  --install-scope project --project-dir <project> --agents <agent> \
-  --target-kind skill --source-dir <shared-skill-dir> --dry-run
-```
-
+失败报告已完成部分与阻塞步骤。正式发布回执给版本、SHA、PR/CI、Release、pin 比对及重开 SNAPSHOT；安装只列本次选择的宿主与实际加载结果，不为 remote-only 填装机空表。
 
 ## 正式发版（dev 分支制）
 
 > **执行前置：必须有客户当次的明确授权。** 正式发版是对外动作——tag、Release、
 > 发版 PR、市场 pin 刷新都会改变外部用户收到的内容。客户要求修 bug 或加功能
-> **不等于**要求发版：改动合进 `dev` 即算交付完成，报告「已进 dev，待你决定
-> 是否发版」并停下。多 AI 并行时未经协调的发版会把他人未完成的工作一并送出
+> **不等于**要求发版：按本次约定交付到本地、PR 或 `dev`，仅在未授权发布时停下。
+> 本次完整发布计划已批准且范围未变时连续完成，不逐命令重复确认。多 AI 并行时未经协调的发版会把他人未完成的工作一并送出
 > （2026-08-03 实际发生过）。仅 `--dry-run` 预演无需授权。
 
 域仓采用双通道：`dev` 承接日常合并（版本带 `-SNAPSHOT` 声明下个目标，期间不变，
@@ -122,18 +65,18 @@ python3 skills/soia-meta-skill-release/scripts/formal_release.py \
   --repo soia-team/<域仓> --repo-dir <本地路径> --summary "<一句话摘要>" --dry-run
 ```
 
-复核 dry-run 计划后去掉 `--dry-run` 执行。脚本按序完成五步，每步失败即停：
+复核 dry-run 及实际附带动作：脚本会创建/强制清理 worktree 并删除分支，这些动作也须在批准范围内；未获清理授权时用同样门禁的手工步骤保留分支/worktree，不运行带清理的写模式。正式顺序如下，失败报告实际停点，不绕过检查：
 
 1. 定稿 PR → dev：各 manifest（claude/codex/codebuddy 独立轨道）摘掉 `-SNAPSHOT`，
    并把 Release Notes **前插 `CHANGELOG.md`**——发版即更新、与 GitHub Release 同源，
    CHANGELOG 跟着插件缓存走，装了插件的用户离线可读
 2. **快进推送 dev → main**：`git push origin <dev-sha>:refs/heads/main`，
-   main 与 dev 指向同一提交
+   先确认已合并 dev HEAD 的 audit 为 success，快进瞬间 main 与 dev 指向同一提交
 3. `v<X.Y.Z>` tag 打在该提交并推送
 4. `gh release create`（标题 `<插件名> v<X.Y.Z>`）
 5. 重开列车 PR → dev：各 manifest **+patch** 进入 `-SNAPSHOT`
 
-随后继续本技能既有的 pin 刷新与客户端更新流程（下节）。
+随后完成 pin；客户端更新只在另有安装请求时执行。重开后以 main 仍为 dev 祖先及双向 `git rev-list --left-right --count origin/main...origin/dev` 验收，不要求两个 SHA 相等。
 
 ### 版本号怎么定
 
@@ -160,38 +103,18 @@ CI 的 `check_skill_versions.py` 会拦（2026-08-03 漏过一次：改了 skill
      sync main→dev（有人绕过流程直接改 main、或历史上走过 merge/squash 时会不满足）。
    - 前提二：dev HEAD 的 `audit` 结论必须是 success。脚本显式查 check-runs——
      **快进不是跳过检查**，推上去的就是那个已通过检查的提交。
-   - 仓库设置：`main` 的 `enforce_admins` 需关闭，否则受保护分支拒绝直接推送。
-     其余保护（PR 要求、`audit` 必过）对普通改动照常生效。
+   - 仓库保护拒绝快进时报告阻塞，不从发布授权推断修改保护的权限；其余 PR/audit 门不变。
 2. **定稿与重开列车之间是不变量破窗期**：第 1 步摘掉 dev 的 `-SNAPSHOT` 后，直到
    第 5 步重开前，dev 都处于违规状态。中断在此区间会静默留下「dev 停在正式版本
    号」。脚本收尾有断言兜底，但**人工介入或中断后必须自查**。
 3. **发布门禁**：元仓 `generate_marketplaces.py` 读取待 pin 提交的 manifest，含
    `-SNAPSHOT` 直接拒绝生成清单——SNAPSHOT 结构上到不了任何客户端。
 
-### 全生态批量发版实测补充（2026-08-06，10 仓一次发齐踩出来的）
+### 批量发布与元仓自身发布
 
-1. **元仓自己发版时，定稿 PR 必须同步带上派生物刷新**。域仓 main 先发、元仓后发，
-   元仓定稿 PR 的 `audit` 会依次撞 marketplace freshness 与 skill-pages freshness
-   （实测连撞两次 CI）。正确做法：在定稿分支上补跑 `generate_marketplaces.py`、
-   `generate_router_index.py`、`generate_skill_pages.py`，且 push 前把 audit 的
-   全部检查步骤在本地预跑一遍绿了再推。
-2. **域仓默认分支必须是 main**。曾有域仓默认分支指向 dev，codex
-   `marketplace add` 按默认分支拉清单，装出 `-SNAPSHOT`。用
-   `gh repo edit <repo> --default-branch main` 修正后重装即恢复正式版。
-3. **WorkBuddy 正式安装前，所有域仓本地 checkout 必须切到 main**。
-   `install_workbuddy_experts.py` 复制的是 checkout 当前分支；发版后 dev 已开
-   下一班列车（SNAPSHOT），停在 dev 会把 SNAPSHOT 装成专家。
-4. **发版后重建 dev（客户要求「删 dev 从 main 重拉」时）**：开源仓 dev 保护
-   禁删也禁强推，流程是 GET 保护配置存档 → PUT `allow_force_pushes=true` →
-   强推 main+新列车 → 立即 PUT 关回 → 验证远程 sha 一致且保护恢复。免费版
-   私有仓无 classic protection API（GET 返回 403），说明本就无保护，直接删/推。
-5. **zsh 手动推 refspec 的坑**：`"$sha:refs/heads/main"` 里的 `:r` 会被 zsh
-   当作修饰符吞掉，产生损坏的 refspec；必须写 `"${sha}:refs/heads/main"`。
-6. **含 feat 的仓发版前把列车提为 next-minor**（本节上文已有规则）：批量场景
-   先按 `git log main..origin/dev` 统计各仓 feat 提交数分组，一次脚本完成
-   6 仓 minor bump 再逐仓跑 `formal_release.py`，比逐仓临时判断稳。
+域仓先发布，元仓后发布；元仓定稿候选内同步 `generate_marketplaces.py`、`generate_router_index.py`、`generate_skill_pages.py` 并运行完整 audit。核对默认分支为 main，发现不符先报告，不顺手修改设置。WorkBuddy 正式安装须从 main 正式候选取源，不能从刚重开的 SNAPSHOT 复制。重建 dev、强推、删除分支与修改保护不属于常规发布，须另有明确授权。zsh 手动推送用 `"${sha}:refs/heads/main"`，避免变量修饰符误解析。
 
-### 体检：随时可跑，盘点必跑
+### 体检：盘点生态或批量发布时
 
 ```bash
 python3 scripts/generate_marketplaces.py --help >/dev/null  # 元仓 checkout 内
@@ -201,21 +124,6 @@ python3 scripts/check_version_trains.py --repos-root <各仓父目录>
 查两件事：①版本列车不变量（dev 带 `-SNAPSHOT`、main 不带）②下次发版能否干净
 合并。**报告生态状态时必须验这两个不变量，不能只抄版本号**——2026-08-03 的两次
 漏判都源于「只看数值对不对，没验规则成不成立」。
-
-## 试装 dev（本地验证快照版）
-
-触发词：**「试装 dev」**、**「本地装 dev 版」**。dev 快照只做本地验证，绝不常驻安装。
-
-- **Claude Code（推荐，会话级）**：`claude --plugin-dir <域仓本地路径>` 启动会话，
-  当前检出（dev 时即 SNAPSHOT 版）被加载为插件，退出即卸、不污染安装态；可叠加
-  多个 `--plugin-dir`。只验证不开会话时用
-  `claude --plugin-dir <路径> plugin details <插件名>`（`--plugin-dir` 必须在
-  `plugin` 子命令之前）。
-- **WorkBuddy**：本地 checkout 切到 dev 后运行
-  `install_workbuddy_experts.py <插件名>`——脚本复制本地 checkout，装出的专家即
-  SNAPSHOT 版，界面版本号可直接分辨。
-- **Codex**：无会话级机制，**禁止**把 dev/SNAPSHOT 常驻安装——SNAPSHOT 会进入
-  客户端版本比较路径，这正是发布门禁在市场侧拦截的场景。
 
 ## 插件发布与更新流程（域仓改动后）
 
@@ -236,19 +144,22 @@ git checkout main && git pull && git checkout -b chore/refresh-marketplace
 ```
 
 ```bash
-python3 scripts/generate_marketplaces.py && python3 scripts/generate_router_index.py
+python3 scripts/generate_marketplaces.py
+python3 scripts/generate_router_index.py
+python3 scripts/generate_skill_pages.py
 ```
 
-两个脚本重新拉取各域仓 main 的最新 sha，改写 `.claude-plugin/marketplace.json`、`.agents/plugins/marketplace.json` 与路由索引。若 `git status` 无变化，说明清单已是最新，跳到第 5 步。
+生成器重新拉取各域仓 main 的最新 sha，改写 `.claude-plugin/marketplace.json`、`.agents/plugins/marketplace.json` 与路由索引。只纳入授权 pin 与对应派生物，检查是否带入范围外变化。已有本次元仓正式候选包含这些变更时复用，不另造重复 pin PR。若 `git status` 无变化，说明清单已是最新，跳到第 5 步。
 
 ### 3. 提交 PR 并合并
 
 ```bash
-git add -A && git commit -m "chore(marketplace): refresh sha pins" && git push -u origin chore/refresh-marketplace
+git commit --only <本次逐个批准路径> -m "chore(marketplace): refresh sha pins"
+git push -u origin <本次分支>
 ```
 
 ```bash
-gh pr create --title "chore(marketplace): refresh sha pins" --body "刷新 sha pin 至各域仓最新提交。" --repo soia-team/soia-open-skills
+gh pr create --base <元仓规则指定目标分支> --title "chore(marketplace): refresh sha pins" --body "刷新 sha pin 至各域仓最新提交。" --repo soia-team/soia-open-skills
 ```
 
 等 `audit` 检查通过后合并：
@@ -258,8 +169,10 @@ gh pr checks <PR号> --repo soia-team/soia-open-skills
 ```
 
 ```bash
-gh pr merge <PR号> --squash --delete-branch --repo soia-team/soia-open-skills
+gh pr merge <PR号> --merge --repo soia-team/soia-open-skills
 ```
+
+合并方式须保留正式发布所需 main→dev 祖先关系；合并不自动删除分支。
 
 `audit` 中的 marketplace freshness 检查会独立重算一次清单，两边不一致即失败——这道门保证发布出去的 pin 确实指向域仓当前 main。
 
@@ -273,139 +186,17 @@ gh api repos/soia-team/soia-open-skills/contents/.claude-plugin/marketplace.json
 
 > 不要用 `gh workflow run refresh-marketplace.yml`：CI 的 `GITHUB_TOKEN` 无法直推受保护的 main，它建的 PR 也不会触发 `audit` 检查（GitHub 为防递归而抑制），两条路都走不通。市场刷新是发布动作的一部分，由本流程显式完成。
 
-### 5. 指导客户端更新
+### 5. 客户端更新（仅明确选择后）
 
-Claude Code：**先记录安装清单**，收尾要对账——`plugin update` 对未安装的插件会直接失败，卸载重装类操作也容易漏装：
-
-```bash
-claude plugin list | grep soia > /tmp/claude-soia-before.txt && cat /tmp/claude-soia-before.txt
-```
-
-```bash
-claude plugin marketplace update soia
-```
-
-```bash
-claude plugin update <域插件名>@soia
-```
-
-收尾对账，缺失的逐个 `plugin install` 补回：
-
-```bash
-claude plugin list | grep soia | diff /tmp/claude-soia-before.txt -
-```
-
-更新后需重启 Claude Code 生效。已开启 `autoUpdate` 的用户会在下次启动时自动完成这两步。
-
-> `claude plugin details <名>` 对私有市场的插件要带市场后缀（`<名>@<市场>`），不带会报「not installed」，容易误判成插件丢失。核对安装状态用 `plugin list` 更可靠。
-
-Codex：**先记录当前安装清单**——下面要删缓存，删错粒度会连带卸掉同市场的其他插件：
-
-```bash
-codex plugin list | grep '@soia' > /tmp/soia-installed-before.txt && cat /tmp/soia-installed-before.txt
-```
-
-**只删市场暂存**（`marketplace add` 会复用旧克隆，不删就拉不到新增的资源文件）：
-
-```bash
-rm -rf ~/.codex/.tmp/marketplaces/soia
-```
-
-**插件缓存只删目标那一个**，`soia` 是市场名不是插件名，删除整个市场缓存会影响其中全部已安装插件：
-
-```bash
-rm -rf ~/.codex/plugins/cache/soia/<域插件名>
-```
-
-```bash
-codex plugin marketplace add soia-team/soia-open-skills
-```
-
-```bash
-codex plugin add <域插件名>@soia
-```
-
-**收尾比对安装清单**，确认没有连带损失；有缺失就逐个 `plugin add` 补回：
-
-```bash
-codex plugin list | grep '@soia' | diff /tmp/soia-installed-before.txt -
-```
-
-Codex 无自动更新机制，必须手动执行。跳过删暂存这一步会出现「命令报成功、内容还是旧的」——2026-07-27 实际踩过：corp 市场的暂存停在没有 `assets/icon.svg` 的旧版本，`composerIcon` 指向不存在的文件，界面回退成通用图标，排查时误判为路径写错。
-
-### 6. WorkBuddy 专家（客户在用 WorkBuddy 时才做）
-
-WorkBuddy 是 Electron 桌面端，**没有 CLI**——不存在 `workbuddy plugin install`，
-也没有能指向我们 GitHub 的市场通道。所以这一步由脚本代劳，不要去找对等命令：
-
-```bash
-python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py --dry-run
-```
-
-确认计划后执行（不带参数装全部，也可只给要装的插件名）：
-
-```bash
-python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py
-```
-
-脚本把域仓 checkout 复制进 `my-experts/plugins/<插件名>`，再调 WorkBuddy 官方
-`register_expert.py` 注册。三条实测约束决定了只能这么做：
-
-| 约束 | 实测结论 |
-|---|---|
-| 目录 | 自建专家只认硬编码的 `my-experts`，应用内出现 38 处；别处放了不显示 |
-| 软链 | 不行。官方 `validate_expert.py` 对路径 `resolve()`，穿透后判定「不在专家目录下」 |
-| 远端 | 市场条目 `source` 只能是路径字符串，没有 sha pin 层；`expert/install` 深链要 `sharecode`，走官方云 |
-
-装完**必须让客户重启 WorkBuddy**，否则新专家不出现在【专家·技能·连接器 → 我的专家】。
-
-验证：召唤该专家后问「你有多少个可用技能」，该域技能应全部在场；不召唤时不在场。
-
-### 7. 回收旧版本缓存
-
-两家客户端在 `plugin update` 后都只新增版本目录，**不回收旧的**；Claude 的 `.in_use` 标记也不可靠（实测同一插件新旧两个版本都带这个文件）。不清理会线性堆积，并干扰排查——用 `find` 找资源会匹配到多个版本目录，`ls` 统计技能数会得出离谱结果。
-
-```bash
-python3 skills/soia-meta-skill-release/scripts/prune_plugin_cache.py
-```
-
-预演确认无误后执行：
-
-```bash
-python3 skills/soia-meta-skill-release/scripts/prune_plugin_cache.py --apply
-```
-
-按语义化版本取最高值保留，其余删除；非语义化版本目录（如官方插件的 `latest`）一律跳过。缓存随时可由市场重新拉取，删错也只是多下一次。
-
-### 8. 验证
-
-```bash
-claude plugin list
-```
-
-```bash
-codex plugin list
-```
-
-确认目标插件版本已变化、状态为 enabled。
-
-### 域仓与插件对照
-
-| 域仓 | 插件名 |
-|---|---|
-| soia-open-dev-skills | soia-dev |
-| soia-open-pkm-vault-skills | soia-pkm-vault |
-| soia-open-media-content-skills | soia-media-content |
-| soia-open-cwork-office-skills | soia-cwork-office |
-| soia-open-edu-course-skills | soia-edu-course |
-| soia-open-env-skills | soia-env |
-| soia-open-skills | soia-meta |
+发布不自动安装。只有客户已选择项目/全局、Agent、skill/domain/all 与具体目标时，才读[定向安装与客户端更新](references/selected-install.md)的相关宿主部分。完整 source/target/action/删除替换影响计划已展示并明确批准且不变时复用，不重复询问。没有安装请求，不扫描本机目录、不清理缓存。
 
 ## 边界与验证
 
+普通发布执行上述真实远端核验；以下维护测试不是每次发布的重复前置。项目正式 CI 和发版门禁不省。
+
 - 本技能负责已获当次明确授权的正式发布、tag/Release 和市场 pin 收口。本机安装或更新只有在客户另行选择并满足安装确认门后执行。发布计划、安装计划或转交下游技能不等于实际完成；分别报告 publish、pin、install 状态。
 - `--dry-run` 不执行任何命令或文件写入，只输出计划回执。
-- 前向测试应在临时 HOME 中 mock `subprocess`，覆盖命令顺序、失败即停、五处旧名清理、Codex 补链、lock 分支与 dry-run。
+- 维护脚本时的前向测试应在临时 HOME 中 mock `subprocess`，覆盖命令顺序、失败即停、五处旧名清理、Codex 补链、lock 分支与 dry-run。
 
 ### 发版前置：跨仓安装章节体检
 

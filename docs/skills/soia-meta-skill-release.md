@@ -21,25 +21,7 @@
 
 ### 客户如何使用
 
-正式远端发版使用本文后半的 `formal_release.py`；下列 `release_skills.py` 只负责发布后的本机收口选择。先提供仓库、技能名单和可选旧名：
-
-```bash
-python3 skills/soia-meta-skill-release/scripts/release_skills.py \
-  --repo <owner/name> \
-  --skills <skill-a,skill-b> \
-  --removed <legacy-skill> \
-  --dry-run
-```
-
-复核 dry-run 后，移除 `--dry-run` 执行。默认 `remote-only`，不选择任何 Agent；要安装时必须明确 scope、Agent、skill/domain/all 与目标。版本核对按以下顺序解析本地 checkout：
-
-1. `--repo-dir <repo-path>` 显式路径；
-2. 当前进程的 `SOIA_SKILL_REPOS_ROOT/<repo-name>`；
-3. 私有 YAML：`--config` → `SOIA_META_SKILL_RELEASE_CONFIG_FILE` → `~/.config/soia-skills/soia-meta-skill-release/config.yml` 中的 `env.SOIA_SKILL_REPOS_ROOT`；
-4. v1 私有配置目录只读回退（会向 stderr 输出建议的 `mv` 迁移命令）；
-5. 旧版维护者本地目录约定，仅作弃用中的向后兼容回退。
-
-仓库内部仍须采用 `skills/<skill-name>/SKILL.md` 布局。对未来新增仓库，只要 `--repo` 提供对应的任意 `<owner>/<repo-name>`，无需修改脚本。
+提供仓库、技能范围、发布摘要及本次明确授权。正式发布按下方主流程；`release_skills.py` 只负责本机收口选择，不执行正式远端发布。仅请求安装或试装时才读取[定向安装与客户端更新](references/selected-install.md)。
 
 ## 安装
 
