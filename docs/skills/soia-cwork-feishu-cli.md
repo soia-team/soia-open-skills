@@ -33,7 +33,7 @@
 
 ### 权限开通与应用发布
 
-在首次调研前，或 CLI 返回错误时，先读取[机器可读权限目录](references/permissions.yml)和[错误目录](references/errors.yml)，再按[权限开通指南](references/permissions.md)向客户解释申请流程。先判断目标是知识库还是云盘，再判断使用 bot 还是 user OAuth；不要把 user OAuth scope 当成 bot 权限，也不要为了读取而申请写入、删除、上传或成员管理权限。
+先按下方只读调研工作流核对身份、目标和最小 scope。仅遇 CLI 错误时读取[错误目录](references/errors.yml)，确认权限缺口后再读取[权限开通指南](references/permissions.md)；已有有效权限不重复申请。知识库/云盘与 bot/user OAuth 分开，不为读取申请写入、删除、上传或成员管理权限。
 
 开放平台入口按私有配置中的 `LARK_APP_ID` 拼接：
 

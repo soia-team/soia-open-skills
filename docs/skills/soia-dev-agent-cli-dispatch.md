@@ -1,14 +1,8 @@
 # soia-dev-agent-cli-dispatch
 
-> 受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据
+> 调度外部 AI CLI 进程，核验模型、额度、权限及产物。仅外部 CLI 派发、多 CLI 分工或外部自动选模时使用；宿主内置 subagent 不走本技能
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-agent-cli-dispatch) · [← 全部技能](README.md)
-
-## 怎么触发
-
-装好后用自然语言说话即可，Agent 按下列意图命中本技能：
-
-「派活给外部 AI」「调用 DeepCode/Pi/agy」「多 CLI 派发」、按任务书派发外部执行器、发起独立评审派发
 
 ## 能力与用法
 

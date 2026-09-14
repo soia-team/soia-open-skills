@@ -22,7 +22,7 @@
   },
   {
     "name": "soia-dev-agent-cli-dispatch",
-    "description": "受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据。触发：「派活给外部 AI」「调用 DeepCode/Pi/agy」「多 CLI 派发」、按任务书派发外部执行器、发起独立评审派发",
+    "description": "调度外部 AI CLI 进程，核验模型、额度、权限及产物。仅外部 CLI 派发、多 CLI 分工或外部自动选模时使用；宿主内置 subagent 不走本技能。",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -141,7 +141,7 @@
   },
   {
     "name": "soia-dev-show-task-html",
-    "description": "用最小视图帮用户看懂当前话题；简单关系直接画，复杂关系才做聚焦 HTML。触发：show me、展示这个任务、给我画一下、输出任务视图、把进度画出来",
+    "description": "展示任务进度、调用关系或数据流；用户要求任务视图或关系图时使用，复杂布局才生成 HTML。普通问答、单一状态和常规回执不自动触发。",
     "source": {
       "repository": "soia-open-dev-skills"
     }
