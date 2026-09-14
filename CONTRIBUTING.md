@@ -192,7 +192,7 @@ The shared sequence below does not waive those gates.
   If your change genuinely builds on
   unreleased work already in `dev`, branch off `dev` instead and say so in the
   PR body.
-- `main` never receives PRs. It moves only by fast-forward from `dev` during a
+- Domain/plugin implementation on `main` moves only by fast-forward from `dev` during a
   formal release (see `soia-meta-skill-release`). Do not create long-lived
   feature branches. Ordinary changes go through PRs into `dev`; only the
   authorized formal release flow may push the fast-forward to `main`.
@@ -226,9 +226,10 @@ The shared sequence below does not waive those gates.
   the pin gate could not catch it — there is no pinned commit to inspect.
   Therefore: open PRs with an explicit `--base dev`; releases go `dev` → `main`
   through `soia-meta-skill-release`; clients keep receiving `main` only.
-  Marketplace pin refreshes are release actions: PR into `dev`, then reach
-  `main` with the authorized portal formal release. Do not bypass release
-  approval or CI.
+  Marketplace pin refreshes are release actions: the portal accepts a narrowly
+  scoped PR into `main` for approved formal pins and their corresponding generated
+  pages, as defined in its AGENTS.md. Do not include skill implementation or
+  SNAPSHOT content, or bypass release approval or CI. Other PRs target `dev`.
 - **Worktrees require a defined scope and lifecycle.** Ordinary tasks do not
   create them by default. Explicitly approved isolation work or the authorized
   formal release flow may use temporary worktrees. Confirm paths and ownership

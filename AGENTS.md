@@ -72,7 +72,7 @@ npx skills add soia-team/soia-open-skills -g --all
 - 因此：提 PR 必须**显式 `--base dev`**，不要依赖默认分支。
 - **新分支从 `main` 开**（最新正式版），PR 目标仍是 `dev`：实际核对 `main` → `dev` 的祖先关系和合并冲突，不把祖先关系当作无冲突的保证。确实要基于 dev 上尚未发布的
   工作时才从 `dev` 开，并在 PR 正文说明。
-- `main` 不接收任何 PR：它只在正式发版时由 `dev` 快进推进。
+- 技能/规范代码 PR 指向 `dev`，正式版本由 `dev` 快进到 `main`。市场分发例外：已获本次发布授权的正式 pin 及其对应生成说明页可按现有市场流程 PR 到 `main`，通过 audit 后按授权合并；不得夹带技能实现、SNAPSHOT 或未批准内容。本条不自动授权发布或 PR。
 - `dev` 上 plugin.json 版本带 `-SNAPSHOT` 声明下个目标，feature PR 不改版本号。
 
 ## 正式发版需用户逐次授权（硬门禁）

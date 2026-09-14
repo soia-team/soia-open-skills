@@ -136,15 +136,17 @@ on. Three first-class hosts, and their loading units differ:
 
 | Host | Loading unit | What to write |
 | --- | --- | --- |
-| Claude Code | domain plugin | `claude plugin marketplace add` + `claude plugin install <domain>@soia` |
-| Codex | domain plugin | same pair (marketplace-level enable) |
+| Claude Code | project skill or explicitly selected domain plugin | project single-skill command; plugin route may link to official installation docs |
+| Codex | project skill or explicitly selected domain plugin | use the host's own commands, not Claude CLI commands as Codex commands |
 | **WorkBuddy** | **role-based expert** | one line pointing at `docs/install/workbuddy.md` |
 
 Plus the single-skill route, which covers most CLI agents:
 
 ```bash
-npx skills add soia-team/<domain-repo> -g -a '*' -s <skill-name> -y
+npx skills add soia-team/<domain-repo> -a <explicit-agent> -s <skill-name>
 ```
+
+Default to the selected project and skill; global, all-agent or whole-domain scope requires explicit selection and approval. Keep this section short: name dependencies, give the project route, and link conditional host installation details. Reading a skill never authorizes installation, and an unchanged approved plan does not need approval again.
 
 **`npx skills add -a '*'` does not reach WorkBuddy.** WorkBuddy only loads experts
 from the hardcoded `~/.workbuddy/plugins/marketplaces/my-experts/plugins/<expert>/`,
@@ -442,12 +444,12 @@ Do not say "tested" or "passed" without saying which checks ran.
 
 Before commit, verify:
 
-- [ ] `SKILL.md` has `name` and a `description` of at most 150 characters: one
-      core-responsibility sentence plus `触发：` and 2–3 distinct triggers.
+- [ ] `SKILL.md` has `name` and a discriminating `description` of at most 150 characters: identify
+      the actual workflow rather than generic words that attract unrelated tasks.
 - [ ] `SKILL.md` has a customer-readable intro covering capabilities, usage, dependencies/install, config, logs, and completion receipt.
-- [ ] `依赖与安装` covers **all three first-class hosts**: the domain-plugin pair
-      (Claude Code / Codex), the `npx skills add` single-skill route, and a link to
-      `docs/install/workbuddy.md`. Verify with
+- [ ] `依赖与安装` identifies **all three first-class hosts** with a short project
+      single-skill route and conditional links for Claude Code / Codex plugin
+      installation and WorkBuddy (`docs/install/workbuddy.md`). Verify with
       `python3 scripts/check_install_sections.py`.
 - [ ] No `metadata.json`; public skills use `SKILL.md` and optional `agents/openai.yaml`.
 - [ ] No maintainer-specific paths or vault directory names.
