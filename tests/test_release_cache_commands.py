@@ -9,6 +9,7 @@ from __future__ import annotations
 import pathlib
 import re
 import unittest
+from unittest import mock
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SKILL = ROOT / "skills/soia-meta-skill-release/SKILL.md"
@@ -17,13 +18,28 @@ SKILL = ROOT / "skills/soia-meta-skill-release/SKILL.md"
 MARKET_WIDE_DELETE = re.compile(r"rm\s+-rf[^\n`]*~/\.codex/plugins/cache/[\w-]+(?![\w/-])")
 
 
+def read_instruction_text(skill: pathlib.Path = SKILL) -> str:
+    """检查入口及入口真实链接的参考，不假设安装命令必须留在入口。"""
+    text = skill.read_text(encoding="utf-8")
+    links = dict.fromkeys(re.findall(r"\]\((references/[^)#]+\.md)\)", text))
+    documents = [text]
+    for link in links:
+        reference = (skill.parent / link).resolve()
+        if not reference.is_relative_to(skill.parent.resolve()):
+            raise ValueError(f"reference escapes skill: {link}")
+        documents.append(reference.read_text(encoding="utf-8"))
+    return "\n".join(documents)
+
+
+def bash_commands(text: str) -> str:
+    return "\n".join(re.findall(r"```bash\n(.*?)```", text, re.S))
+
+
 class ReleaseCacheCommandTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.text = SKILL.read_text(encoding="utf-8")
+        self.text = read_instruction_text()
         # 说明性文字里会引用这条危险命令作为反例，只检查代码块
-        self.code = "\n".join(
-            block for block in re.findall(r"```bash\n(.*?)```", self.text, re.S)
-        )
+        self.code = bash_commands(self.text)
 
     def test_no_market_wide_plugin_cache_delete_in_commands(self) -> None:
         hits = MARKET_WIDE_DELETE.findall(self.code)
@@ -32,8 +48,19 @@ class ReleaseCacheCommandTests(unittest.TestCase):
             f"插件缓存清理必须精确到插件目录（cache/<市场>/<插件>），命中市场级删除：{hits}",
         )
 
-    def test_plugin_scoped_delete_is_present(self) -> None:
-        self.assertIn("~/.codex/plugins/cache/soia/<域插件名>", self.code)
+    def test_optional_cleanup_requires_authorized_plugin_scope(self) -> None:
+        self.assertIn("先列目标并获授权", self.text)
+        self.assertIn("只处理已选择插件", self.text)
+        self.assertIn("不能删整个市场下的其它插件", self.text)
+
+    def test_market_wide_delete_in_linked_reference_is_detected(self) -> None:
+        """负控：危险命令迁到已链接 reference 后仍然必须被抓住。"""
+        root_text = "[安装](references/selected-install.md)\n"
+        dangerous = "rm -rf ~/.codex/plugins/cache/soia"
+        reference_text = f"```bash\n{dangerous}\n```\n"
+        with mock.patch.object(pathlib.Path, "read_text", side_effect=[root_text, reference_text]):
+            code = bash_commands(read_instruction_text())
+        self.assertEqual(MARKET_WIDE_DELETE.findall(code), [dangerous])
 
     def test_install_list_is_recorded_and_diffed(self) -> None:
         """删缓存前后要能对账，否则连带损失无人察觉。"""
