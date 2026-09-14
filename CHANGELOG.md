@@ -3,6 +3,21 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.0.4 — 2026-09-14
+
+Keep skill discovery and formal publishing focused on the requested workflow.
+
+### Changed
+- Finder returns candidates without making installation choices a prerequisite; only explicit installation requests enter the installation gate.
+- Separate release and client-installation instructions through an on-demand reference; preserve authorization, CI, quota/model evidence and real-result verification.
+- Simplify portal repository instructions and pin soia-dev to formal v2.7.1; no unrelated domain pins changed.
+- Skill versions: find-skill 1.2.2 and skill-release 6.0.1.
+
+### Verification
+- Tooling unit suite: 238 passed, including linked-reference cache deletion negative control and both host inventory reconciliation.
+- Strict audit, catalog, version bump, README/host coverage, icons, marketplaces, router index and skill pages checks passed.
+- No client installation, cache cleanup, branch/worktree deletion or protection changes.
+
 ## v2.0.3 — 2026-09-14
 
 优化规则、技能模板与按需读取边界，同步已正式发布的开发、PKM、媒体与办公技能市场 pin 和说明页。
