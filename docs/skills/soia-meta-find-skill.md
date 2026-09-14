@@ -1,6 +1,6 @@
 # soia-meta-find-skill
 
-> 查找适合任务的 SOIA 技能并收集安全安装选择，不代替已安装技能执行任务
+> 查找适合任务的 SOIA 技能；仅请求安装时收集安装选择，不代替已安装技能执行任务
 
 所属：[`soia-meta`](https://github.com/soia-team/soia-open-skills) · [技能源码](https://github.com/soia-team/soia-open-skills/tree/main/skills/soia-meta-find-skill) · [← 全部技能](README.md)
 

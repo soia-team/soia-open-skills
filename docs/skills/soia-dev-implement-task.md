@@ -1,6 +1,6 @@
 # soia-dev-implement-task
 
-> 在明确授权内实现需求、诊断修复或处理 findings，合并执行与修复流程
+> 实现工程需求、定位修复缺陷或处理已授权 findings
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-implement-task) · [← 全部技能](README.md)
 
@@ -8,11 +8,11 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-实现这个任务、修复这个 bug、处理审查发现、按任务书实现、修复缺陷、迁移、处理 findings
+按任务书实现、修复代码缺陷、处理工程审查发现
 
 ## 能力与用法
 
-**能做什么：** 把一个工程需求、缺陷或 finding 做到可验证的完成；代码、配置和文档都可用。不把“只诊断”变成改代码。
+**能做什么：** 把一个工程需求、缺陷或 finding 做到可验证的完成；覆盖代码、配置及其行为契约文档；不因 README 拼写或不改变契约的纯文字修正启动工程流程。不把“只诊断”变成改代码。
 
 **如何使用：** 提供目标、所在项目及已知约束。有足够信息就推进；只有会改变结果、权限或安全的歧义才暂停对应动作。
 

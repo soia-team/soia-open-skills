@@ -78,14 +78,14 @@
   },
   {
     "name": "soia-dev-enforce-coding-protocol",
-    "description": "用短协议约束工程改动的范围、权限与验证，不另起流程。触发：执行编码协议、约束本次改动、检查修复是否有证据、按任务书约束改动范围、核对改动是否越界、检查验证证据",
+    "description": "为工程任务补充范围、权限与验证底线，不另起流程。触发：执行编码协议、按协议约束工程改动、核对工程任务是否越界",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-github-ops",
-    "description": "GitHub gh CLI 运维、PR 合规审查与修复。触发：「查 CI 挂了」「发 release」「加协作者权限」、提 PR、查 CI、PR 合规审查",
+    "description": "查询和操作 GitHub PR、CI、Release 与协作者权限。触发：查 GitHub CI、处理 PR 生命周期、管理仓库协作者",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -99,7 +99,7 @@
   },
   {
     "name": "soia-dev-implement-task",
-    "description": "在明确授权内实现需求、诊断修复或处理 findings，合并执行与修复流程。触发：实现这个任务、修复这个 bug、处理审查发现、按任务书实现、修复缺陷、迁移、处理 findings",
+    "description": "实现工程需求、定位修复缺陷或处理已授权 findings。触发：按任务书实现、修复代码缺陷、处理工程审查发现",
     "source": {
       "repository": "soia-open-dev-skills"
     }
