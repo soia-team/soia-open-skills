@@ -37,7 +37,7 @@ updated_by: <model-name>
 
 1. 客户用自然语言说明目标，并提供必要输入：文件、URL、repo、workspace、proposal、vault 或平台账号状态。
 2. Agent 先判断是否命中本技能，再检查依赖、配置、权限和风险动作。
-3. 能 dry-run 或预览的动作先给预览；涉及删除、覆盖、发送、发布、写远端状态时先征求客户确认。
+3. 已明确授权且范围不变的低风险步骤连续执行；删除重要数据、覆盖未知内容、发送、发布与远端写入先核对具体计划及授权，缺少时确认，不把普通补丁编辑当成覆盖风险。
 4. 执行后验证真实输出，不用“看起来成功”代替证据。
 5. 最终回复必须给客户可见总结：做了什么、日志摘要、文件变化、问题和下一步。
 
@@ -68,7 +68,7 @@ SOIA_<TYPE>_<SHORT>_CONFIG_FILE=<custom-config-path>
 上面那张表讲的是**技能之间**的依赖；这一节讲**本技能自己**怎么进到客户的宿主里。
 两件事不同，不要只写其中一个。
 
-**装整个域（推荐）**——Claude Code 与 Codex 共用同一份域插件：
+**整域仅在明确选择时使用**——以下是 Claude Code 示例，Codex 使用其自身插件命令，按宿主安装文档执行：
 
 ```bash
 claude plugin marketplace add soia-team/soia-open-skills
@@ -78,14 +78,10 @@ claude plugin install <域插件名>@soia
 **只装这一个技能**——覆盖多数 CLI agent：
 
 ```bash
-npx skills add soia-team/<域仓名> -g -a '*' -s <技能名> -y
+npx skills add soia-team/<域仓名> -a <明确宿主> -s <技能名>
 ```
 
-**WorkBuddy 必须单独写一句。** 它的装载单位是**角色化专家**而不是插件，只认硬编码目录
-`~/.workbuddy/plugins/marketplaces/my-experts/plugins/<专家名>/`，且**软链无效**
-（官方校验器 `resolve()` 会穿透到真实路径后判定不在专家目录下）。
-也就是说 **`npx skills add -a '*'` 覆盖不到 WorkBuddy**，只写 npx 那条命令等于漏了一个一等宿主。
-步骤较长且会变，不要在技能里复制，指过去即可：
+默认项目级、单技能、明确宿主。全局、全宿主、整域仅在用户明确选择并批准范围后使用；正文不复制整套安装流程。WorkBuddy 不由 npx 代装，按需链接其专家安装说明：
 
 > WorkBuddy 用角色化专家装载，机制与插件不同，见
 > [docs/install/workbuddy.md](https://github.com/soia-team/soia-open-skills/blob/main/docs/install/workbuddy.md)。

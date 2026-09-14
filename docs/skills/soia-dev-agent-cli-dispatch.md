@@ -1,14 +1,8 @@
 # soia-dev-agent-cli-dispatch
 
-> 受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据
+> 调度外部 AI CLI 进程，核验模型、额度、权限及产物。仅外部 CLI 派发、多 CLI 分工或外部自动选模时使用；宿主内置 subagent 不走本技能
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-agent-cli-dispatch) · [← 全部技能](README.md)
-
-## 怎么触发
-
-装好后用自然语言说话即可，Agent 按下列意图命中本技能：
-
-「派活给外部 AI」「调用 DeepCode/Pi/agy」「多 CLI 派发」
 
 ## 能力与用法
 
@@ -17,7 +11,7 @@
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
 | 派一个任务给指定 AI CLI | 检查 CLI、认证、工作目录和权限，按该执行器规范启动 | 执行器、请求/实际模型、状态与验证结果 |
-| 让系统自动选择模型档位 | 只从已有验证证据的候选中选择；无候选时阻断 | 选择理由、推理档、价格区间与证据状态 |
+| 让系统自动选择模型档位 | 只从已有验证证据、且本次预检报告里 `available` 的候选桶中选择；报告缺失、错绑或畸形时阻断 | 选择理由、推理档、可用桶与 `quota_scope_key`、价格区间与证据状态 |
 | 批量或断点执行 | 串行运行 case，逐项原子更新脱敏 manifest | 成功、失败、降级、超时、剩余任务与恢复状态 |
 | 查看支持哪些 AI Agent | 读取 `references/supported-agents.yml` | 支持状态、使用方式、自动路由范围和对应规范 |
 

@@ -46,7 +46,7 @@
 
 | 技能 | 一句话职责 |
 |---|---|
-| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 受控调度外部 AI Agent CLI，选择已验证模型、隔离工作目录并回传模型、用量、费用与验证证据 |
+| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 调度外部 AI CLI 进程，核验模型、额度、权限及产物。仅外部 CLI 派发、多 CLI 分工或外部自动选模时使用；宿主内置 subagent 不走本技能 |
 | [`soia-dev-agent-md-advisor`](soia-dev-agent-md-advisor.md) | 诊断、起草或精简 AI 项目指令，解决无效规则、重复和入口冲突 |
 | [`soia-dev-archify-diagrams`](soia-dev-archify-diagrams.md) | 用 Archify 将架构、数据流和流程说明生成可维护 JSON 图表及 PNG 预览 |
 | [`soia-dev-audit-ui`](soia-dev-audit-ui.md) | 只读验收界面，将布局、键盘等技术证据与 UX、视觉判断分开报告 |
@@ -63,7 +63,7 @@
 | [`soia-dev-project-scaffold`](soia-dev-project-scaffold.md) | 为 Git 项目补最小 AI 协作入口与文档导航，优先沿用已有约定 |
 | [`soia-dev-release-plan-checklist`](soia-dev-release-plan-checklist.md) | 为软件发版设计预检、灰度、停止与回滚清单；只规划，不执行部署 |
 | [`soia-dev-review-code`](soia-dev-review-code.md) | 对固定代码候选或技能包做一次只读审查，区分规格符合性与工程标准，报告可核实问题 |
-| [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 用最小视图帮用户看懂当前话题；简单关系直接画，复杂关系才做聚焦 HTML |
+| [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 展示任务进度、调用关系或数据流；用户要求任务视图或关系图时使用，复杂布局才生成 HTML。普通问答、单一状态和常规回执不自动触发 |
 | [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理长任务与后台日志，诊断停滞并安全停止或恢复明确进程 |
 | [`soia-dev-test-draft-doc`](soia-dev-test-draft-doc.md) | 从需求或变更设计测试计划、用例与验收对照，不冒充测试执行 |
 

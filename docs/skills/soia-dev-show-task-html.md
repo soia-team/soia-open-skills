@@ -1,14 +1,8 @@
 # soia-dev-show-task-html
 
-> 用最小视图帮用户看懂当前话题；简单关系直接画，复杂关系才做聚焦 HTML
+> 展示任务进度、调用关系或数据流；用户要求任务视图或关系图时使用，复杂布局才生成 HTML。普通问答、单一状态和常规回执不自动触发
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-show-task-html) · [← 全部技能](README.md)
-
-## 怎么触发
-
-装好后用自然语言说话即可，Agent 按下列意图命中本技能：
-
-show me、展示这个任务、给我画一下
 
 ## 能力与用法
 
