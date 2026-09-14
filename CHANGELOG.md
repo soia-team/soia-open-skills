@@ -3,6 +3,22 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.0.3 — 2026-09-14
+
+优化规则、技能模板与按需读取边界，同步已正式发布的开发、PKM、媒体与办公技能市场 pin 和说明页。
+
+## 维护
+- chore(marketplace): refresh formal rules release pins and pages
+- docs(rules): narrow approval and installation guidance
+- chore(marketplace): refresh soia-dev v2.6.1 sha pin (#336)
+- chore(marketplace): refresh sha pins for soia-dev v2.6.0 (#335)
+- chore(marketplace): refresh sha pins (soia-dev v2.5.0) (#334)
+- chore(marketplace): refresh sha pins (soia-dev v2.4.0) (#333)
+- chore(marketplace): refresh sha pins (soia-dev v2.3.0) (#332)
+- chore(marketplace): refresh sha pins (soia-dev v2.2.1) (#331)
+- chore(marketplace): refresh sha pins (soia-dev v2.2.0) (#330)
+- chore(release): open next train after v2.0.2 (#329)
+
 ## v2.0.2 — 2026-09-09
 
 对齐中英文学习与安装指南，明确项目级最小安装和技能发现验证边界。
