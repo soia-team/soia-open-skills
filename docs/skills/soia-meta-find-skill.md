@@ -1,6 +1,6 @@
 # soia-meta-find-skill
 
-> 查找适合任务的 SOIA 技能；仅请求安装时收集安装选择，不代替已安装技能执行任务
+> 按需求查找合适的 SOIA 技能，未安装时只收集安装选择，不代替技能执行任务
 
 所属：[`soia-meta`](https://github.com/soia-team/soia-open-skills) · [技能源码](https://github.com/soia-team/soia-open-skills/tree/main/skills/soia-meta-find-skill) · [← 全部技能](README.md)
 
@@ -14,25 +14,16 @@
 
 ### 这个技能可以做什么
 
-- 在项目 `.agents/skills`、用户全局真源或公开生态目录中发现候选技能。
-- 识别代码审查、架构评审、调用链、数据流、模块边界等中文意图。
-- 返回“项目/全局、目标 Agent、单技能/整域/全量”选择意图，交给安装或同步技能执行。
+- 在项目 `.agents/skills`、用户全局真源或公开生态目录中发现候选技能，识别代码审查、架构评审、调用链、数据流等中文意图。
+- 返回“项目/全局、目标 Agent、单技能/整域/全量”的选择意图，交给安装或同步技能执行。
 
 ### 客户如何使用
 
-先从当前项目查找；若当前目录不能确定项目，脚本不会暗自扫描全局目录，而会让 Agent 向客户确认范围。
-
 ```bash
-python3 scripts/find_skill.py --query <关键词> [--project <项目路径>] [--scope auto|project|global|both] [--agent <Agent>]
+python3 scripts/find_skill.py --query <关键词> [--domain <领域>] [--project <项目路径>] [--scope auto|project|global|both] [--agent <Agent>]
 ```
 
-从仓库源码调用：
-
-```bash
-python3 skills/soia-meta-find-skill/scripts/find_skill.py --query <关键词> --project <项目路径> --agent claude --agent codex
-```
-
-`--agent` 可重复，仅保留客户的目标 Agent 选择，不猜测任何宿主目录。`--scope auto` 仅扫描可确定的当前项目；`project`、`global`、`both` 是显式范围。`--skills-dir` 与 `--directory` 保留给旧离线调用和测试。
+从仓库源码调用时脚本路径为 `skills/soia-meta-find-skill/scripts/find_skill.py`。`--domain` 按领域或 `query-hints.json` 的 `domain_hints` 缩小候选。`--agent` 可重复，只记录客户选的目标 Agent，不猜宿主目录。`--scope auto` 只扫描能确定的当前项目，确定不了就让 Agent 向客户确认范围，不暗自扫全局；`project`、`global`、`both` 是显式范围。
 
 ## 安装
 

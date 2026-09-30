@@ -27,13 +27,13 @@ Recognize:
 
 Rules:
 
-- Clone into a temporary directory.
+- Clone into a durable local source directory (see the boundary below), never a temporary one.
 - Strip a trailing `.git` only for display/name derivation; keep the clone URL valid.
 - Locate `SKILL.md`.
 - If the repo root contains `SKILL.md`, use the repo root as the skill directory.
 - If one nested `SKILL.md` exists, use its parent directory.
 - If multiple nested `SKILL.md` files exist, ask the user which skill to sync.
-- Remove the temporary directory after sync or on failure.
+- On failure, remove the partial clone.
 
 ## skillsmp.com Page
 
@@ -49,7 +49,7 @@ Rules:
 - If extraction cannot produce a valid local directory with `SKILL.md`, stop and report the blocker.
 - Do not run downloaded scripts during import.
 
-## Generic Copy Boundary
+## Single-Skill Link Boundary
 
 For a single-skill sync, remove only `<target>/<skill-name>` before linking. Do not scan or clean other target entries.
 

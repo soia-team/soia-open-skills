@@ -1,6 +1,6 @@
 # soia-meta-skill-release
 
-> 正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装
+> 正式发版 SOIA 技能仓并刷新市场 pin，默认不装机
 
 所属：[`soia-meta`](https://github.com/soia-team/soia-open-skills) · [技能源码](https://github.com/soia-team/soia-open-skills/tree/main/skills/soia-meta-skill-release) · [← 全部技能](README.md)
 
@@ -8,20 +8,18 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-正式发版、发布技能、发布后安装
+正式发版、发布技能、刷新市场 pin
 
 ## 能力与用法
 
 ### 这个技能可以做什么
 
-| 客户想要 | 技能会做 | 客户能看到 |
-| --- | --- | --- |
-| 发布 merge 后的一个或多个技能 | 远端正式版与市场 pin 收尾 | 发布回执与客户端更新指引 |
-| 发布后按客户选择安装 | 转交 sync owner 的明确计划 | project/global、Agent、粒度与 dry-run |
+- 发布 merge 后的一个或多个技能：远端正式版与市场 pin 收尾，给发布回执与客户端更新指引。
+- 发布后按客户选择安装：转交 sync owner 的明确计划（project/global、Agent、粒度与 dry-run）。
 
 ### 客户如何使用
 
-提供仓库、技能范围、发布摘要及本次明确授权。正式发布按下方主流程；`release_skills.py` 只负责本机收口选择，不执行正式远端发布。仅请求安装或试装时才读取[定向安装与客户端更新](references/selected-install.md)。
+提供仓库、技能范围、发布摘要及本次明确授权。正式发布按下方主流程；`release_skills.py` 只负责本机收口选择，不做正式远端发布。只有请求安装或试装时才读[定向安装与客户端更新](references/selected-install.md)。
 
 ## 安装
 

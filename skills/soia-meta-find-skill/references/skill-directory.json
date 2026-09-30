@@ -358,14 +358,14 @@
   },
   {
     "name": "soia-meta-skill-release",
-    "description": "正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装。触发：正式发版、发布技能、发布后安装",
+    "description": "正式发版 SOIA 技能仓并刷新市场 pin，默认不装机。触发：正式发版、发布技能、刷新市场 pin",
     "source": {
       "repository": "soia-open-skills"
     }
   },
   {
     "name": "soia-meta-sync-skills",
-    "description": "按明确项目或全局范围同步 SOIA 技能，并先输出可审计划。触发：项目安装、技能同步、同步预览",
+    "description": "按明确范围把共享技能目录软链到项目或宿主，写入前先 dry-run。触发：技能同步、同步预览、把技能链到项目",
     "source": {
       "repository": "soia-open-skills"
     }
