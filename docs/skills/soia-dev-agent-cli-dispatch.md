@@ -1,54 +1,29 @@
 # soia-dev-agent-cli-dispatch
 
-> 调度外部 AI CLI 进程，核验模型、额度、权限及产物。仅外部 CLI 派发、多 CLI 分工或外部自动选模时使用；宿主内置 subagent 不走本技能
+> 派任务给外部 AI CLI 进程并核验模型、额度与产物；宿主内置 subagent 不用本技能
 
 所属：[`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) · [技能源码](https://github.com/soia-team/soia-open-dev-skills/tree/main/skills/soia-dev-agent-cli-dispatch) · [← 全部技能](README.md)
+
+## 怎么触发
+
+装好后用自然语言说话即可，Agent 按下列意图命中本技能：
+
+派给 Codex/Pi 等外部 CLI、多 CLI 分工、外部自动选模
 
 ## 能力与用法
 
 ### 这个技能可以做什么
 
-| 客户想要 | 技能会做 | 客户能看到 |
-|---|---|---|
-| 派一个任务给指定 AI CLI | 检查 CLI、认证、工作目录和权限，按该执行器规范启动 | 执行器、请求/实际模型、状态与验证结果 |
-| 让系统自动选择模型档位 | 只从已有验证证据、且本次预检报告里 `available` 的候选桶中选择；报告缺失、错绑或畸形时阻断 | 选择理由、推理档、可用桶与 `quota_scope_key`、价格区间与证据状态 |
-| 批量或断点执行 | 串行运行 case，逐项原子更新脱敏 manifest | 成功、失败、降级、超时、剩余任务与恢复状态 |
-| 查看支持哪些 AI Agent | 读取 `references/supported-agents.yml` | 支持状态、使用方式、自动路由范围和对应规范 |
+- **派给指定 CLI：** 检查 CLI、认证、工作目录与权限，按该执行器规范启动；回报请求/实际模型、状态与验证结果。
+- **自动选模：** 只在本次预检报告里 `available` 且有验证证据的候选桶中选；报告缺失、错绑或畸形时阻断。
+- **批量或断点执行：** 串行跑 case，逐项原子更新脱敏 manifest。
+- **查支持哪些 CLI：** 读 `references/supported-agents.yml`。
 
-本技能不会把“进程退出码为 0”直接当成模型或任务质量已验证，也不会在没有证据时开放新的自动路由。
+进程退出码 0 不等于模型或任务质量已验证；没有证据不开放新的自动路由。
 
 ### 客户如何使用
 
-客户至少说明：
-
-1. 要完成的任务和验收标准；
-2. 目标项目或工作目录；
-3. 指定执行器/模型/推理档，或允许自动选择；
-4. 是否允许修改文件、联网、创建 worktree、提交或执行其他高影响动作。
-
-示例请求：
-
-```text
-把这个小范围修复派给 Pi，允许改当前项目，不允许提交；运行相关测试并回报实际模型和 Token。
-```
-
-### 配置文件
-
-本技能目录中有两类 YAML，职责不同：
-
-| 文件 | 性质 | 用途 |
-|---|---|---|
-| `references/supported-agents.yml` | 随技能发布的公共配置 | 支持哪些 AI Agent、适合什么工作、如何调用、验证到什么程度 |
-| `assets/config.example.yml` | 私有配置模板 | 配置 host 标识及 state/temp 根目录；复制后由客户持有 |
-
-可选私有配置位置与覆盖变量：
-
-```text
-~/.config/soia-skills/soia-dev-agent-cli-dispatch/config.yml
-SOIA_DEV_AGENT_CLI_DISPATCH_CONFIG_FILE=<custom-config-path>
-```
-
-配置优先级：本次 CLI 参数 → 进程环境 → 私有 `config.yml` → 跨平台默认值。API key、cookie、token、session 不得写进该配置；它们留在 provider 登录态或系统凭据库。
+说明任务与验收标准、目标工作目录、执行器/模型/推理档（或允许自动选择），以及是否允许改文件、联网、建 worktree、提交或其他高影响动作。例：「把这个小修复派给 Pi，允许改当前项目、不许提交；跑相关测试并回报实际模型和 Token。」
 
 ## 安装
 
