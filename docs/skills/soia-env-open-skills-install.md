@@ -1,6 +1,6 @@
 # soia-env-open-skills-install
 
-> 在 Claude Code、Codex、WorkBuddy 上按确认范围安装或更新 SOIA 开源技能；默认项目级单技能，支持全局、整域和全量
+> 按确认范围在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，默认项目级单技能
 
 所属：[`soia-env`](https://github.com/soia-team/soia-open-env-skills) · [技能源码](https://github.com/soia-team/soia-open-env-skills/tree/main/skills/soia-env-open-skills-install) · [← 全部技能](README.md)
 
@@ -14,13 +14,13 @@
 
 ### 这个技能可以做什么
 
-- 只读检查 Claude Code、Codex、WorkBuddy 的可用性、市场状态和当前安装。
+- 只读检查 Claude Code、Codex、WorkBuddy 的可用性、市场状态与当前安装。
 - 生成机器可读的选择计划与 Agent × 范围 × 粒度矩阵。
-- 在确认后按当前 CLI/官方脚本安装或更新单技能、整域或全量，并验证实际结果。
+- 确认后按当前 CLI/官方脚本安装或更新单技能、整域或全量，并验证实际结果。
 
 ### 客户如何使用
 
-请明确说明安装范围、宿主和粒度，例如“在这个项目给 Codex 装单个技能”“全局给 Claude Code 更新 `soia-dev`”。范围、宿主或粒度任一缺失时只检查并返回 `selection_required`，先询问，不检测全部后默认全域执行。要扩大到全局、整域、多宿主或 `*` 全量，必须明确选择；先展示 dry-run/安装矩阵，再等待确认。仅选择字段齐全不等于写入批准；只有已展示影响并获客户明确批准、且包含 source、具体 target、action 以及删除/替换影响的完整计划，才可由 Finder、Sync 或 Release 传递而不重复询问。计划字段变化时重新确认受影响部分。
+说明安装范围、宿主和粒度，例如“在这个项目给 Codex 装单个技能”“全局给 Claude Code 更新 `soia-dev`”。缺任一项时只检查并返回 `selection_required`，不默认全域。
 
 ## 安装
 

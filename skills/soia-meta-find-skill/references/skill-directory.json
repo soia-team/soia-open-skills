@@ -22,7 +22,7 @@
   },
   {
     "name": "soia-dev-agent-cli-dispatch",
-    "description": "调度外部 AI CLI 进程，核验模型、额度、权限及产物。仅外部 CLI 派发、多 CLI 分工或外部自动选模时使用；宿主内置 subagent 不走本技能。",
+    "description": "派任务给外部 AI CLI 进程并核验模型、额度与产物；宿主内置 subagent 不用本技能。触发：派给 Codex/Pi 等外部 CLI、多 CLI 分工、外部自动选模",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -43,14 +43,14 @@
   },
   {
     "name": "soia-dev-audit-ui",
-    "description": "只读验收界面，将布局、键盘等技术证据与 UX、视觉判断分开报告。触发：验收这个界面、检查键盘和布局、评审视觉与体验、界面验收、按验收标准核对界面",
+    "description": "只读验收界面，技术证据与 UX/视觉判断分开报告。触发：验收这个界面、检查键盘和布局、评审视觉体验",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-design-ui",
-    "description": "设计界面的信息结构、交互、视觉与实现交接，保持已批准的品牌和样式边界。触发：设计这个界面、梳理交互流程、做 UI 设计交接、按任务书设计界面、交互状态与实现交接",
+    "description": "设计界面结构、交互状态与视觉并交接实现，守住已批准的品牌与样式。触发：设计这个界面、梳理交互流程、做 UI 设计交接",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -64,7 +64,7 @@
   },
   {
     "name": "soia-dev-draft-feature-spec",
-    "description": "把产品想法或需求材料整理成可验收的功能规格，并按需拆成纵向交付切片。触发：起草功能规格、把需求写成 PRD、拆分可验收功能、按任务书写功能规格、补验收标准",
+    "description": "把产品想法或需求整理成可验收的功能规格，按需拆成纵向交付切片。触发：起草功能规格、把需求写成 PRD、补验收标准",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -78,7 +78,7 @@
   },
   {
     "name": "soia-dev-enforce-coding-protocol",
-    "description": "为工程任务补充范围、权限与验证底线，不另起流程。触发：执行编码协议、按协议约束工程改动、核对工程任务是否越界",
+    "description": "给工程改动加范围、权限与验证底线，不另起流程。触发：执行编码协议、核对工程改动是否越界",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -92,7 +92,7 @@
   },
   {
     "name": "soia-dev-govern-architecture",
-    "description": "设计架构、审查给定方案或核对长期漂移，明确职责、契约、事实真源与迁移边界。触发：架构方案怎么选、审查架构边界、检查架构漂移、按任务书核对架构边界、评估迁移边界",
+    "description": "设计或审查架构方案、核对长期漂移，明确职责、契约、事实真源与迁移边界。触发：架构方案怎么选、审查架构边界、检查架构漂移",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -134,14 +134,14 @@
   },
   {
     "name": "soia-dev-review-code",
-    "description": "对固定代码候选或技能包做一次只读审查，区分规格符合性与工程标准，报告可核实问题。触发：审查这次改动、review 代码、检查技能包、独立评审、按验收标准审查交付物",
+    "description": "只读审查固定的代码候选或技能包，分开报告规格符合性与工程问题。触发：审查这次改动、review 代码、独立评审",
     "source": {
       "repository": "soia-open-dev-skills"
     }
   },
   {
     "name": "soia-dev-show-task-html",
-    "description": "展示任务进度、调用关系或数据流；用户要求任务视图或关系图时使用，复杂布局才生成 HTML。普通问答、单一状态和常规回执不自动触发。",
+    "description": "用户要求时把任务进度、调用关系或数据流画成最小视图，复杂布局才出 HTML；普通问答与常规回执不用。触发：展示这个任务、画调用关系、数据流怎么走",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -253,7 +253,7 @@
   },
   {
     "name": "soia-env-open-skills-install",
-    "description": "在 Claude Code、Codex、WorkBuddy 上按确认范围安装或更新 SOIA 开源技能；默认项目级单技能，支持全局、整域和全量。触发：「安装 SOIA 技能」「在 Codex 下装」「更新 soia-dev」",
+    "description": "按确认范围在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，默认项目级单技能。触发：「安装 SOIA 技能」「在 Codex 下装」「更新 soia-dev」",
     "source": {
       "repository": "soia-open-env-skills"
     }
