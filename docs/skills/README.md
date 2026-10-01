@@ -46,24 +46,24 @@
 
 | 技能 | 一句话职责 |
 |---|---|
-| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 调度外部 AI CLI 进程，核验模型、额度、权限及产物。仅外部 CLI 派发、多 CLI 分工或外部自动选模时使用；宿主内置 subagent 不走本技能 |
+| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 派任务给外部 AI CLI 进程并核验模型、额度与产物；宿主内置 subagent 不用本技能 |
 | [`soia-dev-agent-md-advisor`](soia-dev-agent-md-advisor.md) | 诊断、起草或精简 AI 项目指令，解决无效规则、重复和入口冲突 |
 | [`soia-dev-archify-diagrams`](soia-dev-archify-diagrams.md) | 用 Archify 将架构、数据流和流程说明生成可维护 JSON 图表及 PNG 预览 |
-| [`soia-dev-audit-ui`](soia-dev-audit-ui.md) | 只读验收界面，将布局、键盘等技术证据与 UX、视觉判断分开报告 |
-| [`soia-dev-design-ui`](soia-dev-design-ui.md) | 设计界面的信息结构、交互、视觉与实现交接，保持已批准的品牌和样式边界 |
+| [`soia-dev-audit-ui`](soia-dev-audit-ui.md) | 只读验收界面，技术证据与 UX/视觉判断分开报告 |
+| [`soia-dev-design-ui`](soia-dev-design-ui.md) | 设计界面结构、交互状态与视觉并交接实现，守住已批准的品牌与样式 |
 | [`soia-dev-doc-sync`](soia-dev-doc-sync.md) | 核对代码、发布事实和有效裁决与文档之间的漂移，按授权同步派生内容 |
-| [`soia-dev-draft-feature-spec`](soia-dev-draft-feature-spec.md) | 把产品想法或需求材料整理成可验收的功能规格，并按需拆成纵向交付切片 |
+| [`soia-dev-draft-feature-spec`](soia-dev-draft-feature-spec.md) | 把产品想法或需求整理成可验收的功能规格，按需拆成纵向交付切片 |
 | [`soia-dev-drawio-visio-diagrams`](soia-dev-drawio-visio-diagrams.md) | 将 Visio VSDX 安全转换、盘点和受控升级为可编辑 draw.io 图表 |
-| [`soia-dev-enforce-coding-protocol`](soia-dev-enforce-coding-protocol.md) | 为工程任务补充范围、权限与验证底线，不另起流程 |
+| [`soia-dev-enforce-coding-protocol`](soia-dev-enforce-coding-protocol.md) | 给工程改动加范围、权限与验证底线，不另起流程 |
 | [`soia-dev-github-ops`](soia-dev-github-ops.md) | 查询和操作 GitHub PR、CI、Release 与协作者权限 |
-| [`soia-dev-govern-architecture`](soia-dev-govern-architecture.md) | 设计架构、审查给定方案或核对长期漂移，明确职责、契约、事实真源与迁移边界 |
+| [`soia-dev-govern-architecture`](soia-dev-govern-architecture.md) | 设计或审查架构方案、核对长期漂移，明确职责、契约、事实真源与迁移边界 |
 | [`soia-dev-implement-task`](soia-dev-implement-task.md) | 实现工程需求、定位修复缺陷或处理已授权 findings |
 | [`soia-dev-officecli-ops`](soia-dev-officecli-ops.md) | 以 OfficeCLI 安全读取、复制后修改并验证 DOCX、XLSX、PPTX |
 | [`soia-dev-open-design-ops`](soia-dev-open-design-ops.md) | 操作 Open Design 环境、项目与导出，并交付 HTML 原型、deck 和动画 |
 | [`soia-dev-project-scaffold`](soia-dev-project-scaffold.md) | 为 Git 项目补最小 AI 协作入口与文档导航，优先沿用已有约定 |
 | [`soia-dev-release-plan-checklist`](soia-dev-release-plan-checklist.md) | 为软件发版设计预检、灰度、停止与回滚清单；只规划，不执行部署 |
-| [`soia-dev-review-code`](soia-dev-review-code.md) | 对固定代码候选或技能包做一次只读审查，区分规格符合性与工程标准，报告可核实问题 |
-| [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 展示任务进度、调用关系或数据流；用户要求任务视图或关系图时使用，复杂布局才生成 HTML。普通问答、单一状态和常规回执不自动触发 |
+| [`soia-dev-review-code`](soia-dev-review-code.md) | 只读审查固定的代码候选或技能包，分开报告规格符合性与工程问题 |
+| [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 用户要求时把任务进度、调用关系或数据流画成最小视图，复杂布局才出 HTML；普通问答与常规回执不用 |
 | [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理长任务与后台日志，诊断停滞并安全停止或恢复明确进程 |
 | [`soia-dev-test-draft-doc`](soia-dev-test-draft-doc.md) | 从需求或变更设计测试计划、用例与验收对照，不冒充测试执行 |
 
@@ -82,7 +82,7 @@
 | [`soia-env-local-model-bench`](soia-env-local-model-bench.md) | 在 Apple Silicon 上评测本地 LLM：先环境检查与引擎选型（mlx-lm/llama.cpp 等），确认后才下载部署；跑题库判定、吞吐 TTFT 与硬件采样，产出可横比的口径化报告 |
 | [`soia-env-network-diagnose`](soia-env-network-diagnose.md) | 只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报 |
 | [`soia-env-node-install`](soia-env-node-install.md) | 为新手安装、验证或按授权更新 Node.js 与 npm |
-| [`soia-env-open-skills-install`](soia-env-open-skills-install.md) | 在 Claude Code、Codex、WorkBuddy 上按确认范围安装或更新 SOIA 开源技能；默认项目级单技能，支持全局、整域和全量 |
+| [`soia-env-open-skills-install`](soia-env-open-skills-install.md) | 按确认范围在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，默认项目级单技能 |
 | [`soia-env-opencode-cli-install`](soia-env-opencode-cli-install.md) | 为新手安装、登录、配置或按授权更新 OpenCode CLI |
 | [`soia-env-pi-cli-install`](soia-env-pi-cli-install.md) | 为小白安装、配置与授权更新 Pi（pi-coding-agent）CLI |
 | [`soia-env-python-install`](soia-env-python-install.md) | 为新手安装、验证或按授权更新 Python 与 pip |
