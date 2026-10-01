@@ -12,9 +12,9 @@
 
 ## 能力与用法
 
-**这个技能可以做什么：** 用 gh CLI 查询或操作 GitHub issue、PR、checks、workflow、release 和协作者权限。纯本地 commit、rebase、worktree 管理不触发。
+**这个技能可以做什么：** 用 gh CLI 查询或操作 GitHub issue、PR、checks、workflow、release 和协作者权限。纯本地 commit、rebase、worktree 管理不用本技能。
 
-**客户如何使用：** 给仓库或对象 URL 和需要的动作。查询不授权修复或远端写入；已批准、范围未变的完整工作流连续推进，不逐命令重复确认。
+**客户如何使用：** 给仓库或对象 URL 和要做的动作。查询不授权修复或远端写入；已批准、范围未变的完整工作流连续推进，不逐命令重复确认。
 
 ## 安装
 
