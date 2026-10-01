@@ -3,6 +3,24 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.0.5 — 2026-10-01
+
+soia-meta 技能按强模型精简；市场 pin 同步进 dev
+
+## 维护
+- chore(marketplace): pin soia-open-dev-skills v2.9.1 and soia-open-env-skills v1.19.4
+- refactor(skills): slim SKILL.md and references for strong models (2026-09-30)
+- chore(marketplace): pin soia-open-dev-skills v2.9.0
+- chore(marketplace): pin soia-open-dev-skills v2.8.6
+- chore(marketplace): pin soia-open-dev-skills v2.8.5
+- chore(marketplace): pin soia-open-dev-skills v2.8.4
+- chore(marketplace): pin soia-open-dev-skills v2.8.3
+- chore(marketplace): pin soia-dev v2.8.2 (#347)
+- chore(marketplace): pin soia-dev v2.8.1 (#346)
+- chore(marketplace): pin soia-dev to v2.8.0 (#345)
+- chore(marketplace): publish completed rule repository pins (#343)
+- chore(release): open next train after v2.0.4 (#342)
+
 ## v2.0.4 — 2026-09-14
 
 Keep skill discovery and formal publishing focused on the requested workflow.
