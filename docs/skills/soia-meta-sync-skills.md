@@ -1,6 +1,6 @@
 # soia-meta-sync-skills
 
-> 按明确项目或全局范围同步 SOIA 技能，并先输出可审计划
+> 按明确范围把共享技能目录软链到项目或宿主，写入前先 dry-run
 
 所属：[`soia-meta`](https://github.com/soia-team/soia-open-skills) · [技能源码](https://github.com/soia-team/soia-open-skills/tree/main/skills/soia-meta-sync-skills) · [← 全部技能](README.md)
 
@@ -8,17 +8,17 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-项目安装、技能同步、同步预览
+技能同步、同步预览、把技能链到项目
 
 ## 能力与用法
 
 ### 这个技能可以做什么
 
-将一个已安装或本地的共享技能目录同步到用户选择的 AI 工具目录。它只创建或替换同名的软链接；先用 `--dry-run` 展示影响，再在已有明确授权时写入。同一任务内只有已展示影响并获客户明确批准、且包含 source、具体 target、action 以及删除/替换影响的完整计划，才可由 Finder、Installer 或 Release 传递而不重复询问；计划字段变化时重新确认受影响部分。
+把一个已安装或本地的共享技能目录同步到客户选择的 AI 工具目录：只创建或替换同名软链接，清理已退役名称，并默认清理悬空的 `soia-*` 软链。先用 `--dry-run` 展示影响，有明确授权再写入。
 
 ### 客户如何使用
 
-提供源目录、`--scope`、目标粒度和技能范围。没有 `--scope`、`--target-kind` 或项目 Agent 选择时，脚本只返回 `selection_required`，不写入。
+提供源目录、`--scope`、目标粒度和技能范围；缺 `--scope`、`--target-kind` 或项目 Agent 选择时脚本只返回 `selection_required`，不写入。
 
 ```bash
 python3 skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
@@ -28,7 +28,7 @@ python3 skills/soia-meta-sync-skills/scripts/sync_soia_skills.py \
   --dry-run
 ```
 
-`skill`、`domain`、`all` 都支持；默认不全量。`--skills '*'` 和 `--targets '*'` 必须显式选择 `all`，先 dry-run；全宿主写入还需 `--confirm-all-targets`。使用 `--exclude-skills a,b` 可在本次运行中对每个选中 target 跳过并摘除这些技能的既有软链。
+`skill`、`domain`、`all` 都支持，默认不全量。`--skills '*'` / `--targets '*'` 须显式选 `all` 并先 dry-run，全宿主写入还需 `--confirm-all-targets`。`--skills` 单技能同步会带上其 hard dependencies（`--no-deps` 关闭）。`--exclude-skills a,b` 在本次对每个选中 target 跳过并摘除这些技能的既有软链，加 `--save-excludes` 才持久化到私有配置；target 中同名的真实文件或目录保留并在日志报告。`--list-targets` / `--list-skills` 查看内置目标与源中技能。
 
 ## 安装
 

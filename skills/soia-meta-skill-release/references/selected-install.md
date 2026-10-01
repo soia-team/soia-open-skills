@@ -63,7 +63,7 @@ python3 skills/soia-meta-skill-release/scripts/release_skills.py \
 - **Codex**：无会话级机制，**禁止**把 dev/SNAPSHOT 常驻安装——SNAPSHOT 会进入
   客户端版本比较路径，这正是发布门禁在市场侧拦截的场景。
 
-### 5. 指导客户端更新
+### 指导客户端更新
 
 Claude Code：**先记录安装清单**，收尾要对账——`plugin update` 对未安装的插件会直接失败，卸载重装类操作也容易漏装：
 
@@ -113,9 +113,9 @@ codex plugin add <域插件名>@soia
 codex plugin list | grep '@soia' | diff /tmp/soia-installed-before.txt -
 ```
 
-以下是历史版本现象，不能替代当前 CLI 帮助或作为强制删除依据：跳过暂存诊断曾出现「命令报成功、内容还是旧的」——2026-07-27 实际踩过：corp 市场的暂存停在没有 `assets/icon.svg` 的旧版本，`composerIcon` 指向不存在的文件，界面回退成通用图标，排查时误判为路径写错。
+市场暂存过期时，`plugin add` 可能报成功但加载的仍是旧内容（例如新增资源缺失、图标回退）；遇到这种症状先诊断暂存，不当作路径错误排查，也不作为强制删除依据。
 
-### 6. WorkBuddy 专家（客户在用 WorkBuddy 时才做）
+### WorkBuddy 专家（客户在用 WorkBuddy 时才做）
 
 WorkBuddy 是 Electron 桌面端，**没有 CLI**——不存在 `workbuddy plugin install`，
 也没有能指向我们 GitHub 的市场通道。所以这一步由脚本代劳，不要去找对等命令：
@@ -143,7 +143,7 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py <目
 
 验证：召唤该专家后问「你有多少个可用技能」，该域技能应全部在场；不召唤时不在场。
 
-### 7. 回收旧版本缓存（另有清理授权才做）
+### 回收旧版本缓存（另有清理授权才做）
 
 两家客户端在 `plugin update` 后都只新增版本目录，**不回收旧的**；Claude 的 `.in_use` 标记也不可靠（实测同一插件新旧两个版本都带这个文件）。不清理会线性堆积，并干扰排查——用 `find` 找资源会匹配到多个版本目录，`ls` 统计技能数会得出离谱结果。
 
@@ -159,7 +159,7 @@ python3 skills/soia-meta-skill-release/scripts/prune_plugin_cache.py --apply
 
 按语义化版本取最高值保留，其余删除；非语义化版本目录（如官方插件的 `latest`）一律跳过。可重新下载不免除删除确认；语义版本最高也不必然是本次批准版本，须先核对实际安装来源。
 
-### 8. 验证
+### 验证
 
 ```bash
 claude plugin list

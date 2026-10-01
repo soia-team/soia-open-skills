@@ -315,13 +315,13 @@ def print_plugin_publish_steps(repo: str, skills: list[str]) -> None:
     plugin = REPO_TO_PLUGIN.get(repo_name, "<域插件名>")
     print()
     print("插件模式：本次未向 ~/.agents/skills 安装任何技能。用户要收到改动，还需：")
-    print(f"  1. 在 {repo_name} 把 .claude-plugin/plugin.json 与 .codex-plugin/plugin.json 的")
-    print("     version 提上去——Claude Code 比对的是 version 字段而非 sha pin，不 bump 则")
+    print(f"  1. 在 {repo_name} 按 SKILL.md「正式发版」用 formal_release.py 出正式版（版本由 dev 的")
+    print("     -SNAPSHOT 列车决定）——Claude Code 比对的是 version 字段而非 sha pin，不出正式版则")
     print("     客户端回答「already at the latest version」。")
-    print("  2. 在元仓 soia-open-skills 重新生成市场清单并提 PR 合并（main 受保护，不能直推）：")
-    print("     python3 scripts/generate_marketplaces.py && python3 scripts/generate_router_index.py")
+    print("  2. 按 references/marketplace-pin.md 在元仓重跑三个生成器并以 PR 刷新 sha pin（main 受保护，不能直推）：")
+    print("     python3 scripts/generate_marketplaces.py && python3 scripts/generate_router_index.py && python3 scripts/generate_skill_pages.py")
     print(f"  3. 客户端更新：claude plugin update {plugin}@soia / codex plugin add {plugin}@soia")
-    print(f"  4. 验证：claude plugin details {plugin} 应列出 {', '.join(skills)}")
+    print(f"  4. 验证：claude plugin details {plugin}@soia 应列出 {', '.join(skills)}")
     print()
     print("如需本机安装，先确认 project/global、Agent 与 skill/domain/all，")
     print("再显式传 --install-mode selected-install；范围不清时保持 remote-only。")
@@ -435,7 +435,7 @@ def release(args: argparse.Namespace, *, home: Path | None = None) -> int:
         # 7. Verify repository and installed versions with independent file reads.
         #    Plugin mode installs nothing into the shared source, so there is no
         #    installed version to compare against — report the repository version
-        #    and leave delivery verification to `claude plugin details`.
+        #    and leave delivery verification to `claude plugin details <plugin>@soia`.
         for row in rows:
             if row.name in removed:
                 row.result = "removed"

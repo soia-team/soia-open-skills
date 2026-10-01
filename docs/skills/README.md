@@ -105,11 +105,11 @@
 
 | 技能 | 一句话职责 |
 |---|---|
-| [`soia-meta-find-skill`](soia-meta-find-skill.md) | 查找适合任务的 SOIA 技能；仅请求安装时收集安装选择，不代替已安装技能执行任务 |
+| [`soia-meta-find-skill`](soia-meta-find-skill.md) | 按需求查找合适的 SOIA 技能，未安装时只收集安装选择，不代替技能执行任务 |
 | [`soia-meta-prompt-clarity`](soia-meta-prompt-clarity.md) | 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界 |
 | [`soia-meta-publish-market`](soia-meta-publish-market.md) | 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交 |
-| [`soia-meta-skill-release`](soia-meta-skill-release.md) | 正式发版与发布收尾；默认只发布，客户明确选择后才转交定向安装 |
-| [`soia-meta-sync-skills`](soia-meta-sync-skills.md) | 按明确项目或全局范围同步 SOIA 技能，并先输出可审计划 |
+| [`soia-meta-skill-release`](soia-meta-skill-release.md) | 正式发版 SOIA 技能仓并刷新市场 pin，默认不装机 |
+| [`soia-meta-sync-skills`](soia-meta-sync-skills.md) | 按明确范围把共享技能目录软链到项目或宿主，写入前先 dry-run |
 
 ## `soia-cwork-office`　3 个技能
 

@@ -10,7 +10,7 @@ The batch script discovers current managed skills mechanically:
 - Include optional non-SOIA entries only when the user selects optional sync or the script is run with `--optional`.
 - Exclude support files and nested helper directories that do not contain their own `SKILL.md`.
 
-This removes two old allowlist problems: adding a new `soia-*` skill requires adding the folder, not editing the sync script, and installing several packages into one shared source produces one complete target set.
+Adding a new `soia-*` skill needs only its folder; several packages installed into one shared source produce one complete target set.
 
 ## Included SOIA Domains
 
@@ -38,24 +38,17 @@ Public PKM:
 
 Optional skills are linked only when the user selects optional sync or the script is run with `--optional`.
 
-There are currently no optional non-SOIA skills in the non-public source.
+No optional entries are currently bundled.
 
 ## Retired Cleanup Names
 
-Retired names are removed from target agent directories during SOIA batch sync.
-
-- `soia-dev-project-init` - merged into `soia-dev-project-scaffold`.
-- `soia-gov-ui-validation` - merged into its successor.
-- `soia-gov-tauri-real-device-test` - merged into its successor's Stage 2 (2026-04-24).
-- `soia-brand-guidelines` - renamed to `soia-design-brand-guidelines` (2026-04-24).
-- `jiuan-docs-v5-project-structure` - v5 legacy; no longer shipped.
-- `jiuan-docs-v5-references` - v5 legacy; no longer shipped.
+Retired names are removed from target agent directories during SOIA batch sync. The authoritative list is `RETIRED_SKILLS` in `scripts/sync_soia_skills.py`; add a name there when a skill is renamed or merged.
 
 ## Cleanup Boundary
 
 - Managed current set = discovered `soia-*` skills plus optional entries when selected.
 - Repository ownership and target-link ownership are separate: `soia-open-skills` publishes `soia-pkm-*`; this script may link those installed shared-source directories without editing their contents.
-- Managed retired set = retired cleanup names above.
+- Managed retired set = `RETIRED_SKILLS` in the sync script.
 - Overwrite only current managed skill names selected for this run.
 - Delete explicit retired cleanup names and first-level dangling symlinks whose names start with `soia-`.
 - Keep dangling symlinks when `--no-prune` is selected.
