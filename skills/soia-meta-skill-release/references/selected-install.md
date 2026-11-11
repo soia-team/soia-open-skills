@@ -177,6 +177,5 @@ codex plugin list
 |---|---|
 | soia-open-dev-skills | soia-dev |
 | soia-open-pkm-vault-skills | soia-pkm-vault |
-| soia-open-media-content-skills | soia-media-content |
-| soia-open-cwork-office-skills | soia-cwork-office |
+| soia-open-cwork-office-skills | soia-cwork-office（含 `soia-cwork-*` 与 `soia-media-*`） |
 | soia-open-skills | soia-meta |

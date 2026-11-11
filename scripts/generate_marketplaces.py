@@ -66,8 +66,8 @@ PLUGIN_DEFINITIONS = (
     PluginDefinition(
         "soia-open-cwork-office-skills",
         "soia-cwork-office",
-        "办公协作技能库",
-        "办公协作技能：飞书知识库与云盘、ProcessOn 图表",
+        "办公与内容技能库",
+        "办公与内容技能：飞书知识库与云盘、ProcessOn 图表；文章成文、文章图片与公众号、X、小红书发布",
         "Productivity",
     ),
     PluginDefinition(
@@ -76,13 +76,6 @@ PLUGIN_DEFINITIONS = (
         "知识库技能库",
         "知识库技能：初始化、整理、提炼、翻译、转换与书库",
         "Productivity",
-    ),
-    PluginDefinition(
-        "soia-open-media-content-skills",
-        "soia-media-content",
-        "新媒体内容技能库",
-        "新媒体内容技能：文章成文、文章图片与公众号、X、小红书发布",
-        "Creativity",
     ),
     PluginDefinition(
         PORTAL_REPOSITORY,

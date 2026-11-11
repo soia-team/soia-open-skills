@@ -6,7 +6,7 @@
 
 **The hard part isn't learning a skill — it's remembering which one to call**
 
-47 public skills, 5 domains, one entry point. Describe the goal; you don't have to memorize the catalog
+47 public skills, 4 domains, one entry point. Describe the goal; you don't have to memorize the catalog
 
 [中文](README.md) · English
 
@@ -34,17 +34,16 @@ flowchart TB
     D --> E["Claude Code · Codex · WorkBuddy<br/>all three hosts"]
 ```
 
-## 5 domain plugins
+## 4 domain plugins
 
-Install a domain and get every skill in it. The default remains project-scoped installation of only the skills you need; a whole domain requires an explicit choice. **Always-on** is the context the skill index consumes each session; bodies load only when a skill fires. Costs below are historical estimates; after the 2026-11-11 reduction only skill counts were refreshed, and domains whose count changed are marked "Not measured".
+Install a domain and get every skill in it. The default remains project-scoped installation of only the skills you need; a whole domain requires an explicit choice. **Always-on** is the context the skill index consumes each session; bodies load only when a skill fires. Costs below are historical estimates; after the 2026-11-11 reduction only skill counts were refreshed, and domains whose count changed are marked "Not measured". The 5 `soia-media-*` content skills moved into `soia-cwork-office` the same day with their names unchanged; the former `soia-media-content` plugin is no longer updated.
 
 | Domain plugin | What it does | Skills | Always-on |
 |---|---|---:|---:|
 | [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Vault: capture, organize, distill, transform | 27 | Not measured |
 | [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | Engineering and UI: architecture, implementation, reviews, design and external AI dispatch | 9 | Not measured |
-| [`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) | Content: drafting, imagery, per-platform adaptation | 5 | Not measured |
+| [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | Office & Content: Feishu and ProcessOn material to local files; drafting, imagery, per-platform adaptation | 7 | Not measured |
 | **`soia-meta`** (this repo) | Ecosystem: search, sync, release, prompts | 4 | Not measured |
-| [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | Collaboration: Feishu and ProcessOn material to local files | 2 | Not measured |
 
 > `claude plugin disable <plugin>@soia` on a domain you are not using drops it to zero; enable it again any time.
 
@@ -97,7 +96,7 @@ A domain repo is simultaneously a plugin for all three — skills are never copi
 |---|---|---|
 | Claude Code | Domain plugin | `plugin enable/disable`, zero context cost |
 | Codex | Domain plugin | Marketplace-level enable |
-| WorkBuddy | **Role-based expert** (one per domain, 5 public) | Summon / switch expert; not in context until summoned |
+| WorkBuddy | **Role-based expert** (one per domain, 4 public) | Summon / switch expert; not in context until summoned |
 
 ## What it does not do
 

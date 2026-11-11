@@ -58,7 +58,6 @@ TRIGGER_SPLIT = re.compile(r"触发[词]?[：:]|Triggers?[：:]")
 REPO_TO_PLUGIN = {
     "soia-open-dev-skills": "soia-dev",
     "soia-open-pkm-vault-skills": "soia-pkm-vault",
-    "soia-open-media-content-skills": "soia-media-content",
     "soia-open-cwork-office-skills": "soia-cwork-office",
     "soia-open-skills": "soia-meta",
 }
