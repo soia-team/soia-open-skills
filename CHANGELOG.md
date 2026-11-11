@@ -3,7 +3,7 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
-## v2.1.1-SNAPSHOT — 未发布
+## v2.2.0 — 2026-11-11
 
 内容域并入办公域：5 个 `soia-media-*` 技能原名搬到 `soia-cwork-office`，域 5 → 4，公开技能仍是 47 个
 
