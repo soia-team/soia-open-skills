@@ -1,6 +1,6 @@
 # 技能详情页
 
-全生态 64 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 57 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
@@ -61,18 +61,6 @@
 | [`soia-dev-review-code`](soia-dev-review-code.md) | 只读审查固定的代码候选或技能包，分开报告规格符合性与工程问题 |
 | [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 用户要求时把任务进度、调用关系或数据流画成最小视图，复杂布局才出 HTML；普通问答与常规回执不用 |
 | [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理长任务与后台日志，诊断停滞并安全停止或恢复明确进程 |
-
-## `soia-env`　7 个技能
-
-| 技能 | 一句话职责 |
-|---|---|
-| [`soia-env-ai-cli-upgrade`](soia-env-ai-cli-upgrade.md) | 审计并按授权升级多款 AI CLI，先预演并核验结果 |
-| [`soia-env-environment-setup`](soia-env-environment-setup.md) | 从零规划并验证面向新手的开发环境：给安装顺序与官方安装入口，装后逐项复检 |
-| [`soia-env-local-model-bench`](soia-env-local-model-bench.md) | 在 Apple Silicon 上评测本地 LLM：先环境检查与引擎选型（mlx-lm/llama.cpp 等），确认后才下载部署；跑题库判定、吞吐 TTFT 与硬件采样，产出可横比的口径化报告 |
-| [`soia-env-network-diagnose`](soia-env-network-diagnose.md) | 只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报 |
-| [`soia-env-open-skills-install`](soia-env-open-skills-install.md) | 按确认范围在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，默认项目级单技能 |
-| [`soia-env-storage-cleanup`](soia-env-storage-cleanup.md) | 面向小白统计 SOIA 受管配置、状态、缓存和临时目录的空间占用，生成可清理清单并提醒删除风险；只有客户看过最新清单并明确授权后才执行删除，随后复核实际释放空间 |
-| [`soia-env-workbuddy-install`](soia-env-workbuddy-install.md) | 为新手安装、验证或按授权更新 WorkBuddy 桌面客户端 |
 
 ## `soia-media-content`　5 个技能
 

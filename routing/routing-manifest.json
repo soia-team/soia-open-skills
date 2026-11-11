@@ -102,48 +102,6 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-env-ai-cli-upgrade",
-    "repo": "soia-open-env-skills",
-    "skillPath": "skills/soia-env-ai-cli-upgrade",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-env-environment-setup",
-    "repo": "soia-open-env-skills",
-    "skillPath": "skills/soia-env-environment-setup",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-env-local-model-bench",
-    "repo": "soia-open-env-skills",
-    "skillPath": "skills/soia-env-local-model-bench",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-env-network-diagnose",
-    "repo": "soia-open-env-skills",
-    "skillPath": "skills/soia-env-network-diagnose",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-env-open-skills-install",
-    "repo": "soia-open-env-skills",
-    "skillPath": "skills/soia-env-open-skills-install",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-env-storage-cleanup",
-    "repo": "soia-open-env-skills",
-    "skillPath": "skills/soia-env-storage-cleanup",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-env-workbuddy-install",
-    "repo": "soia-open-env-skills",
-    "skillPath": "skills/soia-env-workbuddy-install",
-    "visibility": "public"
-  },
-  {
     "skill_name": "soia-media-compose-article-draft",
     "repo": "soia-open-media-content-skills",
     "skillPath": "skills/soia-media-compose-article-draft",

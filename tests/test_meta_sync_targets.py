@@ -39,7 +39,7 @@ class MetaSyncTargetTests(unittest.TestCase):
         self.assertTrue(expected.issubset(retired), expected - retired)
 
     def test_2026_11_11_retired_and_merged_names_are_registered(self) -> None:
-        """2026-11-11 删减：被删、被并、整仓退役的名字都要进名单，旧软链才会被摘。"""
+        """2026-11-11 删减：被删、被并、整域退役的名字都要进名单，旧软链才会被摘。"""
         retired = runpy.run_path(str(SCRIPT))["RETIRED_SKILLS"]
         expected = {
             "soia-env-antigravity-cli-install",
@@ -53,6 +53,13 @@ class MetaSyncTargetTests(unittest.TestCase):
             "soia-env-codex-setup-support",
             "soia-env-node-install",
             "soia-env-python-install",
+            "soia-env-ai-cli-upgrade",
+            "soia-env-environment-setup",
+            "soia-env-local-model-bench",
+            "soia-env-network-diagnose",
+            "soia-env-open-skills-install",
+            "soia-env-storage-cleanup",
+            "soia-env-workbuddy-install",
             "soia-dev-release-plan-checklist",
             "soia-dev-test-draft-doc",
             "soia-dev-archify-diagrams",
@@ -72,6 +79,22 @@ class MetaSyncTargetTests(unittest.TestCase):
             "soia-corp-ts-inspect-data",
             "soia-corp-ts-inspect-env",
             "soia-corp-ts-inspect-system",
+        }
+        self.assertEqual(len(expected), 37)
+        self.assertTrue(expected.issubset(set(retired)), expected - set(retired))
+        self.assertEqual(len(retired), len(set(retired)), "retired names must not repeat")
+        # 合并后保留的名字不能误进退役名单，否则同步会把现役技能摘掉。
+        for kept in (
+            "soia-dev-project-scaffold",
+            "soia-media-publish-x",
+            "soia-cwork-feishu-cli",
+            "soia-corp-upgrade-framework-major",
+            "soia-meta-skill-release",
+            "soia-meta-sync-skills",
+        ):
+            self.assertNotIn(kept, retired)
+        # soia-private-skills 的退役暂缓（产品仓仍按名字调用 soia-gov-*），其名字不得进名单。
+        for held in (
             "soia-gov-coding-protocol",
             "soia-gov-disaster-recovery",
             "soia-gov-doc-sync",
@@ -90,20 +113,8 @@ class MetaSyncTargetTests(unittest.TestCase):
             "soia-dev-coding-agent",
             "soia-dev-task-prompt",
             "soia-meta-harness",
-        }
-        self.assertEqual(len(expected), 48)
-        self.assertTrue(expected.issubset(set(retired)), expected - set(retired))
-        self.assertEqual(len(retired), len(set(retired)), "retired names must not repeat")
-        # 合并后保留的名字不能误进退役名单，否则同步会把现役技能摘掉。
-        for kept in (
-            "soia-dev-project-scaffold",
-            "soia-media-publish-x",
-            "soia-cwork-feishu-cli",
-            "soia-corp-upgrade-framework-major",
-            "soia-meta-skill-release",
-            "soia-meta-sync-skills",
         ):
-            self.assertNotIn(kept, retired)
+            self.assertNotIn(held, retired)
 
     def run_script(self, home: Path, *args: str, path: str | None = None, legacy: bool = True) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()

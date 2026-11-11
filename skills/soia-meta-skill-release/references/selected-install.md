@@ -179,5 +179,4 @@ codex plugin list
 | soia-open-pkm-vault-skills | soia-pkm-vault |
 | soia-open-media-content-skills | soia-media-content |
 | soia-open-cwork-office-skills | soia-cwork-office |
-| soia-open-env-skills | soia-env |
 | soia-open-skills | soia-meta |

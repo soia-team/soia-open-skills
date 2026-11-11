@@ -93,28 +93,6 @@
       "category": "Creativity"
     },
     {
-      "name": "soia-env",
-      "description": "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/soia-team/soia-open-env-skills.git",
-        "ref": "77b67871d4191fde4425c372200dfadbd409fe5e"
-      },
-      "interface": {
-        "displayName": "环境运维技能库",
-        "shortDescription": "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
-        "category": "Developer Tools",
-        "brandColor": "#84CC16",
-        "composerIcon": "./assets/plugins/soia-env.svg",
-        "logo": "./assets/plugins/soia-env.png"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Developer Tools"
-    },
-    {
       "name": "soia-meta",
       "description": "SOIA 技能生态门户：规范真源、技能目录与跨仓路由清单",
       "source": {

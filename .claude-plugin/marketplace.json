@@ -42,15 +42,6 @@
       }
     },
     {
-      "name": "soia-env",
-      "description": "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
-      "source": {
-        "source": "github",
-        "repo": "soia-team/soia-open-env-skills",
-        "sha": "77b67871d4191fde4425c372200dfadbd409fe5e"
-      }
-    },
-    {
       "name": "soia-meta",
       "description": "SOIA 技能生态门户：规范真源、技能目录与跨仓路由清单",
       "source": "./"

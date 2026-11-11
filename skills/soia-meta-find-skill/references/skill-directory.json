@@ -119,55 +119,6 @@
     }
   },
   {
-    "name": "soia-env-ai-cli-upgrade",
-    "description": "审计并按授权升级多款 AI CLI，先预演并核验结果。触发：「升级 AI CLI」「更新 Claude/Kimi」「检查 CLI 版本」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-environment-setup",
-    "description": "从零规划并验证面向新手的开发环境：给安装顺序与官方安装入口，装后逐项复检。触发：「从零配置开发环境」「准备 AI CLI 环境」「新电脑开发环境搭建」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-local-model-bench",
-    "description": "在 Apple Silicon 上评测本地 LLM：先环境检查与引擎选型（mlx-lm/llama.cpp 等），确认后才下载部署；跑题库判定、吞吐 TTFT 与硬件采样，产出可横比的口径化报告。触发：「评测本地模型」「本地模型跑分」「装个本地模型」「mlx 测速」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-network-diagnose",
-    "description": "只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报。触发：「网络不通」「下载失败」「npm/pip 超时」「证书错误」「安装卡住」「装之前先检查环境」「这台机器能装什么」「有没有装 node」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-open-skills-install",
-    "description": "按确认范围在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，默认项目级单技能。触发：「安装 SOIA 技能」「在 Codex 下装」「更新 soia-dev」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-storage-cleanup",
-    "description": "面向小白统计 SOIA 受管配置、状态、缓存和临时目录的空间占用，生成可清理清单并提醒删除风险；只有客户看过最新清单并明确授权后才执行删除，随后复核实际释放空间。触发：「检查 SOIA 占用」「统计缓存大小」「清理临时文件」「清理过期状态」「释放磁盘空间」；不用于未经授权的全盘清理。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-workbuddy-install",
-    "description": "为新手安装、验证或按授权更新 WorkBuddy 桌面客户端。触发：「安装 WorkBuddy」「更新 WorkBuddy」「WorkBuddy 下载」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
     "name": "soia-media-compose-article-draft",
     "description": "把 distill 提炼出的观点写成成文草稿。以用户观点为骨、vault 摘抄为料，生成可继续交给 publish 的文章。可指定公众号/知乎/随笔风格。Triggers：「把这些观点写成一篇」「把 X 主题写成文章」「compose 这篇」「写成草稿」「起草这篇」",
     "source": {

@@ -110,7 +110,6 @@ DEPLOY_TARGETS: dict[str, list[tuple[str, str]]] = {
     "soia-open-media-content-skills": [(".", "soia-media-content")],
     "soia-open-cwork-office-skills": [(".", "soia-cwork-office")],
     "soia-open-edu-course-skills": [(".", "soia-edu-course")],
-    "soia-open-env-skills": [(".", "soia-env")],
     "soia-open-skills": [(".", "soia-meta")],
 }
 

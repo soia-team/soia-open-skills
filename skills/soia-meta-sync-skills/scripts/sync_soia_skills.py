@@ -49,6 +49,14 @@ RETIRED_SKILLS = [
     "soia-env-codex-setup-support",
     "soia-env-node-install",
     "soia-env-python-install",
+    # env domain retired as a whole 2026-11-11 (no replacement skills)
+    "soia-env-ai-cli-upgrade",
+    "soia-env-environment-setup",
+    "soia-env-local-model-bench",
+    "soia-env-network-diagnose",
+    "soia-env-open-skills-install",
+    "soia-env-storage-cleanup",
+    "soia-env-workbuddy-install",
     # dev skills removed 2026-11-11
     "soia-dev-release-plan-checklist",
     "soia-dev-test-draft-doc",
@@ -73,25 +81,6 @@ RETIRED_SKILLS = [
     "soia-corp-ts-inspect-data",
     "soia-corp-ts-inspect-env",
     "soia-corp-ts-inspect-system",
-    # soia-private-skills repository retired 2026-11-11 (gov / workspace / harness roots)
-    "soia-gov-coding-protocol",
-    "soia-gov-disaster-recovery",
-    "soia-gov-doc-sync",
-    "soia-gov-fix-loop",
-    "soia-gov-git-workflow",
-    "soia-gov-project-scaffold",
-    "soia-gov-proposal-flow",
-    "soia-gov-release",
-    "soia-gov-session-history",
-    "soia-gov-session-startup",
-    "soia-gov-task-execute",
-    "soia-gov-ui-design",
-    "soia-design-brand-guidelines",
-    "soia-design-stitch",
-    "soia-dev-code-review",
-    "soia-dev-coding-agent",
-    "soia-dev-task-prompt",
-    "soia-meta-harness",
 ]
 
 

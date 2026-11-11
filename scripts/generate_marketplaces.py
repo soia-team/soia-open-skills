@@ -85,13 +85,6 @@ PLUGIN_DEFINITIONS = (
         "Creativity",
     ),
     PluginDefinition(
-        "soia-open-env-skills",
-        "soia-env",
-        "环境运维技能库",
-        "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
-        "Developer Tools",
-    ),
-    PluginDefinition(
         PORTAL_REPOSITORY,
         "soia-meta",
         "SOIA 元技能库",

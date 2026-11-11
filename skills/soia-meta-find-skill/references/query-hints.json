@@ -28,7 +28,6 @@
     "设计图表": ["design-ui", "audit-ui", "diagram", "open-design-ops"],
     "产品prd": ["draft-feature-spec"],
     "办公协作": ["cwork-", "cwork-office"],
-    "环境安装": ["env-", "open-env"],
     "生态管理": ["meta-", "open-skills"]
   }
 }
