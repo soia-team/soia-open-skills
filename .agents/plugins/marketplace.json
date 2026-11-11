@@ -6,15 +6,15 @@
   "plugins": [
     {
       "name": "soia-dev",
-      "description": "工程与 UI 技能：功能规格、架构、实现审查、UI 设计验收与按需工具",
+      "description": "工程与 UI 技能：架构、实现审查、UI 设计验收与外部 AI 调度",
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-dev-skills.git",
-        "ref": "aad13a4608750eb05dd33c264d36514443a5fe2d"
+        "ref": "9f00504b3c6b92d97b583b7a13be8042e4b3d31e"
       },
       "interface": {
         "displayName": "工程与 UI 技能库",
-        "shortDescription": "工程与 UI 技能：功能规格、架构、实现审查、UI 设计验收与按需工具",
+        "shortDescription": "工程与 UI 技能：架构、实现审查、UI 设计验收与外部 AI 调度",
         "category": "Developer Tools",
         "brandColor": "#FB923C",
         "composerIcon": "./assets/plugins/soia-dev.svg",
@@ -32,7 +32,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-cwork-office-skills.git",
-        "ref": "a3ef2273774d57fb9516eeb073385d9f759612d3"
+        "ref": "5fd7d02a8f5d9e008989b937c62894bdd07727b8"
       },
       "interface": {
         "displayName": "办公协作技能库",
@@ -54,7 +54,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-pkm-vault-skills.git",
-        "ref": "c41d641ed66c5d9d196ee62b1a1a0303e7d3c28b"
+        "ref": "b541e90d6d72096655d78dca5fcef7a763340d29"
       },
       "interface": {
         "displayName": "知识库技能库",
@@ -76,7 +76,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-media-content-skills.git",
-        "ref": "3e92a606ba813af387caf1fa0f443ae330f07eb3"
+        "ref": "5402df192edc99bb6d34c48af10588061dbb8de4"
       },
       "interface": {
         "displayName": "新媒体内容技能库",

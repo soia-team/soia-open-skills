@@ -1,12 +1,12 @@
 # 技能详情页
 
-全生态 57 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 47 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
 [← 返回门户](../../README.md)
 
-## `soia-pkm-vault`　31 个技能
+## `soia-pkm-vault`　27 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
@@ -14,7 +14,6 @@
 | [`soia-pkm-alipan-drive-ops`](soia-pkm-alipan-drive-ops.md) | 执行阿里云盘登录、浏览与文件操作，并为资源整理提供底层能力 |
 | [`soia-pkm-baidu-netdisk-ops`](soia-pkm-baidu-netdisk-ops.md) | 百度网盘原子操作与只读 JSONL 扫描适配 |
 | [`soia-pkm-bootstrap-vault-base`](soia-pkm-bootstrap-vault-base.md) | 以 plan-first、create-only、可检查的方式初始化平台中立的 AI-native Markdown vault 基座，包含分区下钻规则、工作台生命周期、模板与多 AI 适配层 |
-| [`soia-pkm-bootstrap-vault-ima`](soia-pkm-bootstrap-vault-ima.md) | 把已有本地 Markdown vault 接入腾讯 ima 知识库消费端：安装客户端、建立目录映射、用 ima 官方 Skills 配置本地文件夹监控同步并验证检索 |
 | [`soia-pkm-bootstrap-vault-obsidian`](soia-pkm-bootstrap-vault-obsidian.md) | 以 dry-run 和保留未知配置的结构化合并方式，把已有 Markdown vault 配置为 Obsidian 消费端，启用 Bases 与可选宽页 CSS |
 | [`soia-pkm-clip-douyin`](soia-pkm-clip-douyin.md) | 归档单条抖音视频到 Obsidian vault，并保留本地媒体索引 |
 | [`soia-pkm-clip-drive`](soia-pkm-clip-drive.md) | 把云盘/本地文件或受控 PDF URL 批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理；图片正文需显式 OCR |
@@ -35,32 +34,23 @@
 | [`soia-pkm-manage-vault-lifecycle`](soia-pkm-manage-vault-lifecycle.md) | 规划并安全执行整个 Markdown/Obsidian 知识库，或知识库中指定模块的盘点、整理、改名、迁移、归档与清理 |
 | [`soia-pkm-organize-article-moc`](soia-pkm-organize-article-moc.md) | 将 Obsidian 文章库按元数据、主题双链、月份和两级 MOC 规范化整理 |
 | [`soia-pkm-query-vault`](soia-pkm-query-vault.md) | 以只读方式搜索整个 Markdown/Obsidian 知识库或指定模块，检索文件名、正文、frontmatter、标签、反向链接、代码与附件，并按来源层级返回可核验结果 |
-| [`soia-pkm-reading-plan`](soia-pkm-reading-plan.md) | 把书单、主题或观点映射组织成按字数排期的可执行阅读计划，并落为 Obsidian 笔记 |
 | [`soia-pkm-transform-article-notebooklm`](soia-pkm-transform-article-notebooklm.md) | 用 NotebookLM 将文章转换为学习材料 |
-| [`soia-pkm-transform-article-ppt`](soia-pkm-transform-article-ppt.md) | 把文章、提纲或主题转换为以可编辑 PPTX 为正式母版的演示媒体包，并支持外置固定模板与机密内容本地隔离 |
 | [`soia-pkm-transform-article-visual`](soia-pkm-transform-article-visual.md) | 把文章转换为长图、信息图、海报、封面、插画等视觉产物。HTML/CSS 截图为本地默认方案，可选 Open Design 或 Codex 图生成 |
-| [`soia-pkm-transform-obsidian-pdf`](soia-pkm-transform-obsidian-pdf.md) | 用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint |
 | [`soia-pkm-translate-article-zh`](soia-pkm-translate-article-zh.md) | 将外文文章按 quick、normal 或 refined 模式翻译成独立中文稿，保持术语一致且不覆盖原文 |
 
-## `soia-dev`　15 个技能
+## `soia-dev`　9 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
 | [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 派任务给外部 AI CLI 进程并核验模型、额度与产物；宿主内置 subagent 不用本技能 |
 | [`soia-dev-audit-ui`](soia-dev-audit-ui.md) | 只读验收界面，技术证据与 UX/视觉判断分开报告 |
 | [`soia-dev-design-ui`](soia-dev-design-ui.md) | 设计界面结构、交互状态与视觉并交接实现，守住已批准的品牌与样式 |
-| [`soia-dev-doc-sync`](soia-dev-doc-sync.md) | 核对代码、发布事实和有效裁决与文档之间的漂移，按授权同步派生内容 |
-| [`soia-dev-draft-feature-spec`](soia-dev-draft-feature-spec.md) | 把产品想法或需求整理成可验收的功能规格，按需拆成纵向交付切片 |
 | [`soia-dev-enforce-coding-protocol`](soia-dev-enforce-coding-protocol.md) | 给工程改动加范围、权限与验证底线，不另起流程 |
 | [`soia-dev-github-ops`](soia-dev-github-ops.md) | 查询和操作 GitHub PR、CI、Release 与协作者权限 |
 | [`soia-dev-govern-architecture`](soia-dev-govern-architecture.md) | 设计或审查架构方案、核对长期漂移，明确职责、契约、事实真源与迁移边界 |
 | [`soia-dev-implement-task`](soia-dev-implement-task.md) | 实现工程需求、定位修复缺陷或处理已授权 findings |
-| [`soia-dev-officecli-ops`](soia-dev-officecli-ops.md) | 以 OfficeCLI 安全读取、复制后修改并验证 DOCX、XLSX、PPTX |
-| [`soia-dev-open-design-ops`](soia-dev-open-design-ops.md) | 操作 Open Design 环境、项目与导出，并交付 HTML 原型、deck 和动画 |
-| [`soia-dev-project-scaffold`](soia-dev-project-scaffold.md) | 为 Git 项目补最小 AI 协作入口与文档导航，或诊断、起草、精简 AI 项目指令 |
 | [`soia-dev-review-code`](soia-dev-review-code.md) | 只读审查固定的代码候选或技能包，分开报告规格符合性与工程问题 |
 | [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 用户要求时把任务进度、调用关系或数据流画成最小视图，复杂布局才出 HTML；普通问答与常规回执不用 |
-| [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理长任务与后台日志，诊断停滞并安全停止或恢复明确进程 |
 
 ## `soia-media-content`　5 个技能
 

@@ -7,11 +7,11 @@
   "plugins": [
     {
       "name": "soia-dev",
-      "description": "工程与 UI 技能：功能规格、架构、实现审查、UI 设计验收与按需工具",
+      "description": "工程与 UI 技能：架构、实现审查、UI 设计验收与外部 AI 调度",
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-dev-skills",
-        "sha": "aad13a4608750eb05dd33c264d36514443a5fe2d"
+        "sha": "9f00504b3c6b92d97b583b7a13be8042e4b3d31e"
       }
     },
     {
@@ -20,7 +20,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-cwork-office-skills",
-        "sha": "a3ef2273774d57fb9516eeb073385d9f759612d3"
+        "sha": "5fd7d02a8f5d9e008989b937c62894bdd07727b8"
       }
     },
     {
@@ -29,7 +29,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-pkm-vault-skills",
-        "sha": "c41d641ed66c5d9d196ee62b1a1a0303e7d3c28b"
+        "sha": "b541e90d6d72096655d78dca5fcef7a763340d29"
       }
     },
     {
@@ -38,7 +38,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-media-content-skills",
-        "sha": "3e92a606ba813af387caf1fa0f443ae330f07eb3"
+        "sha": "5402df192edc99bb6d34c48af10588061dbb8de4"
       }
     },
     {

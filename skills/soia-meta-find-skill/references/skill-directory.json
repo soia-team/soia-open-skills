@@ -35,20 +35,6 @@
     }
   },
   {
-    "name": "soia-dev-doc-sync",
-    "description": "核对代码、发布事实和有效裁决与文档之间的漂移，按授权同步派生内容。触发：文档和代码对不上、同步发布文档、核对状态文档",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-draft-feature-spec",
-    "description": "把产品想法或需求整理成可验收的功能规格，按需拆成纵向交付切片。触发：起草功能规格、把需求写成 PRD、补验收标准",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
     "name": "soia-dev-enforce-coding-protocol",
     "description": "给工程改动加范围、权限与验证底线，不另起流程。触发：执行编码协议、核对工程改动是否越界",
     "source": {
@@ -77,27 +63,6 @@
     }
   },
   {
-    "name": "soia-dev-officecli-ops",
-    "description": "以 OfficeCLI 安全读取、复制后修改并验证 DOCX、XLSX、PPTX。触发：「OfficeCLI」「OpenXML 验证」「Office 文件原子修改」",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-open-design-ops",
-    "description": "操作 Open Design 环境、项目与导出，并交付 HTML 原型、deck 和动画。触发：检查 Open Design、制作 HTML deck、继续设计会话",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-project-scaffold",
-    "description": "为 Git 项目补最小 AI 协作入口与文档导航，或诊断、起草、精简 AI 项目指令。触发：补项目协作基线、初始化 AGENTS、生成文档骨架、精简 AGENTS.md、CLAUDE.md 怎么组织、检查 AI 指令冲突",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
     "name": "soia-dev-review-code",
     "description": "只读审查固定的代码候选或技能包，分开报告规格符合性与工程问题。触发：审查这次改动、review 代码、独立评审",
     "source": {
@@ -107,13 +72,6 @@
   {
     "name": "soia-dev-show-task-html",
     "description": "用户要求时把任务进度、调用关系或数据流画成最小视图，复杂布局才出 HTML；普通问答与常规回执不用。触发：展示这个任务、画调用关系、数据流怎么走",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-terminal-ops",
-    "description": "管理长任务与后台日志，诊断停滞并安全停止或恢复明确进程。触发：后台跑这个、进程疑似卡住、安全停止进程",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -198,13 +156,6 @@
   {
     "name": "soia-pkm-bootstrap-vault-base",
     "description": "以 plan-first、create-only、可检查的方式初始化平台中立的 AI-native Markdown vault 基座，包含分区下钻规则、工作台生命周期、模板与多 AI 适配层。触发：「初始化知识库」「新建 Markdown vault」「搭建 AI-native PKM」",
-    "source": {
-      "repository": "soia-open-pkm-vault-skills"
-    }
-  },
-  {
-    "name": "soia-pkm-bootstrap-vault-ima",
-    "description": "把已有本地 Markdown vault 接入腾讯 ima 知识库消费端：安装客户端、建立目录映射、用 ima 官方 Skills 配置本地文件夹监控同步并验证检索。Triggers：「接入 ima」「同步到 ima 知识库」「配置 ima」「让 ima 监控 vault」",
     "source": {
       "repository": "soia-open-pkm-vault-skills"
     }
@@ -350,13 +301,6 @@
     }
   },
   {
-    "name": "soia-pkm-reading-plan",
-    "description": "把书单、主题或观点映射组织成按字数排期的可执行阅读计划，并落为 Obsidian 笔记。触发：「做读书计划」「书单排期」「规划下半年阅读」",
-    "source": {
-      "repository": "soia-open-pkm-vault-skills"
-    }
-  },
-  {
     "name": "soia-pkm-transform-article-notebooklm",
     "description": "用 NotebookLM 将文章转换为学习材料。触发：「NotebookLM 生成试卷」「NotebookLM 做闪卡」「NotebookLM 生成播客」",
     "source": {
@@ -364,22 +308,8 @@
     }
   },
   {
-    "name": "soia-pkm-transform-article-ppt",
-    "description": "把文章、提纲或主题转换为以可编辑 PPTX 为正式母版的演示媒体包，并支持外置固定模板与机密内容本地隔离。触发：「做 PPT」「生成 PPTX」「转成课件」「按公司模板做周报」",
-    "source": {
-      "repository": "soia-open-pkm-vault-skills"
-    }
-  },
-  {
     "name": "soia-pkm-transform-article-visual",
     "description": "把文章转换为长图、信息图、海报、封面、插画等视觉产物。HTML/CSS 截图为本地默认方案，可选 Open Design 或 Codex 图生成。Triggers：「生成长图」「做成信息图」「转成海报」「生成封面」「做成图片」「export visual」「make infographic」",
-    "source": {
-      "repository": "soia-open-pkm-vault-skills"
-    }
-  },
-  {
-    "name": "soia-pkm-transform-obsidian-pdf",
-    "description": "用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint。Triggers：「转成PDF」「导出PDF」「归档并转PDF」「生成PDF」「export PDF」",
     "source": {
       "repository": "soia-open-pkm-vault-skills"
     }

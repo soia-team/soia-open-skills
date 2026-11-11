@@ -30,18 +30,6 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-dev-doc-sync",
-    "repo": "soia-open-dev-skills",
-    "skillPath": "skills/soia-dev-doc-sync",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-dev-draft-feature-spec",
-    "repo": "soia-open-dev-skills",
-    "skillPath": "skills/soia-dev-draft-feature-spec",
-    "visibility": "public"
-  },
-  {
     "skill_name": "soia-dev-enforce-coding-protocol",
     "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-enforce-coding-protocol",
@@ -66,24 +54,6 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-dev-officecli-ops",
-    "repo": "soia-open-dev-skills",
-    "skillPath": "skills/soia-dev-officecli-ops",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-dev-open-design-ops",
-    "repo": "soia-open-dev-skills",
-    "skillPath": "skills/soia-dev-open-design-ops",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-dev-project-scaffold",
-    "repo": "soia-open-dev-skills",
-    "skillPath": "skills/soia-dev-project-scaffold",
-    "visibility": "public"
-  },
-  {
     "skill_name": "soia-dev-review-code",
     "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-review-code",
@@ -93,12 +63,6 @@
     "skill_name": "soia-dev-show-task-html",
     "repo": "soia-open-dev-skills",
     "skillPath": "skills/soia-dev-show-task-html",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-dev-terminal-ops",
-    "repo": "soia-open-dev-skills",
-    "skillPath": "skills/soia-dev-terminal-ops",
     "visibility": "public"
   },
   {
@@ -171,12 +135,6 @@
     "skill_name": "soia-pkm-bootstrap-vault-base",
     "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-bootstrap-vault-base",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-pkm-bootstrap-vault-ima",
-    "repo": "soia-open-pkm-vault-skills",
-    "skillPath": "skills/soia-pkm-bootstrap-vault-ima",
     "visibility": "public"
   },
   {
@@ -300,33 +258,15 @@
     "visibility": "public"
   },
   {
-    "skill_name": "soia-pkm-reading-plan",
-    "repo": "soia-open-pkm-vault-skills",
-    "skillPath": "skills/soia-pkm-reading-plan",
-    "visibility": "public"
-  },
-  {
     "skill_name": "soia-pkm-transform-article-notebooklm",
     "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-transform-article-notebooklm",
     "visibility": "public"
   },
   {
-    "skill_name": "soia-pkm-transform-article-ppt",
-    "repo": "soia-open-pkm-vault-skills",
-    "skillPath": "skills/soia-pkm-transform-article-ppt",
-    "visibility": "public"
-  },
-  {
     "skill_name": "soia-pkm-transform-article-visual",
     "repo": "soia-open-pkm-vault-skills",
     "skillPath": "skills/soia-pkm-transform-article-visual",
-    "visibility": "public"
-  },
-  {
-    "skill_name": "soia-pkm-transform-obsidian-pdf",
-    "repo": "soia-open-pkm-vault-skills",
-    "skillPath": "skills/soia-pkm-transform-obsidian-pdf",
     "visibility": "public"
   },
   {

@@ -60,7 +60,7 @@ PLUGIN_DEFINITIONS = (
         "soia-open-dev-skills",
         "soia-dev",
         "工程与 UI 技能库",
-        "工程与 UI 技能：功能规格、架构、实现审查、UI 设计验收与按需工具",
+        "工程与 UI 技能：架构、实现审查、UI 设计验收与外部 AI 调度",
         "Developer Tools",
     ),
     PluginDefinition(

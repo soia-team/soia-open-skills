@@ -15,18 +15,15 @@
     "UI 设计": ["design-ui", "设计界面"],
     "界面设计": ["design-ui", "信息结构"],
     "UI 验收": ["audit-ui", "验收界面"],
-    "界面验收": ["audit-ui", "键盘"],
-    "功能规格": ["draft-feature-spec", "产品"],
-    "PRD": ["draft-feature-spec", "功能规格"]
+    "界面验收": ["audit-ui", "键盘"]
   },
   "domain_hints": {
     "剪藏网盘": ["pkm-clip", "drive-ops", "alipan", "baidu"],
     "知识提炼": ["pkm-vault", "pkm-library", "pkm-distill", "pkm-interpret", "pkm-transform"],
     "新媒发布": ["media-", "media-content"],
-    "编码审查终端": ["enforce-coding-protocol", "review-code", "implement-task", "github-ops", "terminal-ops"],
+    "编码审查终端": ["enforce-coding-protocol", "review-code", "implement-task", "github-ops"],
     "架构治理": ["govern-architecture"],
-    "设计图表": ["design-ui", "audit-ui", "diagram", "open-design-ops"],
-    "产品prd": ["draft-feature-spec"],
+    "设计图表": ["design-ui", "audit-ui"],
     "办公协作": ["cwork-", "cwork-office"],
     "生态管理": ["meta-", "open-skills"]
   }

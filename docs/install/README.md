@@ -79,7 +79,7 @@ codex plugin add soia-pkm-vault@soia
 
 | 插件名 | 来源仓库 | 内容 |
 |---|---|---|
-| `soia-dev` | soia-open-dev-skills | 工程与 UI：功能规格、架构、实现审查、UI 设计验收、Open Design 和 Office 工具 |
+| `soia-dev` | soia-open-dev-skills | 工程与 UI：架构、实现审查、UI 设计验收、GitHub 运维与外部 AI 调度 |
 | `soia-pkm-vault` | soia-open-pkm-vault-skills | 知识库：剪藏（网页/公众号/X/抖音/小红书/GitHub）、网盘、整理、提炼、转换、书库 |
 | `soia-media-content` | soia-open-media-content-skills | 新媒体：文章成文、文章图片、公众号/X/小红书发布 |
 | `soia-cwork-office` | soia-open-cwork-office-skills | 办公协作：飞书知识库与云盘、ProcessOn 图表 |

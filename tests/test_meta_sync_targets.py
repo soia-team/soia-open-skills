@@ -68,6 +68,16 @@ class MetaSyncTargetTests(unittest.TestCase):
             "soia-media-publish-x-article",
             "soia-media-publish-x-thread",
             "soia-cwork-feishu-doc-git-sync",
+            "soia-dev-open-design-ops",
+            "soia-dev-doc-sync",
+            "soia-dev-draft-feature-spec",
+            "soia-dev-officecli-ops",
+            "soia-dev-terminal-ops",
+            "soia-dev-project-scaffold",
+            "soia-pkm-bootstrap-vault-ima",
+            "soia-pkm-transform-obsidian-pdf",
+            "soia-pkm-transform-article-ppt",
+            "soia-pkm-reading-plan",
             "soia-edu-design-course-outline",
             "soia-edu-compose-lesson-plan",
             "soia-meta-publish-market",
@@ -98,13 +108,15 @@ class MetaSyncTargetTests(unittest.TestCase):
             "soia-dev-task-prompt",
             "soia-meta-harness",
         }
-        self.assertEqual(len(expected), 55)
+        self.assertEqual(len(expected), 65)
         self.assertTrue(expected.issubset(set(retired)), expected - set(retired))
         self.assertEqual(len(retired), len(set(retired)), "retired names must not repeat")
         # 合并后保留的名字不能误进退役名单，否则同步会把现役技能摘掉。
         for kept in (
-            "soia-dev-project-scaffold",
             "soia-media-publish-x",
+            "soia-pkm-clip-x-profile",
+            "soia-pkm-clip-drive",
+            "soia-dev-github-ops",
             "soia-cwork-feishu-cli",
             "soia-corp-upgrade-framework-major",
             "soia-meta-skill-release",

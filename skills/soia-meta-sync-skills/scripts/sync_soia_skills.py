@@ -62,11 +62,23 @@ RETIRED_SKILLS = [
     "soia-dev-test-draft-doc",
     "soia-dev-archify-diagrams",
     "soia-dev-drawio-visio-diagrams",
-    # merged 2026-11-11: agent-md-advisor -> soia-dev-project-scaffold; publish-x-article/-thread -> soia-media-publish-x; feishu-doc-git-sync -> soia-cwork-feishu-cli
+    # merged 2026-11-11: agent-md-advisor -> soia-dev-project-scaffold (itself removed later the same day); publish-x-article/-thread -> soia-media-publish-x; feishu-doc-git-sync -> soia-cwork-feishu-cli
     "soia-dev-agent-md-advisor",
     "soia-media-publish-x-article",
     "soia-media-publish-x-thread",
     "soia-cwork-feishu-doc-git-sync",
+    # dev skills removed 2026-11-11 (second batch; project-scaffold included, so its merged advisor entry is gone too)
+    "soia-dev-open-design-ops",
+    "soia-dev-doc-sync",
+    "soia-dev-draft-feature-spec",
+    "soia-dev-officecli-ops",
+    "soia-dev-terminal-ops",
+    "soia-dev-project-scaffold",
+    # pkm skills removed 2026-11-11 (no usage trace)
+    "soia-pkm-bootstrap-vault-ima",
+    "soia-pkm-transform-obsidian-pdf",
+    "soia-pkm-transform-article-ppt",
+    "soia-pkm-reading-plan",
     # edu repository retired 2026-11-11 (no replacement)
     "soia-edu-design-course-outline",
     "soia-edu-compose-lesson-plan",

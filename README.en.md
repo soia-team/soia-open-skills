@@ -6,7 +6,7 @@
 
 **The hard part isn't learning a skill — it's remembering which one to call**
 
-57 public skills, 5 domains, one entry point. Describe the goal; you don't have to memorize the catalog
+47 public skills, 5 domains, one entry point. Describe the goal; you don't have to memorize the catalog
 
 [中文](README.md) · English
 
@@ -24,7 +24,7 @@
 
 ## What it solves
 
-Once a skill library gets large, the real cost is not learning any single skill — it's **remembering which ones exist**. This repo is the ecosystem portal: specifications, cross-repo navigation, the marketplace manifest, and 5 meta skills that manage the ecosystem itself.
+Once a skill library gets large, the real cost is not learning any single skill — it's **remembering which ones exist**. This repo is the ecosystem portal: specifications, cross-repo navigation, the marketplace manifest, and 4 meta skills that manage the ecosystem itself.
 
 ```mermaid
 flowchart TB
@@ -40,8 +40,8 @@ Install a domain and get every skill in it. The default remains project-scoped i
 
 | Domain plugin | What it does | Skills | Always-on |
 |---|---|---:|---:|
-| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Vault: capture, organize, distill, transform | 31 | ~3.6k |
-| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | Engineering and UI: specs, architecture, implementation, reviews, design and tools | 15 | Not measured |
+| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Vault: capture, organize, distill, transform | 27 | Not measured |
+| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | Engineering and UI: architecture, implementation, reviews, design and external AI dispatch | 9 | Not measured |
 | [`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) | Content: drafting, imagery, per-platform adaptation | 5 | Not measured |
 | **`soia-meta`** (this repo) | Ecosystem: search, sync, release, prompts | 4 | Not measured |
 | [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | Collaboration: Feishu and ProcessOn material to local files | 2 | Not measured |
@@ -111,7 +111,7 @@ A domain repo is simultaneously a plugin for all three — skills are never copi
 | Document | Covers |
 |---|---|
 | [docs/learning-guide.en.md](docs/learning-guide.en.md) | **Start here**: how the ecosystem works, why it is designed this way, FAQs |
-| [docs/skills/](docs/skills/README.md) | **Per-skill pages for all 57 skills**: triggers, outputs, usage examples, install |
+| [docs/skills/](docs/skills/README.md) | **Per-skill pages for all 47 skills**: triggers, outputs, usage examples, install |
 | [docs/install/](docs/install/README.en.md) | Install guides for 60+ AI hosts |
 | [docs/install-profiles.md](docs/install-profiles.md) | Setups organized by machine purpose |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | Skill structure, naming, frontmatter, validation |
