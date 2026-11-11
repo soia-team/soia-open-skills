@@ -81,6 +81,25 @@ RETIRED_SKILLS = [
     "soia-corp-ts-inspect-data",
     "soia-corp-ts-inspect-env",
     "soia-corp-ts-inspect-system",
+    # soia-private-skills repository retired and deleted 2026-11-11 (gov / workspace / harness roots)
+    "soia-gov-coding-protocol",
+    "soia-gov-disaster-recovery",
+    "soia-gov-doc-sync",
+    "soia-gov-fix-loop",
+    "soia-gov-git-workflow",
+    "soia-gov-project-scaffold",
+    "soia-gov-proposal-flow",
+    "soia-gov-release",
+    "soia-gov-session-history",
+    "soia-gov-session-startup",
+    "soia-gov-task-execute",
+    "soia-gov-ui-design",
+    "soia-design-brand-guidelines",
+    "soia-design-stitch",
+    "soia-dev-code-review",
+    "soia-dev-coding-agent",
+    "soia-dev-task-prompt",
+    "soia-meta-harness",
 ]
 
 

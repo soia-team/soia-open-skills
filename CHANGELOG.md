@@ -15,9 +15,10 @@
 
 ## 变更
 - 路由与详情页按删减后的技能集重出：dev 20 → 15、media 6 → 5、cwork 3 → 2、pkm 31 不变；新增 `soia-media-publish-x`（合并原 `-x-article` 与 `-x-thread`），`soia-dev-project-scaffold`、`soia-cwork-feishu-cli` 更新为合并后的职责
-- `soia-meta-sync-skills` 2.4.3：退役清理名单补 37 个名字（env 18 个、dev 被删 / 被并 5 个、media 2 个、cwork 1 个、edu 2 个、`soia-meta-publish-market`、corp 8 个），同步时摘除这些旧入口
+- `soia-meta-sync-skills` 2.4.3：退役清理名单补入本批全部被删 / 被并 / 退役的名字（公开 29 个：env 18 个、dev 被删 / 被并 5 个、media 2 个、cwork 1 个、edu 2 个、`soia-meta-publish-market`；另含非公开仓已退役的名字），同步时摘除这些旧入口
 - `soia-meta-find-skill` 1.2.4：`query-hints.json` 去掉只指向已删技能与已退役域的提示词
 - `soia-meta-skill-release` 6.0.3：域仓与插件对照表去掉 edu 与 env；`install_workbuddy_experts.py` 找不到 WorkBuddy 官方工具时改为提示按官方文档安装桌面端，不再指向已退役的 `soia-env-workbuddy-install`
+- 检查脚本的仓表去掉一个已退役并删除的非公开仓
 - README 中英、`docs/install/`、`docs/install-profiles.md`、学习指南的技能总数、域数量与安装组合
 
 ## v2.0.5 — 2026-10-01
