@@ -301,7 +301,6 @@ REPO_TO_PLUGIN = {
     "soia-open-pkm-vault-skills": "soia-pkm-vault",
     "soia-open-media-content-skills": "soia-media-content",
     "soia-open-cwork-office-skills": "soia-cwork-office",
-    "soia-open-edu-course-skills": "soia-edu-course",
     "soia-open-env-skills": "soia-env",
 }
 

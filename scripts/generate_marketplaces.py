@@ -85,13 +85,6 @@ PLUGIN_DEFINITIONS = (
         "Creativity",
     ),
     PluginDefinition(
-        "soia-open-edu-course-skills",
-        "soia-edu-course",
-        "教育课程技能库",
-        "教育课程技能：课程大纲设计与教案编写",
-        "Education & Research",
-    ),
-    PluginDefinition(
         "soia-open-env-skills",
         "soia-env",
         "环境运维技能库",

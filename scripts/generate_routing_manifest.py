@@ -24,7 +24,6 @@ PUBLIC_REPOSITORIES = (
     "soia-open-media-content-skills",
     "soia-open-cwork-office-skills",
     "soia-open-dev-skills",
-    "soia-open-edu-course-skills",
 )
 
 PORTAL_REPOSITORY = "soia-open-skills"

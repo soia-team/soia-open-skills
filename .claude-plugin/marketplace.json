@@ -42,15 +42,6 @@
       }
     },
     {
-      "name": "soia-edu-course",
-      "description": "教育课程技能：课程大纲设计与教案编写",
-      "source": {
-        "source": "github",
-        "repo": "soia-team/soia-open-edu-course-skills",
-        "sha": "1736e89d7f63e010a697222b866c14781257e6a1"
-      }
-    },
-    {
       "name": "soia-env",
       "description": "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
       "source": {

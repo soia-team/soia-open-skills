@@ -38,6 +38,73 @@ class MetaSyncTargetTests(unittest.TestCase):
         }
         self.assertTrue(expected.issubset(retired), expected - retired)
 
+    def test_2026_11_11_retired_and_merged_names_are_registered(self) -> None:
+        """2026-11-11 删减：被删、被并、整仓退役的名字都要进名单，旧软链才会被摘。"""
+        retired = runpy.run_path(str(SCRIPT))["RETIRED_SKILLS"]
+        expected = {
+            "soia-env-antigravity-cli-install",
+            "soia-env-claude-cli-install",
+            "soia-env-deepcode-cli-install",
+            "soia-env-kimi-cli-install",
+            "soia-env-opencode-cli-install",
+            "soia-env-pi-cli-install",
+            "soia-env-qoder-cli-install",
+            "soia-env-codex-install",
+            "soia-env-codex-setup-support",
+            "soia-env-node-install",
+            "soia-env-python-install",
+            "soia-dev-release-plan-checklist",
+            "soia-dev-test-draft-doc",
+            "soia-dev-archify-diagrams",
+            "soia-dev-drawio-visio-diagrams",
+            "soia-dev-agent-md-advisor",
+            "soia-media-publish-x-article",
+            "soia-media-publish-x-thread",
+            "soia-cwork-feishu-doc-git-sync",
+            "soia-edu-design-course-outline",
+            "soia-edu-compose-lesson-plan",
+            "soia-meta-publish-market",
+            "soia-corp-ba-draft-requirement",
+            "soia-corp-release-plan-checklist",
+            "soia-corp-safe-audit-codebase",
+            "soia-corp-safe-vuln-intel",
+            "soia-corp-test-draft-test-doc",
+            "soia-corp-ts-inspect-data",
+            "soia-corp-ts-inspect-env",
+            "soia-corp-ts-inspect-system",
+            "soia-gov-coding-protocol",
+            "soia-gov-disaster-recovery",
+            "soia-gov-doc-sync",
+            "soia-gov-fix-loop",
+            "soia-gov-git-workflow",
+            "soia-gov-project-scaffold",
+            "soia-gov-proposal-flow",
+            "soia-gov-release",
+            "soia-gov-session-history",
+            "soia-gov-session-startup",
+            "soia-gov-task-execute",
+            "soia-gov-ui-design",
+            "soia-design-brand-guidelines",
+            "soia-design-stitch",
+            "soia-dev-code-review",
+            "soia-dev-coding-agent",
+            "soia-dev-task-prompt",
+            "soia-meta-harness",
+        }
+        self.assertEqual(len(expected), 48)
+        self.assertTrue(expected.issubset(set(retired)), expected - set(retired))
+        self.assertEqual(len(retired), len(set(retired)), "retired names must not repeat")
+        # 合并后保留的名字不能误进退役名单，否则同步会把现役技能摘掉。
+        for kept in (
+            "soia-dev-project-scaffold",
+            "soia-media-publish-x",
+            "soia-cwork-feishu-cli",
+            "soia-corp-upgrade-framework-major",
+            "soia-meta-skill-release",
+            "soia-meta-sync-skills",
+        ):
+            self.assertNotIn(kept, retired)
+
     def run_script(self, home: Path, *args: str, path: str | None = None, legacy: bool = True) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env["HOME"] = str(home)

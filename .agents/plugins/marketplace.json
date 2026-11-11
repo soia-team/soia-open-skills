@@ -93,28 +93,6 @@
       "category": "Creativity"
     },
     {
-      "name": "soia-edu-course",
-      "description": "教育课程技能：课程大纲设计与教案编写",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/soia-team/soia-open-edu-course-skills.git",
-        "ref": "1736e89d7f63e010a697222b866c14781257e6a1"
-      },
-      "interface": {
-        "displayName": "教育课程技能库",
-        "shortDescription": "教育课程技能：课程大纲设计与教案编写",
-        "category": "Education & Research",
-        "brandColor": "#818CF8",
-        "composerIcon": "./assets/plugins/soia-edu-course.svg",
-        "logo": "./assets/plugins/soia-edu-course.png"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Education & Research"
-    },
-    {
       "name": "soia-env",
       "description": "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
       "source": {

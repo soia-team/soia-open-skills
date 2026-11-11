@@ -6,7 +6,6 @@
     "提炼": ["distill", "interpret", "分析"],
     "发版": ["release", "发布清单"],
     "运维": ["ops", "巡检"],
-    "课程": ["course", "lesson", "教案"],
     "代码审查": ["review", "审查", "代码"],
     "架构评审": ["govern-architecture", "架构"],
     "架构漂移": ["govern-architecture", "漂移"],
@@ -26,12 +25,9 @@
     "新媒发布": ["media-", "media-content"],
     "编码审查终端": ["enforce-coding-protocol", "review-code", "implement-task", "github-ops", "terminal-ops"],
     "架构治理": ["govern-architecture"],
-    "设计图表": ["design-ui", "audit-ui", "diagram", "drawio", "archify", "open-design-ops"],
+    "设计图表": ["design-ui", "audit-ui", "diagram", "open-design-ops"],
     "产品prd": ["draft-feature-spec"],
-    "软件测试": ["test-draft-doc"],
-    "软件发版": ["release-plan-checklist"],
     "办公协作": ["cwork-", "cwork-office"],
-    "教育课程": ["edu-", "edu-course"],
     "环境安装": ["env-", "open-env"],
     "生态管理": ["meta-", "open-skills"]
   }

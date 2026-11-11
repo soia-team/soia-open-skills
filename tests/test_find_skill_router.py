@@ -278,7 +278,6 @@ class FindSkillRouterTests(unittest.TestCase):
     def test_neighboring_methods_route_to_distinct_primary_candidates(self) -> None:
         descriptions = {
             "soia-dev-govern-architecture": "设计架构、审查给定方案或核对长期漂移，明确职责、契约与迁移边界。",
-            "soia-dev-archify-diagrams": "用 Archify 将架构、数据流和流程说明生成 JSON 图表及 PNG 预览。",
             "soia-dev-design-ui": "设计界面的信息结构、交互、视觉与实现交接。",
             "soia-dev-audit-ui": "只读验收界面，将布局、键盘等技术证据与 UX、视觉判断分开。",
             "soia-dev-draft-feature-spec": "把产品需求整理成可验收的功能规格和纵向切片。",
@@ -287,7 +286,6 @@ class FindSkillRouterTests(unittest.TestCase):
         cases = {
             "架构评审": "soia-dev-govern-architecture",
             "检查架构漂移": "soia-dev-govern-architecture",
-            "用 Archify 画图": "soia-dev-archify-diagrams",
             "UI 设计": "soia-dev-design-ui",
             "UI设计": "soia-dev-design-ui",
             "ui\t设计": "soia-dev-design-ui",
