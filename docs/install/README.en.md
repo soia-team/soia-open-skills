@@ -4,7 +4,7 @@
 
 This concise guide covers the universal installer, domain plugins, on-demand routing, and host-specific notes. Placeholders such as `<repository>`, `<skill-name>`, and `<domain-plugin>` should be replaced before running a command.
 
-The [root README installation section](../../README.en.md#install) is the canonical scope policy: one project-scoped skill for a selected host by default. Global scope, multiple hosts, whole domains, and full installs require an explicit choice. The current public ecosystem has 7 domains; design capabilities now live in dev.
+The [root README installation section](../../README.en.md#install) is the canonical scope policy: one project-scoped skill for a selected host by default. Global scope, multiple hosts, whole domains, and full installs require an explicit choice. The current public ecosystem has 6 domains; design capabilities now live in dev, and the education domain was retired on 2026-11-11.
 
 ## Ecosystem coverage
 
@@ -67,7 +67,7 @@ For host-specific trimming, use `soia-meta-sync-skills` with `--exclude-skills` 
 
 ### Step 1: install the complete base
 
-Install the meta repository first. Repeat the command for each public repository, or use the 7-repository loop below:
+Install the meta repository first. Repeat the command for each public repository, or use the 6-repository loop below:
 
 ```bash
 npx skills add soia-team/soia-open-skills -g -a '*' -s '*' -y
@@ -77,7 +77,6 @@ npx skills add soia-team/soia-open-skills -g -a '*' -s '*' -y
 repos=(
   soia-open-cwork-office-skills
   soia-open-dev-skills
-  soia-open-edu-course-skills
   soia-open-env-skills
   soia-open-media-content-skills
   soia-open-pkm-vault-skills
@@ -164,7 +163,7 @@ The link should resolve to `~/.agents/skills/<skill-name>`. Use the correspondin
 
 ### Common mixed-install profiles
 
-The following optional profiles assume the 7-repository base installation from step 1 is complete.
+The following optional profiles assume the 6-repository base installation from step 1 is complete.
 
 **Claude Code + Codex + WorkBuddy for personal development**
 

@@ -2,7 +2,7 @@
 
 [English](README.en.md) · [按使用场景选择安装组合](../install-profiles.md) · [先搞懂它怎么运转](../learning-guide.md)
 
-SOIA 当前由 7 个公开域仓分发，设计能力已并入 dev。安装范围的唯一规范见[根 README 安装节](../../README.md#安装)：默认项目、明确宿主、单技能；下文的全局或整域命令仅供明确选择该范围时使用。
+SOIA 当前由 6 个公开域仓分发，设计能力已并入 dev，教育课程域已于 2026-11-11 退役。安装范围的唯一规范见[根 README 安装节](../../README.md#安装)：默认项目、明确宿主、单技能；下文的全局或整域命令仅供明确选择该范围时使用。
 
 ## 两条安装路线
 
@@ -75,16 +75,15 @@ codex plugin marketplace add soia-team/soia-open-skills
 codex plugin add soia-pkm-vault@soia
 ```
 
-## 7 个领域插件
+## 6 个领域插件
 
 | 插件名 | 来源仓库 | 内容 |
 |---|---|---|
-| `soia-dev` | soia-open-dev-skills | 工程与 UI：功能规格、架构、实现审查、UI 设计验收、Open Design、图表和 Office 工具 |
+| `soia-dev` | soia-open-dev-skills | 工程与 UI：功能规格、架构、实现审查、UI 设计验收、Open Design 和 Office 工具 |
 | `soia-pkm-vault` | soia-open-pkm-vault-skills | 知识库：剪藏（网页/公众号/X/抖音/小红书/GitHub）、网盘、整理、提炼、转换、书库 |
 | `soia-media-content` | soia-open-media-content-skills | 新媒体：文章成文、文章图片、公众号/X/小红书发布 |
 | `soia-cwork-office` | soia-open-cwork-office-skills | 办公协作：飞书知识库与云盘、ProcessOn 图表 |
-| `soia-edu-course` | soia-open-edu-course-skills | 教育课程：课程大纲设计、教案编写 |
-| `soia-env` | soia-open-env-skills | 环境：AI CLI 与运行时安装、网络诊断、系统维护 |
+| `soia-env` | soia-open-env-skills | 环境：环境规划、AI CLI 升级、网络诊断、系统维护 |
 | `soia-meta` | soia-open-skills | 生态管理：技能检索、多 AI 同步、发布收尾、提示词起草 |
 
 ## 按 AI 工具查看

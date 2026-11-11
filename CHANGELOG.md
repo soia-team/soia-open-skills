@@ -3,6 +3,22 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## Unreleased（2.0.6-SNAPSHOT）
+
+2026-11-11 技能删减：门户的清单、路由与市场入口同步到删减后的状态，公开技能 85 → 64，域 7 → 6。
+
+## 移除
+- `soia-meta-publish-market`（外部市场上架）及其测试；meta 技能 5 → 4
+- 教育课程域 `soia-edu-course`：从两份 `marketplace.json`、生成与检查脚本的仓表、README 域表和安装文档中移除，`soia-open-edu-course-skills` 整仓退役，无替代技能
+- `docs/skills/` 下 22 个被删 / 被并技能的详情页，`routing/routing-manifest.json` 与 `skill-directory.json` 的对应条目
+
+## 变更
+- 路由与详情页按删减后的技能集重出：env 18 → 7、dev 20 → 15、media 6 → 5、cwork 3 → 2、pkm 31 不变；新增 `soia-media-publish-x`（合并原 `-x-article` 与 `-x-thread`），`soia-dev-project-scaffold`、`soia-cwork-feishu-cli` 更新为合并后的职责
+- `soia-meta-sync-skills` 2.4.3：退役清理名单补 48 个名字（公开被删 / 被并 22 个、corp 8 个、已退役私有仓 18 个），同步时摘除这些旧入口
+- `soia-meta-find-skill` 1.2.4：`query-hints.json` 去掉只指向已删技能的提示词
+- `soia-meta-skill-release` 6.0.3：域仓与插件对照表去掉 edu
+- README 中英、`docs/install/`、`docs/install-profiles.md`、学习指南的技能总数、域数量与安装组合
+
 ## v2.0.5 — 2026-10-01
 
 soia-meta 技能按强模型精简；市场 pin 同步进 dev

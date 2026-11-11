@@ -10,7 +10,6 @@
 |---|---|---|
 | 写作机 | PKM vault + media | 收集素材、整理知识库、写作与发布 |
 | 编码机 | meta + dev 精选技能 | 工程与 UI 方法、终端和按需设计工具 |
-| 教育机 | edu + PKM vault 精选子集 | 课程大纲、教案、阅读计划与教学资料整理 |
 | 最小 | 3 个 meta 技能 | 提示词澄清、技能同步与发布收尾 |
 
 ### 写作机
@@ -25,20 +24,6 @@ npx skills add soia-team/soia-open-media-content-skills -g -a '*' -y
 ```bash
 npx skills add soia-team/soia-open-skills -g -a '*' -y
 npx skills add soia-team/soia-open-dev-skills -g -a '*' -y
-```
-
-### 教育机
-
-教育技能全装；PKM vault 只装初始化、文章分析整理和阅读计划所需子集：
-
-```bash
-npx skills add soia-team/soia-open-edu-course-skills -g -a '*' -y
-npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' \
-  -s soia-pkm-bootstrap-vault-base \
-  -s soia-pkm-bootstrap-vault-obsidian \
-  -s soia-pkm-interpret-article-analysis \
-  -s soia-pkm-organize-article-moc \
-  -s soia-pkm-reading-plan -y
 ```
 
 ### 最小配置

@@ -27,7 +27,7 @@
 ## 二、一张图看懂全生态
 
 ```text
-真源：7 个公开域仓，共 85 个技能（2026-09-08 快照）
+真源：6 个公开域仓，共 64 个技能（2026-11-11 快照）
         │
         │   routing/routing-manifest.json（机器可读索引，生成物）
         ▼
@@ -61,7 +61,7 @@
 
 所以真正的设计约束是：**如何让你只为今天用得上的域付费**。
 
-**源码仓边界不等于单技能安装边界。** 同一仓也能用 `npx skills add ... -s <技能名>` 选择单项。当前保留 7 个公开域仓，是为了清晰的维护职责和整域插件分发；dev-design 已并入 dev，不再是第 8 个现役域。默认先按项目选择实际需要的技能；需要整域启停时，才把域插件作为开关单位。
+**源码仓边界不等于单技能安装边界。** 同一仓也能用 `npx skills add ... -s <技能名>` 选择单项。当前保留 6 个公开域仓，是为了清晰的维护职责和整域插件分发；dev-design 已并入 dev，edu 域已于 2026-11-11 退役，都不再是现役域。默认先按项目选择实际需要的技能；需要整域启停时，才把域插件作为开关单位。
 
 推论：**新技能该放哪个仓，取决于「它和谁一起被打开」**，不取决于代码相似度。
 
@@ -98,7 +98,7 @@ npx skills add soia-team/soia-open-pkm-vault-skills -a codex -s soia-pkm-clip-we
 |---|---|---|
 | 1 常驻核心 | description 瘦身，`audit_skills.py --strict` 限制新技能 ≤150 字符 | ✅ 已生效，CI 强制 |
 | 2 域级开关 | `plugin enable/disable`（Claude/Qwen/agy）；Codex 市场级；WorkBuddy 按专家召唤 | ✅ 已生效 |
-| 3 机器画像 | [install-profiles.md](install-profiles.md) 四场景（写作/编码/教育/最小） | ✅ 已发布 |
+| 3 机器画像 | [install-profiles.md](install-profiles.md) 三场景（写作/编码/最小） | ✅ 已发布 |
 | 4 长尾路由 | `soia-meta-find-skill` 先检索 SOIA；无候选才用 `find-skills` 搜公共生态 | ✅ 已启用 |
 
 第 4 层的代价要讲清楚：**路由牺牲触发词直达**。走路由的技能不在索引里，Agent 不会自动命中，得先查清单再装。所以它只适合低频长尾，高频能力必须留在第 1 层。
