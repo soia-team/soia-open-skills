@@ -3,7 +3,7 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
-## Unreleased（2.0.6-SNAPSHOT）
+## v2.1.0 — 2026-11-11
 
 2026-11-11 技能删减：门户的清单、路由与市场入口同步到删减后的状态，公开技能 85 → 47，域 7 → 5；四个域插件的市场 pin 刷到最新正式版。
 
