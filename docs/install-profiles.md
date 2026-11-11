@@ -8,7 +8,7 @@
 
 | 场景 | 安装范围 | 适合任务 |
 |---|---|---|
-| 写作机 | PKM vault + media | 收集素材、整理知识库、写作与发布 |
+| 写作机 | PKM vault + 办公与内容 | 收集素材、整理知识库、写作与发布 |
 | 编码机 | meta + dev 精选技能 | 工程与 UI 方法、GitHub 运维和外部 AI 调度 |
 | 最小 | 3 个 meta 技能 | 提示词澄清、技能同步与发布收尾 |
 
@@ -16,7 +16,7 @@
 
 ```bash
 npx skills add soia-team/soia-open-pkm-vault-skills -g -a '*' -y
-npx skills add soia-team/soia-open-media-content-skills -g -a '*' -y
+npx skills add soia-team/soia-open-cwork-office-skills -g -a '*' -y
 ```
 
 ### 编码机

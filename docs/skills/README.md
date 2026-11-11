@@ -52,10 +52,12 @@
 | [`soia-dev-review-code`](soia-dev-review-code.md) | 只读审查固定的代码候选或技能包，分开报告规格符合性与工程问题 |
 | [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 用户要求时把任务进度、调用关系或数据流画成最小视图，复杂布局才出 HTML；普通问答与常规回执不用 |
 
-## `soia-media-content`　5 个技能
+## `soia-cwork-office`　7 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
+| [`soia-cwork-feishu-cli`](soia-cwork-feishu-cli.md) | 用飞书官方 lark-cli 以最小权限只读调研 Wiki、Drive 与文档，或把知识库只读同步为本地 Markdown |
+| [`soia-cwork-processon-diagrams`](soia-cwork-processon-diagrams.md) | 安全盘点并按授权导出、校验和归档 ProcessOn 图表 |
 | [`soia-media-compose-article-draft`](soia-media-compose-article-draft.md) | 把 distill 提炼出的观点写成成文草稿。以用户观点为骨、vault 摘抄为料，生成可继续交给 publish 的文章。可指定公众号/知乎/随笔风格 |
 | [`soia-media-generate-article-image`](soia-media-generate-article-image.md) | 将文章、开源项目、品牌 Logo 或公开 X Prompt Deck 编译为可验收的图片与矢量资产，按组合轴生成 Prompt 并完成事实、文字和视觉验收 |
 | [`soia-media-publish-rednote-card`](soia-media-publish-rednote-card.md) | 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议；获客户当次授权时可代其在创作服务平台网页端完成发布。不接平台 API、不用第三方逆向包 |
@@ -70,11 +72,4 @@
 | [`soia-meta-prompt-clarity`](soia-meta-prompt-clarity.md) | 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界 |
 | [`soia-meta-skill-release`](soia-meta-skill-release.md) | 正式发版 SOIA 技能仓并刷新市场 pin，默认不装机 |
 | [`soia-meta-sync-skills`](soia-meta-sync-skills.md) | 按明确范围把共享技能目录软链到项目或宿主，写入前先 dry-run |
-
-## `soia-cwork-office`　2 个技能
-
-| 技能 | 一句话职责 |
-|---|---|
-| [`soia-cwork-feishu-cli`](soia-cwork-feishu-cli.md) | 用飞书官方 lark-cli 以最小权限只读调研 Wiki、Drive 与文档，或把知识库只读同步为本地 Markdown |
-| [`soia-cwork-processon-diagrams`](soia-cwork-processon-diagrams.md) | 安全盘点并按授权导出、校验和归档 ProcessOn 图表 |
 

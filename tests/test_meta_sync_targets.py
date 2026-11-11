@@ -113,6 +113,12 @@ class MetaSyncTargetTests(unittest.TestCase):
         self.assertEqual(len(retired), len(set(retired)), "retired names must not repeat")
         # 合并后保留的名字不能误进退役名单，否则同步会把现役技能摘掉。
         for kept in (
+            # 2026-11-11 内容域 5 个技能原名并入 cwork 仓：是搬家不是退役，
+            # 进了名单同步时会把用户已装的副本摘掉。
+            "soia-media-compose-article-draft",
+            "soia-media-generate-article-image",
+            "soia-media-publish-wechat-draft",
+            "soia-media-publish-rednote-card",
             "soia-media-publish-x",
             "soia-pkm-clip-x-profile",
             "soia-pkm-clip-drive",

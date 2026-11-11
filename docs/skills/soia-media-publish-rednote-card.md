@@ -2,7 +2,7 @@
 
 > 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议；获客户当次授权时可代其在创作服务平台网页端完成发布。不接平台 API、不用第三方逆向包
 
-所属：[`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) · [技能源码](https://github.com/soia-team/soia-open-media-content-skills/tree/main/skills/soia-media-publish-rednote-card) · [← 全部技能](README.md)
+所属：[`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) · [技能源码](https://github.com/soia-team/soia-open-cwork-office-skills/tree/main/skills/soia-media-publish-rednote-card) · [← 全部技能](README.md)
 
 ## 怎么触发
 
@@ -32,14 +32,14 @@
 
 ## 安装
 
-客户明确选择安装整个 `soia-media-content` 领域插件时：
+客户明确选择安装整个 `soia-cwork-office` 领域插件时：
 
 ```bash
-claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-media-content@soia
+claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-cwork-office@soia
 ```
 
 ```bash
-codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia-media-content@soia
+codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia-cwork-office@soia
 ```
 
 客户选择 WorkBuddy 时由技能代劳——对 AI 说「装到 WorkBuddy」即可。
@@ -47,7 +47,7 @@ codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia
 安装前先确认项目/全局、目标 Agent 与单技能/整域/全量；范围不清先询问。默认是当前项目、明确 Agent、单个技能：
 
 ```bash
-npx skills add soia-team/soia-open-media-content-skills -a <agent> -s soia-media-publish-rednote-card -y
+npx skills add soia-team/soia-open-cwork-office-skills -a <agent> -s soia-media-publish-rednote-card -y
 ```
 
 客户明确选择全局时再加 `-g`；明确选择全部 Agent 时才把 `<agent>` 换成 `'*'`。

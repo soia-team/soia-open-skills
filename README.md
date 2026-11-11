@@ -6,7 +6,7 @@
 
 **技能越来越多，最麻烦的不是「不会用」，而是不知道该叫谁**
 
-47 个公开技能，5 个领域，一个入口；描述目标即可，不必先背完目录
+47 个公开技能，4 个领域，一个入口；描述目标即可，不必先背完目录
 
 [English](README.en.md) · 中文
 
@@ -34,17 +34,16 @@ flowchart TB
     D --> E["Claude Code · Codex · WorkBuddy<br/>三个宿主都能装"]
 ```
 
-## 5 个领域插件
+## 4 个领域插件
 
-装整个领域，一次拿到该域全部技能。默认仍按项目只装所需技能，整域须明确选择。**常驻成本**指技能索引每次会话占用的上下文，正文只在命中时载入；下表成本为历史估算；2026-11-11 删减后只更新了技能数量，数量变动的域标「待测」。
+装整个领域，一次拿到该域全部技能。默认仍按项目只装所需技能，整域须明确选择。**常驻成本**指技能索引每次会话占用的上下文，正文只在命中时载入；下表成本为历史估算；2026-11-11 删减后只更新了技能数量，数量变动的域标「待测」。内容域的 5 个 `soia-media-*` 技能同日并入 `soia-cwork-office`，技能名不变，原插件 `soia-media-content` 不再更新。
 
 | 领域插件 | 做什么 | 技能 | 常驻 |
 |---|---|---:|---:|
 | [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | 知识库：采集、整理、提炼、转换 | 27 | 待测 |
 | [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | 工程与 UI：架构、实现审查、设计验收与外部 AI 调度 | 9 | 待测 |
-| [`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) | 内容：成文、配图、多平台改写 | 5 | 待测 |
+| [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | 办公与内容：飞书与 ProcessOn 资料落本地；成文、配图、多平台改写 | 7 | 待测 |
 | **`soia-meta`**（本仓） | 生态：检索、同步、发布、提示词 | 4 | 待测 |
-| [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | 协作：飞书与 ProcessOn 资料落本地 | 2 | 待测 |
 
 > 暂时不用的域 `claude plugin disable <插件名>@soia`，成本归零，随时开回来。
 
@@ -97,7 +96,7 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py soia
 |---|---|---|
 | Claude Code | 域插件 | `plugin enable/disable`，上下文零成本 |
 | Codex | 域插件 | 市场级 enable |
-| WorkBuddy | **角色化专家**（每个域一个，公开 5 个） | 召唤/切换专家，不召唤就不在场 |
+| WorkBuddy | **角色化专家**（每个域一个，公开 4 个） | 召唤/切换专家，不召唤就不在场 |
 
 ## 不负责什么
 

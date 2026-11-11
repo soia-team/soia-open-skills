@@ -107,7 +107,6 @@ GLYPHS: dict[str, str] = {
 DEPLOY_TARGETS: dict[str, list[tuple[str, str]]] = {
     "soia-open-dev-skills": [(".", "soia-dev")],
     "soia-open-pkm-vault-skills": [(".", "soia-pkm-vault")],
-    "soia-open-media-content-skills": [(".", "soia-media-content")],
     "soia-open-cwork-office-skills": [(".", "soia-cwork-office")],
     "soia-open-edu-course-skills": [(".", "soia-edu-course")],
     "soia-open-skills": [(".", "soia-meta")],

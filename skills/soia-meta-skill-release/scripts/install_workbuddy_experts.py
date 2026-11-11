@@ -40,7 +40,10 @@ MY_EXPERTS = "plugins/marketplaces/my-experts"
 #
 # 一个仓可能有多个 plugin root（靠目录分隔），所以要往下多找一层。
 PLUGIN_MANIFEST = ".codebuddy-plugin/plugin.json"
-RETIRED_PLUGINS = {"soia-dev-design"}  # 已并入 dev；旧 checkout 不再参与新安装
+RETIRED_PLUGINS = {
+    "soia-dev-design",  # 已并入 dev；旧 checkout 不再参与新安装
+    "soia-media-content",  # 2026-11-11 并入 soia-cwork-office，技能名不变
+}
 MAX_ROOT_DEPTH = 2  # 仓根本身，以及仓根下一层的子目录
 
 # 复制时排除：本机产物与版本库，不应进专家包

@@ -28,7 +28,7 @@ Codex 读取仓库根的 `.agents/plugins/marketplace.json`（其原生清单格
 codex plugin add soia-dev@soia
 ```
 
-可用插件：`soia-dev`、`soia-dev-design`、`soia-pkm-vault`、`soia-media-content`、`soia-cwork-office`、`soia-meta`。
+可用插件：`soia-dev`、`soia-dev-design`、`soia-pkm-vault`、`soia-cwork-office`、`soia-meta`。
 
 ### 插件是叠加而非替代（重要）
 

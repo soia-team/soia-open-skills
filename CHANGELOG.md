@@ -3,6 +3,22 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.1.1-SNAPSHOT — 未发布
+
+内容域并入办公域：5 个 `soia-media-*` 技能原名搬到 `soia-cwork-office`，域 5 → 4，公开技能仍是 47 个
+
+## 变更
+- 路由、`skill-directory.json` 与 `docs/skills/` 详情页：5 个 `soia-media-*` 技能改为归属 `soia-open-cwork-office-skills` 与插件 `soia-cwork-office`；现为 pkm 27、dev 9、cwork 7、meta 4
+- 两份 `marketplace.json` 去掉 `soia-media-content`；`soia-cwork-office` 的 pin 刷到 v1.10.0，市场展示名改为「办公与内容技能库」
+- 生成与检查脚本的仓表、`release_skills.py` 的域仓对照去掉内容域仓
+- `soia-meta-skill-release` 6.0.4：`install_workbuddy_experts.py` 的退役插件名单补 `soia-media-content`；域仓与插件对照表同步
+- `soia-meta-find-skill` 1.2.5：`query-hints.json` 的「新媒发布」域提示改指 `cwork-office`
+- README 中英、`docs/install/`、`docs/install-profiles.md`、学习指南的域数量、域表与安装组合
+
+## 兼容
+- 这 5 个技能是搬家不是退役：技能名不变，**不进**同步脚本的退役清理名单，已装副本、`~/.config/soia-skills/<技能名>/` 配置与平台登录 profile 不受影响；测试新增守卫
+- 已装 `soia-media-content` 插件的用户改装 `soia-cwork-office`
+
 ## v2.1.0 — 2026-11-11
 
 2026-11-11 技能删减：门户的清单、路由与市场入口同步到删减后的状态，公开技能 85 → 47，域 7 → 5；四个域插件的市场 pin 刷到最新正式版。

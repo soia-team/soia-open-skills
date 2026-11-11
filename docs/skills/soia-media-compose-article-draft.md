@@ -2,7 +2,7 @@
 
 > 把 distill 提炼出的观点写成成文草稿。以用户观点为骨、vault 摘抄为料，生成可继续交给 publish 的文章。可指定公众号/知乎/随笔风格
 
-所属：[`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) · [技能源码](https://github.com/soia-team/soia-open-media-content-skills/tree/main/skills/soia-media-compose-article-draft) · [← 全部技能](README.md)
+所属：[`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) · [技能源码](https://github.com/soia-team/soia-open-cwork-office-skills/tree/main/skills/soia-media-compose-article-draft) · [← 全部技能](README.md)
 
 ## 怎么触发
 
@@ -29,14 +29,14 @@
 
 ## 安装
 
-客户明确选择安装整个 `soia-media-content` 领域插件时：
+客户明确选择安装整个 `soia-cwork-office` 领域插件时：
 
 ```bash
-claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-media-content@soia
+claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-cwork-office@soia
 ```
 
 ```bash
-codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia-media-content@soia
+codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia-cwork-office@soia
 ```
 
 客户选择 WorkBuddy 时由技能代劳——对 AI 说「装到 WorkBuddy」即可。
@@ -44,7 +44,7 @@ codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia
 安装前先确认项目/全局、目标 Agent 与单技能/整域/全量；范围不清先询问。默认是当前项目、明确 Agent、单个技能：
 
 ```bash
-npx skills add soia-team/soia-open-media-content-skills -a <agent> -s soia-media-compose-article-draft -y
+npx skills add soia-team/soia-open-cwork-office-skills -a <agent> -s soia-media-compose-article-draft -y
 ```
 
 客户明确选择全局时再加 `-g`；明确选择全部 Agent 时才把 `<agent>` 换成 `'*'`。

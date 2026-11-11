@@ -16,11 +16,11 @@
     },
     {
       "name": "soia-cwork-office",
-      "description": "办公协作技能：飞书知识库与云盘、ProcessOn 图表",
+      "description": "办公与内容技能：飞书知识库与云盘、ProcessOn 图表；文章成文、文章图片与公众号、X、小红书发布",
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-cwork-office-skills",
-        "sha": "5fd7d02a8f5d9e008989b937c62894bdd07727b8"
+        "sha": "963bce62255a382b28602563c0c9a511ec055681"
       }
     },
     {
@@ -30,15 +30,6 @@
         "source": "github",
         "repo": "soia-team/soia-open-pkm-vault-skills",
         "sha": "b541e90d6d72096655d78dca5fcef7a763340d29"
-      }
-    },
-    {
-      "name": "soia-media-content",
-      "description": "新媒体内容技能：文章成文、文章图片与公众号、X、小红书发布",
-      "source": {
-        "source": "github",
-        "repo": "soia-team/soia-open-media-content-skills",
-        "sha": "5402df192edc99bb6d34c48af10588061dbb8de4"
       }
     },
     {

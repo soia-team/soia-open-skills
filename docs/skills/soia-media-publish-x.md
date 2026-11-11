@@ -2,7 +2,7 @@
 
 > 成文发 X：拆成编号 thread 并按授权存草稿，或把 Markdown 传到 X Articles 草稿箱并校验
 
-所属：[`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) · [技能源码](https://github.com/soia-team/soia-open-media-content-skills/tree/main/skills/soia-media-publish-x) · [← 全部技能](README.md)
+所属：[`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) · [技能源码](https://github.com/soia-team/soia-open-cwork-office-skills/tree/main/skills/soia-media-publish-x) · [← 全部技能](README.md)
 
 ## 怎么触发
 
@@ -52,14 +52,14 @@ profile 目录优先级：`--profile-dir` → `SOIA_X_PROFILE_DIR` → `~/.confi
 
 ## 安装
 
-客户明确选择安装整个 `soia-media-content` 领域插件时：
+客户明确选择安装整个 `soia-cwork-office` 领域插件时：
 
 ```bash
-claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-media-content@soia
+claude plugin marketplace add soia-team/soia-open-skills && claude plugin install soia-cwork-office@soia
 ```
 
 ```bash
-codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia-media-content@soia
+codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia-cwork-office@soia
 ```
 
 客户选择 WorkBuddy 时由技能代劳——对 AI 说「装到 WorkBuddy」即可。
@@ -67,7 +67,7 @@ codex plugin marketplace add soia-team/soia-open-skills && codex plugin add soia
 安装前先确认项目/全局、目标 Agent 与单技能/整域/全量；范围不清先询问。默认是当前项目、明确 Agent、单个技能：
 
 ```bash
-npx skills add soia-team/soia-open-media-content-skills -a <agent> -s soia-media-publish-x -y
+npx skills add soia-team/soia-open-cwork-office-skills -a <agent> -s soia-media-publish-x -y
 ```
 
 客户明确选择全局时再加 `-g`；明确选择全部 Agent 时才把 `<agent>` 换成 `'*'`。
