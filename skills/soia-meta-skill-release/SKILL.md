@@ -1,9 +1,9 @@
 ---
 name: soia-meta-skill-release
 description: 正式发版 SOIA 技能仓并刷新市场 pin，默认不装机。触发：正式发版、发布技能、刷新市场 pin
-version: 6.0.2
+version: 6.0.3
 created_at: 2026-07-22 21:26:01
-updated_at: 2026-09-30 13:14:57
+updated_at: 2026-11-11 17:40:00
 created_by: gpt-5.6-terra
 updated_by: claude opus 5.5
 dependencies:

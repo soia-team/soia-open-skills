@@ -505,7 +505,7 @@ python3 skills/soia-meta-skill-release/scripts/install_workbuddy_experts.py --dr
 放一份克隆是对等的做法。注册一律调官方 `register_expert.py`，官方规范明确禁止
 绕过它直接写 `marketplace.json`。装完必须让客户**重启 WorkBuddy**。
 
-`soia-env-workbuddy-install` 只管客户端本身的安装与验证，不管专家——两者别混。
+WorkBuddy 客户端本身的安装与验证不在本脚本范围内：先按官方文档装好桌面端并至少启动一次，再装专家。
 
 #### 写测试时的两个坑
 
@@ -687,6 +687,4 @@ python3 scripts/generate_icons.py --deploy <域仓路径>
 | soia-open-pkm-vault-skills | soia-pkm-vault | `soia-pkm-*` |
 | soia-open-media-content-skills | soia-media-content | `soia-media-*` |
 | soia-open-cwork-office-skills | soia-cwork-office | `soia-cwork-*` |
-| soia-open-edu-course-skills | soia-edu-course | `soia-edu-*` |
-| soia-open-env-skills | soia-env | `soia-env-*` |
 | soia-open-skills | soia-meta | `soia-meta-*` |

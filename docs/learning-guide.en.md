@@ -27,7 +27,7 @@ The whole ecosystem has only five concepts. Confusing them is the source of most
 ## 2. The whole ecosystem in one diagram
 
 ```text
-Source of truth: 7 public domain repos, 85 skills (2026-09-08 snapshot)
+Source of truth: 5 public domain repos, 57 skills (2026-11-11 snapshot)
         │
         │   routing/routing-manifest.json (machine-readable index, generated)
         ▼
@@ -61,7 +61,7 @@ A skill's body (`SKILL.md` content, `references/`, `scripts/`) only enters conte
 
 So the real design constraint is: **how do you pay only for the domains you need today?**
 
-**Source-repo boundaries do not determine single-skill installation boundaries.** Even one repo supports selecting an individual skill with `npx skills add ... -s <skill-name>`. The 7 public domain repos separate maintenance responsibilities and whole-domain plugin distribution. Dev-design is now part of dev, not an eighth active domain. Select the skills a project actually needs first; use domain plugins when you want whole-domain toggling.
+**Source-repo boundaries do not determine single-skill installation boundaries.** Even one repo supports selecting an individual skill with `npx skills add ... -s <skill-name>`. The 5 public domain repos separate maintenance responsibilities and whole-domain plugin distribution. Dev-design is now part of dev, the edu domain was retired on 2026-11-11, and the env domain was taken offline the same day with its repository deleted; none of them is an active domain. Select the skills a project actually needs first; use domain plugins when you want whole-domain toggling.
 
 Corollary: **which repo a new skill belongs in depends on what it gets switched on together with**, not on code similarity.
 
@@ -98,7 +98,7 @@ This is the core problem the architecture solves, handled in four layers from co
 |---|---|---|
 | 1. Resident core | Description slimming; `audit_skills.py --strict` caps new skills at 150 characters | ✅ Live, enforced in CI |
 | 2. Domain toggle | `plugin enable/disable` (Claude/Qwen/agy); marketplace level on Codex; expert summoning on WorkBuddy | ✅ Live |
-| 3. Machine profiles | [install-profiles.md](install-profiles.md) — four scenarios (writing / coding / education / minimal) | ✅ Published |
+| 3. Machine profiles | [install-profiles.md](install-profiles.md) — three scenarios (writing / coding / minimal) | ✅ Published |
 | 4. Long-tail routing | `soia-meta-find-skill` searches SOIA first; use `find-skills` for the public ecosystem only when no candidate exists | ✅ Enabled |
 
 Layer 4's cost must be stated plainly: **routing gives up direct trigger matching**. A routed skill is not in the index, so the agent will not match it automatically — you look it up and install it first. That makes it suitable only for low-frequency long tail; high-frequency capability must stay in layer 1.

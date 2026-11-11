@@ -1,14 +1,7 @@
 [
   {
     "name": "soia-cwork-feishu-cli",
-    "description": "通过飞书官方 lark-cli 以最小权限只读调研 Wiki、Drive 与文档。触发：「调研飞书知识库」「读取飞书云盘」「配置飞书 CLI」",
-    "source": {
-      "repository": "soia-open-cwork-office-skills"
-    }
-  },
-  {
-    "name": "soia-cwork-feishu-doc-git-sync",
-    "description": "将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用。",
+    "description": "用飞书官方 lark-cli 以最小权限只读调研 Wiki、Drive 与文档，或把知识库只读同步为本地 Markdown。触发：「调研飞书知识库」「读取飞书云盘」「配置飞书 CLI」「同步飞书知识库」「飞书备份到 Git」「规划双向同步」",
     "source": {
       "repository": "soia-open-cwork-office-skills"
     }
@@ -28,20 +21,6 @@
     }
   },
   {
-    "name": "soia-dev-agent-md-advisor",
-    "description": "诊断、起草或精简 AI 项目指令，解决无效规则、重复和入口冲突。触发：精简 AGENTS.md、CLAUDE.md 怎么组织、检查 AI 指令冲突",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-archify-diagrams",
-    "description": "用 Archify 将架构、数据流和流程说明生成可维护 JSON 图表及 PNG 预览。触发：「用 Archify 画」「Archify 架构图」「Archify 时序图」",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
     "name": "soia-dev-audit-ui",
     "description": "只读验收界面，技术证据与 UX/视觉判断分开报告。触发：验收这个界面、检查键盘和布局、评审视觉体验",
     "source": {
@@ -51,27 +30,6 @@
   {
     "name": "soia-dev-design-ui",
     "description": "设计界面结构、交互状态与视觉并交接实现，守住已批准的品牌与样式。触发：设计这个界面、梳理交互流程、做 UI 设计交接",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-doc-sync",
-    "description": "核对代码、发布事实和有效裁决与文档之间的漂移，按授权同步派生内容。触发：文档和代码对不上、同步发布文档、核对状态文档",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-draft-feature-spec",
-    "description": "把产品想法或需求整理成可验收的功能规格，按需拆成纵向交付切片。触发：起草功能规格、把需求写成 PRD、补验收标准",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-drawio-visio-diagrams",
-    "description": "将 Visio VSDX 安全转换、盘点和受控升级为可编辑 draw.io 图表。触发：「VSDX 转 draw.io」「Visio 图表升级」「draw.io 图表盘点」",
     "source": {
       "repository": "soia-open-dev-skills"
     }
@@ -105,34 +63,6 @@
     }
   },
   {
-    "name": "soia-dev-officecli-ops",
-    "description": "以 OfficeCLI 安全读取、复制后修改并验证 DOCX、XLSX、PPTX。触发：「OfficeCLI」「OpenXML 验证」「Office 文件原子修改」",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-open-design-ops",
-    "description": "操作 Open Design 环境、项目与导出，并交付 HTML 原型、deck 和动画。触发：检查 Open Design、制作 HTML deck、继续设计会话",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-project-scaffold",
-    "description": "为 Git 项目补最小 AI 协作入口与文档导航，优先沿用已有约定。触发：补项目协作基线、初始化 AGENTS、生成文档骨架",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-release-plan-checklist",
-    "description": "为软件发版设计预检、灰度、停止与回滚清单；只规划，不执行部署。触发：上线前检查什么、设计灰度方案、准备回滚预案",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
     "name": "soia-dev-review-code",
     "description": "只读审查固定的代码候选或技能包，分开报告规格符合性与工程问题。触发：审查这次改动、review 代码、独立评审",
     "source": {
@@ -144,160 +74,6 @@
     "description": "用户要求时把任务进度、调用关系或数据流画成最小视图，复杂布局才出 HTML；普通问答与常规回执不用。触发：展示这个任务、画调用关系、数据流怎么走",
     "source": {
       "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-terminal-ops",
-    "description": "管理长任务与后台日志，诊断停滞并安全停止或恢复明确进程。触发：后台跑这个、进程疑似卡住、安全停止进程",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-dev-test-draft-doc",
-    "description": "从需求或变更设计测试计划、用例与验收对照，不冒充测试执行。触发：写测试用例、出测试计划、整理回归清单",
-    "source": {
-      "repository": "soia-open-dev-skills"
-    }
-  },
-  {
-    "name": "soia-edu-compose-lesson-plan",
-    "description": "按课程大纲编写可执行教案与讲义结构；适用于“教案”“讲义”“课堂活动”等请求。",
-    "source": {
-      "repository": "soia-open-edu-course-skills"
-    }
-  },
-  {
-    "name": "soia-edu-design-course-outline",
-    "description": "从主题、受众和课时约束设计课程大纲；适用于“课程大纲”“教学目标”“课时规划”等请求。",
-    "source": {
-      "repository": "soia-open-edu-course-skills"
-    }
-  },
-  {
-    "name": "soia-env-ai-cli-upgrade",
-    "description": "审计并按授权升级多款 AI CLI，先预演并核验结果。触发：「升级 AI CLI」「更新 Claude/Kimi」「检查 CLI 版本」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-antigravity-cli-install",
-    "description": "为新手安装、登录、迁移或按授权更新 Google Antigravity CLI（agy）。触发：「安装 agy」「Gemini CLI 迁移」「agy 登录」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-claude-cli-install",
-    "description": "为小白安装、登录与授权更新 Anthropic Claude Code CLI。触发：「安装 Claude CLI」「Claude 命令不存在」「Claude 登录」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-codex-install",
-    "description": "为新手安装、验证或按授权更新 OpenAI Codex CLI。触发：「安装 Codex CLI」「更新 Codex CLI」「Codex 命令不存在」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-codex-setup-support",
-    "description": "诊断并支持 Codex 桌面版与 CLI 的安装、登录、性能和存储问题。触发：「Codex 打不开」「Codex 变慢」「检查 logs_2.sqlite」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-deepcode-cli-install",
-    "description": "为小白安装、配置与授权更新开源 Deep Code Agent CLI（lessweb/deepcode-cli）。触发：「安装 DeepCode」「deepcode 不存在」「配置 DeepSeek Agent」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-environment-setup",
-    "description": "从零规划并验证面向新手的开发环境，协调所需安装技能。触发：「从零配置开发环境」「准备 AI CLI 环境」「新电脑开发环境搭建」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-kimi-cli-install",
-    "description": "面向小白检查、安装、登录和按明确授权更新 Moonshot AI Kimi Code CLI；识别官方独立安装与 npm 来源，默认只报告版本和产品自动更新状态。触发：「安装 Kimi CLI」「安装 Kimi Code」「kimi 不存在」「Kimi 登录」「更新 Kimi 到最新」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-local-model-bench",
-    "description": "在 Apple Silicon 上评测本地 LLM：先环境检查与引擎选型（mlx-lm/llama.cpp 等），确认后才下载部署；跑题库判定、吞吐 TTFT 与硬件采样，产出可横比的口径化报告。触发：「评测本地模型」「本地模型跑分」「装个本地模型」「mlx 测速」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-network-diagnose",
-    "description": "只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报。触发：「网络不通」「下载失败」「npm/pip 超时」「证书错误」「安装卡住」「装之前先检查环境」「这台机器能装什么」「有没有装 node」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-node-install",
-    "description": "为新手安装、验证或按授权更新 Node.js 与 npm。触发：「安装 Node.js」「更新 Node.js」「node 命令不存在」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-open-skills-install",
-    "description": "按确认范围在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，默认项目级单技能。触发：「安装 SOIA 技能」「在 Codex 下装」「更新 soia-dev」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-opencode-cli-install",
-    "description": "为新手安装、登录、配置或按授权更新 OpenCode CLI。触发：「安装 OpenCode」「配置 OpenCode CLI」「OpenCode 登录」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-pi-cli-install",
-    "description": "为小白安装、配置与授权更新 Pi（pi-coding-agent）CLI。触发：「安装 Pi」「pi 不存在」「更新 Pi CLI」「pi-coding-agent」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-python-install",
-    "description": "为新手安装、验证或按授权更新 Python 与 pip。触发：「安装 Python」「更新 Python」「python 命令不存在」",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-qoder-cli-install",
-    "description": "面向小白检查、安装、登录和按明确授权更新 Qoder CLI；识别官方独立安装、Homebrew 与 npm 来源，默认只报告版本和自动更新设置。触发：「安装 Qoder CLI」「qodercli 不存在」「Qoder 登录」「检查 Qoder 更新」「更新 Qoder 到最新」。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-storage-cleanup",
-    "description": "面向小白统计 SOIA 受管配置、状态、缓存和临时目录的空间占用，生成可清理清单并提醒删除风险；只有客户看过最新清单并明确授权后才执行删除，随后复核实际释放空间。触发：「检查 SOIA 占用」「统计缓存大小」「清理临时文件」「清理过期状态」「释放磁盘空间」；不用于未经授权的全盘清理。",
-    "source": {
-      "repository": "soia-open-env-skills"
-    }
-  },
-  {
-    "name": "soia-env-workbuddy-install",
-    "description": "为新手安装、验证或按授权更新 WorkBuddy 桌面客户端。触发：「安装 WorkBuddy」「更新 WorkBuddy」「WorkBuddy 下载」",
-    "source": {
-      "repository": "soia-open-env-skills"
     }
   },
   {
@@ -329,15 +105,8 @@
     }
   },
   {
-    "name": "soia-media-publish-x-article",
-    "description": "将 Markdown 成文上传到 X Articles 草稿箱并校验格式，只保存草稿。触发：「发成 X Article」「推到 X 文章草稿箱」",
-    "source": {
-      "repository": "soia-open-media-content-skills"
-    }
-  },
-  {
-    "name": "soia-media-publish-x-thread",
-    "description": "将成文草稿改写为带编号、符合字数限制的 X thread，并可按授权存草稿。触发：「发成 X thread」「拆成推文串」「thread 这篇」",
+    "name": "soia-media-publish-x",
+    "description": "成文发 X：拆成编号 thread 并按授权存草稿，或把 Markdown 传到 X Articles 草稿箱并校验。触发：「发成 X thread」「拆成推文串」「thread 这篇」「发成 X Article」「推到 X 文章草稿箱」",
     "source": {
       "repository": "soia-open-media-content-skills"
     }
@@ -345,13 +114,6 @@
   {
     "name": "soia-meta-prompt-clarity",
     "description": "起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界。触发：「写提示词 / write a prompt」「优化 prompt / improve this prompt」「扩展成可验证规格」",
-    "source": {
-      "repository": "soia-open-skills"
-    }
-  },
-  {
-    "name": "soia-meta-publish-market",
-    "description": "把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交。触发：「上架 SkillHub」「发到 Red Skill」「上架技能市场」",
     "source": {
       "repository": "soia-open-skills"
     }
@@ -394,13 +156,6 @@
   {
     "name": "soia-pkm-bootstrap-vault-base",
     "description": "以 plan-first、create-only、可检查的方式初始化平台中立的 AI-native Markdown vault 基座，包含分区下钻规则、工作台生命周期、模板与多 AI 适配层。触发：「初始化知识库」「新建 Markdown vault」「搭建 AI-native PKM」",
-    "source": {
-      "repository": "soia-open-pkm-vault-skills"
-    }
-  },
-  {
-    "name": "soia-pkm-bootstrap-vault-ima",
-    "description": "把已有本地 Markdown vault 接入腾讯 ima 知识库消费端：安装客户端、建立目录映射、用 ima 官方 Skills 配置本地文件夹监控同步并验证检索。Triggers：「接入 ima」「同步到 ima 知识库」「配置 ima」「让 ima 监控 vault」",
     "source": {
       "repository": "soia-open-pkm-vault-skills"
     }
@@ -546,13 +301,6 @@
     }
   },
   {
-    "name": "soia-pkm-reading-plan",
-    "description": "把书单、主题或观点映射组织成按字数排期的可执行阅读计划，并落为 Obsidian 笔记。触发：「做读书计划」「书单排期」「规划下半年阅读」",
-    "source": {
-      "repository": "soia-open-pkm-vault-skills"
-    }
-  },
-  {
     "name": "soia-pkm-transform-article-notebooklm",
     "description": "用 NotebookLM 将文章转换为学习材料。触发：「NotebookLM 生成试卷」「NotebookLM 做闪卡」「NotebookLM 生成播客」",
     "source": {
@@ -560,22 +308,8 @@
     }
   },
   {
-    "name": "soia-pkm-transform-article-ppt",
-    "description": "把文章、提纲或主题转换为以可编辑 PPTX 为正式母版的演示媒体包，并支持外置固定模板与机密内容本地隔离。触发：「做 PPT」「生成 PPTX」「转成课件」「按公司模板做周报」",
-    "source": {
-      "repository": "soia-open-pkm-vault-skills"
-    }
-  },
-  {
     "name": "soia-pkm-transform-article-visual",
     "description": "把文章转换为长图、信息图、海报、封面、插画等视觉产物。HTML/CSS 截图为本地默认方案，可选 Open Design 或 Codex 图生成。Triggers：「生成长图」「做成信息图」「转成海报」「生成封面」「做成图片」「export visual」「make infographic」",
-    "source": {
-      "repository": "soia-open-pkm-vault-skills"
-    }
-  },
-  {
-    "name": "soia-pkm-transform-obsidian-pdf",
-    "description": "用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint。Triggers：「转成PDF」「导出PDF」「归档并转PDF」「生成PDF」「export PDF」",
     "source": {
       "repository": "soia-open-pkm-vault-skills"
     }

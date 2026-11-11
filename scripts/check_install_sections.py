@@ -38,9 +38,6 @@ REPOS = [
     "soia-open-pkm-vault-skills",
     "soia-open-media-content-skills",
     "soia-open-cwork-office-skills",
-    "soia-open-env-skills",
-    "soia-open-edu-course-skills",
-    "soia-private-skills",
     "soia-private-corp-skills",
 ]
 

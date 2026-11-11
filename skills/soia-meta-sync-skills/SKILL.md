@@ -1,9 +1,9 @@
 ---
 name: soia-meta-sync-skills
 description: 按明确范围把共享技能目录软链到项目或宿主，写入前先 dry-run。触发：技能同步、同步预览、把技能链到项目
-version: 2.4.2
+version: 2.4.3
 created_at: 2026-07-07 14:44:10
-updated_at: 2026-09-30 13:14:57
+updated_at: 2026-11-11 17:40:00
 created_by: claude opus 4.6
 updated_by: claude opus 5.5
 ---

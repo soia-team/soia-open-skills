@@ -3,6 +3,26 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## Unreleased（2.0.6-SNAPSHOT）
+
+2026-11-11 技能删减：门户的清单、路由与市场入口同步到删减后的状态，公开技能 85 → 47，域 7 → 5；四个域插件的市场 pin 刷到最新正式版。
+
+## 移除
+- `soia-meta-publish-market`（外部市场上架）及其测试；meta 技能 5 → 4
+- 环境域 `soia-env`（18 个技能）已下线、仓库已删除，无替代技能：从两份 `marketplace.json`、生成与检查脚本的仓表、README 域表和安装文档中移除；安装 AI CLI 与运行时请按各工具官方文档
+- 教育课程域 `soia-edu-course`（2 个技能）整域退役，无替代技能，同样从上述位置移除
+- 第二批：dev 域再删 6 个（`soia-dev-open-design-ops`、`soia-dev-doc-sync`、`soia-dev-draft-feature-spec`、`soia-dev-officecli-ops`、`soia-dev-terminal-ops`、`soia-dev-project-scaffold`），pkm 域删 4 个（`soia-pkm-bootstrap-vault-ima`、`soia-pkm-transform-obsidian-pdf`、`soia-pkm-transform-article-ppt`、`soia-pkm-reading-plan`），均无替代技能
+- `docs/skills/` 下 39 个被删 / 被并技能的详情页，`routing/routing-manifest.json` 与 `skill-directory.json` 的对应条目
+
+## 变更
+- 路由与详情页按删减后的技能集重出：pkm 31 → 27、dev 20 → 9、media 6 → 5、cwork 3 → 2、meta 5 → 4；新增 `soia-media-publish-x`（合并原 `-x-article` 与 `-x-thread`），`soia-cwork-feishu-cli` 更新为合并后的职责
+- 市场 pin：`soia-dev` v2.11.0、`soia-pkm-vault` v1.13.0、`soia-cwork-office` v1.9.1、`soia-media-content` v1.14.0；`soia-dev` 的市场描述同步为删减后的能力
+- `soia-meta-sync-skills` 2.4.3：退役清理名单补入本批全部被删 / 被并 / 退役的名字（公开 39 个：env 18 个、dev 被删 / 被并 11 个、pkm 4 个、media 2 个、cwork 1 个、edu 2 个、`soia-meta-publish-market`；另含非公开仓已退役的名字），同步时摘除这些旧入口
+- `soia-meta-find-skill` 1.2.4：`query-hints.json` 去掉只指向已删技能与已退役域的提示词（含功能规格 / PRD、终端、Open Design）
+- `soia-meta-skill-release` 6.0.3：域仓与插件对照表去掉 edu 与 env；`install_workbuddy_experts.py` 找不到 WorkBuddy 官方工具时改为提示按官方文档安装桌面端，不再指向已退役的 `soia-env-workbuddy-install`
+- 检查脚本的仓表去掉一个已退役并删除的非公开仓
+- README 中英、`docs/install/`、`docs/install-profiles.md`、学习指南的技能总数、域数量与安装组合
+
 ## v2.0.5 — 2026-10-01
 
 soia-meta 技能按强模型精简；市场 pin 同步进 dev

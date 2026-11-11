@@ -1,9 +1,9 @@
 ---
 name: soia-meta-find-skill
 description: 按需求查找合适的 SOIA 技能，未安装时只收集安装选择，不代替技能执行任务。触发：找个技能、有没有技能可以、发现 SOIA 能力
-version: 1.2.3
+version: 1.2.4
 created_at: 2026-07-23 10:23:03
-updated_at: 2026-09-30 13:14:57
+updated_at: 2026-11-11 17:40:00
 created_by: gpt-5.6-luna
 updated_by: claude opus 5.5
 ---

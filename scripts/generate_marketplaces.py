@@ -60,7 +60,7 @@ PLUGIN_DEFINITIONS = (
         "soia-open-dev-skills",
         "soia-dev",
         "工程与 UI 技能库",
-        "工程与 UI 技能：功能规格、架构、实现审查、UI 设计验收与按需工具",
+        "工程与 UI 技能：架构、实现审查、UI 设计验收与外部 AI 调度",
         "Developer Tools",
     ),
     PluginDefinition(
@@ -83,20 +83,6 @@ PLUGIN_DEFINITIONS = (
         "新媒体内容技能库",
         "新媒体内容技能：文章成文、文章图片与公众号、X、小红书发布",
         "Creativity",
-    ),
-    PluginDefinition(
-        "soia-open-edu-course-skills",
-        "soia-edu-course",
-        "教育课程技能库",
-        "教育课程技能：课程大纲设计与教案编写",
-        "Education & Research",
-    ),
-    PluginDefinition(
-        "soia-open-env-skills",
-        "soia-env",
-        "环境运维技能库",
-        "环境技能：AI CLI 与运行时安装、网络诊断、系统维护",
-        "Developer Tools",
     ),
     PluginDefinition(
         PORTAL_REPOSITORY,

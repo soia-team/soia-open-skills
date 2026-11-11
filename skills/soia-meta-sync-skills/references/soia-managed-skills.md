@@ -14,10 +14,6 @@ Adding a new `soia-*` skill needs only its folder; several packages installed in
 
 ## Included SOIA Domains
 
-Governance:
-
-- `soia-gov-*`
-
 Development:
 
 - `soia-dev-*`
@@ -29,6 +25,8 @@ Design:
 Meta:
 
 - `soia-meta-*`
+
+Other domains (`soia-media-*`, `soia-cwork-*`, and the remaining private `soia-corp-*` skill) are discovered the same way when they are present in the selected source.
 
 Public PKM:
 
@@ -42,7 +40,9 @@ No optional entries are currently bundled.
 
 ## Retired Cleanup Names
 
-Retired names are removed from target agent directories during SOIA batch sync. The authoritative list is `RETIRED_SKILLS` in `scripts/sync_soia_skills.py`; add a name there when a skill is renamed or merged.
+Retired names are removed from target agent directories during SOIA batch sync. The authoritative list is `RETIRED_SKILLS` in `scripts/sync_soia_skills.py`; add a name there when a skill is removed, renamed, merged, or its repository is retired.
+
+The 2026-11-11 reduction added 55 names in one batch: all 18 skills of the retired env domain, 4 dev skills, 4 merged-away names (`soia-dev-agent-md-advisor`, `soia-media-publish-x-article`, `soia-media-publish-x-thread`, `soia-cwork-feishu-doc-git-sync`), 2 edu skills, `soia-meta-publish-market`, 8 corp skills, and all 18 skills of the retired and deleted private repository (`soia-gov-*`, its workspace `soia-design-*` / `soia-dev-*` entries, `soia-meta-harness`). The list in the script stays the only place that spells them out.
 
 ## Cleanup Boundary
 

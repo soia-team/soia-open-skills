@@ -1,6 +1,6 @@
 # soia-cwork-feishu-cli
 
-> 通过飞书官方 lark-cli 以最小权限只读调研 Wiki、Drive 与文档
+> 用飞书官方 lark-cli 以最小权限只读调研 Wiki、Drive 与文档，或把知识库只读同步为本地 Markdown
 
 所属：[`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) · [技能源码](https://github.com/soia-team/soia-open-cwork-office-skills/tree/main/skills/soia-cwork-feishu-cli) · [← 全部技能](README.md)
 
@@ -8,7 +8,7 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「调研飞书知识库」「读取飞书云盘」「配置飞书 CLI」
+「调研飞书知识库」「读取飞书云盘」「配置飞书 CLI」「同步飞书知识库」「飞书备份到 Git」「规划双向同步」
 
 ## 能力与用法
 
@@ -20,6 +20,7 @@
 | 读取、总结或比较飞书文档 | 先识别 URL 类型，再按 `lark-doc` 规则读取正文和大纲 | 文档摘要、引用位置、格式和权限限制 |
 | 搜索飞书知识库、文档和云盘 | 使用 Drive Search 或 Wiki 节点查询，不猜 token 和参数 | 命中文档、标题、类型、空间和下一步读取范围 |
 | 安装或修复飞书 CLI | 安装官方 CLI，配置应用凭证，检查 token、身份、scope 和连通性 | 命令输出摘要；绝不打印 App Secret 或 access token |
+| 同步飞书知识库到本地、备份到 Git、在本地查看 | 以应用身份只读镜像为 Markdown，保留目录、来源和同步元数据，可接入 Git、Obsidian、VitePress | 本地镜像目录、同步清单、失败清单与验收结果 |
 
 ### 客户如何使用
 
@@ -28,6 +29,7 @@
 - “用飞书 CLI 盘点我可见的知识库层级和云盘文档类型。”
 - “读取这个飞书 Wiki 页面，判断它更适合迁移到哪个开源本地部署产品。”
 - “检查飞书应用当前能看到哪些知识空间和文档，不要修改任何内容。”
+- “把这个飞书知识库同步成本地 Markdown，备份到 Git。”
 
 执行前解析 `source`、`target`、`scope`、`as` 和 `output`。对本技能的调研任务，默认 `as=bot`、`read_only=true`、`dry_run=true`（涉及写操作时）；不要因为 bot 看不到用户个人资源就静默改用用户 OAuth。
 

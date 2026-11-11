@@ -1,12 +1,12 @@
 # 技能详情页
 
-全生态 85 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
+全生态 47 个公开技能，每个一页：触发词、产物、用法示例与安装命令。
 
 内容从各技能的 `SKILL.md` 派生，改技能后由 CI 校验是否同步。
 
 [← 返回门户](../../README.md)
 
-## `soia-pkm-vault`　31 个技能
+## `soia-pkm-vault`　27 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
@@ -14,7 +14,6 @@
 | [`soia-pkm-alipan-drive-ops`](soia-pkm-alipan-drive-ops.md) | 执行阿里云盘登录、浏览与文件操作，并为资源整理提供底层能力 |
 | [`soia-pkm-baidu-netdisk-ops`](soia-pkm-baidu-netdisk-ops.md) | 百度网盘原子操作与只读 JSONL 扫描适配 |
 | [`soia-pkm-bootstrap-vault-base`](soia-pkm-bootstrap-vault-base.md) | 以 plan-first、create-only、可检查的方式初始化平台中立的 AI-native Markdown vault 基座，包含分区下钻规则、工作台生命周期、模板与多 AI 适配层 |
-| [`soia-pkm-bootstrap-vault-ima`](soia-pkm-bootstrap-vault-ima.md) | 把已有本地 Markdown vault 接入腾讯 ima 知识库消费端：安装客户端、建立目录映射、用 ima 官方 Skills 配置本地文件夹监控同步并验证检索 |
 | [`soia-pkm-bootstrap-vault-obsidian`](soia-pkm-bootstrap-vault-obsidian.md) | 以 dry-run 和保留未知配置的结构化合并方式，把已有 Markdown vault 配置为 Obsidian 消费端，启用 Bases 与可选宽页 CSS |
 | [`soia-pkm-clip-douyin`](soia-pkm-clip-douyin.md) | 归档单条抖音视频到 Obsidian vault，并保留本地媒体索引 |
 | [`soia-pkm-clip-drive`](soia-pkm-clip-drive.md) | 把云盘/本地文件或受控 PDF URL 批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理；图片正文需显式 OCR |
@@ -35,62 +34,25 @@
 | [`soia-pkm-manage-vault-lifecycle`](soia-pkm-manage-vault-lifecycle.md) | 规划并安全执行整个 Markdown/Obsidian 知识库，或知识库中指定模块的盘点、整理、改名、迁移、归档与清理 |
 | [`soia-pkm-organize-article-moc`](soia-pkm-organize-article-moc.md) | 将 Obsidian 文章库按元数据、主题双链、月份和两级 MOC 规范化整理 |
 | [`soia-pkm-query-vault`](soia-pkm-query-vault.md) | 以只读方式搜索整个 Markdown/Obsidian 知识库或指定模块，检索文件名、正文、frontmatter、标签、反向链接、代码与附件，并按来源层级返回可核验结果 |
-| [`soia-pkm-reading-plan`](soia-pkm-reading-plan.md) | 把书单、主题或观点映射组织成按字数排期的可执行阅读计划，并落为 Obsidian 笔记 |
 | [`soia-pkm-transform-article-notebooklm`](soia-pkm-transform-article-notebooklm.md) | 用 NotebookLM 将文章转换为学习材料 |
-| [`soia-pkm-transform-article-ppt`](soia-pkm-transform-article-ppt.md) | 把文章、提纲或主题转换为以可编辑 PPTX 为正式母版的演示媒体包，并支持外置固定模板与机密内容本地隔离 |
 | [`soia-pkm-transform-article-visual`](soia-pkm-transform-article-visual.md) | 把文章转换为长图、信息图、海报、封面、插画等视觉产物。HTML/CSS 截图为本地默认方案，可选 Open Design 或 Codex 图生成 |
-| [`soia-pkm-transform-obsidian-pdf`](soia-pkm-transform-obsidian-pdf.md) | 用 Obsidian 原生导出把 vault 内 Markdown 笔记导出为 PDF。vault 外文章降级 pandoc/weasyprint |
 | [`soia-pkm-translate-article-zh`](soia-pkm-translate-article-zh.md) | 将外文文章按 quick、normal 或 refined 模式翻译成独立中文稿，保持术语一致且不覆盖原文 |
 
-## `soia-dev`　20 个技能
+## `soia-dev`　9 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
 | [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 派任务给外部 AI CLI 进程并核验模型、额度与产物；宿主内置 subagent 不用本技能 |
-| [`soia-dev-agent-md-advisor`](soia-dev-agent-md-advisor.md) | 诊断、起草或精简 AI 项目指令，解决无效规则、重复和入口冲突 |
-| [`soia-dev-archify-diagrams`](soia-dev-archify-diagrams.md) | 用 Archify 将架构、数据流和流程说明生成可维护 JSON 图表及 PNG 预览 |
 | [`soia-dev-audit-ui`](soia-dev-audit-ui.md) | 只读验收界面，技术证据与 UX/视觉判断分开报告 |
 | [`soia-dev-design-ui`](soia-dev-design-ui.md) | 设计界面结构、交互状态与视觉并交接实现，守住已批准的品牌与样式 |
-| [`soia-dev-doc-sync`](soia-dev-doc-sync.md) | 核对代码、发布事实和有效裁决与文档之间的漂移，按授权同步派生内容 |
-| [`soia-dev-draft-feature-spec`](soia-dev-draft-feature-spec.md) | 把产品想法或需求整理成可验收的功能规格，按需拆成纵向交付切片 |
-| [`soia-dev-drawio-visio-diagrams`](soia-dev-drawio-visio-diagrams.md) | 将 Visio VSDX 安全转换、盘点和受控升级为可编辑 draw.io 图表 |
 | [`soia-dev-enforce-coding-protocol`](soia-dev-enforce-coding-protocol.md) | 给工程改动加范围、权限与验证底线，不另起流程 |
 | [`soia-dev-github-ops`](soia-dev-github-ops.md) | 查询和操作 GitHub PR、CI、Release 与协作者权限 |
 | [`soia-dev-govern-architecture`](soia-dev-govern-architecture.md) | 设计或审查架构方案、核对长期漂移，明确职责、契约、事实真源与迁移边界 |
 | [`soia-dev-implement-task`](soia-dev-implement-task.md) | 实现工程需求、定位修复缺陷或处理已授权 findings |
-| [`soia-dev-officecli-ops`](soia-dev-officecli-ops.md) | 以 OfficeCLI 安全读取、复制后修改并验证 DOCX、XLSX、PPTX |
-| [`soia-dev-open-design-ops`](soia-dev-open-design-ops.md) | 操作 Open Design 环境、项目与导出，并交付 HTML 原型、deck 和动画 |
-| [`soia-dev-project-scaffold`](soia-dev-project-scaffold.md) | 为 Git 项目补最小 AI 协作入口与文档导航，优先沿用已有约定 |
-| [`soia-dev-release-plan-checklist`](soia-dev-release-plan-checklist.md) | 为软件发版设计预检、灰度、停止与回滚清单；只规划，不执行部署 |
 | [`soia-dev-review-code`](soia-dev-review-code.md) | 只读审查固定的代码候选或技能包，分开报告规格符合性与工程问题 |
 | [`soia-dev-show-task-html`](soia-dev-show-task-html.md) | 用户要求时把任务进度、调用关系或数据流画成最小视图，复杂布局才出 HTML；普通问答与常规回执不用 |
-| [`soia-dev-terminal-ops`](soia-dev-terminal-ops.md) | 管理长任务与后台日志，诊断停滞并安全停止或恢复明确进程 |
-| [`soia-dev-test-draft-doc`](soia-dev-test-draft-doc.md) | 从需求或变更设计测试计划、用例与验收对照，不冒充测试执行 |
 
-## `soia-env`　18 个技能
-
-| 技能 | 一句话职责 |
-|---|---|
-| [`soia-env-ai-cli-upgrade`](soia-env-ai-cli-upgrade.md) | 审计并按授权升级多款 AI CLI，先预演并核验结果 |
-| [`soia-env-antigravity-cli-install`](soia-env-antigravity-cli-install.md) | 为新手安装、登录、迁移或按授权更新 Google Antigravity CLI（agy） |
-| [`soia-env-claude-cli-install`](soia-env-claude-cli-install.md) | 为小白安装、登录与授权更新 Anthropic Claude Code CLI |
-| [`soia-env-codex-install`](soia-env-codex-install.md) | 为新手安装、验证或按授权更新 OpenAI Codex CLI |
-| [`soia-env-codex-setup-support`](soia-env-codex-setup-support.md) | 诊断并支持 Codex 桌面版与 CLI 的安装、登录、性能和存储问题 |
-| [`soia-env-deepcode-cli-install`](soia-env-deepcode-cli-install.md) | 为小白安装、配置与授权更新开源 Deep Code Agent CLI（lessweb/deepcode-cli） |
-| [`soia-env-environment-setup`](soia-env-environment-setup.md) | 从零规划并验证面向新手的开发环境，协调所需安装技能 |
-| [`soia-env-kimi-cli-install`](soia-env-kimi-cli-install.md) | 面向小白检查、安装、登录和按明确授权更新 Moonshot AI Kimi Code CLI；识别官方独立安装与 npm 来源，默认只报告版本和产品自动更新状态 |
-| [`soia-env-local-model-bench`](soia-env-local-model-bench.md) | 在 Apple Silicon 上评测本地 LLM：先环境检查与引擎选型（mlx-lm/llama.cpp 等），确认后才下载部署；跑题库判定、吞吐 TTFT 与硬件采样，产出可横比的口径化报告 |
-| [`soia-env-network-diagnose`](soia-env-network-diagnose.md) | 只读诊断安装 AI 工具前的环境问题：网络侧检查 DNS、HTTPS、代理、证书、官方源和超时；本机侧按 Node/Python/Rust/Go/包管理器/Shell 分类盘点运行时，推导当前机器能装哪些 AI CLI，并用固定七列列表汇报 |
-| [`soia-env-node-install`](soia-env-node-install.md) | 为新手安装、验证或按授权更新 Node.js 与 npm |
-| [`soia-env-open-skills-install`](soia-env-open-skills-install.md) | 按确认范围在 Claude Code、Codex、WorkBuddy 上安装或更新 SOIA 开源技能，默认项目级单技能 |
-| [`soia-env-opencode-cli-install`](soia-env-opencode-cli-install.md) | 为新手安装、登录、配置或按授权更新 OpenCode CLI |
-| [`soia-env-pi-cli-install`](soia-env-pi-cli-install.md) | 为小白安装、配置与授权更新 Pi（pi-coding-agent）CLI |
-| [`soia-env-python-install`](soia-env-python-install.md) | 为新手安装、验证或按授权更新 Python 与 pip |
-| [`soia-env-qoder-cli-install`](soia-env-qoder-cli-install.md) | 面向小白检查、安装、登录和按明确授权更新 Qoder CLI；识别官方独立安装、Homebrew 与 npm 来源，默认只报告版本和自动更新设置 |
-| [`soia-env-storage-cleanup`](soia-env-storage-cleanup.md) | 面向小白统计 SOIA 受管配置、状态、缓存和临时目录的空间占用，生成可清理清单并提醒删除风险；只有客户看过最新清单并明确授权后才执行删除，随后复核实际释放空间 |
-| [`soia-env-workbuddy-install`](soia-env-workbuddy-install.md) | 为新手安装、验证或按授权更新 WorkBuddy 桌面客户端 |
-
-## `soia-media-content`　6 个技能
+## `soia-media-content`　5 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
@@ -98,31 +60,21 @@
 | [`soia-media-generate-article-image`](soia-media-generate-article-image.md) | 将文章、开源项目、品牌 Logo 或公开 X Prompt Deck 编译为可验收的图片与矢量资产，按组合轴生成 Prompt 并完成事实、文字和视觉验收 |
 | [`soia-media-publish-rednote-card`](soia-media-publish-rednote-card.md) | 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议；获客户当次授权时可代其在创作服务平台网页端完成发布。不接平台 API、不用第三方逆向包 |
 | [`soia-media-publish-wechat-draft`](soia-media-publish-wechat-draft.md) | 把成文草稿排版成符合微信公众号限制的内联样式 HTML，机械校验通过后推入微信公众号草稿箱；只建草稿，绝不自动群发 |
-| [`soia-media-publish-x-article`](soia-media-publish-x-article.md) | 将 Markdown 成文上传到 X Articles 草稿箱并校验格式，只保存草稿 |
-| [`soia-media-publish-x-thread`](soia-media-publish-x-thread.md) | 将成文草稿改写为带编号、符合字数限制的 X thread，并可按授权存草稿 |
+| [`soia-media-publish-x`](soia-media-publish-x.md) | 成文发 X：拆成编号 thread 并按授权存草稿，或把 Markdown 传到 X Articles 草稿箱并校验 |
 
-## `soia-meta`　5 个技能
+## `soia-meta`　4 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
 | [`soia-meta-find-skill`](soia-meta-find-skill.md) | 按需求查找合适的 SOIA 技能，未安装时只收集安装选择，不代替技能执行任务 |
 | [`soia-meta-prompt-clarity`](soia-meta-prompt-clarity.md) | 起草、诊断并规格化中英文提示词，保留用户意图、语言与安全边界 |
-| [`soia-meta-publish-market`](soia-meta-publish-market.md) | 把已正式发版的技能上架到外部市场（腾讯 SkillHub、小红书 Red Skill）：筛选可独立运行的技能、叠加平台 frontmatter、预检后交由客户提交 |
 | [`soia-meta-skill-release`](soia-meta-skill-release.md) | 正式发版 SOIA 技能仓并刷新市场 pin，默认不装机 |
 | [`soia-meta-sync-skills`](soia-meta-sync-skills.md) | 按明确范围把共享技能目录软链到项目或宿主，写入前先 dry-run |
 
-## `soia-cwork-office`　3 个技能
+## `soia-cwork-office`　2 个技能
 
 | 技能 | 一句话职责 |
 |---|---|
-| [`soia-cwork-feishu-cli`](soia-cwork-feishu-cli.md) | 通过飞书官方 lark-cli 以最小权限只读调研 Wiki、Drive 与文档 |
-| [`soia-cwork-feishu-doc-git-sync`](soia-cwork-feishu-doc-git-sync.md) | 将飞书知识库或云文档以应用身份只读同步为本地 Markdown，保留目录、来源和同步元数据，并可接入 Git、Obsidian 与 VitePress；当用户要求同步飞书知识库、备份到 Git、在本地查看或规划双向同步时使用 |
+| [`soia-cwork-feishu-cli`](soia-cwork-feishu-cli.md) | 用飞书官方 lark-cli 以最小权限只读调研 Wiki、Drive 与文档，或把知识库只读同步为本地 Markdown |
 | [`soia-cwork-processon-diagrams`](soia-cwork-processon-diagrams.md) | 安全盘点并按授权导出、校验和归档 ProcessOn 图表 |
-
-## `soia-edu-course`　2 个技能
-
-| 技能 | 一句话职责 |
-|---|---|
-| [`soia-edu-compose-lesson-plan`](soia-edu-compose-lesson-plan.md) | 按课程大纲编写可执行教案与讲义结构；适用于“教案”“讲义”“课堂活动”等请求 |
-| [`soia-edu-design-course-outline`](soia-edu-design-course-outline.md) | 从主题、受众和课时约束设计课程大纲；适用于“课程大纲”“教学目标”“课时规划”等请求 |
 

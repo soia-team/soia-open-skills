@@ -112,7 +112,7 @@ def register(expert_dir: pathlib.Path, target_root: pathlib.Path) -> None:
     if not script.exists():
         raise InstallError(
             f"未找到 WorkBuddy 官方 expert-manager（{script}）。"
-            "请先安装 WorkBuddy 桌面端（技能 soia-env-workbuddy-install）。"
+            "请先按 WorkBuddy 官方文档安装桌面端并至少启动一次，再重跑本脚本。"
         )
     result = subprocess.run(
         [sys.executable, str(script), str(expert_dir),

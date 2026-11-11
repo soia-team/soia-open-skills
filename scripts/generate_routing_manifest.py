@@ -19,12 +19,10 @@ OWNER = "soia-team"
 # private repository.
 PUBLIC_REPOSITORIES = (
     "soia-open-skills",
-    "soia-open-env-skills",
     "soia-open-pkm-vault-skills",
     "soia-open-media-content-skills",
     "soia-open-cwork-office-skills",
     "soia-open-dev-skills",
-    "soia-open-edu-course-skills",
 )
 
 PORTAL_REPOSITORY = "soia-open-skills"
