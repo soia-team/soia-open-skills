@@ -6,7 +6,7 @@
 
 **The hard part isn't learning a skill — it's remembering which one to call**
 
-64 public skills, 6 domains, one entry point. Describe the goal; you don't have to memorize the catalog
+57 public skills, 5 domains, one entry point. Describe the goal; you don't have to memorize the catalog
 
 [中文](README.md) · English
 
@@ -34,7 +34,7 @@ flowchart TB
     D --> E["Claude Code · Codex · WorkBuddy<br/>all three hosts"]
 ```
 
-## 6 domain plugins
+## 5 domain plugins
 
 Install a domain and get every skill in it. The default remains project-scoped installation of only the skills you need; a whole domain requires an explicit choice. **Always-on** is the context the skill index consumes each session; bodies load only when a skill fires. Costs below are historical estimates; after the 2026-11-11 reduction only skill counts were refreshed, and domains whose count changed are marked "Not measured".
 
@@ -42,7 +42,6 @@ Install a domain and get every skill in it. The default remains project-scoped i
 |---|---|---:|---:|
 | [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Vault: capture, organize, distill, transform | 31 | ~3.6k |
 | [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | Engineering and UI: specs, architecture, implementation, reviews, design and tools | 15 | Not measured |
-| [`soia-env`](https://github.com/soia-team/soia-open-env-skills) | Environment: setup planning, AI CLI upgrades, network diagnosis, disk hygiene | 7 | Not measured |
 | [`soia-media-content`](https://github.com/soia-team/soia-open-media-content-skills) | Content: drafting, imagery, per-platform adaptation | 5 | Not measured |
 | **`soia-meta`** (this repo) | Ecosystem: search, sync, release, prompts | 4 | Not measured |
 | [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | Collaboration: Feishu and ProcessOn material to local files | 2 | Not measured |
@@ -98,7 +97,7 @@ A domain repo is simultaneously a plugin for all three — skills are never copi
 |---|---|---|
 | Claude Code | Domain plugin | `plugin enable/disable`, zero context cost |
 | Codex | Domain plugin | Marketplace-level enable |
-| WorkBuddy | **Role-based expert** (one per domain, 6 public) | Summon / switch expert; not in context until summoned |
+| WorkBuddy | **Role-based expert** (one per domain, 5 public) | Summon / switch expert; not in context until summoned |
 
 ## What it does not do
 
@@ -112,7 +111,7 @@ A domain repo is simultaneously a plugin for all three — skills are never copi
 | Document | Covers |
 |---|---|
 | [docs/learning-guide.en.md](docs/learning-guide.en.md) | **Start here**: how the ecosystem works, why it is designed this way, FAQs |
-| [docs/skills/](docs/skills/README.md) | **Per-skill pages for all 64 skills**: triggers, outputs, usage examples, install |
+| [docs/skills/](docs/skills/README.md) | **Per-skill pages for all 57 skills**: triggers, outputs, usage examples, install |
 | [docs/install/](docs/install/README.en.md) | Install guides for 60+ AI hosts |
 | [docs/install-profiles.md](docs/install-profiles.md) | Setups organized by machine purpose |
 | [SKILL_SPEC.md](SKILL_SPEC.md) | Skill structure, naming, frontmatter, validation |

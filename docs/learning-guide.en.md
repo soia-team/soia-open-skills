@@ -27,7 +27,7 @@ The whole ecosystem has only five concepts. Confusing them is the source of most
 ## 2. The whole ecosystem in one diagram
 
 ```text
-Source of truth: 6 public domain repos, 64 skills (2026-11-11 snapshot)
+Source of truth: 5 public domain repos, 57 skills (2026-11-11 snapshot)
         │
         │   routing/routing-manifest.json (machine-readable index, generated)
         ▼
@@ -61,7 +61,7 @@ A skill's body (`SKILL.md` content, `references/`, `scripts/`) only enters conte
 
 So the real design constraint is: **how do you pay only for the domains you need today?**
 
-**Source-repo boundaries do not determine single-skill installation boundaries.** Even one repo supports selecting an individual skill with `npx skills add ... -s <skill-name>`. The 6 public domain repos separate maintenance responsibilities and whole-domain plugin distribution. Dev-design is now part of dev and the edu domain was retired on 2026-11-11; neither is an active domain. Select the skills a project actually needs first; use domain plugins when you want whole-domain toggling.
+**Source-repo boundaries do not determine single-skill installation boundaries.** Even one repo supports selecting an individual skill with `npx skills add ... -s <skill-name>`. The 5 public domain repos separate maintenance responsibilities and whole-domain plugin distribution. Dev-design is now part of dev, the edu domain was retired on 2026-11-11, and the env domain was taken offline the same day with its repository deleted; none of them is an active domain. Select the skills a project actually needs first; use domain plugins when you want whole-domain toggling.
 
 Corollary: **which repo a new skill belongs in depends on what it gets switched on together with**, not on code similarity.
 
