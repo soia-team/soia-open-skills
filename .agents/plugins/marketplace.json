@@ -32,7 +32,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-cwork-office-skills.git",
-        "ref": "1570ab4c73b224c85aa27f189915586c354ab94b"
+        "ref": "4da54979668d7fc51f7ce34eddef218295544a67"
       },
       "interface": {
         "displayName": "办公与内容技能库",
