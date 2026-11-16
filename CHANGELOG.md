@@ -3,6 +3,14 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.2.5 — 2026-11-16
+
+刷新 soia-cwork-office 市场 pin 至 v1.11.3
+
+## 维护
+- chore(marketplace): pin soia-cwork-office v1.11.3 (#377)
+- chore(release): open next train after v2.2.4 (#376)
+
 ## v2.2.4 — 2026-11-16
 
 刷新 soia-cwork-office 市场 pin 至 v1.11.2
