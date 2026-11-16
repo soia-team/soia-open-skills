@@ -32,7 +32,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-cwork-office-skills.git",
-        "ref": "963bce62255a382b28602563c0c9a511ec055681"
+        "ref": "28bf1c120f74596670048b58b353d80e8e91ceff"
       },
       "interface": {
         "displayName": "办公与内容技能库",
@@ -54,7 +54,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/soia-team/soia-open-pkm-vault-skills.git",
-        "ref": "e8ccc3d5e54f892bba450645fd41f15e7ad4993d"
+        "ref": "8a2ffa230c329f26b049a719e4007fac4845e762"
       },
       "interface": {
         "displayName": "知识库技能库",
