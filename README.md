@@ -14,7 +14,7 @@
   <img alt="plugin version" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsoia-team%2Fsoia-open-skills%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=plugin&color=F5A623&prefix=v">
   <img alt="skills" src="https://img.shields.io/badge/技能-4-brightgreen">
   <img alt="hosts" src="https://img.shields.io/badge/宿主-Claude%20%C2%B7%20Codex%20%C2%B7%20WorkBuddy-8A2BE2">
-  <img alt="always-on cost" src="https://img.shields.io/badge/常驻-~428%20tok-lightgrey">
+  <img alt="always-on cost" src="https://img.shields.io/badge/常驻-~250%20tok-lightgrey">
   <img alt="license" src="https://img.shields.io/github/license/soia-team/soia-open-skills?color=blue">
 </p>
 
@@ -36,14 +36,14 @@ flowchart TB
 
 ## 4 个领域插件
 
-装整个领域，一次拿到该域全部技能。默认仍按项目只装所需技能，整域须明确选择。**常驻成本**指技能索引每次会话占用的上下文，正文只在命中时载入；下表成本为历史估算；2026-11-11 删减后只更新了技能数量，数量变动的域标「待测」。内容域的 5 个 `soia-media-*` 技能同日并入 `soia-cwork-office`，技能名不变，原插件 `soia-media-content` 不再更新。
+装整个领域，一次拿到该域全部技能。默认仍按项目只装所需技能，整域须明确选择。**常驻成本**指技能索引（`name + description`）每次会话占用的上下文，正文只在命中时载入。内容域的 5 个 `soia-media-*` 技能已于 2026-11-11 并入 `soia-cwork-office`，技能名不变，原插件 `soia-media-content` 不再更新。
 
 | 领域插件 | 做什么 | 技能 | 常驻 |
 |---|---|---:|---:|
-| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | 知识库：采集、整理、提炼、转换 | 27 | 待测 |
-| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | 工程与 UI：架构、实现审查、设计验收与外部 AI 调度 | 9 | 待测 |
-| [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | 办公与内容：飞书与 ProcessOn 资料落本地；成文、配图、多平台改写 | 7 | 待测 |
-| **`soia-meta`**（本仓） | 生态：检索、同步、发布、提示词 | 4 | 待测 |
+| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | 知识库：多源采集、MOC 整理、健康巡检、提炼与视觉转换 | 27 | ~2.4k tok |
+| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | 工程与 UI：架构、实现审查、设计验收与外部 AI 调度 | 9 | ~550 tok |
+| [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | 办公与内容：飞书与 ProcessOn 资料落本地；成文、传统构图/传统色配图、公众号/X/小红书草稿发布 | 7 | ~680 tok |
+| **`soia-meta`**（本仓） | 生态：检索、同步、发布、提示词 | 4 | ~250 tok |
 
 > 暂时不用的域 `claude plugin disable <插件名>@soia`，成本归零，随时开回来。
 

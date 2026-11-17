@@ -14,7 +14,7 @@
 
 ### 这个技能可以做什么
 
-归档 X/Twitter 推文、thread、Article 到 Obsidian vault。基于 fxtwitter API，单条零配置；可选同步 Telegram 收藏。需要 PDF 时优先用 Obsidian 导出
+归档 X/Twitter 推文、thread、Article 到 Obsidian vault：基于 FxTwitter API 单条零配置抓取，自动展开 `t.co` 短链、提取 X Article 全量块（含 `entityMap` 原子代码块/图片及 `cover_media` 首图）；可选同步 Telegram 收藏，需要 PDF 时优先用 Obsidian 导出。
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
