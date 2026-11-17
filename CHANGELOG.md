@@ -3,6 +3,14 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.2.9 — 2026-11-17
+
+刷新三域市场 pin（cwork-office v1.11.7、pkm-vault v1.14.1、dev v2.11.1），同步 47 篇技能详情页与实测常驻 Token
+
+## 维护
+- chore(marketplace): pin cwork-office v1.11.7, pkm-vault v1.14.1, dev v2.11.1 and refresh skill pages/README (#389)
+- chore(release): open next train after v2.2.8 (#388)
+
 ## v2.2.8 — 2026-11-17
 
 刷新 soia-cwork-office 市场 pin 至 v1.11.6
