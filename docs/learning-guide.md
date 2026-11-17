@@ -49,7 +49,7 @@
 2. **域仓 = 域插件 = 开关单位**。`plugin disable soia-pkm-vault@soia` 一次摘掉 27 个知识库技能的索引，上下文降到零成本；写作日再 `enable` 回来。
 3. **正式通道 pin sha**。跨仓市场条目锁定正式 commit；元仓的自指 `source: "./"` 使用默认 `main` 正式版，不把它误写成有独立 pin。
 
-当前数量以[生成目录](skills/README.md)为准；路由清单有 84 个目标，另加发现入口 `soia-meta-find-skill`。dev-design 的方法与工具已迁入 dev，旧仓仅保留历史。
+当前数量以[生成目录](skills/README.md)为准；路由清单有 46 个目标，另加发现入口 `soia-meta-find-skill`（共 47 个公开技能）。dev-design 的方法与工具已迁入 dev，旧仓仅保留历史。
 
 ---
 

@@ -14,7 +14,7 @@
   <img alt="plugin version" src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsoia-team%2Fsoia-open-skills%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=plugin&color=F5A623&prefix=v">
   <img alt="skills" src="https://img.shields.io/badge/skills-4-brightgreen">
   <img alt="hosts" src="https://img.shields.io/badge/hosts-Claude%20%C2%B7%20Codex%20%C2%B7%20WorkBuddy-8A2BE2">
-  <img alt="always-on cost" src="https://img.shields.io/badge/always--on-~428%20tok-lightgrey">
+  <img alt="always-on cost" src="https://img.shields.io/badge/always--on-~250%20tok-lightgrey">
   <img alt="license" src="https://img.shields.io/github/license/soia-team/soia-open-skills?color=blue">
 </p>
 
@@ -36,14 +36,14 @@ flowchart TB
 
 ## 4 domain plugins
 
-Install a domain and get every skill in it. The default remains project-scoped installation of only the skills you need; a whole domain requires an explicit choice. **Always-on** is the context the skill index consumes each session; bodies load only when a skill fires. Costs below are historical estimates; after the 2026-11-11 reduction only skill counts were refreshed, and domains whose count changed are marked "Not measured". The 5 `soia-media-*` content skills moved into `soia-cwork-office` the same day with their names unchanged; the former `soia-media-content` plugin is no longer updated.
+Install a domain and get every skill in it. The default remains project-scoped installation of only the skills you need; a whole domain requires an explicit choice. **Always-on** is the context the skill index (`name + description`) consumes each session; bodies load only when a skill fires. The 5 `soia-media-*` content skills moved into `soia-cwork-office` on 2026-11-11 with their names unchanged; the former `soia-media-content` plugin is no longer updated.
 
 | Domain plugin | What it does | Skills | Always-on |
 |---|---|---:|---:|
-| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Vault: capture, organize, distill, transform | 27 | Not measured |
-| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | Engineering and UI: architecture, implementation, reviews, design and external AI dispatch | 9 | Not measured |
-| [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | Office & Content: Feishu and ProcessOn material to local files; drafting, imagery, per-platform adaptation | 7 | Not measured |
-| **`soia-meta`** (this repo) | Ecosystem: search, sync, release, prompts | 4 | Not measured |
+| [`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) | Vault: multi-source capture, MOC organization, health audits, distillation and visual transformation | 27 | ~2.4k tok |
+| [`soia-dev`](https://github.com/soia-team/soia-open-dev-skills) | Engineering and UI: architecture, implementation, reviews, design and external AI dispatch | 9 | ~550 tok |
+| [`soia-cwork-office`](https://github.com/soia-team/soia-open-cwork-office-skills) | Office & Content: Feishu and ProcessOn material to local files; drafting, traditional-composition/color imagery, WeChat / X / Rednote drafts | 7 | ~680 tok |
+| **`soia-meta`** (this repo) | Ecosystem: search, sync, release, prompts | 4 | ~250 tok |
 
 > `claude plugin disable <plugin>@soia` on a domain you are not using drops it to zero; enable it again any time.
 

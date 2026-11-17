@@ -49,7 +49,7 @@ Three rules run through the whole picture:
 2. **Domain repo = domain plugin = unit of on/off.** `plugin disable soia-pkm-vault@soia` removes 31 vault skills from the index at zero context cost; `enable` brings them back on a writing day.
 3. **Pin the sha on release channels.** Cross-repo entries lock a released commit. The portal's self-reference, `source: "./"`, uses its released default `main` branch; it does not have a separate pin.
 
-Use the [generated catalog](skills/README.md) for current counts: 84 routing targets plus the `soia-meta-find-skill` discovery entry point. The dev-design methods and tools now live in dev; the old repo retains history only.
+Use the [generated catalog](skills/README.md) for current counts: 46 routing targets plus the `soia-meta-find-skill` discovery entry point (47 public skills in total). The dev-design methods and tools now live in dev; the old repo retains history only.
 
 ---
 

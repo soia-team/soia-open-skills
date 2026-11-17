@@ -14,7 +14,7 @@
 
 ### 这个技能可以做什么
 
-批量归档用户自己管理的微信公众号已发文章到 Obsidian vault。支持官方 API、公众号后台接口、登录态 Cookie 三条路线，并按 url 去重
+批量归档用户自己管理的微信公众号已发文章到 Obsidian vault：支持官方 API、公众号后台接口、登录态 Cookie 三条路线，支持单文件（`accounts:`）与多文件（`config.<alias>.yml` / `accounts/<alias>.yml`）多账号配置、`--list-accounts` 账号盘点及按 `url` 自动去重。
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|

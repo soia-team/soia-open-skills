@@ -10,7 +10,7 @@
 |---|---|---|
 | 写作机 | PKM vault + 办公与内容 | 收集素材、整理知识库、写作与发布 |
 | 编码机 | meta + dev 精选技能 | 工程与 UI 方法、GitHub 运维和外部 AI 调度 |
-| 最小 | 3 个 meta 技能 | 提示词澄清、技能同步与发布收尾 |
+| 最小 | 4 个 meta 技能 | 技能检索、提示词澄清、技能同步与发布收尾 |
 
 ### 写作机
 
@@ -28,10 +28,11 @@ npx skills add soia-team/soia-open-dev-skills -g -a '*' -y
 
 ### 最小配置
 
-显式列出 3 个 meta 技能，避免本仓以后新增技能时被意外带入：
+显式列出 4 个 meta 技能，避免本仓以后新增技能时被意外带入：
 
 ```bash
 npx skills add soia-team/soia-open-skills -g -a '*' \
+  -s soia-meta-find-skill \
   -s soia-meta-prompt-clarity \
   -s soia-meta-sync-skills \
   -s soia-meta-skill-release -y
