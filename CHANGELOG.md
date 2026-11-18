@@ -3,6 +3,14 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.2.11 — 2026-11-18
+
+刷新 soia-dev 市场 pin 至 v2.12.0
+
+## 维护
+- chore(portal): refresh marketplace pin for dev v2.12.0 (#395)
+- chore(release): open next train after v2.2.10 (#394)
+
 ## v2.2.10 — 2026-11-18
 
 同步 cwork v1.11.8 与 pkm v1.14.2 市场 pin、路由索引与 47 个技能文档页
