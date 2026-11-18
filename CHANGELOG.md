@@ -3,6 +3,14 @@
 本文件由 soia-meta-skill-release 在每次正式发版时自动更新，与 GitHub Release 同源；
 更早的版本演进见 git 提交历史与 GitHub Releases。
 
+## v2.2.12 — 2026-11-18
+
+刷新 soia-dev 市场 pin 至 v2.12.1（dispatch 说明补多账号与额度查看）
+
+## 维护
+- chore(portal): refresh marketplace pin and dispatch skill page for dev v2.12.1 (#398)
+- chore(release): open next train after v2.2.11 (#397)
+
 ## v2.2.11 — 2026-11-18
 
 刷新 soia-dev 市场 pin 至 v2.12.0
