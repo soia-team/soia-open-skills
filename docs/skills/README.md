@@ -42,7 +42,7 @@
 
 | 技能 | 一句话职责 |
 |---|---|
-| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 派任务给外部 AI CLI 进程并核验模型、额度与产物；宿主内置 subagent 不用本技能 |
+| [`soia-dev-agent-cli-dispatch`](soia-dev-agent-cli-dispatch.md) | 派任务给外部 AI CLI 进程并核验模型、额度与产物；支持同一 CLI 多账号（账号槽位）、登录检测与各账号套餐/剩余额度查看，宿主内置 subagent 不用本技能 |
 | [`soia-dev-audit-ui`](soia-dev-audit-ui.md) | 只读验收界面，技术证据与 UX/视觉判断分开报告 |
 | [`soia-dev-design-ui`](soia-dev-design-ui.md) | 设计界面结构、交互状态与视觉并交接实现，守住已批准的品牌与样式 |
 | [`soia-dev-enforce-coding-protocol`](soia-dev-enforce-coding-protocol.md) | 给工程改动加范围、权限与验证底线，不另起流程 |
