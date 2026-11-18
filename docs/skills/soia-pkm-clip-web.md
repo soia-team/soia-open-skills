@@ -14,18 +14,16 @@
 
 ### 这个技能可以做什么
 
-把网页/博客文章归档到 Obsidian vault；网页公开 `PodcastEpisode` 元数据时，也能同时保存 shownotes 与本地音频。文章继续用 readability/trafilatura 抽正文，播客用 JSON-LD 解析，二者都按 clip 家族统一规范落地。当用户说「归档并转 PDF」时，归档后在 Obsidian vault 内优先调用 Obsidian 自带 PDF。
-
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
-| 完成本技能覆盖的工作 | 读取用户请求、必要上下文和本技能正文流程，执行最小可靠步骤 | 客户会看到 Obsidian/vault 文件变更、终端日志、生成产物路径和最终回执。 |
-| 缺少依赖、权限、配置或 key | 停止需要外部状态的动作，明确指出缺什么 | 安装命令、申请地址、配置路径或需要客户确认的问题 |
-| 执行完成 | 汇总成功、跳过、失败、文件变更和验证结果 | 一段可复制进工单/日志的完成回执 |
+| 归档网页、博客或外文长文 | 抓取标题/作者/时间与完整正文；非中文正文自动补充意译 `## 中文译文`，默认随手交 `organize` 增量整理 | `<articles>/YYYY/MM/` Markdown 笔记与分步入库回执 |
+| 归档公开播客单集（小宇宙/Apple Podcasts 等） | 调 `archive_podcast.py` 剥离分享 query、收 shownotes、按需下载音频落 `_attachments/podcasts/` 并嵌 `![[...]]` 播放器 | 播客笔记、音频本地路径/SHA-256 或 `--metadata-only` 纯文本 |
+| 归档后转 PDF | 完成归档整理后按 [references/obsidian-pdf-export.md](references/obsidian-pdf-export.md) 走 Obsidian 原生导出 | 同目录 PDF 产物 |
 
 ### 客户如何使用
 
-1. 用自然语言说明目标，并提供必要输入：文件、URL、repo、workspace、proposal、vault 或平台账号状态。
-2. 能 dry-run 或预览的动作先给预览；涉及删除、覆盖、发送、发布、写远端状态时先征求客户确认。
+- 「归档这个网页链接到知识库，并同步更新文章 MOC。」（加“仅归档/不要整理”则停在 clip）
+- 「存一下这期播客节目，保留 shownotes 并下载本地音频。」
 
 ## 安装
 

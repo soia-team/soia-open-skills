@@ -1,6 +1,6 @@
 # soia-pkm-clip-drive
 
-> 把云盘/本地文件或受控 PDF URL 批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理；图片正文需显式 OCR
+> 把云盘/本地文档或受控 PDF URL 导入 Obsidian vault，提取可搜索正文并接入整理
 
 所属：[`soia-pkm-vault`](https://github.com/soia-team/soia-open-pkm-vault-skills) · [技能源码](https://github.com/soia-team/soia-open-pkm-vault-skills/tree/main/skills/soia-pkm-clip-drive) · [← 全部技能](README.md)
 
@@ -8,24 +8,22 @@
 
 装好后用自然语言说话即可，Agent 按下列意图命中本技能：
 
-「导入云盘资料」「下载这些 PDF」「把这批 PDF 导进来」「clip 这个文档」「整理云盘」「OCR 这批图片」
+「导入云盘资料」「下载这些 PDF」「clip 这个文档」「OCR 这批图片」
 
 ## 能力与用法
 
 ### 这个技能可以做什么
 
-把云盘/本地的存量资料（PDF/Word/表格/演示文稿/文档）批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理。图片不能仅凭文件名当作正文，需用户明确要求并具备 OCR 后端。
-
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
-| 完成本技能覆盖的工作 | 读取用户请求、必要上下文和本技能正文流程，执行最小可靠步骤 | 客户会看到 Obsidian/vault 文件变更、终端日志、生成产物路径和最终回执。 |
-| 缺少依赖、权限、配置或 key | 停止需要外部状态的动作，明确指出缺什么 | 安装命令、申请地址、配置路径或需要客户确认的问题 |
-| 执行完成 | 汇总成功、跳过、失败、文件变更和验证结果 | 一段可复制进工单/日志的完成回执 |
+| 导入本地/云盘 PDF、Word、PPT、表格 | 计算 SHA-256、提取可搜索文本并生成带来源元数据的资料/摘抄笔记 | `<vault-resources-dir>/<主题>/` 或文章区 Markdown 与哈希回执 |
+| 归档并深度提取受控 PDF URL | `archive_pdf.py --deep --extract` 校验魔数/哈希，发现 arXiv/HTML 论文 PDF 并抽文本 | 原 PDF、`-extracted.txt` 与逐条状态 |
+| 处理图片或扫描版 PDF | 严格区分文件名命中与正文命中；仅显式运行 OCR 后标 `ocr` 正文状态 | 提取限制说明或带来源/工具标签的正文笔记 |
 
 ### 客户如何使用
 
-1. 用自然语言说明目标，并提供必要输入：文件、URL、repo、workspace、proposal、vault 或平台账号状态。
-2. 能 dry-run 或预览的动作先给预览；涉及删除、覆盖、发送、发布、写远端状态时先征求客户确认。
+- 「把这个文件夹里的 PDF 和 Word 批量提取成知识库笔记，先列清单确认。」
+- 「把这个论文链接列表通过 `archive_pdf.py --deep --extract` 归档进知识库。」
 
 ## 安装
 

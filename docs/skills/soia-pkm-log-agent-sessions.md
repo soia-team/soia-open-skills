@@ -14,14 +14,13 @@
 
 ### 这个技能可以做什么
 
-- 为 Claude Code `SessionEnd` 或 Codex `notify` 生成轻量日志。
-- 用 git 状态、tracked diff 和 untracked 内容哈希去重，连续编辑同一文件仍会产生新快照。
-- 保留客户已有 Codex notify 命令，并提供 dry-run、安装检查和卸载步骤。
-- 报告旧日志数量/体量；默认不自动删除或轮转。
+| 客户想要 | 技能会做 | 客户能看到 |
+|---|---|---|
+| 为 Claude Code `SessionEnd` / Codex `notify` 接改动快照 | 展示配置合并片段获同意后备份并无损合并（保留已有 notify），用 diff+未追踪哈希去重 | 轻量快照目录、`deduplicated` 去重结果与安全卸载方式 |
 
 ### 客户如何使用
 
-提供 vault 路径、AI 名称和期望日志目录。Agent 先展示将修改的用户配置片段；只有客户明确同意后才合并写入。首次先手动 dry-run，再触发一次真实小改动验证。
+给出 vault 路径、AI 名称与目标日志相对目录，确认待修改的配置片段后接入，再跑一次 dry-run 与真实小改动验证快照与内容去重。
 
 ## 安装
 

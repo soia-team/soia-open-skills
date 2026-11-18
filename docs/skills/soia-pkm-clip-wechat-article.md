@@ -14,18 +14,15 @@
 
 ### 这个技能可以做什么
 
-归档单篇微信公众号文章到 Obsidian vault：抓取静态 HTML，提取标题、作者、正文、发布时间和配图，按 clip 家族规范落地；需要 PDF 时优先用 Obsidian 导出
-
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
-| 完成本技能覆盖的工作 | 读取用户请求、必要上下文和本技能正文流程，执行最小可靠步骤 | 客户会看到 Obsidian/vault 文件变更、终端日志、生成产物路径和最终回执。 |
-| 缺少依赖、权限、配置或 key | 停止需要外部状态的动作，明确指出缺什么 | 安装命令、申请地址、配置路径或需要客户确认的问题 |
-| 执行完成 | 汇总成功、跳过、失败、文件变更和验证结果 | 一段可复制进工单/日志的完成回执 |
+| 归档单篇微信公众号链接 | 跑 `archive_wechat.py` 按标准化 URL 去重、解析 `#js_content` 与元数据，按默认五段收口整理 MOC | `<articles>/YYYY/MM/` Markdown 笔记与分步入库回执 |
+| 归档后导出 PDF | 先完成 Markdown 归档与月份归位，再按 [references/obsidian-pdf-export.md](references/obsidian-pdf-export.md) 原生导出 | Markdown 与同目录 PDF 路径 |
 
 ### 客户如何使用
 
-1. 用自然语言说明目标，并提供必要输入：文件、URL、repo、workspace、proposal、vault 或平台账号状态。
-2. 能 dry-run 或预览的动作先给预览；涉及删除、覆盖、发送、发布、写远端状态时先征求客户确认。
+- 「归档这篇公众号文章 `https://mp.weixin.qq.com/s/...` 到知识库。」（明确说“仅归档”则停在 clip）
+- 「存这篇微信文章并导出 PDF。」
 
 ## 安装
 

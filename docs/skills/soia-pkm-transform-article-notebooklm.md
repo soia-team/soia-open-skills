@@ -14,29 +14,13 @@
 
 ### 这个技能可以做什么
 
-把 Markdown / vault 文章或 URL 转换为学习产物：
-
-- **试卷（quiz）**：选择题 + 简答题 + 答案解析
-- **闪卡（flashcards）**：Anki 兼容双面卡片
-- **脑图（mindmap）**：Mermaid / Markdown 层级结构
-- **播客脚本（podcast）**：对话式音频脚本
-- **学习笔记**：NotebookLM 综合摘要
-
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
-| 生成试卷 | 本地 Markdown 或 NotebookLM quiz artifact | 题数、题型分布、文件路径 |
-| 做闪卡 | Anki 兼容 Markdown 或 NotebookLM flashcards | 卡片数、文件路径 |
-| 脑图 / 播客 | Mermaid 脑图 / 对话脚本 Markdown | 文件路径、节点数 / 字数 |
-| 上传 NotebookLM | 上传源文件、记录 notebook id | notebook id / artifact 路径 |
-| 执行完成 | 验收产物结构完整、题目答案数量一致 | 完成回执 |
+| 生成试卷 / 闪卡 / 脑图 / 播客 / 学习笔记 | 按 `learning` 模式提炼全部核心知识点，选 `notebooklm` 或本地 Markdown 生成 | `outputs/transform/<YYYY>/<stem>/` 产物、`prompts/`、题数或节点数 |
 
 ### 客户如何使用
 
-其他可识别说法包括「生成脑图」「做播客」「NotebookLM」「generate quiz」「make flashcards」「mindmap」「podcast」；泛称「生成封面」或「做 PPT」时不使用本技能。
-
-1. 说明来源（URL / vault 路径 / 本地 Markdown）和目标类型（试卷/闪卡/脑图/播客，可选）。
-2. 可选：指定 provider（`local` / `notebooklm`）、题数、卡片数、难度。
-3. URL 来源先 clip 归档再转换。
+说明来源（vault 路径/URL 先 clip）及类型（`quiz` 默认 / `flashcards` / `mindmap` / `podcast` / `notes`），可选指定题数、难度与 `provider`（`local` / `notebooklm`；不用于做封面/PPT）。
 
 ## 安装
 
