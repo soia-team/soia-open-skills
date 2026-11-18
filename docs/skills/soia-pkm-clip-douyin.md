@@ -16,17 +16,14 @@
 
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
-| 归档一条抖音视频链接 | 用 Playwright 打开视频页拦截签名 API，拿到作者/文案/时长/互动数和可下载直链；下载 MP4 到本地；在 vault 写一篇轻量 Markdown 笔记（含 `media_local_path`） | vault 里新增一个 `.md` 文件，终端打印文件路径、作者、发布时间、下载路径、互动数据 |
-| 只想先看这条链接能不能解析，暂不下载视频 | 加 `--metadata-only`：只抓元数据和文案写笔记，跳过视频下载 | 笔记里 `media_local_path` 为空、`media_fetched: false`，日志提示候选直链数量 |
-| 同一条视频重复归档 | 按 vault 内已有笔记的 frontmatter `url:` 做去重 | 打印 `⚠️ Already archived` 并退出，不重复下载/不重复写笔记 |
-| 缺少 Playwright 依赖 | 停止并给出安装命令，不猜测降级方案 | `❌` 开头的错误信息 + `pip install playwright && python -m playwright install chromium` |
+| 归档一条抖音视频 | 用 Playwright 拦截签名响应、校验 `video_id` 去重、下载 MP4 至本机目录并写入 Markdown | vault 笔记路径、MP4 本地路径、作者/时长/互动数 |
+| 只要文案与元数据（暂不下载视频） | `--metadata-only` 跳过下载并写笔记 | `media_local_path` 置空、`media_fetched: false` |
+| 强制更新已归档视频 | `--force` 重抓并在覆盖时保留人工 `topics`/`people`/`## 摘要` | 更新后的笔记与核验回执 |
 
 ### 客户如何使用
 
-1. 给出一条抖音视频链接（`https://www.douyin.com/video/<id>`、带 `modal_id=`/`resource_id=` 参数的链接，或 `v.douyin.com` 短链）。
-2. 在 vault 根目录运行 `python3 scripts/archive_douyin.py <URL>`；不在 vault 内时加 `--vault <path>`。
-3. 脚本自动去重、抓取、下载、写笔记；全过程失败会用 `❌` 报出具体原因，不会留下半成品笔记。
-4. 归档完成后，按回执里的「Next step」提示补 `## 摘要`、`topics`、`people`。
+- 「归档这条抖音：`https://www.douyin.com/video/<id>`」（支持 `modal_id=`/`resource_id=` 与 `v.douyin.com` 短链）
+- 「先只抓这条抖音文案和元数据，不要下视频（`--metadata-only`）」
 
 ## 安装
 

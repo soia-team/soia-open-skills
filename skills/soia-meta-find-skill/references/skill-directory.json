@@ -92,7 +92,7 @@
   },
   {
     "name": "soia-media-publish-rednote-card",
-    "description": "把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议；获客户当次授权时可代其在创作服务平台网页端完成发布。不接平台 API、不用第三方逆向包。Triggers：「发成小红书」「小红书笔记」「改成 rednote」「rednote 这篇」「帮我发到小红书」",
+    "description": "把成文草稿改写成小红书（rednote）笔记：标题、3–5 段短文、标签与配图建议；获当次授权可驱动已登录浏览器在网页端完成发布，不用逆向包。触发：「发成小红书」「小红书笔记」「改成 rednote」「帮我发到小红书」",
     "source": {
       "repository": "soia-open-cwork-office-skills"
     }
@@ -176,7 +176,7 @@
   },
   {
     "name": "soia-pkm-clip-drive",
-    "description": "把云盘/本地文件或受控 PDF URL 批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理；图片正文需显式 OCR。Triggers：「导入云盘资料」「下载这些 PDF」「把这批 PDF 导进来」「clip 这个文档」「整理云盘」「OCR 这批图片」",
+    "description": "把云盘/本地文档或受控 PDF URL 导入 Obsidian vault，提取可搜索正文并接入整理。Triggers：「导入云盘资料」「下载这些 PDF」「clip 这个文档」「OCR 这批图片」",
     "source": {
       "repository": "soia-open-pkm-vault-skills"
     }

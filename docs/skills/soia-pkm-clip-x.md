@@ -14,18 +14,17 @@
 
 ### 这个技能可以做什么
 
-归档 X/Twitter 推文、thread、Article 到 Obsidian vault：基于 FxTwitter API 单条零配置抓取，自动展开 `t.co` 短链、提取 X Article 全量块（含 `entityMap` 原子代码块/图片及 `cover_media` 首图）；可选同步 Telegram 收藏，需要 PDF 时优先用 Obsidian 导出。
-
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
-| 完成本技能覆盖的工作 | 读取用户请求、必要上下文和本技能正文流程，执行最小可靠步骤 | 客户会看到 Obsidian/vault 文件变更、终端日志、生成产物路径和最终回执。 |
-| 缺少依赖、权限、配置或 key | 停止需要外部状态的动作，明确指出缺什么 | 安装命令、申请地址、配置路径或需要客户确认的问题 |
-| 执行完成 | 汇总成功、跳过、失败、文件变更和验证结果 | 一段可复制进工单/日志的完成回执 |
+| 归档单条推文、thread 或 X Article | 调用 `archive_x.py` 走免密 FxTwitter API（兜底 syndication），回溯 thread、展开 `t.co`、提取 `content.blocks[]` 与首图 | `<articles>/<YYYY>/<MM>/` Markdown 笔记、摘要、双链与 MOC 更新 |
+| 归档外文推文或导出 PDF | 自动补充自然中文意译段（`## 中文译文`）；请求导出 PDF 时走 Obsidian 原生导出参考 | 双语对照归档笔记或原生 PDF |
+| 批量导入 Telegram「我的收藏」X 链接 | 解析 JSON 导出（或按授权走 MTProto），先 `--dry-run` 预览再去重归档 | 新增/跳过篇数与异常链接清单 |
 
 ### 客户如何使用
 
-1. 用自然语言说明目标，并提供必要输入：文件、URL、repo、workspace、proposal、vault 或平台账号状态。
-2. 能 dry-run 或预览的动作先给预览；涉及删除、覆盖、发送、发布、写远端状态时先征求客户确认。
+- 「归档这条 X：`https://x.com/<handle>/status/<id>`」
+- 「整理这条 X thread 并导出 PDF」
+- 「用 `--dry-run` 同步我的 Telegram 收藏导出 JSON 里的 X 链接」
 
 ## 安装
 

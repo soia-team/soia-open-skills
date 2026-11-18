@@ -14,18 +14,13 @@
 
 ### 这个技能可以做什么
 
-- 创建 00/10/20/30/40/50/60/90 分区、下钻 `AGENTS.md`、工作台 Schema v2、长期知识 Schema 与对应模板；20 区精选目录固定为 `10_主题知识`、`20_规范与手册`、`30_学习指南`，历史导入使用 `90_历史导入`。
-- 默认元信息目录与当前 SOIA vault 约定一致，使用 `00_Obsidian系统/`；工作台收件箱使用 `10_工作台/00_Inbox/`。旧名 `00_知识库系统/`、`00_收件箱/` 不再由默认配置创建；已有不同命名的 vault 应通过自定义 config 显式保留。
-- 建立 `AGENTS.md` 唯一规则源及 Claude/Gemini/opencode/workbuddy 适配层。
-- 支持 JSON/YAML 自定义、默认 plan、显式 `--apply`、create-only 幂等和 `--check`。
-- 不创建 `.obsidian`、不安装插件、不配置 hook、不删除或覆盖现有文件。
+| 客户想要 | 技能会做 | 客户能看到 |
+|---|---|---|
+| 初始化中立 PKM 骨架与规则层 | 创建 00–90 分区（20 精选固定 `10_主题知识`/`20_规范与手册`/`30_学习指南`、历史导入 `90_历史导入`，默认 `00_Obsidian系统/` 与 `10_工作台/00_Inbox/`）及模板 | json `plan`、逐文件 create/skip/conflict/drift 与 `--check` 结果 |
 
 ### 客户如何使用
 
-1. 提供目标目录、语言/命名偏好和是否继承默认结构。
-2. 先运行 plan，逐项审查 create/skip/conflict/drift。
-3. 客户确认后加 `--apply`；已有文件默认跳过。
-4. 再运行 `--check`，确认必需目录和种子文件存在。
+提供目标目录及可选自定义 `config.json`（Schema v2 支持 `extends_default`、`directories`、`files`），先跑默认 plan 审查 create/skip/drift，再 `--apply` 与 `--check`。
 
 ## 安装
 

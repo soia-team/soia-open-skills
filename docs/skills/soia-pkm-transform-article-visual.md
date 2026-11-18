@@ -14,25 +14,14 @@
 
 ### 这个技能可以做什么
 
-把 Markdown / vault 文章或 URL 渲染为图片产物：
-
-- **长图**：完整文章内容纵向展开为单张 PNG/JPEG
-- **信息图**：核心概念可视化，节点 + 连接 + 标注
-- **术语地图 / 路线图**：左侧认知路径 + 右侧视觉隐喻 + 底部结论
-- **海报 / 封面**：单张设计稿，强排版重视觉
-- **插画 / 封面图**：可选 Codex imagegen 生成配图
-
 | 客户想要 | 技能会做 | 客户能看到 |
 |---|---|---|
-| 生成长图 | HTML/CSS 渲染截图，prompt 落盘可重跑 | 图片路径、像素尺寸、预览 |
-| 指定 provider | 走对应 provider 流程 | provider 日志 |
-| 执行完成 | 验收文件存在、尺寸合理、中文可读 | 完成回执 |
+| 文章转长图/信息图/概念图/海报/封面 | 按 `visual_dense` 重组核心概念，写 prompt 落盘并用选定 provider 生成高清图 | PNG/JPEG 路径、分辨率与 `view_image` 验收结果 |
+| 切换生成引擎（`local` / `open-design` / `codex-image`） | 优先客户指定，按硬依赖就绪情况执行并在报告中写明真实 provider | prompt 路径与真实渲染通道记录 |
 
 ### 客户如何使用
 
-1. 说明来源（URL / vault 路径 / 本地 Markdown）和目标视觉类型（长图/信息图/海报/封面，可选）。
-2. 可选：指定 provider（`local` / `open-design` / `codex-image`）、风格、尺寸。
-3. URL 来源先 clip 归档再转换。
+说明来源（vault 路径/URL 先 clip）和目标类型（`long_image` 默认 / `infographic` / `concept_map` / `poster` / `cover` / `illustration`），可选指定 provider 与参考图（仅提取版式语法，不抄内容）。
 
 ## 安装
 

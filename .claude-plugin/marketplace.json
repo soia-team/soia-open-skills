@@ -20,7 +20,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-cwork-office-skills",
-        "sha": "4100ac66e9c598317e5fa139bbf6fbe4fa34fbcd"
+        "sha": "c943896a7076a7465f39cefa3c92f9f60c642bf7"
       }
     },
     {
@@ -29,7 +29,7 @@
       "source": {
         "source": "github",
         "repo": "soia-team/soia-open-pkm-vault-skills",
-        "sha": "a7ca7fc2ab778c97e9d8b37cb926c4d3c472057b"
+        "sha": "3b6ec79a189b2c45d50c7520c1e89d661ddcfc55"
       }
     },
     {

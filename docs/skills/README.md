@@ -16,7 +16,7 @@
 | [`soia-pkm-bootstrap-vault-base`](soia-pkm-bootstrap-vault-base.md) | 以 plan-first、create-only、可检查的方式初始化平台中立的 AI-native Markdown vault 基座，包含分区下钻规则、工作台生命周期、模板与多 AI 适配层 |
 | [`soia-pkm-bootstrap-vault-obsidian`](soia-pkm-bootstrap-vault-obsidian.md) | 以 dry-run 和保留未知配置的结构化合并方式，把已有 Markdown vault 配置为 Obsidian 消费端，启用 Bases 与可选宽页 CSS |
 | [`soia-pkm-clip-douyin`](soia-pkm-clip-douyin.md) | 归档单条抖音视频到 Obsidian vault，并保留本地媒体索引 |
-| [`soia-pkm-clip-drive`](soia-pkm-clip-drive.md) | 把云盘/本地文件或受控 PDF URL 批量导入 Obsidian vault。提取文本、生成资料笔记，归入资料库或文章摘抄，再交给 organize 整理；图片正文需显式 OCR |
+| [`soia-pkm-clip-drive`](soia-pkm-clip-drive.md) | 把云盘/本地文档或受控 PDF URL 导入 Obsidian vault，提取可搜索正文并接入整理 |
 | [`soia-pkm-clip-github-repo`](soia-pkm-clip-github-repo.md) | 将 GitHub 开源仓库归档为 Obsidian vault 的项目卡和调研笔记 |
 | [`soia-pkm-clip-rednote`](soia-pkm-clip-rednote.md) | 将单篇小红书图文或视频笔记归档到 Obsidian vault |
 | [`soia-pkm-clip-web`](soia-pkm-clip-web.md) | 归档网页、博客文章或公开播客节目到 Obsidian vault；可同时保留 shownotes 与本地音频 |
@@ -60,7 +60,7 @@
 | [`soia-cwork-processon-diagrams`](soia-cwork-processon-diagrams.md) | 安全盘点并按授权导出、校验和归档 ProcessOn 图表 |
 | [`soia-media-compose-article-draft`](soia-media-compose-article-draft.md) | 把 distill 提炼出的观点写成成文草稿。以用户观点为骨、vault 摘抄为料，生成可继续交给 publish 的文章。可指定公众号/知乎/随笔风格 |
 | [`soia-media-generate-article-image`](soia-media-generate-article-image.md) | 将文章、开源项目、品牌 Logo 或公开 X Prompt Deck 编译为可验收的图片与矢量资产，按组合轴生成 Prompt 并完成事实、文字和视觉验收 |
-| [`soia-media-publish-rednote-card`](soia-media-publish-rednote-card.md) | 把成文草稿改写成 rednote（小红书）笔记：生成吸睛标题（可带 emoji）、3–5 段短文、话题标签和配图建议；获客户当次授权时可代其在创作服务平台网页端完成发布。不接平台 API、不用第三方逆向包 |
+| [`soia-media-publish-rednote-card`](soia-media-publish-rednote-card.md) | 把成文草稿改写成小红书（rednote）笔记：标题、3–5 段短文、标签与配图建议；获当次授权可驱动已登录浏览器在网页端完成发布，不用逆向包 |
 | [`soia-media-publish-wechat-draft`](soia-media-publish-wechat-draft.md) | 把成文草稿排版成符合微信公众号限制的内联样式 HTML，机械校验通过后推入微信公众号草稿箱；只建草稿，绝不自动群发 |
 | [`soia-media-publish-x`](soia-media-publish-x.md) | 成文发 X：拆成编号 thread 并按授权存草稿，或把 Markdown 传到 X Articles 草稿箱并校验 |
 

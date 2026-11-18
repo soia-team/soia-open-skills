@@ -14,22 +14,13 @@
 
 ### 这个技能可以做什么
 
-- 检查 Obsidian 客户端是否可用；版本信息需以本机或官方当前信息为准。
-- dry-run 预览并结构化合并 `core-plugins.json`、`appearance.json` 与可选 `app.json`，兼容新版对象和旧版列表两种核心插件格式。
-- 保留未知核心插件、主题、snippet 和 JSON 键；启用 Bases 与宽页 CSS 时不覆盖客户现有配置。
-- 为工作台、精选长期知识和工作台历史补充三个 create-only `.base` 视图；已有视图始终保留。
-- apply 前备份将修改的现有文件；支持 `--check` 验收。
-
-本 skill 不创建 PARA 骨架、不替代 base，也不把 Obsidian 数据反向写回其他云端知识库。
+| 客户想要 | 技能会做 | 客户能看到 |
+|---|---|---|
+| 为已有 Markdown vault 启用 Obsidian Bases 与宽页样式 | dry-run 预览并结构化合并 `core-plugins.json`/`appearance.json`/`app.json`，保留已有主题/插件/未知键，建缺失 `.base` | JSON 合并、CSS create/drift 清单、备份路径与 `--check` 结果 |
 
 ### 客户如何使用
 
-其他可识别说法包括「配置 Obsidian」「装 Obsidian 插件」「Obsidian 特化配置」「启用 Bases」；从零建立通用 vault 骨架时先使用 `soia-pkm-bootstrap-vault-base`。
-
-1. 先用 base 初始化或确认已有 Markdown vault；base 不写 `.obsidian`。
-2. 提供 vault 路径，先运行脚本默认 dry-run。
-3. 展示 JSON 合并和 CSS create/drift 清单，客户确认后加 `--apply`。
-4. 运行 `--check`，再在 Obsidian 中打开 Bases 和普通笔记验证。
+先确认已完成 `soia-pkm-bootstrap-vault-base` 初始化（base 不写 `.obsidian`），提供 vault 路径跑默认 dry-run，核对清单后再 `--apply` 与 `--check`，最后在 Obsidian（建议 1.9+，可按需装社区插件如 Tars/Terminal/Obsidian Git）中验证打开视图。
 
 ## 安装
 
