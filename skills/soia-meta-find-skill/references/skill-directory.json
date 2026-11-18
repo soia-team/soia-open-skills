@@ -15,7 +15,7 @@
   },
   {
     "name": "soia-dev-agent-cli-dispatch",
-    "description": "派任务给外部 AI CLI 进程并核验模型、额度与产物；宿主内置 subagent 不用本技能。触发：派给 Codex/Pi 等外部 CLI、多 CLI 分工、外部自动选模",
+    "description": "派任务给外部 AI CLI 进程并核验模型、额度与产物；支持同一 CLI 多账号（账号槽位）、登录检测与各账号套餐/剩余额度查看，宿主内置 subagent 不用本技能。触发：派给 Codex/Pi/agy 等外部 CLI、多账号/切换账号、看额度/agy 账号",
     "source": {
       "repository": "soia-open-dev-skills"
     }
